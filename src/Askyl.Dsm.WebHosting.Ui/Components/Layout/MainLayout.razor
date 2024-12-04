@@ -1,0 +1,30 @@
+﻿@inherits LayoutComponentBase
+
+<FluentMainLayout @ Style="height: 100% !important;">
+    <Header>
+        ASkyl DSM Web Hosting
+    </Header>
+
+    <Body>
+        @Body
+    </Body>
+</FluentMainLayout>
+
+<div id="blazor-error-ui" data-nosnippet>
+    <FluentHeader>
+        An unhandled error has occurred.
+        <FluentSpacer />
+        <a href="." class="reload">
+            <FluentIcon Value="@(new Icons.Regular.Size32.ArrowCounterclockwise().WithColor(Color.Error))" />
+        </a>
+        <span class="dismiss">
+            <FluentIcon Value="@(new Icons.Regular.Size32.DismissCircle().WithColor(Color.Error))" />
+        </span>
+    </FluentHeader>
+</div
+
+<FluentToastProvider />
+<FluentDialogProvider />
+<FluentTooltipProvider />
+<FluentMessageBarProvider />
+<FluentMenuProvider />

@@ -1,0 +1,27 @@
+﻿@page "/"
+
+@inject IDialogService DialogService
+
+<PageTitle>Home</PageTitle>
+
+<FluentButton OnClick="ShowDialog">Dialog</FluentButton>
+<FluentButton OnClick="ThrowError">Error</FluentButton>
+
+@code
+{
+    private async Task ShowDialog()
+    {
+        var dialog = await DialogService.ShowConfirmationAsync("Content", "OK", "Cancel", "Title");
+        var result = await dialog.Result;
+
+        if (result.Cancelled)
+        {
+            // Whaaattt
+        }
+    }
+
+    private void ThrowError()
+    {
+        throw new Exception("This is an error");
+    }
+}
