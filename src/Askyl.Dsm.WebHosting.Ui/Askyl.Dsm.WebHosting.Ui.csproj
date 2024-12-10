@@ -11,4 +11,14 @@
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.10.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Constants/Askyl.Dsm.WebHosting.Constants.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Data/Askyl.Dsm.WebHosting.Data.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Tools/Askyl.Dsm.WebHosting.Tools.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Components/Dialogs/" />
+  </ItemGroup>
+
 </Project>

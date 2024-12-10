@@ -1,27 +1,56 @@
 ﻿@page "/"
+@using Askyl.Dsm.WebHosting.Data.Security
+@using Askyl.Dsm.WebHosting.Tools.Network
 
-@inject IDialogService DialogService
+@inject IToastService ToastService
+@inject DsmApiClient client
 
 <PageTitle>Home</PageTitle>
 
-<FluentButton OnClick="ShowDialog">Dialog</FluentButton>
-<FluentButton OnClick="ThrowError">Error</FluentButton>
+<FluentButton OnClick="() => DialogHidden = false">Show Login</FluentButton>
+
+<FluentDialog Hidden="@DialogHidden" Modal="true" TrapFocus="true" PreventScroll="true">
+    <EditForm Model="@Model" OnValidSubmit="@Authenticate" novalidate>
+        <DataAnnotationsValidator />
+
+        <FluentDialogHeader>
+            <h2>Authentication</h2>
+        </FluentDialogHeader>
+
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentTextField @bind-Value="@Model.Login">Login:</FluentTextField>
+            <FluentValidationMessage For="@(() => Model.Login)" />
+            <FluentTextField @bind-Value="@Model.Password" TextFieldType="TextFieldType.Password">Password:
+            </FluentTextField>
+            <FluentTextField @bind-Value="@Model.OtpCode">OTP:</FluentTextField>
+        </FluentStack>
+
+        <FluentDialogFooter>
+            <FluentSpacer />
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" OnClick="Authenticate">OK
+            </FluentButton>
+            <FluentButton OnClick="() => DialogHidden = true">Cancel</FluentButton>
+        </FluentDialogFooter>
+    </EditForm>
+</FluentDialog>
 
 @code
 {
-    private async Task ShowDialog()
-    {
-        var dialog = await DialogService.ShowConfirmationAsync("Content", "OK", "Cancel", "Title");
-        var result = await dialog.Result;
+    private bool DialogHidden { get; set; } = true;
 
-        if (result.Cancelled)
+    private LoginModel Model = new();
+
+    private async Task Authenticate()
+    {
+        if(!await client.ConnectAsync(Model))
         {
-            // Whaaattt
+            // failed
+            ToastService.ShowError("Authentication failed");
+            return;
         }
-    }
 
-    private void ThrowError()
-    {
-        throw new Exception("This is an error");
+        // success
+        ToastService.ShowSuccess("Authentication successful");
+        DialogHidden = true;
     }
 }

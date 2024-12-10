@@ -11,3 +11,8 @@ html, body {
     width: 100%;
     z-index: 1000;
 }
+
+fluent-text-field
+{
+    width: 100%;
+}

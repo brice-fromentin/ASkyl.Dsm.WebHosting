@@ -1,9 +1,12 @@
+using Askyl.Dsm.WebHosting.Tools;
 using Askyl.Dsm.WebHosting.Ui.Components;
+
 using Microsoft.FluentUI.AspNetCore.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient();
+builder.Services.AddDsmApiClient();
 builder.Services.AddFluentUIComponents();
 
 // Add services to the container.
