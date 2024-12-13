@@ -1,9 +1,8 @@
-using System;
 using System.Text.Json.Serialization;
 
-namespace Askyl.Dsm.WebHosting.Data.API;
+namespace Askyl.Dsm.WebHosting.Data.API.Responses;
 
-public class SynoLoginResponse : ApiResponse<SynoLogin>
+public class SynoLoginResponse : ApiResponseBase<SynoLogin>
 {
 }
 

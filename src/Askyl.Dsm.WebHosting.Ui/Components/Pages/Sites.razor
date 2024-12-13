@@ -1,0 +1,45 @@
+﻿@page "/sites"
+@using Askyl.Dsm.WebHosting.Constants
+@using Askyl.Dsm.WebHosting.Data.API.Parameters
+@using Askyl.Dsm.WebHosting.Data.API.Responses
+@using Askyl.Dsm.WebHosting.Tools.Network
+
+@inject DsmApiClient client
+@inject NavigationManager navigation
+
+<h3>Sites</h3>
+
+<FluentButton OnClick="GoToHome">Home</FluentButton>
+<FluentButton OnClick="CallReverseList">Home</FluentButton>
+
+<div>
+    
+</div>
+@code
+{
+    protected override void OnInitialized()
+    {
+        if (!client.IsConnected)
+        {
+            navigation.NavigateTo("/", true);
+        }
+    }
+
+    private void GoToHome()
+    {
+        navigation.NavigateTo("/");
+    }
+
+    private async Task CallReverseList()
+    {
+        var apiInfo = client.GetApiInformation(DsmDefaults.DsmApiReverseProxy);
+        if (apiInfo == null)
+        {
+            return;
+        }
+
+        var parameters = ApiParameters.Create(DsmDefaults.DsmApiReverseProxy, apiInfo.Path, 1, "list");
+
+        var list = await client.ExecuteAsync<ReverseProxyListResponse>(parameters);
+    }
+}

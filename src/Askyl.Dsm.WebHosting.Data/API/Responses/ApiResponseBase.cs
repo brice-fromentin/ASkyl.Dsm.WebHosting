@@ -1,9 +1,8 @@
-using System;
 using System.Text.Json.Serialization;
 
-namespace Askyl.Dsm.WebHosting.Data.API;
+namespace Askyl.Dsm.WebHosting.Data.API.Responses;
 
-public class ApiResponse<T> where T : class, new()
+public class ApiResponseBase<T> where T : class, new()
 {
     [JsonPropertyName("data")]
     public T? Data { get; set; }

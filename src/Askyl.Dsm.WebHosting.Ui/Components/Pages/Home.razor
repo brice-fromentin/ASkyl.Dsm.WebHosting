@@ -2,15 +2,14 @@
 @using Askyl.Dsm.WebHosting.Data.Security
 @using Askyl.Dsm.WebHosting.Tools.Network
 
-@inject IToastService ToastService
 @inject DsmApiClient client
+@inject IToastService ToastService
+@inject NavigationManager navigation
 
 <PageTitle>Home</PageTitle>
 
-<FluentButton OnClick="() => DialogHidden = false">Show Login</FluentButton>
-
 <FluentDialog Hidden="@DialogHidden" Modal="true" TrapFocus="true" PreventScroll="true">
-    <EditForm Model="@Model" OnValidSubmit="@Authenticate" novalidate>
+    <EditForm Model="@Model" OnValidSubmit="Authenticate">
         <DataAnnotationsValidator />
 
         <FluentDialogHeader>
@@ -18,7 +17,7 @@
         </FluentDialogHeader>
 
         <FluentStack Orientation="Orientation.Vertical">
-            <FluentTextField @bind-Value="@Model.Login">Login:</FluentTextField>
+            <FluentTextField @bind-Value="@Model.Login" autofocus>Login:</FluentTextField>
             <FluentValidationMessage For="@(() => Model.Login)" />
             <FluentTextField @bind-Value="@Model.Password" TextFieldType="TextFieldType.Password">Password:
             </FluentTextField>
@@ -27,30 +26,54 @@
 
         <FluentDialogFooter>
             <FluentSpacer />
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" OnClick="Authenticate">OK
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">OK
             </FluentButton>
             <FluentButton OnClick="() => DialogHidden = true">Cancel</FluentButton>
         </FluentDialogFooter>
     </EditForm>
 </FluentDialog>
 
+<FluentOverlay @bind-Visible="@IsWorking" Opacity="0.2">
+    <FluentProgressRing />
+</FluentOverlay>
+
 @code
 {
     private bool DialogHidden { get; set; } = true;
 
+    private bool IsWorking { get; set; } = false;
+
     private LoginModel Model = new();
 
-    private async Task Authenticate()
+    protected override void OnInitialized()
     {
-        if(!await client.ConnectAsync(Model))
-        {
-            // failed
-            ToastService.ShowError("Authentication failed");
-            return;
-        }
+        DialogHidden = client.IsConnected;
+    }
 
-        // success
-        ToastService.ShowSuccess("Authentication successful");
-        DialogHidden = true;
+    private async Task Authenticate(EditContext context)
+    {
+        if (IsWorking) return;
+
+        try
+        {
+            IsWorking = true;
+
+            if (!await client.ConnectAsync(Model))
+            {
+                // failed
+                ToastService.ShowError("Authentication failed");
+                return;
+            }
+
+            // success
+            ToastService.ShowSuccess("Authentication successful");
+            await Task.Delay(500);
+            navigation.NavigateTo("/sites");
+            DialogHidden = true;
+        }
+        finally
+        {
+            IsWorking = false;
+        }
     }
 }

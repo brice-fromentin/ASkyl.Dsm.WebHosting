@@ -20,7 +20,9 @@ public static class DsmDefaults
 
     public const string DsmApiFileStationList = "SYNO.FileStation.List";
 
-    public static readonly string[] RequiredApi = [DsmApiAuth, DsmApiFileStationList];
+    public const string DsmApiReverseProxy = "SYNO.Core.AppPortal.ReverseProxy";
+
+    public static readonly string[] RequiredApi = [DsmApiAuth, DsmApiFileStationList, DsmApiReverseProxy];
 
     public static readonly string RequiredApiJoined = String.Join(",", DsmDefaults.RequiredApi);
 }

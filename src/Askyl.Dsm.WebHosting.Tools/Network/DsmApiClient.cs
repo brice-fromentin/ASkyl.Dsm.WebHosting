@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
 using Askyl.Dsm.WebHosting.Constants;
-using Askyl.Dsm.WebHosting.Data.API;
+using Askyl.Dsm.WebHosting.Data.API.Definitions;
+using Askyl.Dsm.WebHosting.Data.API.Parameters;
+using Askyl.Dsm.WebHosting.Data.API.Responses;
 using Askyl.Dsm.WebHosting.Data.Security;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
@@ -12,8 +14,10 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
     private string _server = "";
     private int _port = DsmDefaults.DefaultHttpsPort;
     private string _sid = "";
-    private Dictionary<string, SynoInformation> _apiInfo = [];
+    private Dictionary<string, ApiInformation> _apiInfo = [];
 
+    public bool IsConnected => !String.IsNullOrEmpty(_sid);
+    
     public async Task<bool> ConnectAsync(LoginModel model)
     {
         if(!ReadSettings())
@@ -53,7 +57,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
     private async Task<bool> HandShakeAsync()
     {
         var parameters = ApiParameters.Create(DsmDefaults.DsmApiInfo, DsmDefaults.DsmApiHandshakePath, 1, "query", [new("query", DsmDefaults.RequiredApiJoined)]);
-        var response = await ExecuteAsync<SynoInformationResponse>(parameters);
+        var response = await ExecuteAsync<ApiInformationResponse>(parameters);
 
         if (response == null || !response.Success)
         {
@@ -73,7 +77,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
             return false;
         }
         
-        var parameters = ApiParameters.Create(DsmDefaults.DsmApiAuth, apiInfo.Path, 6, "login", [new("account", model.Login), new("passwd", Uri.EscapeDataString(model.Password)), new("format", "sid")]);
+        var parameters = ApiParameters.Create(DsmDefaults.DsmApiAuth, apiInfo.Path, 6, "login", [new("account", model.Login), new("passwd", Uri.EscapeDataString(model.Password)), new ("format", "cookie")/*, new("&enable_syno_token", "yes")*/]);
         var response = await ExecuteAsync<SynoLoginResponse>(parameters);
 
         if (response == null || !response.Success || response.Data == null)
@@ -82,19 +86,21 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
         }
 
         _sid = response.Data.Sid;
+        _httpClient.DefaultRequestHeaders.Add("Cookie", "_SSID=" + response.Data.Sid);
 
         return true;
     }
 
-    private async Task<R?> ExecuteAsync<R>(ApiParameters parameters)
+    public ApiInformation GetApiInformation(string name)
     {
-        if (!String.IsNullOrEmpty(_sid))
-        {
-            parameters.Parameters["sid"] = _sid;
-        }
+        return _apiInfo[name];
+    }
 
+    public async Task<R?> ExecuteAsync<R>(ApiParameters parameters)
+    {
         var url = BuildUrl(parameters);
-        return await _httpClient.GetFromJsonAsync<R>(url);
+        var response = await _httpClient.GetFromJsonAsync<R>(url);
+        return response; 
     }
 
     private string BuildUrl(ApiParameters parameters)

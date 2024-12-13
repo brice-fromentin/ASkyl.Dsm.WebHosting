@@ -1,6 +1,4 @@
-using System;
-
-namespace Askyl.Dsm.WebHosting.Data.API;
+namespace Askyl.Dsm.WebHosting.Data.API.Parameters;
 
 public class ApiParameters
 {
