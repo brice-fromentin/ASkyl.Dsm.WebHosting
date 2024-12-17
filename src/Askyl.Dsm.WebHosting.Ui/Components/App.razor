@@ -10,14 +10,19 @@
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="RenderMode" />
 </head>
 
 <FluentDesignTheme Mode="@DesignThemeModes.System" />
 
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="RenderMode" />
     <script src="_framework/blazor.web.js"></script>
 </body>
 
 </html>
+
+@code
+{
+    private static readonly IComponentRenderMode RenderMode = new InteractiveServerRenderMode(prerender: false);
+}

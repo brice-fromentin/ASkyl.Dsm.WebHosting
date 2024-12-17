@@ -1,4 +1,5 @@
 using Askyl.Dsm.WebHosting.Constants;
+using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +18,7 @@ public static class DsmToolsExtensions
         });
 
         services.AddScoped<DsmApiClient>();
+        services.AddScoped((provider) => provider.GetRequiredService<DsmApiClient>().ApiInformations);
 
         return services;
     }

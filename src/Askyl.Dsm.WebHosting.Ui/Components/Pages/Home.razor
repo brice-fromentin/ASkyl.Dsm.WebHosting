@@ -1,79 +1,47 @@
 ﻿@page "/"
-@using Askyl.Dsm.WebHosting.Data.Security
+@using System.Text.Json
+@using Askyl.Dsm.WebHosting.Constants
+@using Askyl.Dsm.WebHosting.Data.API.Definitions
+@using Askyl.Dsm.WebHosting.Data.API.Parameters
+@using Askyl.Dsm.WebHosting.Data.API.Parameters.ReverseProxyAPI
+@using Askyl.Dsm.WebHosting.Data.API.Responses
 @using Askyl.Dsm.WebHosting.Tools.Network
 
 @inject DsmApiClient client
-@inject IToastService ToastService
 @inject NavigationManager navigation
 
-<PageTitle>Home</PageTitle>
+<PageTitle>ADWH - Home</PageTitle>
 
-<FluentDialog Hidden="@DialogHidden" Modal="true" TrapFocus="true" PreventScroll="true">
-    <EditForm Model="@Model" OnValidSubmit="Authenticate">
-        <DataAnnotationsValidator />
+<FluentButton OnClick="CallReverseList">List</FluentButton>
 
-        <FluentDialogHeader>
-            <h2>Authentication</h2>
-        </FluentDialogHeader>
-
-        <FluentStack Orientation="Orientation.Vertical">
-            <FluentTextField @bind-Value="@Model.Login" autofocus>Login:</FluentTextField>
-            <FluentValidationMessage For="@(() => Model.Login)" />
-            <FluentTextField @bind-Value="@Model.Password" TextFieldType="TextFieldType.Password">Password:
-            </FluentTextField>
-            <FluentTextField @bind-Value="@Model.OtpCode">OTP:</FluentTextField>
-        </FluentStack>
-
-        <FluentDialogFooter>
-            <FluentSpacer />
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">OK
-            </FluentButton>
-            <FluentButton OnClick="() => DialogHidden = true">Cancel</FluentButton>
-        </FluentDialogFooter>
-    </EditForm>
-</FluentDialog>
-
-<FluentOverlay @bind-Visible="@IsWorking" Opacity="0.2">
-    <FluentProgressRing />
-</FluentOverlay>
+<div>
+    @if (proxies is not null)
+    {
+        foreach (var proxy in proxies)
+        {
+            <div>@JsonSerializer.Serialize(proxy)</div>
+            <br />
+        }
+    }
+</div>
 
 @code
 {
-    private bool DialogHidden { get; set; } = true;
-
-    private bool IsWorking { get; set; } = false;
-
-    private LoginModel Model = new();
+    private List<ReverseProxy>? proxies;
 
     protected override void OnInitialized()
     {
-        DialogHidden = client.IsConnected;
+        if (!client.IsConnected)
+        {
+            navigation.NavigateTo("/login");
+        }
     }
 
-    private async Task Authenticate(EditContext context)
+    private async Task CallReverseList()
     {
-        if (IsWorking) return;
-
-        try
-        {
-            IsWorking = true;
-
-            if (!await client.ConnectAsync(Model))
-            {
-                // failed
-                ToastService.ShowError("Authentication failed");
-                return;
-            }
-
-            // success
-            ToastService.ShowSuccess("Authentication successful");
-            await Task.Delay(500);
-            navigation.NavigateTo("/sites");
-            DialogHidden = true;
-        }
-        finally
-        {
-            IsWorking = false;
-        }
+        var parameters = new ReverseProxyListParameters(client.ApiInformations);
+        var list = await client.ExecuteAsync<ReverseProxyListResponse>(parameters);
+        proxies = list?.Data?.Entries;
     }
 }
+

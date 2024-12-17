@@ -1,0 +1,77 @@
+﻿@page "/login"
+@using Askyl.Dsm.WebHosting.Data.Security
+@using Askyl.Dsm.WebHosting.Tools.Network
+
+@inject DsmApiClient client
+@inject IToastService ToastService
+@inject NavigationManager navigation
+
+<PageTitle>ADWH - Login</PageTitle>
+
+<FluentDialog Modal="true" TrapFocus="true" PreventScroll="true">
+    <EditForm Model="@Model" OnValidSubmit="Authenticate">
+        <DataAnnotationsValidator />
+
+        <FluentDialogHeader>
+            <h2>Authentication (DSM account)</h2>
+        </FluentDialogHeader>
+
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentTextField @bind-Value="Model.Login" autofocus>Login:</FluentTextField>
+            <FluentValidationMessage For="(() => Model.Login)" />
+            <FluentTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password">Password:
+            </FluentTextField>
+            <FluentTextField @bind-Value="Model.OtpCode">OTP:</FluentTextField>
+        </FluentStack>
+
+        <FluentDialogFooter>
+            <FluentSpacer />
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">OK</FluentButton>
+        </FluentDialogFooter>
+    </EditForm>
+</FluentDialog>
+
+<FluentOverlay @bind-Visible="@IsWorking" Opacity="0.2">
+    <FluentProgressRing />
+</FluentOverlay>
+
+@code
+{
+    private bool IsWorking { get; set; } = false;
+
+    private LoginModel Model = new();
+
+    protected override void OnInitialized()
+    {
+        if(client.IsConnected)
+        {
+            navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task Authenticate(EditContext context)
+    {
+        if (IsWorking) return;
+
+        try
+        {
+            IsWorking = true;
+
+            if (!await client.ConnectAsync(Model))
+            {
+                // failed
+                ToastService.ShowError("Authentication failed");
+                return;
+            }
+
+            // success
+            ToastService.ShowSuccess("Authentication successful");
+            await Task.Delay(500);
+            navigation.NavigateTo("/");
+        }
+        finally
+        {
+            IsWorking = false;
+        }
+    }
+}

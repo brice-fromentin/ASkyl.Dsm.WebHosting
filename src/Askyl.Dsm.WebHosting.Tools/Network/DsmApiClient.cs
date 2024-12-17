@@ -1,7 +1,10 @@
 using System.Net.Http.Json;
+using System.Text;
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.API.Parameters;
+using Askyl.Dsm.WebHosting.Data.API.Parameters.AuthenticationAPI;
+using Askyl.Dsm.WebHosting.Data.API.Parameters.InformationsAPI;
 using Askyl.Dsm.WebHosting.Data.API.Responses;
 using Askyl.Dsm.WebHosting.Data.Security;
 
@@ -14,13 +17,14 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
     private string _server = "";
     private int _port = DsmDefaults.DefaultHttpsPort;
     private string _sid = "";
-    private Dictionary<string, ApiInformation> _apiInfo = [];
+
+    public ApiInformationCollection ApiInformations { get; } = new();
 
     public bool IsConnected => !String.IsNullOrEmpty(_sid);
-    
+
     public async Task<bool> ConnectAsync(LoginModel model)
     {
-        if(!ReadSettings())
+        if (!ReadSettings())
         {
             return false;
         }
@@ -37,13 +41,13 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
 
         return true;
     }
-    
+
     private bool ReadSettings()
     {
         var settings = File.ReadAllLines("/etc/synoinfo.conf")
                            .Where(x => x.Contains("="))
                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", ""));
-        
+
         _server = settings[DsmDefaults.KeyExternalHostIp];
 
         if (!Int32.TryParse(settings[DsmDefaults.KeyExternalHttpsPort], out _port))
@@ -56,28 +60,28 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
 
     private async Task<bool> HandShakeAsync()
     {
-        var parameters = ApiParameters.Create(DsmDefaults.DsmApiInfo, DsmDefaults.DsmApiHandshakePath, 1, "query", [new("query", DsmDefaults.RequiredApiJoined)]);
-        var response = await ExecuteAsync<ApiInformationResponse>(parameters);
+        var parameters = new InformationsQueryParameters(this.ApiInformations);
 
-        if (response == null || !response.Success)
+        var result = await ExecuteAsync<ApiInformationResponse>(parameters);
+
+        if (result is null || !result.Success || result.Data is null || result.Data.Count == 0)
         {
             return false;
         }
 
-        _apiInfo = response.Data ?? [];
+        ApiInformations.Replace(result.Data);
 
         return true;
     }
 
     private async Task<bool> AuthenticateAsync(LoginModel model)
     {
-        var apiInfo = _apiInfo[DsmDefaults.DsmApiAuth];
-        if (apiInfo == null)
-        {
-            return false;
-        }
-        
-        var parameters = ApiParameters.Create(DsmDefaults.DsmApiAuth, apiInfo.Path, 6, "login", [new("account", model.Login), new("passwd", Uri.EscapeDataString(model.Password)), new ("format", "cookie")/*, new("&enable_syno_token", "yes")*/]);
+        var parameters = new AuthenticationLoginParameters(this.ApiInformations);
+
+        parameters.Parameters.Account = model.Login;
+        parameters.Parameters.Password = model.Password;
+        parameters.Parameters.OtpCode = model.OtpCode;
+
         var response = await ExecuteAsync<SynoLoginResponse>(parameters);
 
         if (response == null || !response.Success || response.Data == null)
@@ -91,22 +95,45 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
         return true;
     }
 
-    public ApiInformation GetApiInformation(string name)
+    #region HTTP Request calls
+
+    public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
     {
-        return _apiInfo[name];
+        var url = parameters.BuildUrl(_server, _port);
+
+        return parameters.SerializationFormat switch
+        {
+            SerializationFormats.Query
+                => await ExecuteQueryAsync<R>(url),
+            SerializationFormats.Form
+                => await ExecuteFormAsync<R>(url, parameters),
+            SerializationFormats.Json
+                => await ExecuteJsonAsync<R>(url, parameters),
+            _
+                => throw new NotSupportedException($"SerializationFormat : {parameters.SerializationFormat} not supported.")
+        };
     }
 
-    public async Task<R?> ExecuteAsync<R>(ApiParameters parameters)
+    private async Task<R?> ExecuteQueryAsync<R>(string url)
+        => await _httpClient.GetFromJsonAsync<R>(url);
+
+    private async Task<R?> ExecuteFormAsync<R>(string url, IApiParameters parameters)
+        => await ExecutePostAsync<R>(url, new StringContent(parameters.ToForm()));
+
+    private async Task<R?> ExecuteJsonAsync<R>(string url, IApiParameters parameters)
+        => await ExecutePostAsync<R>(url, new StringContent(parameters.ToJson(), Encoding.UTF8, "application/json"));
+
+    private async Task<R?> ExecutePostAsync<R>(string url, HttpContent content)
     {
-        var url = BuildUrl(parameters);
-        var response = await _httpClient.GetFromJsonAsync<R>(url);
-        return response; 
+        var message = await _httpClient.PostAsync(url, content);
+
+        if (message.StatusCode != System.Net.HttpStatusCode.OK)
+        {
+            return default;
+        }
+
+        return await message.Content.ReadFromJsonAsync<R>();
     }
 
-    private string BuildUrl(ApiParameters parameters)
-    {
-        var baseUrl = $"https://{_server}:{_port}/webapi/{parameters.Path}?api={parameters.Name}&version={parameters.Version}&method={parameters.Method}&";
-        var queryString = string.Join("&", parameters.Parameters.Select(parameter => $"{parameter.Key}={parameter.Value}"));
-        return baseUrl + queryString;
-    }
+    #endregion
 }
