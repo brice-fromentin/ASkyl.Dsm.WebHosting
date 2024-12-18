@@ -9,7 +9,6 @@ public class AuthenticateLogin
     public string Account { get; set; } = default!;
 
     [JsonPropertyName("passwd")]
-    [UrlEncode]
     public string Password { get; set; } = default!;
 
     [JsonPropertyName("format")]

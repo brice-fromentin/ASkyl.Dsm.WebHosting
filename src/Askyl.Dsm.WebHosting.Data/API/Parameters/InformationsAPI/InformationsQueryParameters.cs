@@ -11,5 +11,5 @@ public class InformationsQueryParameters(ApiInformationCollection informations) 
 
     public override string Method => "query";
 
-    public override SerializationFormats SerializationFormat => SerializationFormats.Query;
+    public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }

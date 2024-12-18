@@ -5,20 +5,20 @@ using Askyl.Dsm.WebHosting.Data.Attributes;
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters.ReverseProxyAPI;
 
 [DsmParameterName("entry")]
-public class ReverseProxyCreateParameters(ApiInformationCollection informations) : ApiParametersBase<ReverseProxy>(informations)
+public class ReverseProxyUpdateParameters(ApiInformationCollection informations) : ApiParametersBase<ReverseProxy>(informations)
 {
     public override string Name => DsmDefaults.DsmApiReverseProxy;
 
     public override int Version => 1;
 
-    public override string Method => "create";
+    public override string Method => "update";
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Json;
 }
 
 /*
 api=SYNO.Core.AppPortal.ReverseProxy
-&method=create
+&method=update
 &version=1
 &entry=
 {
@@ -28,6 +28,13 @@ api=SYNO.Core.AppPortal.ReverseProxy
     "proxy_send_timeout": 60,
     "proxy_http_version": 1,
     "proxy_intercept_errors": false,
+    "UUID": "20409e24-43fa-4239-9199-e42f330356bb",
+    "backend": {
+        "fqdn": "test-target-hostname",
+        "port": 80,
+        "protocol": 0
+    },
+    "customize_headers": [],
     "frontend": {
         "acl": null,
         "fqdn": "test-hostname",
@@ -37,11 +44,6 @@ api=SYNO.Core.AppPortal.ReverseProxy
             "hsts": false
         }
     },
-    "backend": {
-        "fqdn": "test-target-hostname",
-        "port": 80,
-        "protocol": 0
-    },
-    "customize_headers": []
+    "_key": "95b443a4-eb94-4e06-b7f1-7c144d720171"
 }
 */

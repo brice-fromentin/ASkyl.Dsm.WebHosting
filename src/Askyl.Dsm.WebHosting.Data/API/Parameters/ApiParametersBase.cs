@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.Attributes;
+using Askyl.Dsm.WebHosting.Data.Extensions;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters;
 
@@ -29,28 +30,30 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 
     #region Reflections Caches
 
-    private static List<PropertyDefinition> Properties { get; } = typeof(T).GetProperties().Select(x => PropertyDefinition.Create(x)).ToList();
+    private static List<PropertyDefinition> Properties { get; } = GetDefinitions();
 
-    private class PropertyDefinition(PropertyInfo info, string customName, bool requiresEncoding)
+    private class PropertyDefinition(PropertyInfo info, string customName)
     {
         public PropertyInfo Info { get; } = info;
 
         public string CustomName { get; } = customName;
 
-        public bool RequiresEncoding { get; } = requiresEncoding;
-
-        public static PropertyDefinition Create (PropertyInfo info)
-        {
-            return new PropertyDefinition
-            (
-                info,
-                info.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? "",
-                info.CustomAttributes.Any(x => x.AttributeType == typeof(UrlEncodeAttribute))
-            );
-        }
+        public static PropertyDefinition Create(PropertyInfo info)
+            => new(info, info.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? "");
     }
 
+    private static List<PropertyDefinition> GetDefinitions()
+        => typeof(T).GetProperties().Select(x => PropertyDefinition.Create(x)).ToList();
+
     #endregion
+
+    private static JsonSerializerOptions JsonOptions { get; } = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        IndentCharacter = ' ',
+        IndentSize = 4,
+        WriteIndented = true
+    };
 
     public abstract string Name { get; }
 
@@ -69,7 +72,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
         var baseUrl = this.SerializationFormat switch
         {
             SerializationFormats.Query
-                => $"https://{server}:{port}/webapi/{this.Path}?api={this.Name}&version={this.Version}&method={this.Method}",
+                => $"https://{server}:{port}/webapi/{this.Path}?api={this.Name}",
             SerializationFormats.Form
                 => $"https://{server}:{port}/webapi/{this.Path}?api={this.Name}",
             SerializationFormats.Json
@@ -78,23 +81,50 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
                 => throw new NotSupportedException($"SerializationFormat : {this.SerializationFormat} not supported.")
         };
 
-        return baseUrl + this.ToQueryString();
+        return baseUrl + this.ToQuery();
     }
 
-    private string ToQueryString()
-        => (this.SerializationFormat != SerializationFormats.Query) ? "" : this.BuildQueryOrForm();
+    private string ToQuery()
+        => (this.SerializationFormat != SerializationFormats.Query) ? "" : this.BuildQueryOrForm().ToString();
 
     public string ToForm()
-        => BuildQueryOrForm();
+        => BuildQueryOrForm().ToString();
 
-    private string BuildQueryOrForm()
+    public string ToJson()
+    {
+        var parameterName = this.GetType().GetCustomAttribute<DsmParameterNameAttribute>()?.Name;
+
+        if (String.IsNullOrWhiteSpace(parameterName))
+        {
+            throw new ArgumentException($"DsmParameterNameAttribute is not set for type {typeof(T).Name}");
+        }
+
+        var builder = this.BuildQueryOrForm(true, true);
+
+        builder.AppendSeparator();
+
+        builder.Append(parameterName);
+        builder.Append('=');
+        builder.Append(Uri.EscapeDataString(JsonSerializer.Serialize(this.Parameters, JsonOptions)));
+
+        return builder.ToString();
+    }
+
+    private StringBuilder BuildQueryOrForm(bool addApi = false, bool skipParameters = false)
     {
         var builder = new StringBuilder();
 
-        if (this.SerializationFormat == SerializationFormats.Form)
+        if (addApi)
         {
-            builder.Append("version=").Append(this.Version);
-            builder.Append("&method=").Append(this.Method);
+            builder.AppendSeparator().Append("api=").Append(this.Name);
+        }
+
+        builder.AppendSeparator().Append("version=").Append(this.Version);
+        builder.AppendSeparator().Append("method=").Append(this.Method);
+
+        if (skipParameters)
+        {
+            return builder;
         }
 
         foreach (var property in Properties)
@@ -111,27 +141,13 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
                     continue;
                 }
 
-                serialized = (property.RequiresEncoding) ? Uri.EscapeDataString(serialized) : serialized;
-
-                if (builder.Length > 0)
-                {
-                    builder.Append("&");
-                }
-
-                builder.Append(name);
-                builder.Append("=");
-                builder.Append(serialized);
+                builder.AppendSeparator();
+                builder.Append(Uri.EscapeDataString(name));
+                builder.Append('=');
+                builder.Append(Uri.EscapeDataString(serialized));
             }
         }
 
-        if (builder.Length > 0)
-        {
-            builder.Insert(0, "&");
-        }
-
-        return builder.ToString();
+        return builder.InsertSeparator();
     }
-
-    public string ToJson()
-        => JsonSerializer.Serialize(this.Parameters);
 }

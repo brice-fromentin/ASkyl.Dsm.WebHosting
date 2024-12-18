@@ -7,13 +7,20 @@
 @using Askyl.Dsm.WebHosting.Data.API.Responses
 @using Askyl.Dsm.WebHosting.Tools.Network
 
+@inject IDialogService dialogs
 @inject DsmApiClient client
 @inject NavigationManager navigation
 
 <PageTitle>ADWH - Home</PageTitle>
 
 <FluentButton OnClick="CallReverseList">List</FluentButton>
+<FluentButton OnClick="CallReverseCreate">Create</FluentButton>
+<FluentTextField @ref="uuid" Style="width:auto;" autofocus>Uuid</FluentTextField>
+<FluentButton OnClick="CallReverseUpdate">Update</FluentButton>
+<FluentButton OnClick="CallReverseDelete">Delete</FluentButton>
 
+<br />
+<h2>Existing reverse proxies</h2>
 <div>
     @if (proxies is not null)
     {
@@ -28,13 +35,17 @@
 @code
 {
     private List<ReverseProxy>? proxies;
+    private FluentTextField uuid = default!;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         if (!client.IsConnected)
         {
             navigation.NavigateTo("/login");
+            return;
         }
+
+        await CallReverseList();
     }
 
     private async Task CallReverseList()
@@ -43,5 +54,67 @@
         var list = await client.ExecuteAsync<ReverseProxyListResponse>(parameters);
         proxies = list?.Data?.Entries;
     }
-}
 
+    private async Task CallReverseCreate()
+    {
+        var parameters = new ReverseProxyCreateParameters(client.ApiInformations);
+        var entry = parameters.Parameters;
+
+        entry.Description = "test-name";
+        entry.Frontend = new (){ Fqdn = "test-hostname", Port = 80, Protocol = 0};
+        entry.Backend = new(){Fqdn = "test-target-name", Port = 80, Protocol = 0};
+        
+        var response = await client.ExecuteAsync<ApiGenericResponse>(parameters);
+        
+        if(response == null || !response.Success)
+        {
+            await dialogs.ShowErrorAsync($"Code = {response?.Error?.Code}");
+            return;
+        }
+
+        await CallReverseList();
+    }
+
+    private async Task CallReverseUpdate()
+    {
+        if (proxies is null || proxies.Count == 0)
+        {
+            await dialogs.ShowErrorAsync($"No proxy available.");
+            return;
+        }
+
+        var parameters = new ReverseProxyUpdateParameters(client.ApiInformations);
+        parameters.Parameters.ProxyConnectTimeout += 11;
+        var response = await client.ExecuteAsync<ApiGenericResponse>(parameters);
+        
+        if(response == null || !response.Success)
+        {
+            await dialogs.ShowErrorAsync($"Code = {response?.Error?.Code}");
+            return;
+        }
+
+        await CallReverseList();
+    }
+
+    private async Task CallReverseDelete()
+    {
+        if(uuid is null || String.IsNullOrWhiteSpace(uuid.Value) || !Guid.TryParse(uuid.Value, out var id))
+        {
+            await dialogs.ShowErrorAsync($"Invalid UUID.");
+            return;
+        }
+
+        var parameters = new ReverseProxyDeleteParameters(client.ApiInformations);
+        parameters.Parameters.Add(id);
+
+        var response = await client.ExecuteAsync<ApiGenericResponse>(parameters);
+        
+        if(response == null || !response.Success)
+        {
+            await dialogs.ShowErrorAsync($"Code = {response?.Error?.Code}");
+            return;
+        }
+
+        await CallReverseList();
+    }
+}

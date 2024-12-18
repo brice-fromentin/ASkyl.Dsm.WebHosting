@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using System.Text;
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.API.Parameters;
@@ -121,7 +120,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
         => await ExecutePostAsync<R>(url, new StringContent(parameters.ToForm()));
 
     private async Task<R?> ExecuteJsonAsync<R>(string url, IApiParameters parameters)
-        => await ExecutePostAsync<R>(url, new StringContent(parameters.ToJson(), Encoding.UTF8, "application/json"));
+        => await ExecutePostAsync<R>(url, new StringContent(parameters.ToJson()));
 
     private async Task<R?> ExecutePostAsync<R>(string url, HttpContent content)
     {
