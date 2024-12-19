@@ -1,5 +1,7 @@
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters;
 
-public class ApiParametersNone
+public class ApiParametersNone : IGenericCloneable<ApiParametersNone>
 {
+    public ApiParametersNone Clone()
+        => new();
 }

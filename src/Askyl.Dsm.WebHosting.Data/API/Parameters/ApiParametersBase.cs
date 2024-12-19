@@ -10,7 +10,7 @@ using Askyl.Dsm.WebHosting.Data.Extensions;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters;
 
-public abstract class ApiParametersBase<T> : IApiParameters where T : class, new()
+public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGenericCloneable<T>, new()
 {
     private ApiParametersBase() => throw new NotImplementedException();
 
@@ -26,7 +26,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
         }
 
         this.Path = infos.Path;
-        this.Parameters = (entry == null) ? new() : entry;
+        this.Parameters = (entry == null) ? new() : entry.Clone();
     }
 
     #region Reflections Caches

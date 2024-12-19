@@ -3,7 +3,7 @@ using Askyl.Dsm.WebHosting.Data.Attributes;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class AuthenticateLogin
+public class AuthenticateLogin : IGenericCloneable<AuthenticateLogin>
 {
     [JsonPropertyName("account")]
     public string Account { get; set; } = default!;
@@ -16,4 +16,7 @@ public class AuthenticateLogin
 
     [JsonPropertyName("otp_code")]
     public string? OtpCode { get; set; }
+
+    public AuthenticateLogin Clone()
+        => new() { Account = this.Account, Password = this.Password, OtpCode = this.OtpCode };
 }
