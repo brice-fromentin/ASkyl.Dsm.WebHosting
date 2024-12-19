@@ -13,12 +13,13 @@
 
 <PageTitle>ADWH - Home</PageTitle>
 
-<FluentButton OnClick="CallReverseList">List</FluentButton>
-<FluentButton OnClick="CallReverseCreate">Create</FluentButton>
-<FluentTextField @ref="uuid" Style="width:auto;" autofocus>Uuid</FluentTextField>
-<FluentButton OnClick="CallReverseUpdate">Update</FluentButton>
-<FluentButton OnClick="CallReverseDelete">Delete</FluentButton>
-
+<FluentToolbar >
+    <FluentButton OnClick="CallReverseList">List</FluentButton>
+    <FluentButton OnClick="CallReverseCreate">Create</FluentButton>
+    <FluentButton OnClick="CallReverseUpdate">Update</FluentButton>
+    <FluentTextField @bind-Value="Uuid" Style="width:auto;" autofocus />
+    <FluentButton OnClick="CallReverseDelete">Delete</FluentButton>
+</FluentToolbar>
 <br />
 <h2>Existing reverse proxies</h2>
 <div>
@@ -26,16 +27,21 @@
     {
         foreach (var proxy in proxies)
         {
-            <div>@JsonSerializer.Serialize(proxy)</div>
-            <br />
+                    <div>@JsonSerializer.Serialize(proxy)</div>
+                    <br />
         }
     }
 </div>
 
+<FluentOverlay @bind-Visible="@IsWorking" Opacity="0.2">
+    <FluentProgressRing />
+</FluentOverlay>
+
 @code
 {
-    private List<ReverseProxy>? proxies;
-    private FluentTextField uuid = default!;
+    private bool IsWorking { get; set; } = false;
+    private List<ReverseProxy>? proxies{ get; set; }
+    private string? Uuid { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -61,18 +67,10 @@
         var entry = parameters.Parameters;
 
         entry.Description = "test-name";
-        entry.Frontend = new (){ Fqdn = "test-hostname", Port = 80, Protocol = 0};
-        entry.Backend = new(){Fqdn = "test-target-name", Port = 80, Protocol = 0};
-        
-        var response = await client.ExecuteAsync<ApiGenericResponse>(parameters);
-        
-        if(response == null || !response.Success)
-        {
-            await dialogs.ShowErrorAsync($"Code = {response?.Error?.Code}");
-            return;
-        }
+        entry.Frontend = new() { Fqdn = "test-hostname", Port = 80, Protocol = 0 };
+        entry.Backend = new() { Fqdn = "test-target-name", Port = 80, Protocol = 0 };
 
-        await CallReverseList();
+        await CallAPI(parameters);
     }
 
     private async Task CallReverseUpdate()
@@ -87,20 +85,13 @@
         var entry = parameters.Parameters;
 
         entry.Description += "-updated";
-        var response = await client.ExecuteAsync<ApiGenericResponse>(parameters);
-        
-        if(response == null || !response.Success)
-        {
-            await dialogs.ShowErrorAsync($"Code = {response?.Error?.Code}");
-            return;
-        }
 
-        await CallReverseList();
+        await CallAPI(parameters);
     }
 
     private async Task CallReverseDelete()
     {
-        if(uuid is null || String.IsNullOrWhiteSpace(uuid.Value) || !Guid.TryParse(uuid.Value, out var id))
+        if (String.IsNullOrWhiteSpace(Uuid) || !Guid.TryParse(Uuid, out var id))
         {
             await dialogs.ShowErrorAsync($"Invalid UUID.");
             return;
@@ -109,14 +100,34 @@
         var parameters = new ReverseProxyDeleteParameters(client.ApiInformations);
         parameters.Parameters.Add(id);
 
-        var response = await client.ExecuteAsync<ApiGenericResponse>(parameters);
-        
-        if(response == null || !response.Success)
+        if(await CallAPI(parameters))
         {
-            await dialogs.ShowErrorAsync($"Code = {response?.Error?.Code}");
-            return;
+            Uuid = "";
         }
+    }
 
-        await CallReverseList();
+    private async Task<bool> CallAPI(IApiParameters parameters)
+    {
+        if (IsWorking) return false;
+
+        IsWorking = true;
+
+        try
+        {
+            var response = await client.ExecuteAsync<ApiGenericResponse>(parameters);
+
+            if (response == null || !response.Success)
+            {
+                await dialogs.ShowErrorAsync($"Code = {response?.Error?.Code}, Reason = {response?.Error?.Errors?.Reason}, Index = [{String.Join(", ", response?.Error?.Errors?.Index ?? [])}]");
+                return false;
+            }
+
+            await CallReverseList();
+            return true;
+        }
+        finally
+        {
+            IsWorking = false;
+        }
     }
 }
