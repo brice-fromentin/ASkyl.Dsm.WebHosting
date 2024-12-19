@@ -14,11 +14,11 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 {
     private ApiParametersBase() => throw new NotImplementedException();
 
-    public ApiParametersBase(ApiInformationCollection informations)
+    public ApiParametersBase(ApiInformationCollection informations, T? entry = null)
     {
         var infos = (this.Name == DsmDefaults.DsmApiInfo)
                         ? new() { Path = DsmDefaults.DsmApiHandshakePath, MinVersion = 1, MaxVersion = 7 }
-                        : informations.Get(this.Name) ?? throw new NullReferenceException("Empty API Information."); ;
+                        : informations.Get(this.Name) ?? throw new NullReferenceException("Empty API Information.");
 
         if (this.Version < infos.MinVersion || this.Version > infos.MaxVersion)
         {
@@ -26,6 +26,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
         }
 
         this.Path = infos.Path;
+        this.Parameters = (entry == null) ? new() : entry;
     }
 
     #region Reflections Caches
@@ -65,7 +66,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 
     public abstract SerializationFormats SerializationFormat { get; }
 
-    public T Parameters { get; } = new();
+    public T Parameters { get; }
 
     public string BuildUrl(string server, int port)
     {

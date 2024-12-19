@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.API.Parameters;
@@ -117,21 +118,23 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
         => await _httpClient.GetFromJsonAsync<R>(url);
 
     private async Task<R?> ExecuteFormAsync<R>(string url, IApiParameters parameters)
-        => await ExecutePostAsync<R>(url, new StringContent(parameters.ToForm()));
+        => await ExecutePostAsync<R>(url, parameters.ToForm());
 
     private async Task<R?> ExecuteJsonAsync<R>(string url, IApiParameters parameters)
-        => await ExecutePostAsync<R>(url, new StringContent(parameters.ToJson()));
+        => await ExecutePostAsync<R>(url, parameters.ToJson());
 
-    private async Task<R?> ExecutePostAsync<R>(string url, HttpContent content)
+    private async Task<R?> ExecutePostAsync<R>(string url, string content)
     {
-        var message = await _httpClient.PostAsync(url, content);
+        var message = await _httpClient.PostAsync(url, new StringContent(content));
 
         if (message.StatusCode != System.Net.HttpStatusCode.OK)
         {
             return default;
         }
 
-        return await message.Content.ReadFromJsonAsync<R>();
+        var text = await message.Content.ReadAsStringAsync();
+
+        return JsonSerializer.Deserialize<R>(text);
     }
 
     #endregion

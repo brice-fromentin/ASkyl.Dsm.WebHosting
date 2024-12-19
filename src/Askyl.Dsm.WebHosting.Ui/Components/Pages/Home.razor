@@ -83,8 +83,10 @@
             return;
         }
 
-        var parameters = new ReverseProxyUpdateParameters(client.ApiInformations);
-        parameters.Parameters.ProxyConnectTimeout += 11;
+        var parameters = new ReverseProxyUpdateParameters(client.ApiInformations, proxies[0]);
+        var entry = parameters.Parameters;
+
+        entry.Description += "-updated";
         var response = await client.ExecuteAsync<ApiGenericResponse>(parameters);
         
         if(response == null || !response.Success)
