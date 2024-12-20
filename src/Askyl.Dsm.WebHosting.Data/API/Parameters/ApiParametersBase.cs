@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.Attributes;
-using Askyl.Dsm.WebHosting.Data.Extensions;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters;
 
@@ -31,6 +30,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
 
     #region Reflections Caches
 
+    private static string? ApiJsonParameterName;
     private static List<PropertyDefinition> Properties { get; } = GetDefinitions();
 
     private class PropertyDefinition(PropertyInfo info, string customName)
@@ -69,59 +69,43 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
     public T Parameters { get; }
 
     public string BuildUrl(string server, int port)
-    {
-        var baseUrl = this.SerializationFormat switch
-        {
-            SerializationFormats.Query
-                => $"https://{server}:{port}/webapi/{this.Path}?api={this.Name}",
-            SerializationFormats.Form
-                => $"https://{server}:{port}/webapi/{this.Path}?api={this.Name}",
-            SerializationFormats.Json
-                => $"https://{server}:{port}/webapi/{this.Path}/{this.Name}",
-            _
-                => throw new NotSupportedException($"SerializationFormat : {this.SerializationFormat} not supported.")
-        };
+        => $"https://{server}:{port}/webapi/{this.Path}/{this.Name}";
 
-        return baseUrl + this.ToQuery();
+    public StringContent ToForm()
+    {
+        var content = BuildForm().ToString();
+
+        return new (content, Encoding.UTF8, "application/x-www-form-urlencoded");
     }
 
-    private string ToQuery()
-        => (this.SerializationFormat != SerializationFormats.Query) ? "" : this.BuildQueryOrForm().ToString();
-
-    public string ToForm()
-        => BuildQueryOrForm().ToString();
-
-    public string ToJson()
+    public StringContent ToJson()
     {
-        var parameterName = this.GetType().GetCustomAttribute<DsmParameterNameAttribute>()?.Name;
+        ApiJsonParameterName??= this.GetType().GetCustomAttribute<DsmParameterNameAttribute>()?.Name;
 
-        if (String.IsNullOrWhiteSpace(parameterName))
+        if (String.IsNullOrWhiteSpace(ApiJsonParameterName))
         {
             throw new ArgumentException($"DsmParameterNameAttribute is not set for type {typeof(T).Name}");
         }
 
-        var builder = this.BuildQueryOrForm(true, true);
+        var builder = this.BuildForm(true);
 
-        builder.AppendSeparator();
-
-        builder.Append(parameterName);
+        builder.Append('&');
+        builder.Append(ApiJsonParameterName);
         builder.Append('=');
-        builder.Append(Uri.EscapeDataString(JsonSerializer.Serialize(this.Parameters, JsonOptions)));
+        builder.Append(JsonSerializer.Serialize(this.Parameters, JsonOptions));
 
-        return builder.ToString();
+        var content = builder.ToString();
+
+        return new(content, Encoding.UTF8, "application/x-www-form-urlencoded");
     }
 
-    private StringBuilder BuildQueryOrForm(bool addApi = false, bool skipParameters = false)
+    private StringBuilder BuildForm(bool skipParameters = false)
     {
         var builder = new StringBuilder();
 
-        if (addApi)
-        {
-            builder.AppendSeparator().Append("api=").Append(this.Name);
-        }
-
-        builder.AppendSeparator().Append("version=").Append(this.Version);
-        builder.AppendSeparator().Append("method=").Append(this.Method);
+        builder.Append("&api=").Append(this.Name);
+        builder.Append("&version=").Append(this.Version);
+        builder.Append("&method=").Append(this.Method);
 
         if (skipParameters)
         {
@@ -142,13 +126,13 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
                     continue;
                 }
 
-                builder.AppendSeparator();
-                builder.Append(Uri.EscapeDataString(name));
+                builder.Append('&');
+                builder.Append(name);
                 builder.Append('=');
-                builder.Append(Uri.EscapeDataString(serialized));
+                builder.Append(serialized);
             }
         }
 
-        return builder.InsertSeparator();
+        return builder;
     }
 }

@@ -17,7 +17,7 @@ public interface IApiParameters
 
     public string BuildUrl(string server, int port);
 
-    public string ToForm();
+    public StringContent ToForm();
 
-    public string ToJson();
+    public StringContent ToJson();
 }

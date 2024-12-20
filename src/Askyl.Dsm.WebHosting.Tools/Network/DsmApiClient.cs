@@ -100,11 +100,8 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
     public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
     {
         var url = parameters.BuildUrl(_server, _port);
-
-        return parameters.SerializationFormat switch
+        var result = parameters.SerializationFormat switch
         {
-            SerializationFormats.Query
-                => await ExecuteQueryAsync<R>(url),
             SerializationFormats.Form
                 => await ExecuteFormAsync<R>(url, parameters),
             SerializationFormats.Json
@@ -112,10 +109,9 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
             _
                 => throw new NotSupportedException($"SerializationFormat : {parameters.SerializationFormat} not supported.")
         };
-    }
 
-    private async Task<R?> ExecuteQueryAsync<R>(string url)
-        => await _httpClient.GetFromJsonAsync<R>(url);
+        return result;
+    }
 
     private async Task<R?> ExecuteFormAsync<R>(string url, IApiParameters parameters)
         => await ExecutePostAsync<R>(url, parameters.ToForm());
@@ -123,9 +119,9 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
     private async Task<R?> ExecuteJsonAsync<R>(string url, IApiParameters parameters)
         => await ExecutePostAsync<R>(url, parameters.ToJson());
 
-    private async Task<R?> ExecutePostAsync<R>(string url, string content)
+    private async Task<R?> ExecutePostAsync<R>(string url, StringContent content)
     {
-        var message = await _httpClient.PostAsync(url, new StringContent(content));
+        var message = await _httpClient.PostAsync(url, content);
 
         if (message.StatusCode != System.Net.HttpStatusCode.OK)
         {

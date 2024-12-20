@@ -11,5 +11,5 @@ public class ReverseProxyListParameters(ApiInformationCollection informations) :
 
     public override string Method => "list";
 
-    public override SerializationFormats SerializationFormat => SerializationFormats.Query;
+    public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }
