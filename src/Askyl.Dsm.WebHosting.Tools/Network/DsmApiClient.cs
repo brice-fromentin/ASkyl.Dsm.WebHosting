@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
@@ -7,12 +6,14 @@ using Askyl.Dsm.WebHosting.Data.API.Parameters.AuthenticationAPI;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.InformationsAPI;
 using Askyl.Dsm.WebHosting.Data.API.Responses;
 using Askyl.Dsm.WebHosting.Data.Security;
+using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
 
-public class DsmApiClient(IHttpClientFactory HttpClientFactory)
+public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiClient> log)
 {
     private readonly HttpClient _httpClient = HttpClientFactory.CreateClient(DsmDefaults.HttpClientName);
+    private readonly ILogger<DsmApiClient> _log = log;
 
     private string _server = "";
     private int _port = DsmDefaults.DefaultHttpsPort;
@@ -44,10 +45,17 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory)
 
     private bool ReadSettings()
     {
-        var settings = File.ReadAllLines("/etc/synoinfo.conf")
+        if (!File.Exists(DsmDefaults.ConfigurationFileName))
+        {
+            _log.LogCritical("Configuration file \"{ConfigurationFileName}\" does not exists.", DsmDefaults.ConfigurationFileName);
+            return false;
+        }
+
+        var settings = File.ReadAllLines(DsmDefaults.ConfigurationFileName)
                            .Where(x => x.Contains("="))
                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", ""));
 
+        _log.LogDebug("Configuration file loaded with {Count} parameters.", settings.Count);
         _server = settings[DsmDefaults.KeyExternalHostIp];
 
         if (!Int32.TryParse(settings[DsmDefaults.KeyExternalHttpsPort], out _port))

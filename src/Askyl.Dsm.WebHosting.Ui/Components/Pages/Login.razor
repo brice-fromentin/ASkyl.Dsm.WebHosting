@@ -1,8 +1,10 @@
 ﻿@page "/login"
+@using System.Runtime.InteropServices
 @using Askyl.Dsm.WebHosting.Data.Security
 @using Askyl.Dsm.WebHosting.Tools.Network
 
 @inject DsmApiClient client
+@inject IDialogService DialogsService
 @inject IToastService ToastService
 @inject NavigationManager navigation
 
@@ -37,15 +39,21 @@
 
 @code
 {
+    
     private bool IsWorking { get; set; } = false;
 
     private LoginModel Model = new();
 
     protected override void OnInitialized()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            DialogsService.ShowError("The application can only run on Linux or MacOS");
+        }
+
         if(client.IsConnected)
         {
-            navigation.NavigateTo("/");
+            navigation.NavigateTo("/"); 
         }
     }
 

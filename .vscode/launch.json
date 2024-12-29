@@ -1,0 +1,13 @@
+{
+    "configurations": [
+        {
+            "name": "UI: Local Debug",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj",
+            "serverReadyAction": {
+                "action": "openExternally",
+            }
+        }
+    ]
+}

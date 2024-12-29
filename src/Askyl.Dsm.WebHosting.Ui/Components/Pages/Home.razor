@@ -7,7 +7,7 @@
 @using Askyl.Dsm.WebHosting.Data.API.Responses
 @using Askyl.Dsm.WebHosting.Tools.Network
 
-@inject IDialogService dialogs
+@inject IDialogService DialogsService
 @inject DsmApiClient client
 @inject NavigationManager navigation
 
@@ -77,7 +77,7 @@
     {
         if (proxies is null || proxies.Count == 0)
         {
-            await dialogs.ShowErrorAsync($"No proxy available.");
+            await DialogsService.ShowErrorAsync($"No proxy available.");
             return;
         }
 
@@ -93,7 +93,7 @@
     {
         if (String.IsNullOrWhiteSpace(Uuid) || !Guid.TryParse(Uuid, out var id))
         {
-            await dialogs.ShowErrorAsync($"Invalid UUID.");
+            await DialogsService.ShowErrorAsync($"Invalid UUID.");
             return;
         }
 
@@ -118,7 +118,7 @@
 
             if (response == null || !response.Success)
             {
-                await dialogs.ShowErrorAsync($"Code = {response?.Error?.Code}, Reason = {response?.Error?.Errors?.Reason}, Index = [{String.Join(", ", response?.Error?.Errors?.Index ?? [])}]");
+                await DialogsService.ShowErrorAsync($"Code = {response?.Error?.Code}, Reason = {response?.Error?.Errors?.Reason}, Index = [{String.Join(", ", response?.Error?.Errors?.Index ?? [])}]");
                 return false;
             }
 
