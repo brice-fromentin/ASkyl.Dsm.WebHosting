@@ -1,0 +1,11 @@
+@Askyl.Dsm.WebHosting.Server_HostAddress = http://localhost:5097
+
+GET {{Askyl.Dsm.WebHosting.Server_HostAddress}}/todos/
+Accept: application/json
+
+###
+
+GET {{Askyl.Dsm.WebHosting.Server_HostAddress}}/todos/1
+Accept: application/json
+
+###

@@ -52,7 +52,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
         }
 
         var settings = File.ReadAllLines(DsmDefaults.ConfigurationFileName)
-                           .Where(x => x.Contains("="))
+                           .Where(x => x.Contains('='))
                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", ""));
 
         _log.LogDebug("Configuration file loaded with {Count} parameters.", settings.Count);

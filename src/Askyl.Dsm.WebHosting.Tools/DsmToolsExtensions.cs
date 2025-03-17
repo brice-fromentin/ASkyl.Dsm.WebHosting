@@ -1,5 +1,4 @@
 using Askyl.Dsm.WebHosting.Constants;
-using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Microsoft.Extensions.DependencyInjection;
 

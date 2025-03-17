@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Askyl.Dsm.WebHosting.Data",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Askyl.Dsm.WebHosting.Benchmarks", "Askyl.Dsm.WebHosting.Benchmarks\Askyl.Dsm.WebHosting.Benchmarks.csproj", "{6ADB518B-95D8-4DDF-ADCD-DF5F77FD73FD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Askyl.Dsm.WebHosting.Server", "Askyl.Dsm.WebHosting.Server\Askyl.Dsm.WebHosting.Server.csproj", "{C864E765-127F-48BA-A1E2-A99604114D46}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{6ADB518B-95D8-4DDF-ADCD-DF5F77FD73FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6ADB518B-95D8-4DDF-ADCD-DF5F77FD73FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6ADB518B-95D8-4DDF-ADCD-DF5F77FD73FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C864E765-127F-48BA-A1E2-A99604114D46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C864E765-127F-48BA-A1E2-A99604114D46}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C864E765-127F-48BA-A1E2-A99604114D46}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C864E765-127F-48BA-A1E2-A99604114D46}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
