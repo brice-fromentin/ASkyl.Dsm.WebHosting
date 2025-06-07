@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Script executed before package installation
+echo "$(date): Starting preinst script" >> /tmp/askyl-install.log
+
+# Check if .NET runtime is available
+if command -v dotnet >/dev/null 2>&1; then
+    echo "$(date): .NET runtime found: $(dotnet --version)" >> /tmp/askyl-install.log
+else
+    echo "$(date): Warning: .NET runtime not found" >> /tmp/askyl-install.log
+fi
+
+# Check if the user exists
+if id "AskylDsmWebHosting" >/dev/null 2>&1; then
+    echo "$(date): User AskylDsmWebHosting already exists" >> /tmp/askyl-install.log
+else
+    echo "$(date): User AskylDsmWebHosting will be created" >> /tmp/askyl-install.log
+fi
+
+echo "$(date): preinst script completed successfully" >> /tmp/askyl-install.log
+exit 0

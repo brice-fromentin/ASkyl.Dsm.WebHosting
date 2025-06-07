@@ -8,3 +8,5 @@ src/*/bin
 src/*/obj
 src/*/logs
 
+src/spk-project/package/ui
+

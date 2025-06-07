@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Script executed after package installation
+echo "$(date): Starting postinst script" >> /tmp/askyl-install.log
+
+# Variables
+PACKAGE_DIR="/var/packages/AskylDsmWebHosting/target"
+VAR_DIR="/var/packages/AskylDsmWebHosting/var"
+USER="AskylDsmWebHosting"
+
+echo "$(date): Package dir: $PACKAGE_DIR" >> /tmp/askyl-install.log
+echo "$(date): Var dir: $VAR_DIR" >> /tmp/askyl-install.log
+
+# Create var directory if it doesn't exist
+mkdir -p "$VAR_DIR"
+echo "$(date): Created var directory" >> /tmp/askyl-install.log
+
+# Set appropriate permissions
+if [ -d "$PACKAGE_DIR" ]; then
+    echo "$(date): Setting permissions for package directory" >> /tmp/askyl-install.log
+    # Permissions for application files
+    chown -R "$USER":http "$PACKAGE_DIR"
+    echo "$(date): Set ownership for package directory" >> /tmp/askyl-install.log
+    find "$PACKAGE_DIR" -type f -name "*.dll" -exec chmod 644 {} \;
+    echo "$(date): Set permissions for .dll files" >> /tmp/askyl-install.log
+    find "$PACKAGE_DIR" -type f -name "*.json" -exec chmod 644 {} \;
+    echo "$(date): Set permissions for .json files" >> /tmp/askyl-install.log
+    find "$PACKAGE_DIR" -type f -name "*.css" -exec chmod 644 {} \;
+    echo "$(date): Set permissions for .css files" >> /tmp/askyl-install.log
+    
+    # Permissions for executable scripts
+    find "$PACKAGE_DIR/bin" -type f -exec chmod 755 {} \; 2>/dev/null || true
+    echo "$(date): Set permissions for executable scripts in bin directory" >> /tmp/askyl-install.log
+    
+    # Permissions for var directory
+    chown -R "$USER":http "$VAR_DIR"
+    echo "$(date): Set ownership for var directory" >> /tmp/askyl-install.log
+    chmod 755 "$VAR_DIR"
+    echo "$(date): Set permissions for var directory" >> /tmp/askyl-install.log
+fi
+
+# Check that .NET Core is available
+if ! command -v dotnet &> /dev/null; then
+    echo "Warning: .NET Core runtime not found. Please ensure .NET 9.0 runtime is installed."
+    echo "$(date): .NET Core runtime not found" >> /tmp/askyl-install.log
+fi
+
+echo "$(date): Finished postinst script" >> /tmp/askyl-install.log
+
+exit 0

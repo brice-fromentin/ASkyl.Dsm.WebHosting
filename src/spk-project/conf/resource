@@ -1,0 +1,20 @@
+
+{
+  "web-config": {
+    "nginx-static-config": {
+      "enable": [
+        {
+          "type": "server",
+          "relpath": "nginx/askyl-reverse-proxy.conf",
+          "ports": [
+            {
+              "port": 7000,
+              "protocol": "tcp",
+              "schema": "https"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

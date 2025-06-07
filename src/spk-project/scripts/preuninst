@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Script executed before package uninstallation
+
+# Stop the service if it's running
+SERVICE_SCRIPT="/var/packages/AskylDsmWebHosting/target/bin/askyl-ui-service"
+
+if [ -x "$SERVICE_SCRIPT" ]; then
+    echo "Stopping Askyl DSM Web Hosting service..."
+    "$SERVICE_SCRIPT" stop || true
+fi
+
+# Force stop all processes related to the package
+pkill -f "Askyl.Dsm.WebHosting.Ui" || true
+
+# Clean PID files
+rm -f "/var/packages/AskylDsmWebHosting/var/ui.pid" || true
+
+exit 0

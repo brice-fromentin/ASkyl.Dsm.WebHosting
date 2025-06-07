@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# Control script for Askyl DSM Web Hosting service
+
+SERVICE_SCRIPT="/var/packages/AskylDsmWebHosting/target/bin/askyl-ui-service"
+LOG_FILE="/var/packages/AskylDsmWebHosting/var/start-stop.log"
+
+# Create log directory if it doesn't exist
+mkdir -p "$(dirname "$LOG_FILE")"
+
+log_message() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
+}
+
+case $1 in
+    start)
+        log_message "START: Attempting to start service"
+        if [ -x "$SERVICE_SCRIPT" ]; then
+            log_message "START: Service script found, executing start"
+            "$SERVICE_SCRIPT" start
+            result=$?
+            log_message "START: Service script returned exit code $result"
+            exit $result
+        else
+            log_message "START: ERROR - Service script not found or not executable at $SERVICE_SCRIPT"
+            echo "Service script not found or not executable"
+            exit 1
+        fi
+        ;;
+    stop)
+        log_message "STOP: Attempting to stop service"
+        if [ -x "$SERVICE_SCRIPT" ]; then
+            log_message "STOP: Service script found, executing stop"
+            "$SERVICE_SCRIPT" stop
+            result=$?
+            log_message "STOP: Service script returned exit code $result"
+            exit $result
+        else
+            log_message "STOP: ERROR - Service script not found or not executable at $SERVICE_SCRIPT"
+            echo "Service script not found or not executable"
+            exit 1
+        fi
+        ;;
+    status)
+        if [ -x "$SERVICE_SCRIPT" ]; then
+            "$SERVICE_SCRIPT" status
+            result=$?
+            log_message "STATUS: Service script returned exit code $result"
+            exit $result
+        else
+            log_message "STATUS: ERROR - Service script not found or not executable at $SERVICE_SCRIPT"
+            echo "Service script not found or not executable"
+            exit 1
+        fi
+        ;;
+    killall)
+        log_message "KILLALL: Force stopping all related processes"
+        # Force stop all related processes
+        pkill -f "Askyl.Dsm.WebHosting.Ui" || true
+        rm -f "/var/packages/AskylDsmWebHosting/var/ui.pid" || true
+        log_message "KILLALL: Completed force stop"
+        exit 0
+        ;;
+    *)
+        log_message "ERROR: Invalid command: $1"
+        exit 1
+        ;;
+esac

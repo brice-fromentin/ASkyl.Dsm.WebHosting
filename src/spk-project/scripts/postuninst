@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Script executed after package uninstallation
+
+exit 0
