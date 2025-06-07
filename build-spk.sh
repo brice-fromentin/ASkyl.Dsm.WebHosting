@@ -54,8 +54,8 @@ tar -cf "$BUILD_DIR/${PACKAGE_NAME}.spk" \
     package.tgz \
     scripts \
     conf \
-    ui \
     PACKAGE_ICON.PNG \
+    PACKAGE_ICON_256.PNG \
     LICENSE
 
 echo "✅ SPK package created successfully: $BUILD_DIR/${PACKAGE_NAME}.spk"

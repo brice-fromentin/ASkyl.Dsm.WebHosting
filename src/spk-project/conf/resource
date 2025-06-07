@@ -1,14 +1,16 @@
-
 {
+  "port-config": {
+    "protocol-file": "etc/adwh.sc"
+  },
   "web-config": {
     "nginx-static-config": {
       "enable": [
         {
           "type": "server",
-          "relpath": "nginx/askyl-reverse-proxy.conf",
+          "relpath": "etc/adwh-reverse-proxy.conf",
           "ports": [
             {
-              "port": 7000,
+              "port": 7121,
               "protocol": "tcp",
               "schema": "https"
             }

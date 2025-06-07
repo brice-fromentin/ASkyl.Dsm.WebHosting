@@ -2,7 +2,7 @@
 
 # Control script for Askyl DSM Web Hosting service
 
-SERVICE_SCRIPT="/var/packages/AskylDsmWebHosting/target/bin/askyl-ui-service"
+SERVICE_SCRIPT="/var/packages/AskylDsmWebHosting/target/etc/adwh-dsm-services"
 LOG_FILE="/var/packages/AskylDsmWebHosting/var/start-stop.log"
 
 # Create log directory if it doesn't exist

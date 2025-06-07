@@ -3,7 +3,7 @@
 # Script executed before package uninstallation
 
 # Stop the service if it's running
-SERVICE_SCRIPT="/var/packages/AskylDsmWebHosting/target/bin/askyl-ui-service"
+SERVICE_SCRIPT="/var/packages/AskylDsmWebHosting/target/etc/adwh-dsm-services"
 
 if [ -x "$SERVICE_SCRIPT" ]; then
     echo "Stopping Askyl DSM Web Hosting service..."
