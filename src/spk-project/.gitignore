@@ -16,9 +16,6 @@ package.tgz
 # Generated .NET publish output (recreated by build script)
 package/ui/
 
-# Debug files (will be removed during build)
-package/ui/*.pdb
-
 # Temporary files
 *~
 *.tmp
