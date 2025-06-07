@@ -15,8 +15,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Askyl.Dsm.WebHosting.Benchm
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Askyl.Dsm.WebHosting.Server", "Askyl.Dsm.WebHosting.Server\Askyl.Dsm.WebHosting.Server.csproj", "{C864E765-127F-48BA-A1E2-A99604114D46}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "spk-project", "spk-project", "{7B28494C-9F06-F5B2-B5A5-514825F614CA}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

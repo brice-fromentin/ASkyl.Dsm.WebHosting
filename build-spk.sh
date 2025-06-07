@@ -7,7 +7,7 @@ set -e
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SPK_DIR="$PROJECT_DIR/src/spk-project"
-BUILD_DIR="$PROJECT_DIR/build"
+BUILD_DIR="$PROJECT_DIR/dist"
 PACKAGE_NAME="AskylDsmWebHosting"
 UI_PROJECT_DIR="$PROJECT_DIR/src/Askyl.Dsm.WebHosting.Ui"
 UI_PUBLISH_DIR="$SPK_DIR/package/ui"
@@ -26,6 +26,10 @@ mkdir -p "$UI_PUBLISH_DIR"
 echo "🏗️  Building and publishing UI project..."
 cd "$UI_PROJECT_DIR"
 dotnet publish -c Release -o "$UI_PUBLISH_DIR" --self-contained false
+
+# Remove debug files to reduce package size
+echo "🧹 Cleaning debug files..."
+find "$UI_PUBLISH_DIR" -name "*.pdb" -delete
 
 echo "✅ UI project published to: $UI_PUBLISH_DIR"
 
@@ -52,10 +56,6 @@ tar -cf "$BUILD_DIR/${PACKAGE_NAME}.spk" \
     conf \
     ui \
     PACKAGE_ICON.PNG \
-    PACKAGE_ICON_256.PNG \
-    APP_ICON.PNG \
-    APP_ICON_24.PNG \
-    APP_ICON_256.PNG \
     LICENSE
 
 echo "✅ SPK package created successfully: $BUILD_DIR/${PACKAGE_NAME}.spk"

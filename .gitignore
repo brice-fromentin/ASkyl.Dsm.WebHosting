@@ -1,12 +1,15 @@
+# Global macOS system files
 .DS_Store
-src/.DS_Store
-src/*/.DS_Store
-src/*/*/.DS_Store
-src/*/*/*/.DS_Store
 
-src/*/bin
-src/*/obj
-src/*/logs
+# Build artifacts (global)
+build/
+dist/
+*.spk
 
-src/spk-project/package/ui
+# Temporary files
+*~
+*.tmp
+*.temp
+*backup*
+*old*
 
