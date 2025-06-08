@@ -1,6 +1,6 @@
 package="AskylDsmWebHosting"
 version="1.0.0"
-displayname="Askyl DSM Web Hosting"
+displayname=".NET Web Hosting"
 description=".NET Web Hosting"
 author="Brice FROMENTIN"
 maintainer="Brice FROMENTIN"
