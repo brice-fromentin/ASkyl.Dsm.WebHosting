@@ -32,6 +32,16 @@ if [ -d "$PACKAGE_DIR" ]; then
     find "$PACKAGE_DIR/bin" -type f -exec chmod 755 {} \; 2>/dev/null || true
     echo "$(date): Set permissions for executable scripts in bin directory" >> /tmp/askyl-install.log
     
+    # Permissions for dotnet-installer binaries
+    find "$PACKAGE_DIR/installer" -name "dotnet-installer" -type f -exec chmod 755 {} \; 2>/dev/null || true
+    echo "$(date): Set executable permissions for dotnet-installer binaries" >> /tmp/askyl-install.log
+    
+    # Permissions for runtimes directory
+    mkdir -p "$PACKAGE_DIR/runtimes"
+    chown -R "$USER":http "$PACKAGE_DIR/runtimes"
+    chmod 755 "$PACKAGE_DIR/runtimes"
+    echo "$(date): Set permissions for runtimes directory" >> /tmp/askyl-install.log
+    
     # Permissions for var directory
     chown -R "$USER":http "$VAR_DIR"
     echo "$(date): Set ownership for var directory" >> /tmp/askyl-install.log
@@ -39,10 +49,128 @@ if [ -d "$PACKAGE_DIR" ]; then
     echo "$(date): Set permissions for var directory" >> /tmp/askyl-install.log
 fi
 
-# Check that .NET Core is available
-if ! command -v dotnet &> /dev/null; then
-    echo "Warning: .NET Core runtime not found. Please ensure .NET 9.0 runtime is installed."
-    echo "$(date): .NET Core runtime not found" >> /tmp/askyl-install.log
+# Detect system architecture and run appropriate dotnet-installer
+echo "$(date): Detecting system architecture for dotnet-installer" >> /tmp/askyl-install.log
+
+# Detect architecture
+ARCH=$(uname -m)
+INSTALLER_ARCH=""
+
+case "$ARCH" in
+    x86_64)
+        INSTALLER_ARCH="amd64"
+        ;;
+    aarch64|arm64)
+        INSTALLER_ARCH="arm64"
+        ;;
+    armv7l|armv6l|arm*)
+        INSTALLER_ARCH="arm"
+        ;;
+    *)
+        echo "$(date): ERROR - Unsupported architecture: $ARCH" >> /tmp/askyl-install.log
+        echo "Error: Unsupported architecture: $ARCH"
+        exit 1
+        ;;
+esac
+
+echo "$(date): Detected architecture: $ARCH -> Using installer: $INSTALLER_ARCH" >> /tmp/askyl-install.log
+
+# Create runtimes directory
+RUNTIMES_DIR="$PACKAGE_DIR/runtimes"
+mkdir -p "$RUNTIMES_DIR"
+echo "$(date): Created runtimes directory: $RUNTIMES_DIR" >> /tmp/askyl-install.log
+
+# Path to the architecture-specific installer source and destination
+SOURCE_INSTALLER_PATH="$PACKAGE_DIR/installer/$INSTALLER_ARCH/dotnet-installer"
+SOURCE_APPSETTINGS_PATH="$PACKAGE_DIR/installer/$INSTALLER_ARCH/appsettings.json"
+DEST_INSTALLER_PATH="$RUNTIMES_DIR/dotnet-installer"
+DEST_APPSETTINGS_PATH="$RUNTIMES_DIR/appsettings.json"
+
+# Check if the source installer exists
+if [ -f "$SOURCE_INSTALLER_PATH" ]; then
+    echo "$(date): Found source dotnet-installer at: $SOURCE_INSTALLER_PATH" >> /tmp/askyl-install.log
+    
+    # Copy the appropriate installer to runtimes directory
+    cp "$SOURCE_INSTALLER_PATH" "$DEST_INSTALLER_PATH"
+    echo "$(date): Copied dotnet-installer to: $DEST_INSTALLER_PATH" >> /tmp/askyl-install.log
+    
+    # Copy the appsettings.json file
+    if [ -f "$SOURCE_APPSETTINGS_PATH" ]; then
+        cp "$SOURCE_APPSETTINGS_PATH" "$DEST_APPSETTINGS_PATH"
+        echo "$(date): Copied appsettings.json to: $DEST_APPSETTINGS_PATH" >> /tmp/askyl-install.log
+        
+        # Set proper ownership for appsettings
+        chown "$USER":http "$DEST_APPSETTINGS_PATH"
+        chmod 644 "$DEST_APPSETTINGS_PATH"
+        echo "$(date): Set permissions and ownership for appsettings.json" >> /tmp/askyl-install.log
+    else
+        echo "$(date): WARNING - appsettings.json not found at: $SOURCE_APPSETTINGS_PATH" >> /tmp/askyl-install.log
+    fi
+    
+    # Make sure dotnet-installer is executable
+    chmod +x "$DEST_INSTALLER_PATH"
+    echo "$(date): Set executable permissions on copied dotnet-installer" >> /tmp/askyl-install.log
+    
+    # Set proper ownership
+    chown "$USER":http "$DEST_INSTALLER_PATH"
+    echo "$(date): Set ownership for dotnet-installer" >> /tmp/askyl-install.log
+    
+    # Run the installer from runtimes directory
+    echo "$(date): Executing dotnet-installer from runtimes..." >> /tmp/askyl-install.log
+    if "$DEST_INSTALLER_PATH" >> /tmp/askyl-install.log 2>&1; then
+        echo "$(date): dotnet-installer completed successfully" >> /tmp/askyl-install.log
+    else
+        echo "$(date): ERROR - dotnet-installer failed with exit code $?" >> /tmp/askyl-install.log
+        echo "Warning: dotnet-installer execution failed. Check /tmp/askyl-install.log for details."
+    fi
+else
+    echo "$(date): ERROR - dotnet-installer not found at: $SOURCE_INSTALLER_PATH" >> /tmp/askyl-install.log
+    echo "Error: dotnet-installer not found for architecture $INSTALLER_ARCH"
+    exit 1
+fi
+
+# Verify that .NET runtime has been installed in runtimes directory
+DOTNET_RUNTIME_PATH="$RUNTIMES_DIR/dotnet"
+if [ -f "$DOTNET_RUNTIME_PATH" ]; then
+    echo "$(date): .NET runtime successfully installed at: $DOTNET_RUNTIME_PATH" >> /tmp/askyl-install.log
+    
+    # Test if dotnet executable works
+    if "$DOTNET_RUNTIME_PATH" --version >> /tmp/askyl-install.log 2>&1; then
+        echo "$(date): .NET runtime verification successful" >> /tmp/askyl-install.log
+        
+        # Create global symbolic link for dotnet
+        USR_LOCAL_BIN="/usr/local/bin"
+        GLOBAL_DOTNET_LINK="$USR_LOCAL_BIN/dotnet"
+        
+        # Create /usr/local/bin if it doesn't exist
+        mkdir -p "$USR_LOCAL_BIN"
+        
+        # Remove existing link if it exists
+        if [ -L "$GLOBAL_DOTNET_LINK" ] || [ -f "$GLOBAL_DOTNET_LINK" ]; then
+            rm -f "$GLOBAL_DOTNET_LINK"
+            echo "$(date): Removed existing dotnet link" >> /tmp/askyl-install.log
+        fi
+        
+        # Create symbolic link
+        if ln -s "$DOTNET_RUNTIME_PATH" "$GLOBAL_DOTNET_LINK"; then
+            echo "$(date): Created global symbolic link: $GLOBAL_DOTNET_LINK -> $DOTNET_RUNTIME_PATH" >> /tmp/askyl-install.log
+            
+            # Verify the global link works
+            if "$GLOBAL_DOTNET_LINK" --version >> /tmp/askyl-install.log 2>&1; then
+                echo "$(date): Global dotnet link verification successful" >> /tmp/askyl-install.log
+            else
+                echo "$(date): WARNING - Global dotnet link created but failed verification" >> /tmp/askyl-install.log
+            fi
+        else
+            echo "$(date): WARNING - Failed to create global symbolic link for dotnet" >> /tmp/askyl-install.log
+        fi
+    else
+        echo "$(date): WARNING - .NET runtime exists but failed version check" >> /tmp/askyl-install.log
+        echo "Warning: .NET runtime verification failed. Check /tmp/askyl-install.log for details."
+    fi
+else
+    echo "$(date): ERROR - .NET runtime not found at expected location: $DOTNET_RUNTIME_PATH" >> /tmp/askyl-install.log
+    echo "Error: .NET runtime installation failed. Runtime not found at $DOTNET_RUNTIME_PATH"
 fi
 
 echo "$(date): Finished postinst script" >> /tmp/askyl-install.log

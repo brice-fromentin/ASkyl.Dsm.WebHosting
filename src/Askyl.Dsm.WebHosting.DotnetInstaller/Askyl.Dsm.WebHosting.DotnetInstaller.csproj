@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AssemblyName>dotnet-installer</AssemblyName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PublishAot>true</PublishAot>
+    <PublishSingleFile>true</PublishSingleFile>
+    <StripSymbols>false</StripSymbols>
+    <DebugType>None</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Tools/Askyl.Dsm.WebHosting.Tools.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Deployment.DotNet.Releases" Version="1.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.5" />
+  </ItemGroup>
+
+</Project>

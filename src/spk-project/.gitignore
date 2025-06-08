@@ -14,6 +14,7 @@ package.tgz
 *.spk
 
 # Generated .NET publish output (recreated by build script)
+package/installer/
 package/ui/
 
 # Temporary files

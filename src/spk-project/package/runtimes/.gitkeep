@@ -1,0 +1,2 @@
+# This file ensures the runtimes directory is preserved in git
+# The dotnet-installer binary will be copied here during package installation

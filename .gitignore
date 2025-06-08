@@ -2,7 +2,6 @@
 .DS_Store
 
 # Build artifacts (global)
-build/
 dist/
 *.spk
 
