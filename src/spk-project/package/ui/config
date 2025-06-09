@@ -1,0 +1,14 @@
+{
+   ".url": {
+     "com.askyl.adwh": {
+       "title": ".NET Web Hosting",
+       "desc": ".NET Web Hosting",
+       "icon": "images/icon.png",
+       "type": "url",
+       "protocol": "https",
+       "port": "7121",
+       "url": "",
+       "allUsers": true
+      }
+    }
+}

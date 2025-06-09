@@ -7,12 +7,6 @@
   "port-config": {
     "protocol-file": "etc/adwh.sc"
   },
-  "webui": {
-    "port": 7121,
-    "type": "classic",
-    "launchable": "yes",
-    "startable": "yes"
-  },
   "web-config": {
     "nginx-static-config": {
       "enable": [
