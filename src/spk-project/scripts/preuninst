@@ -17,7 +17,7 @@ pkill -f "Askyl.Dsm.WebHosting.Ui" || true
 echo "$(date): Stopped all related processes" >> /tmp/askyl-install.log
 
 # Clean PID files
-rm -f "/var/packages/AskylDsmWebHosting/var/ui.pid" || true
+rm -f "/var/packages/AskylDsmWebHosting/var/admin-ui.pid" || true
 echo "$(date): Cleaned PID files" >> /tmp/askyl-install.log
 
 # Remove global dotnet symbolic link

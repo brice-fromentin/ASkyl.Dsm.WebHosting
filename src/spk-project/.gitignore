@@ -15,7 +15,7 @@ package.tgz
 
 # Generated .NET publish output (recreated by build script)
 package/installer/
-package/ui/
+package/admin-ui/
 
 # Temporary files
 *~

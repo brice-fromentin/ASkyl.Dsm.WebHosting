@@ -57,7 +57,7 @@ case $1 in
         log_message "KILLALL: Force stopping all related processes"
         # Force stop all related processes
         pkill -f "Askyl.Dsm.WebHosting.Ui" || true
-        rm -f "/var/packages/AskylDsmWebHosting/var/ui.pid" || true
+        rm -f "/var/packages/AskylDsmWebHosting/var/admin-ui.pid" || true
         log_message "KILLALL: Completed force stop"
         exit 0
         ;;

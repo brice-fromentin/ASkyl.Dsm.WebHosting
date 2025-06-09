@@ -4,7 +4,7 @@ This directory contains the complete structure for creating a Synology package (
 
 **Author:** Brice FROMENTIN  
 **Maintainer:** Brice FROMENTIN  
-**Version:** 1.0.0  
+**Version:** 0.1.3
 **Target DSM:** 7.2+
 
 ## Overview
@@ -13,7 +13,6 @@ Askyl DSM Web Hosting is a .NET web hosting management system designed to run on
 
 - .NET web application running on port 7120
 - HTTPS reverse proxy via nginx on port 7121
-- Official Synology DSM menu integration using `admin*` fields
 - Automated service management and port configuration
 
 ## Package Structure
@@ -36,7 +35,7 @@ spk-project/
 │   │   ├── adwh-dsm-services      # Main service control script
 │   │   ├── adwh-reverse-proxy.conf # Nginx HTTPS proxy config
 │   │   └── adwh.sc               # Port configuration file
-│   └── ui/                 # Published .NET application files
+│   └── admin-ui/          # Published .NET application files
 ├── PACKAGE_ICON.PNG         # 72x72 package icon
 ├── PACKAGE_ICON_256.PNG     # 256x256 high-res icon
 └── LICENSE                  # Package license

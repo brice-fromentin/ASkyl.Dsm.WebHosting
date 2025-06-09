@@ -10,7 +10,7 @@ SPK_DIR="$PROJECT_DIR/src/spk-project"
 BUILD_DIR="$PROJECT_DIR/dist"
 PACKAGE_NAME="AskylDsmWebHosting"
 UI_PROJECT_DIR="$PROJECT_DIR/src/Askyl.Dsm.WebHosting.Ui"
-UI_PUBLISH_DIR="$SPK_DIR/package/ui"
+UI_PUBLISH_DIR="$SPK_DIR/package/admin-ui"
 INSTALLER_DIR="$SPK_DIR/package/installer"
 SRC_DIR="$PROJECT_DIR/src"
 

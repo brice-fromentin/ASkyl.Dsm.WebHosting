@@ -8,11 +8,11 @@ export ASPNETCORE_ENVIRONMENT="Production"
 export ASPNETCORE_URLS="http://0.0.0.0:7120"
 
 # Application directory
-APP_DIR="/var/packages/AskylDsmWebHosting/target/ui"
+APP_DIR="/var/packages/AskylDsmWebHosting/target/admin-ui"
 APP_NAME="Askyl.Dsm.WebHosting.Ui"
 
 # PID file and log file
-PID_FILE="/var/packages/AskylDsmWebHosting/var/ui.pid"
+PID_FILE="/var/packages/AskylDsmWebHosting/var/admin-ui.pid"
 LOG_FILE="/var/packages/AskylDsmWebHosting/var/service.log"
 APP_LOG_FILE="/var/packages/AskylDsmWebHosting/var/application.log"
 
