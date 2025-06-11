@@ -4,6 +4,7 @@
 @using Askyl.Dsm.WebHosting.Data.API.Definitions
 @using Askyl.Dsm.WebHosting.Data.API.Parameters
 @using Askyl.Dsm.WebHosting.Data.API.Parameters.ReverseProxyAPI
+@using Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI
 @using Askyl.Dsm.WebHosting.Data.API.Responses
 @using Askyl.Dsm.WebHosting.Tools.Network
 
@@ -14,13 +15,21 @@
 <PageTitle>ADWH - Home</PageTitle>
 
 <FluentToolbar >
-    <FluentButton OnClick="CallReverseList">List</FluentButton>
+    <FluentButton OnClick="CallReverseList">List Proxies</FluentButton>
     <FluentButton OnClick="CallReverseCreate">Create</FluentButton>
     <FluentButton OnClick="CallReverseUpdate">Update</FluentButton>
     <FluentTextField @bind-Value="Uuid" Style="width:auto;" autofocus />
     <FluentButton OnClick="CallReverseDelete">Delete</FluentButton>
 </FluentToolbar>
 <br />
+
+<FluentToolbar>
+    <FluentButton OnClick="CallFileStationList">List Files</FluentButton>
+    <FluentTextField @bind-Value="FolderPath" Placeholder="/volume1/homes" Style="width:200px;" />
+    <FluentButton OnClick="CallFileStationInfo">FileStation Info</FluentButton>
+</FluentToolbar>
+<br />
+
 <h2>Existing reverse proxies</h2>
 <div>
     @if (proxies is not null)
@@ -33,6 +42,36 @@
     }
 </div>
 
+<h2>FileStation Files</h2>
+<div>
+    @if (files is not null)
+    {
+        <h3>Current folder: @CurrentFolderPath</h3>
+        <p>Total files: @files.Count</p>
+        foreach (var file in files)
+        {
+            <div style="margin: 5px 0; padding: 5px; border: 1px solid #ccc;">
+                <strong>@file.Name</strong> (@file.Type)
+                @if (file.Additional != null)
+                {
+                    <br />
+                    <span>Size: @(file.Additional.Size?.ToString("N0") ?? "N/A") bytes</span>
+                    @if (file.Additional.Owner != null)
+                    {
+                        <span> | Owner: @file.Additional.Owner.User</span>
+                    }
+                    @if (file.Additional.Time != null)
+                    {
+                        <span> | Modified: @(file.Additional.Time.ModifyTime.HasValue ? DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value).ToString("yyyy-MM-dd HH:mm:ss") : "N/A")</span>
+                    }
+                }
+                <br />
+                <small>Path: @file.Path</small>
+            </div>
+        }
+    }
+</div>
+
 <FluentOverlay @bind-Visible="@IsWorking" Opacity="0.2">
     <FluentProgressRing />
 </FluentOverlay>
@@ -40,8 +79,13 @@
 @code
 {
     private bool IsWorking { get; set; } = false;
-    private List<ReverseProxy>? proxies{ get; set; }
+    private List<ReverseProxy>? proxies { get; set; }
     private string? Uuid { get; set; }
+    
+    // FileStation properties
+    private List<FileStationFile>? files { get; set; }
+    private string FolderPath { get; set; } = "/temp";
+    private string CurrentFolderPath { get; set; } = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -52,6 +96,7 @@
         }
 
         await CallReverseList();
+        await CallFileStationList();
     }
 
     private async Task CallReverseList()
@@ -104,9 +149,7 @@
         {
             Uuid = "";
         }
-    }
-
-    private async Task<bool> CallAPI(IApiParameters parameters)
+    }    private async Task<bool> CallAPI(IApiParameters parameters)
     {
         if (IsWorking) return false;
 
@@ -124,6 +167,74 @@
 
             await CallReverseList();
             return true;
+        }
+        finally
+        {
+            IsWorking = false;
+        }
+    }
+
+    // FileStation methods
+    private async Task CallFileStationList()
+    {
+        if (IsWorking) return;
+
+        IsWorking = true;
+        try
+        {
+            var parameters = new FileStationListParameters(client.ApiInformations);
+            parameters.Parameters.FolderPath = FolderPath;
+            parameters.Parameters.Additional = "real_path,size,owner,time,perm,mount_point_type,type";
+            parameters.Parameters.SortBy = "name";
+            parameters.Parameters.SortDirection = "asc";
+
+            var response = await client.ExecuteAsync<FileStationListResponse>(parameters);
+            
+            if (response?.Success == true && response.Data?.Files != null)
+            {
+                files = response.Data.Files;
+                CurrentFolderPath = FolderPath;
+            }
+            else
+            {
+                await DialogsService.ShowErrorAsync($"FileStation List failed: Code = {response?.Error?.Code}, Reason = {response?.Error?.Errors?.Reason}");
+                files = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            await DialogsService.ShowErrorAsync($"Error calling FileStation List: {ex.Message}");
+            files = null;
+        }
+        finally
+        {
+            IsWorking = false;
+        }
+    }
+
+    private async Task CallFileStationInfo()
+    {
+        if (IsWorking) return;
+
+        IsWorking = true;
+        try
+        {
+            var parameters = new FileStationInfoParameters(client.ApiInformations);
+            var response = await client.ExecuteAsync<FileStationInfoResponse>(parameters);
+            
+            if (response?.Success == true && response.Data != null)
+            {
+                var info = response.Data;
+                await DialogsService.ShowInfoAsync($"FileStation Info:\nHostname: {info.Hostname}\nIs Manager: {info.IsManager}\nSupports Sharing: {info.SupportSharing}\nSupports Extract: {info.SupportExtract}");
+            }
+            else
+            {
+                await DialogsService.ShowErrorAsync($"FileStation Info failed: Code = {response?.Error?.Code}, Reason = {response?.Error?.Errors?.Reason}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await DialogsService.ShowErrorAsync($"Error calling FileStation Info: {ex.Message}");
         }
         finally
         {
