@@ -4,7 +4,7 @@ This directory contains the complete structure for creating a Synology package (
 
 **Author:** Brice FROMENTIN  
 **Maintainer:** Brice FROMENTIN  
-**Version:** 0.1.5
+**Version:** 0.1.6
 **Target DSM:** 7.2+
 
 ## Overview

@@ -7,6 +7,7 @@
 @using Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI
 @using Askyl.Dsm.WebHosting.Data.API.Responses
 @using Askyl.Dsm.WebHosting.Tools.Network
+@using Askyl.Dsm.WebHosting.Ui.Components.Dialogs
 
 @inject IDialogService DialogsService
 @inject DsmApiClient client
@@ -19,7 +20,11 @@
     <FluentButton OnClick="CallReverseCreate">Create</FluentButton>
     <FluentButton OnClick="CallReverseUpdate">Update</FluentButton>
     <FluentTextField @bind-Value="Uuid" Style="width:auto;" autofocus />
-    <FluentButton OnClick="CallReverseDelete">Delete</FluentButton>
+    <FluentButton OnClick="CallReverseDelete">Delete</FluentButton>    <FluentSpacer />
+    <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="Appearance.Outline">
+        <FluentIcon Value="@(new Icons.Regular.Size16.Code())" />
+        .NET Version
+    </FluentButton>
 </FluentToolbar>
 <br />
 
@@ -76,6 +81,8 @@
     <FluentProgressRing />
 </FluentOverlay>
 
+<DotnetVersionsDialog Hidden="@isDotnetVersionsDialogHidden" HiddenChanged="@((bool hidden) => isDotnetVersionsDialogHidden = hidden)" />
+
 @code
 {
     private bool IsWorking { get; set; } = false;
@@ -86,6 +93,9 @@
     private List<FileStationFile>? files { get; set; }
     private string FolderPath { get; set; } = "/temp";
     private string CurrentFolderPath { get; set; } = "";
+
+    // Dialog states
+    private bool isDotnetVersionsDialogHidden { get; set; } = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -235,10 +245,14 @@
         catch (Exception ex)
         {
             await DialogsService.ShowErrorAsync($"Error calling FileStation Info: {ex.Message}");
-        }
-        finally
+        }        finally
         {
             IsWorking = false;
         }
+    }
+
+    private void ShowDotnetVersionsDialog()
+    {
+        isDotnetVersionsDialogHidden = false;
     }
 }

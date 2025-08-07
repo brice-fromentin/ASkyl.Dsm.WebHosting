@@ -1,0 +1,347 @@
+@using System.Diagnostics
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons
+@inject IDialogService DialogService
+
+<FluentDialog @bind-Hidden="@Hidden" Modal="true" TrapFocus="true" PreventScroll="true" style="min-width: 600px;">
+    <FluentDialogHeader>
+        <h2>
+            <FluentIcon Value="@(new Icons.Regular.Size24.Code())" />
+            Global .NET Version
+        </h2>
+    </FluentDialogHeader>
+
+    <FluentDialogBody>
+        @if (IsLoading)
+        {
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center">
+                <FluentProgressRing />
+                <FluentLabel>Searching for .NET versions...</FluentLabel>
+            </FluentStack>
+        }
+        else if (DotnetVersions?.Any() == true)
+        {
+            var dotnetInstall = DotnetVersions.First();
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+                <FluentLabel Typo="Typography.Body">
+                    <strong>Global .NET installation detected:</strong>
+                </FluentLabel>
+
+                <FluentCard style="padding: 16px;">
+                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.CheckmarkCircle())" Color="Color.Success" />
+                            <FluentLabel Typo="Typography.Body">
+                                <strong>.NET Installation</strong>
+                            </FluentLabel>
+                            <FluentSpacer />
+                            <FluentLabel Typo="Typography.Subject" style="color: var(--neutral-foreground-rest);">
+                                Global version
+                            </FluentLabel>
+                        </FluentStack>
+
+                        @if (dotnetInstall.Frameworks?.Any() == true)
+                        {
+                            <div style="margin-left: 28px;">
+                                @foreach (var framework in dotnetInstall.Frameworks)
+                                {
+                                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" style="margin-bottom: 8px;">
+                                        <FluentIcon Value="@GetFrameworkIcon(framework.Type)" Color="@GetFrameworkColor(framework.Type)" />
+                                        <FluentLabel Typo="Typography.Body">
+                                            <strong>@framework.Type:</strong> @framework.Version
+                                        </FluentLabel>
+                                    </FluentStack>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="margin-left: 28px;">
+                                <FluentLabel Typo="Typography.Body" style="color: var(--neutral-foreground-rest);">
+                                    No framework detected
+                                </FluentLabel>
+                            </div>
+                        }
+                    </FluentStack>
+                </FluentCard>
+            </FluentStack>
+        }
+        else if (ErrorMessage != null)
+        {
+            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(new Icons.Regular.Size20.Warning())" Color="Color.Error" />
+                <FluentLabel Typo="Typography.Body" style="color: var(--error);">
+                    @ErrorMessage
+                </FluentLabel>
+            </FluentStack>
+        }
+        else
+        {
+            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(new Icons.Regular.Size20.Info())" Color="Color.Warning" />
+                <FluentLabel Typo="Typography.Body">
+                    No global .NET installation found. Make sure .NET is installed and accessible in the PATH.
+                </FluentLabel>
+            </FluentStack>
+        }
+    </FluentDialogBody>
+
+    <FluentDialogFooter>
+        <FluentButton OnClick="RefreshVersions" Disabled="@IsLoading">
+            <FluentIcon Value="@(new Icons.Regular.Size16.ArrowClockwise())" />
+            Refresh
+        </FluentButton>
+        <FluentSpacer />
+        <FluentButton Appearance="Appearance.Accent" OnClick="CloseDialog">
+            Close
+        </FluentButton>
+    </FluentDialogFooter>
+</FluentDialog>
+
+@code {
+    [Parameter] public bool Hidden { get; set; } = true;
+    [Parameter] public EventCallback<bool> HiddenChanged { get; set; }
+
+    private bool IsLoading { get; set; } = false;
+    private List<DotnetInstallation>? DotnetVersions { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDotnetVersions();
+    }
+
+    private async Task LoadDotnetVersions()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var installations = new List<DotnetInstallation>();
+
+            // Use only the global dotnet version
+            var installation = await GetDotnetInstallation("dotnet");
+            if (installation != null)
+            {
+                installations.Add(installation);
+            }
+
+            DotnetVersions = installations;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error while searching for global .NET version: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<DotnetInstallation?> GetDotnetInstallation(string dotnetPath)
+    {
+        try
+        {
+            using var process = new Process();
+            process.StartInfo.FileName = dotnetPath;
+            process.StartInfo.Arguments = "--info";
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.CreateNoWindow = true;
+
+            process.Start();
+            var output = await process.StandardOutput.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode == 0 && !string.IsNullOrEmpty(output))
+            {
+                var frameworks = ParseDotnetInfo(output);
+                if (frameworks.Any())
+                {
+                    return new DotnetInstallation
+                    {
+                        Path = dotnetPath,
+                        Frameworks = frameworks
+                    };
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors
+        }
+
+        return null;
+    }
+
+    private List<FrameworkInfo> ParseDotnetInfo(string output)
+    {
+        var frameworks = new List<FrameworkInfo>();
+        var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        
+        string? currentSection = null;
+        
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+            
+            // Detect main sections
+            if (trimmedLine.StartsWith(".NET SDKs installed:"))
+            {
+                currentSection = "SDK";
+                continue;
+            }
+            else if (trimmedLine.StartsWith(".NET runtimes installed:"))
+            {
+                currentSection = "Runtime";
+                continue;
+            }
+            else if (trimmedLine.StartsWith(".NET SDK:"))
+            {
+                // Main SDK base section
+                currentSection = "Main SDK";
+                continue;
+            }
+            
+            // Parse versions in each section
+            if (currentSection == "SDK")
+            {
+                // Format: "  9.0.300 [/usr/local/share/dotnet/sdk]"
+                var match = System.Text.RegularExpressions.Regex.Match(trimmedLine, @"^\s*(\d+\.\d+\.\d+)");
+                if (match.Success)
+                {
+                    var version = match.Groups[1].Value;
+                    if (!frameworks.Any(f => f.Type == "SDK" && f.Version == version))
+                    {
+                        frameworks.Add(new FrameworkInfo
+                        {
+                            Type = "SDK",
+                            Version = version
+                        });
+                    }
+                }
+            }
+            else if (currentSection == "Runtime")
+            {
+                // Format: "  Microsoft.AspNetCore.App 9.0.5 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]"
+                if (trimmedLine.Contains("Microsoft.AspNetCore.App"))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(trimmedLine, @"Microsoft\.AspNetCore\.App\s+(\d+\.\d+\.\d+)");
+                    if (match.Success)
+                    {
+                        var version = match.Groups[1].Value;
+                        if (!frameworks.Any(f => f.Type == "ASP.NET Core" && f.Version == version))
+                        {
+                            frameworks.Add(new FrameworkInfo
+                            {
+                                Type = "ASP.NET Core",
+                                Version = version
+                            });
+                        }
+                    }
+                }
+                else if (trimmedLine.Contains("Microsoft.NETCore.App"))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(trimmedLine, @"Microsoft\.NETCore\.App\s+(\d+\.\d+\.\d+)");
+                    if (match.Success)
+                    {
+                        var version = match.Groups[1].Value;
+                        if (!frameworks.Any(f => f.Type == "Runtime" && f.Version == version))
+                        {
+                            frameworks.Add(new FrameworkInfo
+                            {
+                                Type = "Runtime",
+                                Version = version
+                            });
+                        }
+                    }
+                }
+            }
+            else if (currentSection == "Main SDK")
+            {
+                // Format: " Version:           9.0.301"
+                if (trimmedLine.StartsWith("Version:"))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(trimmedLine, @"Version:\s*(\d+\.\d+\.\d+)");
+                    if (match.Success)
+                    {
+                        var version = match.Groups[1].Value;
+                        if (!frameworks.Any(f => f.Type == "SDK (Main)" && f.Version == version))
+                        {
+                            frameworks.Add(new FrameworkInfo
+                            {
+                                Type = "SDK (Main)",
+                                Version = version
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        return frameworks.OrderBy(f => GetFrameworkOrder(f.Type)).ThenBy(f => f.Version).ToList();
+    }
+
+    private int GetFrameworkOrder(string frameworkType)
+    {
+        return frameworkType switch
+        {
+            "SDK (Main)" => 1,
+            "SDK" => 2,
+            "Runtime" => 3,
+            "ASP.NET Core" => 4,
+            _ => 5
+        };
+    }
+
+    private Icon GetFrameworkIcon(string frameworkType)
+    {
+        return frameworkType switch
+        {
+            "SDK (Main)" => new Icons.Regular.Size16.Star(),
+            "SDK" => new Icons.Regular.Size16.Settings(),
+            "ASP.NET Core" => new Icons.Regular.Size16.Globe(),
+            "Runtime" => new Icons.Regular.Size16.Play(),
+            _ => new Icons.Regular.Size16.Code()
+        };
+    }
+
+    private Color GetFrameworkColor(string frameworkType)
+    {
+        return frameworkType switch
+        {
+            "SDK (Main)" => Color.Accent,
+            "SDK" => Color.Info,
+            "ASP.NET Core" => Color.Success,
+            "Runtime" => Color.Warning,
+            _ => Color.Neutral
+        };
+    }
+
+    private async Task RefreshVersions()
+    {
+        await LoadDotnetVersions();
+    }
+
+    private async Task CloseDialog()
+    {
+        Hidden = true;
+        await HiddenChanged.InvokeAsync(Hidden);
+    }
+
+    public class DotnetInstallation
+    {
+        public string Path { get; set; } = "";
+        public List<FrameworkInfo> Frameworks { get; set; } = new();
+    }
+
+    public class FrameworkInfo
+    {
+        public string Type { get; set; } = "";
+        public string Version { get; set; } = "";
+    }
+}
