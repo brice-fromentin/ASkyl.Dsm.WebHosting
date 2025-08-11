@@ -1,19 +1,56 @@
 using System.Runtime.InteropServices;
+using System.IO;
 using Microsoft.Extensions.Configuration;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
 public static class Configuration
 {
+    private enum Platform
+    {
+        Linux,
+        MacOS,
+        Windows
+    }
+
+    private static Platform DetectPlatform()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return Platform.Linux;
+        }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return Platform.MacOS;
+        }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return Platform.Windows;
+        }
+
+        throw new NotSupportedException("Operating System is not supported");
+    }
+
     static Configuration()
     {
-        // Load configuration
-        var configuration = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory)
-                                                      .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-                                                      .Build();
+        var basePath = AppContext.BaseDirectory;
+        var configFilePath = Path.Combine(basePath, "appsettings.json");
 
-        // Get Parameters
-        ChannelVersion = GetValue(configuration, "Download:ChannelVersion");
+        if (File.Exists(configFilePath))
+        {
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(basePath)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                .Build();
+
+            ChannelVersion = configuration["Download:ChannelVersion"] ?? string.Empty;
+        }
+        else
+        {
+            ChannelVersion = string.Empty; // No configuration file present
+        }
 
         // Get Executing Architecture
         var osArchitecture = RuntimeInformation.OSArchitecture;
@@ -27,17 +64,27 @@ public static class Configuration
 
         Console.WriteLine($"Detected architecture = {CurrentArchitecture}");
 
-        // Retrieve Operating System information
-        var osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "linux" :
-                 throw new NotSupportedException("Operating System is not supported");
-
-        CurrentOS = osPlatform;
+    // Retrieve Operating System information using switch expression (similar style to architecture).
+#if DEBUG
+    var platform = DetectPlatform();
+    CurrentOS = platform switch
+    {
+        Platform.Linux => "linux",
+        Platform.MacOS => "osx",
+        Platform.Windows => "windows",
+        _ => throw new NotSupportedException("Operating System is not supported in debug mode.")
+    };
+#else
+    var platform = DetectPlatform();
+    CurrentOS = platform switch
+    {
+        Platform.Linux => "linux",
+        _ => throw new NotSupportedException("Operating System is not supported")
+    };
+#endif
         
         Console.WriteLine($"Detected OS = {CurrentOS}");
     }
-
-    static string GetValue(IConfigurationRoot configuration, string key)
-        => configuration[key] ?? throw new NullReferenceException($"{key} not found.");
 
     public static string ChannelVersion { get; }
     public static string CurrentArchitecture { get; }

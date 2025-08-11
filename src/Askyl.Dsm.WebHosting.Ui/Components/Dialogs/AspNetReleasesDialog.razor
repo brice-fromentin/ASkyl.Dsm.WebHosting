@@ -1,0 +1,174 @@
+@using Askyl.Dsm.WebHosting.Tools.Runtime
+
+@implements IDialogContentComponent
+
+<FluentProgressRing Hidden="@(!IsLoading)" />
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentLabel Typo="Typography.H2">ASP.NET Online</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogFooter>
+    <FluentLabel>@(Releases?.Count ?? 0) releases</FluentLabel>
+    <FluentSpacer />
+    <FluentButton Appearance="Appearance.Accent" OnClick="@CancelAsync">Close</FluentButton>
+</FluentDialogFooter>
+
+<FluentDialogBody>
+    <FluentToolbar>
+        <FluentLabel>Channel</FluentLabel>
+
+        <FluentSelect TOption="String" @onchange="OnChannelChanged" Value="@SelectedChannel">
+            @if (Channels == null)
+            {
+                <FluentOption Value="">Loading...</FluentOption>
+            }
+            else
+            {
+                @foreach (var c in Channels)
+                {
+                    <FluentOption Value="@c.ProductVersion">@c.ProductVersion @(c.IsLts ? "(LTS)" : String.Empty)
+                    </FluentOption>
+                }
+            }
+        </FluentSelect>
+
+        <FluentButton Disabled="@IsLoading" OnClick="Refresh" Appearance="Appearance.Outline" Title="Refresh">
+            <FluentIcon Value="@(new Icons.Regular.Size16.ArrowClockwise())" />
+        </FluentButton>
+    </FluentToolbar>
+
+    @if (IsLoading)
+    {
+        <FluentSkeleton Width="100%" Height="140px" />
+    }
+    else if (!String.IsNullOrEmpty(Error))
+    {
+        <FluentBadge Appearance="Appearance.Accent">@Error</FluentBadge>
+    }
+    else if (Releases?.Any() == true)
+    {
+        <FluentDataGrid TItem="ReleaseGridRow" Items="@GridRowsQueryable" DisplayMode="DataGridDisplayMode.Grid"
+            GridTemplateColumns="1fr auto auto 130px">
+            <PropertyColumn Title="Version" Property="@(r => r.Version)" />
+            <PropertyColumn Title="Latest" Property="@(r => r.Latest)" Align="Align.Center" />
+            <PropertyColumn Title="Security" Property="@(r => r.Security)" Align="Align.Center" />
+            <PropertyColumn Title="Release date" Property="@(r => r.ReleaseDate)" />
+        </FluentDataGrid>
+    }
+    else
+    {
+        <FluentBadge Appearance="Appearance.Lightweight">No releases found.</FluentBadge>
+    }
+</FluentDialogBody>
+
+@code {
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private bool IsLoading { get; set; }
+    private string? Error { get; set; }
+    private List<Downloader.AspNetCoreReleaseInfo>? Releases { get; set; }
+    private IQueryable<ReleaseGridRow>? GridRowsQueryable { get; set; }
+    private List<Downloader.AspNetCoreChannelInfo>? Channels { get; set; }
+    private string? SelectedChannel { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadChannelsAndReleasesAsync();
+    }
+
+    private async Task CancelAsync()
+    {
+        await Dialog.CancelAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        IsLoading = true;
+        Error = null;
+        StateHasChanged();
+
+        try
+        {
+            var list = await Downloader.GetAspNetCoreReleasesAsync(channelVersion: SelectedChannel);
+            Releases = list.ToList();
+            BuildGridRows();
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadChannelsAndReleasesAsync()
+    {
+        IsLoading = true;
+        Error = null;
+        StateHasChanged();
+
+        try
+        {
+            var channels = await Downloader.GetAspNetCoreChannelsAsync();
+            Channels = channels.ToList();
+            if (String.IsNullOrWhiteSpace(SelectedChannel))
+            {
+                SelectedChannel = Channels.FirstOrDefault()?.ProductVersion;
+            }
+            var list = await Downloader.GetAspNetCoreReleasesAsync(channelVersion: SelectedChannel);
+            Releases = list.ToList();
+            BuildGridRows();
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Refresh()
+    {
+        Releases = null;
+        await LoadAsync();
+    }
+
+    private async Task OnChannelChanged(ChangeEventArgs e)
+    {
+        SelectedChannel = e.Value?.ToString();
+        await LoadAsync();
+    }
+
+    public sealed class ReleaseGridRow
+    {
+        public required string Version { get; init; }
+        public required string Latest { get; init; }
+        public required string Security { get; init; }
+        public required string ReleaseDate { get; init; }
+    }
+
+    private void BuildGridRows()
+    {
+        if (Releases == null || Releases.Count == 0)
+        {
+            GridRowsQueryable = Array.Empty<ReleaseGridRow>().AsQueryable();
+            return;
+        }
+
+        GridRowsQueryable = Releases.Select(r => new ReleaseGridRow
+        {
+            Version = r.Version,
+            Latest = r.IsLatest ? "✓" : String.Empty,
+            Security = r.IsSecurity ? "⚠" : String.Empty,
+            ReleaseDate = r.ReleaseDate?.ToString("yyyy-MM-dd") ?? String.Empty
+        }).AsQueryable();
+    }
+}

@@ -20,20 +20,23 @@
     <FluentButton OnClick="CallReverseCreate">Create</FluentButton>
     <FluentButton OnClick="CallReverseUpdate">Update</FluentButton>
     <FluentTextField @bind-Value="Uuid" Style="width:auto;" autofocus />
-    <FluentButton OnClick="CallReverseDelete">Delete</FluentButton>    <FluentSpacer />
+    <FluentButton OnClick="CallReverseDelete">Delete</FluentButton>    
+    <FluentSpacer />
+    <FluentButton OnClick="CallFileStationList">List Files</FluentButton>
+    <FluentTextField @bind-Value="FolderPath" Placeholder="/volume1/homes" Style="width:200px;" />
+    <FluentButton OnClick="CallFileStationInfo">FileStation Info</FluentButton>
+    <FluentSpacer />
     <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="Appearance.Outline">
         <FluentIcon Value="@(new Icons.Regular.Size16.Code())" />
         .NET Version
     </FluentButton>
+    <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="Appearance.Outline">
+        <FluentIcon Value="@(new Icons.Regular.Size16.Globe())" />
+        ASP.NET Core Online
+    </FluentButton>
 </FluentToolbar>
 <br />
 
-<FluentToolbar>
-    <FluentButton OnClick="CallFileStationList">List Files</FluentButton>
-    <FluentTextField @bind-Value="FolderPath" Placeholder="/volume1/homes" Style="width:200px;" />
-    <FluentButton OnClick="CallFileStationInfo">FileStation Info</FluentButton>
-</FluentToolbar>
-<br />
 
 <h2>Existing reverse proxies</h2>
 <div>
@@ -255,4 +258,7 @@
     {
         isDotnetVersionsDialogHidden = false;
     }
+
+    private async Task ShowAspNetReleasesDialog()
+        => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new());
 }
