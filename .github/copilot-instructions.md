@@ -10,3 +10,5 @@ Directives :
 - Stack and order the using statements by this order system, ISV and project last.
 - Never suggest to commit.
 []: # Do not suggest code that has been deleted.
+
+- Use GeneratedRegexAttribute for regex patterns.
