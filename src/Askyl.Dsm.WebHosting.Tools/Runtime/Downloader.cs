@@ -25,7 +25,7 @@ public static class Downloader
     /// <summary>
     /// Returns ASP.NET Core runtime releases for a channel (explicit, configured, or latest fallback).
     /// </summary>
-    public static async Task<IReadOnlyList<AspNetCoreReleaseInfo>> GetAspNetCoreReleasesAsync(bool includePreview = false, string? channelVersion = null)
+    public static async Task<IReadOnlyList<AspNetCoreReleaseInfo>> GetAspNetCoreReleasesAsync(string? channelVersion = null)
     {
         var product = await GetProductAsync(channelVersion, false).ConfigureAwait(false);
         var releases = await product.GetReleasesAsync().ConfigureAwait(false);

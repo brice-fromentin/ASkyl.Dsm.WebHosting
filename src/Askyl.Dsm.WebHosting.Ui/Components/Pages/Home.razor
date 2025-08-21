@@ -260,5 +260,5 @@
     }
 
     private async Task ShowAspNetReleasesDialog()
-        => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new());
+        => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height="" });
 }
