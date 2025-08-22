@@ -23,6 +23,18 @@ public static class Downloader
     }
 
     /// <summary>
+    /// Downloads a specific version of ASP.NET Core runtime.
+    /// </summary>
+    public static async Task<string> DownloadVersionToAsync(string version, string? channelVersion = null, bool skipDownloadIfExists = false)
+    {
+        var product = await GetProductAsync(channelVersion, false).ConfigureAwait(false);
+        var release = await GetReleaseByVersionAsync(product, version).ConfigureAwait(false);
+        var fileName = await DownloadReleaseToAsync(release, FileSystem.Downloads, skipDownloadIfExists).ConfigureAwait(false);
+
+        return fileName;
+    }
+
+    /// <summary>
     /// Returns ASP.NET Core runtime releases for a channel (explicit, configured, or latest fallback).
     /// </summary>
     public static async Task<IReadOnlyList<AspNetCoreReleaseInfo>> GetAspNetCoreReleasesAsync(string? channelVersion = null)
@@ -136,6 +148,22 @@ public static class Downloader
 
         var release = releases.FirstOrDefault(x => x.Version == product.LatestReleaseVersion)
                         ?? throw new InvalidOperationException($"Release Version {product.LatestReleaseVersion} not found.");
+
+        return release;
+    }
+
+    private static async Task<ProductRelease> GetReleaseByVersionAsync(Product product, string version)
+    {
+        var releases = await product.GetReleasesAsync().ConfigureAwait(false);
+
+        if (releases == null || releases.Count == 0)
+        {
+            throw new InvalidOperationException("Unable to retrieve releases");
+        }
+
+        var release = releases.FirstOrDefault(r => r.AspNetCoreRuntime != null && 
+                                                    String.Equals(r.AspNetCoreRuntime.Version.ToString(), version, StringComparison.OrdinalIgnoreCase))
+                        ?? throw new InvalidOperationException($"ASP.NET Core runtime version {version} not found.");
 
         return release;
     }

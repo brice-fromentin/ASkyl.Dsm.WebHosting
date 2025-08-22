@@ -1,25 +1,38 @@
 @using Askyl.Dsm.WebHosting.Tools.Runtime
 @using Askyl.Dsm.WebHosting.Data.Runtime
 @using Askyl.Dsm.WebHosting.Ui.Models
+@using Askyl.Dsm.WebHosting.Ui.Services
 @using System.Threading.Tasks
 
 @implements IDialogContentComponent
 
 @inject IDialogService DialogsService
+@inject IFrameworkInstallationService InstallationService
+
+<FluentOverlay @bind-Visible="@IsInstalling" Opacity="0.7">
+    @*<div style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%;">*@
+        <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+            <FluentProgressRing Size="FluentProgressSize.Large" />
+            <FluentLabel Typo="Typography.Header">
+                Installing ASP.NET Core @(SelectedItem?.Version ?? "")...
+            </FluentLabel>
+        </FluentStack>
+    @*</div>*@
+</FluentOverlay>
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">ASP.NET Online</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent">Close</FluentButton>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Style="flex-grow: 1;" Disabled="@IsInstalling">Close</FluentButton>
 </FluentDialogFooter>
 
 <FluentDialogBody>
     <FluentToolbar>
         <FluentLabel>Channel</FluentLabel>
 
-        <FluentSelect TOption="String" @onchange="OnChannelChanged" Value="@SelectedChannel">
+        <FluentSelect TOption="String" @onchange="OnChannelChanged" Width="120px" Value="@SelectedChannel" Disabled="@IsInstalling">
             @if (Channels == null)
             {
                 <FluentOption Value="">Loading...</FluentOption>
@@ -35,26 +48,35 @@
             }
         </FluentSelect>
 
-        <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="Refresh">
+        <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="Refresh" Disabled="@IsInstalling">
             <FluentIcon Value="@(new Icons.Regular.Size16.ArrowClockwise())" />
+        </FluentButton>
+
+        <FluentButton OnClick="InstallSelectedFramework" Appearance="Appearance.Accent" Disabled="@(!CanInstallSelected || IsInstalling)" Title="@GetInstallButtonTooltip()" Style="flex-grow: 1; ">
+            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(new Icons.Regular.Size16.CloudArrowDown())" Color="Color.Fill" />
+                <FluentLabel Color="Color.Fill" Style="margin-left: 4px;">
+                    @(SelectedItem != null ? $"Install {SelectedItem.Version}" : "Select a version to install")
+                </FluentLabel>
+            </FluentStack>
         </FluentButton>
     </FluentToolbar>
 
     <div style="width: 650px; height: 364px;">
-        <FluentDataGrid @ref="@Grid" TItem="ReleaseGridRow" ItemsProvider="@rowsProvider" DisplayMode="DataGridDisplayMode.Grid" Pagination="@pagination" GridTemplateColumns="240px 90px 100px 100px 120px">
+        <FluentDataGrid @ref="@Grid" TItem="ReleaseGridRow" ItemsProvider="@rowsProvider" DisplayMode="DataGridDisplayMode.Grid" Pagination="@pagination" ShowHover="true" OnRowClick="@(EventCallback.Factory.Create<FluentDataGridRow<ReleaseGridRow>>(this, OnRowClick))">
 
             <ChildContent>
-                <PropertyColumn Title="Version" Property="@(r => r.Version)" />
-                <PropertyColumn Title="Latest" Property="@(r => r.Latest)" Align="Align.Center" />
-                <PropertyColumn Title="Security" Property="@(r => r.Security)" Align="Align.Center" />
-                <PropertyColumn Title="Installed" Property="@(r => r.Installed)" Align="Align.Center" />
-                <PropertyColumn Title="Release" Property="@(r => r.ReleaseDate)" />
+                <PropertyColumn Title="Version" Property="@(r => r.Version)" Width="240px" />
+                <PropertyColumn Title="Latest" Property="@(r => r.Latest)" Align="Align.Center" Width="90px" />
+                <PropertyColumn Title="Security" Property="@(r => r.Security)" Align="Align.Center" Width="100px" />
+                <PropertyColumn Title="Installed" Property="@(r => r.Installed)" Align="Align.Center" Width="100px" />
+                <PropertyColumn Title="Release" Property="@(r => r.ReleaseDate)" Width="120px" />
             </ChildContent>
 
             <LoadingContent>
                 <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" Width="650px">
                     Loading...<br />
-                    <FluentProgress Width="650px" />
+                    <FluentProgress Width="50%" />
                 </FluentStack>
             </LoadingContent>
         </FluentDataGrid>
@@ -75,6 +97,49 @@
     private List<Downloader.AspNetCoreReleaseInfo>? Releases { get; set; }
     private List<Downloader.AspNetCoreChannelInfo>? Channels { get; set; }
     private string? SelectedChannel { get; set; }
+    private bool IsInstalling { get; set; } = false;
+    private ReleaseGridRow? SelectedItem { get; set; }
+
+    private bool CanInstallSelected
+    {
+        get
+        {
+            return !IsInstalling &&
+            SelectedItem != null &&
+            !SelectedItem.Installed.Equals("✓");
+        }
+    }
+
+    private IEnumerable<ReleaseGridRow> GetSelectedItems()
+    {
+        return SelectedItem != null ? new[] { SelectedItem } : Enumerable.Empty<ReleaseGridRow>();
+    }
+
+    private void OnRowClick(FluentDataGridRow<ReleaseGridRow> row)
+    {
+        SelectedItem = row.Item;
+        StateHasChanged();
+    }
+
+    private string GetInstallButtonTooltip()
+    {
+        if (IsInstalling)
+        {
+            return "Installation in progress...";
+        }
+
+        if (SelectedItem == null)
+        {
+            return "Select a framework version to install";
+        }
+
+        if (SelectedItem.Installed.Equals("✓"))
+        {
+            return $"Version {SelectedItem.Version} is already installed";
+        }
+
+        return $"Install ASP.NET Core {SelectedItem.Version}";
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -172,12 +237,49 @@
     {
         // Clear releases to force reload
         Releases = null;
+        // Clear selection when refreshing
+        SelectedItem = null;
 
         if (Grid != null)
         {
             Grid.SetLoadingState(true);
             await Grid.RefreshDataAsync();
             Grid.SetLoadingState(false);
+        }
+    }
+
+    private async Task InstallSelectedFramework()
+    {
+        if (!CanInstallSelected || SelectedItem == null)
+        {
+            return;
+        }
+
+        IsInstalling = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await InstallationService.InstallFrameworkAsync(SelectedItem.Version, SelectedChannel ?? String.Empty);
+
+            if (success)
+            {
+                await DialogsService.ShowInfoAsync($"ASP.NET Core {SelectedItem.Version} has been installed successfully!");
+                await Refresh(); // Refresh to update the installed status
+            }
+            else
+            {
+                await DialogsService.ShowErrorAsync($"Failed to install ASP.NET Core {SelectedItem.Version}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await DialogsService.ShowErrorAsync($"Installation error: {ex.Message}");
+        }
+        finally
+        {
+            IsInstalling = false;
+            StateHasChanged();
         }
     }
 }

@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Tools;
 using Askyl.Dsm.WebHosting.Ui.Components;
+using Askyl.Dsm.WebHosting.Ui.Services;
 
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
@@ -12,6 +13,9 @@ builder.Host.UseSerilog();
 builder.Services.AddHttpClient();
 builder.Services.AddDsmApiClient();
 builder.Services.AddFluentUIComponents();
+
+// Add custom services
+builder.Services.AddScoped<IFrameworkInstallationService, FrameworkInstallationService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
