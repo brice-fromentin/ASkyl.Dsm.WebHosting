@@ -3,7 +3,9 @@
 @using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons
 @using Askyl.Dsm.WebHosting.Tools.Runtime
 @using Askyl.Dsm.WebHosting.Data.Runtime
+@using Askyl.Dsm.WebHosting.Ui.Services
 @inject IDialogService DialogService
+@inject IDotnetVersionService DotnetVersionService
 
 <FluentDialog @bind-Hidden="@Hidden" Modal="true" TrapFocus="true" PreventScroll="true" style="min-width: 600px;">
     <FluentDialogHeader>
@@ -78,7 +80,7 @@
 
     <FluentDialogFooter>
         <FluentButton OnClick="RefreshVersions" Disabled="@IsLoading">
-            <FluentIcon Value="@(new Icons.Regular.Size16.ArrowClockwise())" />
+            <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
             Refresh
         </FluentButton>
         <FluentSpacer />
@@ -109,7 +111,7 @@
 
         try
         {
-            DotnetVersions = await VersionsDetector.GetInstalledVersionsAsync();
+            DotnetVersions = await DotnetVersionService.GetInstalledVersionsAsync();
         }
         catch (Exception ex)
         {
@@ -138,11 +140,11 @@
     {
         return frameworkType switch
         {
-            "SDK (Main)" => new Icons.Regular.Size16.Star(),
-            "SDK" => new Icons.Regular.Size16.Settings(),
-            "ASP.NET Core" => new Icons.Regular.Size16.Globe(),
-            "Runtime" => new Icons.Regular.Size16.Play(),
-            _ => new Icons.Regular.Size16.Code()
+            "SDK (Main)" => new IconsRegular16.Star(),
+            "SDK" => new IconsRegular16.Settings(),
+            "ASP.NET Core" => new IconsRegular16.Globe(),
+            "Runtime" => new IconsRegular16.Play(),
+            _ => new IconsRegular16.Code()
         };
     }
 

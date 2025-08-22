@@ -9,16 +9,16 @@ public static partial class VersionsDetector
 {
     #region Regex Patterns
 
-    [GeneratedRegex(@"^\s*(\d+\.\d+\.\d+)")]
+    [GeneratedRegex(@"^\s*(\d+\.\d+\.\d+(?:-[\w\.-]+)?)")]
     private static partial Regex SdkVersionRegex();
 
-    [GeneratedRegex(@"Microsoft\.AspNetCore\.App\s+(\d+\.\d+\.\d+)")]
+    [GeneratedRegex(@"Microsoft\.AspNetCore\.App\s+(\d+\.\d+\.\d+(?:-[\w\.-]+)?)")]
     private static partial Regex AspNetCoreVersionRegex();
 
-    [GeneratedRegex(@"Microsoft\.NETCore\.App\s+(\d+\.\d+\.\d+)")]
+    [GeneratedRegex(@"Microsoft\.NETCore\.App\s+(\d+\.\d+\.\d+(?:-[\w\.-]+)?)")]
     private static partial Regex NetCoreVersionRegex();
 
-    [GeneratedRegex(@"Version:\s*(\d+\.\d+\.\d+)")]
+    [GeneratedRegex(@"Version:\s*(\d+\.\d+\.\d+(?:-[\w\.-]+)?)")]
     private static partial Regex MainSdkVersionRegex();
 
     #endregion
@@ -38,7 +38,7 @@ public static partial class VersionsDetector
         try
         {
             // Use only the global dotnet version
-            frameworks = await GetDotnetFrameworksAsync("dotnet");
+            frameworks = await GetDotnetFrameworksAsync("../runtimes/dotnet");
         }
         catch
         {

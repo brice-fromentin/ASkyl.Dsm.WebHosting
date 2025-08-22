@@ -7,14 +7,27 @@
 @implements IDialogContentComponent
 
 @inject IDialogService DialogsService
-@inject IFrameworkInstallationService InstallationService
+@inject IFrameworkManagementService ManagementService
+@inject IDotnetVersionService DotnetVersionService
+
+<style>
+    .selected-row {
+        background-color: var(--accent-fill-rest) !important;
+        color: var(--neutral-foreground-on-accent-rest) !important;
+    }
+    
+    .selected-row:hover {
+        background-color: var(--accent-fill-hover) !important;
+        color: var(--neutral-foreground-on-accent-rest) !important;
+    }
+</style>
 
 <FluentOverlay @bind-Visible="@IsInstalling" Opacity="0.7">
     @*<div style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%;">*@
         <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
             <FluentProgressRing Size="FluentProgressSize.Large" />
             <FluentLabel Typo="Typography.Header">
-                Installing ASP.NET Core @(SelectedItem?.Version ?? "")...
+                @(IsSelectedVersionInstalled ? "Uninstalling" : "Installing") ASP.NET Core @(SelectedItem?.Version ?? "")...
             </FluentLabel>
         </FluentStack>
     @*</div>*@
@@ -49,21 +62,21 @@
         </FluentSelect>
 
         <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="Refresh" Disabled="@IsInstalling">
-            <FluentIcon Value="@(new Icons.Regular.Size16.ArrowClockwise())" />
+            <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
         </FluentButton>
 
-        <FluentButton OnClick="InstallSelectedFramework" Appearance="Appearance.Accent" Disabled="@(!CanInstallSelected || IsInstalling)" Title="@GetInstallButtonTooltip()" Style="flex-grow: 1; ">
+        <FluentButton OnClick="@(IsSelectedVersionInstalled ? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsInstalling)" Title="@GetActionButtonTooltip()" Style="flex-grow: 1; ">
             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                <FluentIcon Value="@(new Icons.Regular.Size16.CloudArrowDown())" Color="Color.Fill" />
+                <FluentIcon Value="@(IsSelectedVersionInstalled ? (Icon)new IconsRegular16.Delete() : new IconsRegular16.CloudArrowDown())" Color="Color.Fill" />
                 <FluentLabel Color="Color.Fill" Style="margin-left: 4px;">
-                    @(SelectedItem != null ? $"Install {SelectedItem.Version}" : "Select a version to install")
+                    @GetActionButtonText()
                 </FluentLabel>
             </FluentStack>
         </FluentButton>
     </FluentToolbar>
 
     <div style="width: 650px; height: 364px;">
-        <FluentDataGrid @ref="@Grid" TItem="ReleaseGridRow" ItemsProvider="@rowsProvider" DisplayMode="DataGridDisplayMode.Grid" Pagination="@pagination" ShowHover="true" OnRowClick="@(EventCallback.Factory.Create<FluentDataGridRow<ReleaseGridRow>>(this, OnRowClick))">
+        <FluentDataGrid @ref="@Grid" TItem="ReleaseGridRow" ItemsProvider="@rowsProvider" DisplayMode="DataGridDisplayMode.Grid" Pagination="@pagination" ShowHover="true" OnRowClick="@(EventCallback.Factory.Create<FluentDataGridRow<ReleaseGridRow>>(this, OnRowClick))" RowClass="@GetRowClass">
 
             <ChildContent>
                 <PropertyColumn Title="Version" Property="@(r => r.Version)" Width="240px" />
@@ -100,6 +113,16 @@
     private bool IsInstalling { get; set; } = false;
     private ReleaseGridRow? SelectedItem { get; set; }
 
+    private bool IsSelectedVersionInstalled => SelectedItem?.Installed.Equals("✓") == true;
+
+    private bool CanProcessSelected
+    {
+        get
+        {
+            return !IsInstalling && SelectedItem != null;
+        }
+    }
+
     private bool CanInstallSelected
     {
         get
@@ -119,6 +142,40 @@
     {
         SelectedItem = row.Item;
         StateHasChanged();
+    }
+
+    private string GetRowClass(ReleaseGridRow row)
+    {
+        return SelectedItem != null && SelectedItem.Version == row.Version ? "selected-row" : String.Empty;
+    }
+
+    private string GetActionButtonText()
+    {
+        if (SelectedItem == null)
+        {
+            return "Select a version";
+        }
+
+        return IsSelectedVersionInstalled 
+            ? $"Uninstall {SelectedItem.Version}" 
+            : $"Install {SelectedItem.Version}";
+    }
+
+    private string GetActionButtonTooltip()
+    {
+        if (IsInstalling)
+        {
+            return IsSelectedVersionInstalled ? "Uninstallation in progress..." : "Installation in progress...";
+        }
+
+        if (SelectedItem == null)
+        {
+            return "Select a framework version";
+        }
+
+        return IsSelectedVersionInstalled 
+            ? $"Uninstall ASP.NET Core {SelectedItem.Version}" 
+            : $"Install ASP.NET Core {SelectedItem.Version}";
     }
 
     private string GetInstallButtonTooltip()
@@ -146,7 +203,7 @@
         rowsProvider = new(LoadRowsAsync);
         await LoadChannelsAsync();
         // Preload the cache for version detection
-        await VersionsDetector.GetInstalledVersionsAsync();
+        await DotnetVersionService.GetInstalledVersionsAsync();
     }
 
     private async Task CancelAsync()
@@ -220,7 +277,7 @@
         var pagedItems = new List<ReleaseGridRow>();
         foreach (var release in pagedReleases)
         {
-            var isInstalled = VersionsDetector.IsVersionInstalled(release.Version, "ASP.NET Core");
+            var isInstalled = await DotnetVersionService.IsVersionInstalledAsync(release.Version, "ASP.NET Core");
             pagedItems.Add(ReleaseGridRow.Create(release, isInstalled));
         }
 
@@ -235,9 +292,7 @@
 
     private async Task Refresh()
     {
-        // Clear releases to force reload
         Releases = null;
-        // Clear selection when refreshing
         SelectedItem = null;
 
         if (Grid != null)
@@ -260,21 +315,65 @@
 
         try
         {
-            var success = await InstallationService.InstallFrameworkAsync(SelectedItem.Version, SelectedChannel ?? String.Empty);
+            var result = await ManagementService.InstallFrameworkAsync(SelectedItem.Version, SelectedChannel ?? String.Empty);
 
-            if (success)
+            if (result.Success)
             {
-                await DialogsService.ShowInfoAsync($"ASP.NET Core {SelectedItem.Version} has been installed successfully!");
+                await DialogsService.ShowInfoAsync(result.Message);
                 await Refresh(); // Refresh to update the installed status
             }
             else
             {
-                await DialogsService.ShowErrorAsync($"Failed to install ASP.NET Core {SelectedItem.Version}");
+                await DialogsService.ShowErrorAsync(result.Message);
             }
         }
         catch (Exception ex)
         {
             await DialogsService.ShowErrorAsync($"Installation error: {ex.Message}");
+        }
+        finally
+        {
+            IsInstalling = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UninstallSelectedFramework()
+    {
+        if (!IsSelectedVersionInstalled || SelectedItem == null)
+        {
+            return;
+        }
+
+        var confirmationMessage = $"Click OK if you want to proceed with uninstalling ASP.NET Core {SelectedItem.Version}";
+        var confirmation = await DialogsService.ShowConfirmationAsync(confirmationMessage);
+        var result = await confirmation.Result;
+
+        if (result == null || result.Cancelled)
+        {
+            return;
+        }
+        
+        IsInstalling = true;
+        StateHasChanged();
+
+        try
+        {
+            var uninstallResult = await ManagementService.UninstallFrameworkAsync(SelectedItem.Version);
+
+            if (uninstallResult.Success)
+            {
+                await DialogsService.ShowInfoAsync(uninstallResult.Message);
+                await Refresh();
+            }
+            else
+            {
+                await DialogsService.ShowErrorAsync(uninstallResult.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            await DialogsService.ShowErrorAsync($"Uninstallation error: {ex.Message}");
         }
         finally
         {

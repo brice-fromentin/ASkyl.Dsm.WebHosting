@@ -19,6 +19,17 @@ public static class FileSystem
         GetDirectory(FileSystem.Temp);
     }
 
+    public static void DeleteDirectory(string name)
+    {
+        var path = Path.Combine(_baseDir, _dotnetRoot, name);
+
+        if (Directory.Exists(path))
+        {
+            Console.WriteLine("Deleting directory " + path);
+            Directory.Delete(path, true);
+        }
+    }
+
     public static string GetDirectory(string name)
     {
         return _existingFolders.GetOrAdd(name, key =>

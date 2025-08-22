@@ -15,7 +15,8 @@ builder.Services.AddDsmApiClient();
 builder.Services.AddFluentUIComponents();
 
 // Add custom services
-builder.Services.AddScoped<IFrameworkInstallationService, FrameworkInstallationService>();
+builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();
+builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
