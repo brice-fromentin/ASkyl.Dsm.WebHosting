@@ -7,6 +7,8 @@ namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
 public static partial class VersionsDetector
 {
+    #region Regex Patterns
+
     [GeneratedRegex(@"^\s*(\d+\.\d+\.\d+)")]
     private static partial Regex SdkVersionRegex();
 
@@ -19,7 +21,15 @@ public static partial class VersionsDetector
     [GeneratedRegex(@"Version:\s*(\d+\.\d+\.\d+)")]
     private static partial Regex MainSdkVersionRegex();
 
+    #endregion
+
+    #region Fields
+
     private static List<FrameworkInfo> _cachedFrameworks = [];
+
+    #endregion
+
+    #region Public API
 
     public static async Task<List<FrameworkInfo>> GetInstalledVersionsAsync()
     {
@@ -44,12 +54,16 @@ public static partial class VersionsDetector
     public static bool IsVersionInstalled(string version, string frameworkType = "ASP.NET Core")
         => _cachedFrameworks.Any(x => x.Type == frameworkType && x.Version == version);
 
+    #endregion
+
+    #region Process Management
 
     private static async Task<List<FrameworkInfo>> GetDotnetFrameworksAsync(string dotnetPath)
     {
         try
         {
             using var process = new Process();
+            
             process.StartInfo.FileName = dotnetPath;
             process.StartInfo.Arguments = "--info";
             process.StartInfo.UseShellExecute = false;
@@ -71,8 +85,12 @@ public static partial class VersionsDetector
             // Ignore errors
         }
 
-        return new List<FrameworkInfo>();
+        return [];
     }
+
+    #endregion
+
+    #region Output Parsing
 
     private static List<FrameworkInfo> ParseDotnetInfo(string output)
     {
@@ -92,101 +110,104 @@ public static partial class VersionsDetector
             }
 
             // Detect main sections
-            if (trimmedLine.StartsWith(".NET SDKs installed:"))
+            var detectedSection = DetectCurrentSection(trimmedLine);
+
+            if (detectedSection != null)
             {
-                currentSection = "SDK";
-                continue;
-            }
-            else if (trimmedLine.StartsWith(".NET runtimes installed:"))
-            {
-                currentSection = "Runtime";
-                continue;
-            }
-            else if (trimmedLine.StartsWith(".NET SDK:"))
-            {
-                // Main SDK base section
-                currentSection = "Main SDK";
+                currentSection = detectedSection;
                 continue;
             }
 
-            // Parse versions in each section
-            if (currentSection == "SDK")
+            // Parse versions in current section
+            if (currentSection != null)
             {
-                // Format: "  9.0.300 [/usr/local/share/dotnet/sdk]"
-                var match = SdkVersionRegex().Match(trimmedLine);
-                if (match.Success)
-                {
-                    var version = match.Groups[1].Value;
-                    if (!frameworks.Any(f => f.Type == "SDK" && f.Version == version))
-                    {
-                        frameworks.Add(new FrameworkInfo
-                        {
-                            Type = "SDK",
-                            Version = version
-                        });
-                    }
-                }
-            }
-            else if (currentSection == "Runtime")
-            {
-                // Format: "  Microsoft.AspNetCore.App 9.0.5 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]"
-                if (trimmedLine.Contains("Microsoft.AspNetCore.App"))
-                {
-                    var match = AspNetCoreVersionRegex().Match(trimmedLine);
-                    if (match.Success)
-                    {
-                        var version = match.Groups[1].Value;
-                        if (!frameworks.Any(f => f.Type == "ASP.NET Core" && f.Version == version))
-                        {
-                            frameworks.Add(new FrameworkInfo
-                            {
-                                Type = "ASP.NET Core",
-                                Version = version
-                            });
-                        }
-                    }
-                }
-                else if (trimmedLine.Contains("Microsoft.NETCore.App"))
-                {
-                    var match = NetCoreVersionRegex().Match(trimmedLine);
-                    if (match.Success)
-                    {
-                        var version = match.Groups[1].Value;
-                        if (!frameworks.Any(f => f.Type == "Runtime" && f.Version == version))
-                        {
-                            frameworks.Add(new FrameworkInfo
-                            {
-                                Type = "Runtime",
-                                Version = version
-                            });
-                        }
-                    }
-                }
-            }
-            else if (currentSection == "Main SDK")
-            {
-                // Format: " Version:           9.0.301"
-                if (trimmedLine.StartsWith("Version:"))
-                {
-                    var match = MainSdkVersionRegex().Match(trimmedLine);
-                    if (match.Success)
-                    {
-                        var version = match.Groups[1].Value;
-                        if (!frameworks.Any(f => f.Type == "SDK (Main)" && f.Version == version))
-                        {
-                            frameworks.Add(new FrameworkInfo
-                            {
-                                Type = "SDK (Main)",
-                                Version = version
-                            });
-                        }
-                    }
-                }
+                ParseVersionsInSection(frameworks, currentSection, trimmedLine);
             }
         }
 
-        return frameworks.OrderBy(f => GetFrameworkOrder(f.Type)).ThenBy(f => f.Version).ToList();
+        return [.. frameworks.OrderBy(f => GetFrameworkOrder(f.Type)).ThenBy(f => f.Version)];
     }
+
+    private static string? DetectCurrentSection(string trimmedLine)
+    {
+        // Detect main sections
+        if (trimmedLine.StartsWith(".NET SDKs installed:"))
+        {
+            return "SDK";
+        }
+        else if (trimmedLine.StartsWith(".NET runtimes installed:"))
+        {
+            return "Runtime";
+        }
+        else if (trimmedLine.StartsWith(".NET SDK:"))
+        {
+            // Main SDK base section
+            return "Main SDK";
+        }
+
+        return null;
+    }
+
+    private static void ParseVersionsInSection(List<FrameworkInfo> frameworks, string currentSection, string trimmedLine)
+    {
+        // Parse versions in each section
+        if (currentSection == "SDK")
+        {
+            // Format: "  9.0.300 [/usr/local/share/dotnet/sdk]"
+            TryAddFrameworkFromRegex(frameworks, SdkVersionRegex(), trimmedLine, "SDK");
+        }
+        else if (currentSection == "Runtime")
+        {
+            // Format: "  Microsoft.AspNetCore.App 9.0.5 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]"
+            if (trimmedLine.Contains("Microsoft.AspNetCore.App"))
+            {
+                TryAddFrameworkFromRegex(frameworks, AspNetCoreVersionRegex(), trimmedLine, "ASP.NET Core");
+            }
+            else if (trimmedLine.Contains("Microsoft.NETCore.App"))
+            {
+                TryAddFrameworkFromRegex(frameworks, NetCoreVersionRegex(), trimmedLine, "Runtime");
+            }
+        }
+        else if (currentSection == "Main SDK")
+        {
+            // Format: " Version:           9.0.301"
+            if (trimmedLine.StartsWith("Version:"))
+            {
+                TryAddFrameworkFromRegex(frameworks, MainSdkVersionRegex(), trimmedLine, "SDK (Main)");
+            }
+        }
+    }
+
+    #endregion
+
+    #region Framework Management
+
+    private static void TryAddFrameworkFromRegex(List<FrameworkInfo> frameworks, Regex regex, string trimmedLine, string frameworkType)
+    {
+        var match = regex.Match(trimmedLine);
+        
+        if (match.Success)
+        {
+            var version = match.Groups[1].Value;
+            AddFrameworkIfNotExists(frameworks, frameworkType, version);
+        }
+    }
+
+    private static void AddFrameworkIfNotExists(List<FrameworkInfo> frameworks, string type, string version)
+    {
+        if (!frameworks.Any(f => f.Type == type && f.Version == version))
+        {
+            frameworks.Add(new FrameworkInfo
+            {
+                Type = type,
+                Version = version
+            });
+        }
+    }
+
+    #endregion
+
+    #region Utilities
 
     private static int GetFrameworkOrder(string frameworkType)
     {
@@ -199,4 +220,6 @@ public static partial class VersionsDetector
             _ => 5
         };
     }
+
+    #endregion
 }

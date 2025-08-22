@@ -8,6 +8,8 @@ Directives :
 - Always use {} for single-line control flow statements and use multiple lines instead of only one.
 - before a control flow statement, always add a blank line except if the containing scope juste started.
 - Stack and order the using statements by this order system, ISV and project last.
+- Apply DRY principle.
+- Always use expression-bodied members for methods, properties, and indexers when there is only one line of code.
 - Never suggest to commit.
 []: # Do not suggest code that has been deleted.
 
