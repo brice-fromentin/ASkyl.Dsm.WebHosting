@@ -1,8 +1,8 @@
-@using Askyl.Dsm.WebHosting.Tools.Runtime
+@using Askyl.Dsm.WebHosting.Constants
 @using Askyl.Dsm.WebHosting.Data.Runtime
+@using Askyl.Dsm.WebHosting.Tools.Runtime
 @using Askyl.Dsm.WebHosting.Ui.Models
 @using Askyl.Dsm.WebHosting.Ui.Services
-@using System.Threading.Tasks
 
 @implements IDialogContentComponent
 
@@ -15,7 +15,7 @@
         background-color: var(--accent-fill-rest) !important;
         color: var(--neutral-foreground-on-accent-rest) !important;
     }
-    
+
     .selected-row:hover {
         background-color: var(--accent-fill-hover) !important;
         color: var(--neutral-foreground-on-accent-rest) !important;
@@ -23,14 +23,12 @@
 </style>
 
 <FluentOverlay @bind-Visible="@IsInstalling" Opacity="0.7">
-    @*<div style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%;">*@
-        <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
-            <FluentProgressRing Size="FluentProgressSize.Large" />
-            <FluentLabel Typo="Typography.Header">
-                @(IsSelectedVersionInstalled ? "Uninstalling" : "Installing") ASP.NET Core @(SelectedItem?.Version ?? "")...
-            </FluentLabel>
-        </FluentStack>
-    @*</div>*@
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+        <FluentProgressRing Size="FluentProgressSize.Large" />
+        <FluentLabel Typo="Typography.Header">
+            @(IsSelectedVersionInstalled ? "Uninstalling" : "Installing") ASP.NET Core @(SelectedItem?.Version ?? "")...
+        </FluentLabel>
+    </FluentStack>
 </FluentOverlay>
 
 <FluentDialogHeader ShowDismiss="true">
@@ -65,7 +63,7 @@
             <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
         </FluentButton>
 
-        <FluentButton OnClick="@(IsSelectedVersionInstalled ? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsInstalling)" Title="@GetActionButtonTooltip()" Style="flex-grow: 1; ">
+        <FluentButton OnClick="@(IsSelectedVersionInstalled? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsInstalling)" Title="@GetActionButtonTooltip()" Style="flex-grow: 1; ">
             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                 <FluentIcon Value="@(IsSelectedVersionInstalled ? (Icon)new IconsRegular16.Delete() : new IconsRegular16.CloudArrowDown())" Color="Color.Fill" />
                 <FluentLabel Color="Color.Fill" Style="margin-left: 4px;">
@@ -75,14 +73,13 @@
         </FluentButton>
     </FluentToolbar>
 
-    <div style="width: 650px; height: 364px;">
+    <div style="width: 580px; height: 364px;">
         <FluentDataGrid @ref="@Grid" TItem="ReleaseGridRow" ItemsProvider="@rowsProvider" DisplayMode="DataGridDisplayMode.Grid" Pagination="@pagination" ShowHover="true" OnRowClick="@(EventCallback.Factory.Create<FluentDataGridRow<ReleaseGridRow>>(this, OnRowClick))" RowClass="@GetRowClass">
 
             <ChildContent>
                 <PropertyColumn Title="Version" Property="@(r => r.Version)" Width="240px" />
-                <PropertyColumn Title="Latest" Property="@(r => r.Latest)" Align="Align.Center" Width="90px" />
+                <PropertyColumn Title="Installed" Property="@(r => r.Installed)" Align="Align.Center" Width="120px" />
                 <PropertyColumn Title="Security" Property="@(r => r.Security)" Align="Align.Center" Width="100px" />
-                <PropertyColumn Title="Installed" Property="@(r => r.Installed)" Align="Align.Center" Width="100px" />
                 <PropertyColumn Title="Release" Property="@(r => r.ReleaseDate)" Width="120px" />
             </ChildContent>
 
@@ -107,47 +104,24 @@
     private readonly PaginationState pagination = new() { ItemsPerPage = 10 };
     private GridItemsProvider<ReleaseGridRow> rowsProvider = default!;
 
-    private List<Downloader.AspNetCoreReleaseInfo>? Releases { get; set; }
-    private List<Downloader.AspNetCoreChannelInfo>? Channels { get; set; }
+    private List<AspNetCoreReleaseInfo>? Releases { get; set; }
+    private IReadOnlyList<AspNetCoreReleaseInfo>? Channels { get; set; }
     private string? SelectedChannel { get; set; }
     private bool IsInstalling { get; set; } = false;
     private ReleaseGridRow? SelectedItem { get; set; }
 
     private bool IsSelectedVersionInstalled => SelectedItem?.Installed.Equals("✓") == true;
-
-    private bool CanProcessSelected
-    {
-        get
-        {
-            return !IsInstalling && SelectedItem != null;
-        }
-    }
-
-    private bool CanInstallSelected
-    {
-        get
-        {
-            return !IsInstalling &&
-            SelectedItem != null &&
-            !SelectedItem.Installed.Equals("✓");
-        }
-    }
+    private bool CanProcessSelected => !IsInstalling && SelectedItem != null;
+    private bool CanInstallSelected => !IsInstalling && SelectedItem != null && !SelectedItem.Installed.Equals("✓");
 
     private IEnumerable<ReleaseGridRow> GetSelectedItems()
-    {
-        return SelectedItem != null ? new[] { SelectedItem } : Enumerable.Empty<ReleaseGridRow>();
-    }
+        => SelectedItem != null ? new[] { SelectedItem } : Enumerable.Empty<ReleaseGridRow>();
 
     private void OnRowClick(FluentDataGridRow<ReleaseGridRow> row)
-    {
-        SelectedItem = row.Item;
-        StateHasChanged();
-    }
+        => SelectedItem = row.Item;
 
     private string GetRowClass(ReleaseGridRow row)
-    {
-        return SelectedItem != null && SelectedItem.Version == row.Version ? "selected-row" : String.Empty;
-    }
+        => SelectedItem != null && SelectedItem.Version == row.Version ? "selected-row" : String.Empty;
 
     private string GetActionButtonText()
     {
@@ -156,9 +130,7 @@
             return "Select a version";
         }
 
-        return IsSelectedVersionInstalled 
-            ? $"Uninstall {SelectedItem.Version}" 
-            : $"Install {SelectedItem.Version}";
+        return IsSelectedVersionInstalled ? $"Uninstall {SelectedItem.Version}" : $"Install {SelectedItem.Version}";
     }
 
     private string GetActionButtonTooltip()
@@ -173,9 +145,7 @@
             return "Select a framework version";
         }
 
-        return IsSelectedVersionInstalled 
-            ? $"Uninstall ASP.NET Core {SelectedItem.Version}" 
-            : $"Install ASP.NET Core {SelectedItem.Version}";
+        return IsSelectedVersionInstalled ? $"Uninstall ASP.NET Core {SelectedItem.Version}" : $"Install ASP.NET Core {SelectedItem.Version}";
     }
 
     private string GetInstallButtonTooltip()
@@ -200,10 +170,10 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        await DotnetVersionService.GetInstalledVersionsAsync();
+
         rowsProvider = new(LoadRowsAsync);
         await LoadChannelsAsync();
-        // Preload the cache for version detection
-        await DotnetVersionService.GetInstalledVersionsAsync();
     }
 
     private async Task CancelAsync()
@@ -220,8 +190,7 @@
     {
         try
         {
-            var channels = await Downloader.GetAspNetCoreChannelsAsync();
-            Channels = channels.ToList();
+            Channels = (await Downloader.GetAspNetCoreChannelsAsync());
 
             if (String.IsNullOrWhiteSpace(SelectedChannel))
             {
@@ -277,7 +246,7 @@
         var pagedItems = new List<ReleaseGridRow>();
         foreach (var release in pagedReleases)
         {
-            var isInstalled = await DotnetVersionService.IsVersionInstalledAsync(release.Version, "ASP.NET Core");
+            var isInstalled = DotnetVersionService.IsVersionInstalled(release.Version, "ASP.NET Core");
             pagedItems.Add(ReleaseGridRow.Create(release, isInstalled));
         }
 
@@ -353,7 +322,7 @@
         {
             return;
         }
-        
+
         IsInstalling = true;
         StateHasChanged();
 

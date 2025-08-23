@@ -158,13 +158,18 @@
         var parameters = new ReverseProxyDeleteParameters(client.ApiInformations);
         parameters.Parameters.Add(id);
 
-        if(await CallAPI(parameters))
+        if (await CallAPI(parameters))
         {
             Uuid = "";
         }
-    }    private async Task<bool> CallAPI(IApiParameters parameters)
+    }
+
+    private async Task<bool> CallAPI(IApiParameters parameters)
     {
-        if (IsWorking) return false;
+        if (IsWorking) 
+        {
+            return false;
+        }
 
         IsWorking = true;
 
@@ -190,7 +195,10 @@
     // FileStation methods
     private async Task CallFileStationList()
     {
-        if (IsWorking) return;
+        if (IsWorking) 
+        {
+            return;
+        }
 
         IsWorking = true;
         try
@@ -227,7 +235,10 @@
 
     private async Task CallFileStationInfo()
     {
-        if (IsWorking) return;
+        if (IsWorking) 
+        {
+            return;
+        }
 
         IsWorking = true;
         try

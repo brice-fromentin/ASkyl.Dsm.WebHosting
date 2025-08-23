@@ -1,5 +1,3 @@
-using System;
-
 namespace Askyl.Dsm.WebHosting.Data;
 
 public interface IGenericCloneable<T> where T : class, new()

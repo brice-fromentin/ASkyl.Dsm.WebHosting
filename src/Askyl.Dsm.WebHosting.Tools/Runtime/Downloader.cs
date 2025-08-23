@@ -1,18 +1,10 @@
+using Askyl.Dsm.WebHosting.Data.Runtime;
 using Microsoft.Deployment.DotNet.Releases;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
 public static class Downloader
 {
-    // LTS detection now relies on Microsoft.Deployment.DotNet.Releases.ReleaseType instead of hard-coded channel list.
-
-    public sealed class AspNetCoreChannelInfo
-    {
-        public required string ProductVersion { get; init; }
-        public bool IsLts { get; init; }
-        public ReleaseType ReleaseType { get; init; }
-    }
-
     public static async Task<string> DownloadToAsync(bool skipDownloadIfExists = false)
     {
         var product = await GetProductAsync(Configuration.ChannelVersion, true).ConfigureAwait(false);
@@ -45,86 +37,60 @@ public static class Downloader
 
         return [.. releases.Where(r => r.AspNetCoreRuntime != null)
                            .Select(r =>
-            {
-                var version = r.AspNetCoreRuntime!.Version.ToString();
+                                    {
+                                        var version = r.AspNetCoreRuntime!.Version.ToString();
 
-                return new AspNetCoreReleaseInfo
-                {
-                    Version = version,
-                    ProductVersion = product.ProductVersion,
-                    ReleaseDate = r.ReleaseDate,
-                    IsLatest = String.Equals(version, product.LatestReleaseVersion?.ToString(), StringComparison.OrdinalIgnoreCase),
-                    IsSecurity = r.IsSecurityUpdate,
-                    IsLts = isProductLts
-                };
-            })
-            .OrderByDescending(x => x.ReleaseDate)
-            .ThenByDescending(x => x.Version, StringComparer.OrdinalIgnoreCase)];
+                                        return new AspNetCoreReleaseInfo(version, product.ProductVersion, r.ReleaseDate, r.IsSecurityUpdate, isProductLts, ConvertReleaseType(product.ReleaseType));
+                                    })
+                           .OrderByDescending(x => x.ReleaseDate)
+                           .ThenByDescending(x => x.Version, StringComparer.OrdinalIgnoreCase)];
     }
 
     /// <summary>
     /// Returns available ASP.NET Core channels (products) ordered by descending semantic Version.
     /// </summary>
-    public static async Task<IReadOnlyList<AspNetCoreChannelInfo>> GetAspNetCoreChannelsAsync()
+    public static async Task<IReadOnlyList<AspNetCoreReleaseInfo>> GetAspNetCoreChannelsAsync()
     {
         var products = await ProductCollection.GetAsync().ConfigureAwait(false) ?? throw new InvalidOperationException("Unable to retrieve products");
         if (products.Count == 0) { throw new InvalidOperationException("No products returned by ProductCollection"); }
 
-        return [.. products
-            .Select(p => (Product: p, Parsed: Version.TryParse(p.ProductVersion, out var v) ? v : new Version(0, 0)))
-            .OrderByDescending(t => t.Parsed)
-            .Select(t => new AspNetCoreChannelInfo
-            {
-                ProductVersion = t.Product.ProductVersion,
-                IsLts = t.Product.ReleaseType == ReleaseType.LTS,
-                ReleaseType = t.Product.ReleaseType
-            })];
-    }
-
-    public sealed class AspNetCoreReleaseInfo
-    {
-        public required string Version { get; init; }
-        public required string ProductVersion { get; init; }
-        public DateTimeOffset? ReleaseDate { get; init; }
-        public bool IsLatest { get; init; }
-        public bool IsSecurity { get; init; }
-        public bool IsLts { get; init; }
-    }
-
-    private static string ExtractChannel(string version)
-    {
-        var parts = version.Split('.', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 2) { return String.Join('.', parts[0], parts[1]); }
-        return version;
+        return [.. products.Select(p => (Product: p, Parsed: Version.TryParse(p.ProductVersion, out var v) ? v : new Version(0, 0)))
+                           .OrderByDescending(t => t.Parsed)
+                           .Select(t => AspNetCoreReleaseInfo.CreateChannel(t.Product.ProductVersion, t.Product.ReleaseType == ReleaseType.LTS, ConvertReleaseType(t.Product.ReleaseType)))];
     }
 
     private static async Task<Product> GetProductAsync(string? desiredChannelVersion, bool strictWhenConfigured)
     {
         var products = await ProductCollection.GetAsync().ConfigureAwait(false) ?? throw new InvalidOperationException("Unable to retrieve products");
-        if (products.Count == 0) { throw new InvalidOperationException("No products returned by ProductCollection"); }
+        if (products.Count == 0)
+        {
+            throw new InvalidOperationException("No products returned by ProductCollection");
+        }
 
         // 1. Explicit requested channel
         if (!String.IsNullOrWhiteSpace(desiredChannelVersion))
         {
-            var explicitMatch = products.FirstOrDefault(p => String.Equals(p.ProductVersion, desiredChannelVersion, StringComparison.OrdinalIgnoreCase));
-            if (explicitMatch != null) { return explicitMatch; }
-            if (strictWhenConfigured) { throw new InvalidOperationException($"Product Version {desiredChannelVersion} not found."); }
+            if (TryGetProductByVersion(products, desiredChannelVersion, strictWhenConfigured, $"Product Version {desiredChannelVersion} not found.", out var result))
+            {
+                return result;
+            }
         }
 
         // 2. Configured channel (if not already tried and not empty)
         var configured = Configuration.ChannelVersion;
+
         if (!String.IsNullOrWhiteSpace(configured) && !String.Equals(configured, desiredChannelVersion, StringComparison.OrdinalIgnoreCase))
         {
-            var configuredMatch = products.FirstOrDefault(p => String.Equals(p.ProductVersion, configured, StringComparison.OrdinalIgnoreCase));
-            if (configuredMatch != null) { return configuredMatch; }
-            if (strictWhenConfigured) { throw new InvalidOperationException($"Configured product Version {configured} not found."); }
+            if (TryGetProductByVersion(products, configured, strictWhenConfigured, $"Configured product Version {configured} not found.", out var result))
+            {
+                return result;
+            }
         }
 
         // 3. Fallback latest
-        return products
-            .Select(p => (Product: p, Parsed: Version.TryParse(p.ProductVersion, out var v) ? v : new Version(0, 0)))
-            .OrderByDescending(t => t.Parsed)
-            .First().Product;
+        return products.Select(p => (Product: p, Parsed: Version.TryParse(p.ProductVersion, out var v) ? v : new Version(0, 0)))
+                       .OrderByDescending(t => t.Parsed)
+                       .First().Product;
     }
 
     private static async Task<ProductRelease> GetLatestReleaseAsync(Product product)
@@ -137,21 +103,6 @@ public static class Downloader
         return latest;
     }
 
-    private static async Task<ProductRelease> GetReleaseAsync(Product product)
-    {
-        var releases = await product.GetReleasesAsync().ConfigureAwait(false);
-
-        if (releases == null || releases.Count == 0)
-        {
-            throw new InvalidOperationException("Unable to retrieve releases");
-        }
-
-        var release = releases.FirstOrDefault(x => x.Version == product.LatestReleaseVersion)
-                        ?? throw new InvalidOperationException($"Release Version {product.LatestReleaseVersion} not found.");
-
-        return release;
-    }
-
     private static async Task<ProductRelease> GetReleaseByVersionAsync(Product product, string version)
     {
         var releases = await product.GetReleasesAsync().ConfigureAwait(false);
@@ -161,9 +112,8 @@ public static class Downloader
             throw new InvalidOperationException("Unable to retrieve releases");
         }
 
-        var release = releases.FirstOrDefault(r => r.AspNetCoreRuntime != null && 
-                                                    String.Equals(r.AspNetCoreRuntime.Version.ToString(), version, StringComparison.OrdinalIgnoreCase))
-                        ?? throw new InvalidOperationException($"ASP.NET Core runtime version {version} not found.");
+        var release = releases.FirstOrDefault(r => r.AspNetCoreRuntime != null &&
+                                                   String.Equals(r.AspNetCoreRuntime.Version.ToString(), version, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"ASP.NET Core runtime version {version} not found.");
 
         return release;
     }
@@ -171,8 +121,7 @@ public static class Downloader
     private static async Task<string> DownloadReleaseToAsync(ProductRelease release, string destinationPath, bool skipDownloadIfExists)
     {
         var rid = $"{Configuration.CurrentOS}-{Configuration.CurrentArchitecture}";
-        var file = release.AspNetCoreRuntime.Files.FirstOrDefault(f => String.Equals(f.Rid, rid, StringComparison.OrdinalIgnoreCase))
-                        ?? throw new FileNotFoundException($"No release file found for runtime identifier {rid}.");
+        var file = release.AspNetCoreRuntime.Files.FirstOrDefault(f => String.Equals(f.Rid, rid, StringComparison.OrdinalIgnoreCase)) ?? throw new FileNotFoundException($"No release file found for runtime identifier {rid}.");
 
         var fullDestinationPath = FileSystem.GetFullName(destinationPath, file.FileName);
 
@@ -184,5 +133,37 @@ public static class Downloader
         await file.DownloadAsync(fullDestinationPath).ConfigureAwait(false);
 
         return fullDestinationPath;
+    }
+
+    private static AspNetCoreReleaseType ConvertReleaseType(ReleaseType releaseType)
+        => (AspNetCoreReleaseType)releaseType;
+
+    /// <summary>
+    /// Helper method to find a product by version and optionally throw if not found.
+    /// Uses the Try pattern to eliminate the need for null checking after the call.
+    /// </summary>
+    /// <param name="products">The collection of products to search</param>
+    /// <param name="version">The version to search for</param>
+    /// <param name="strictMode">Whether to throw an exception if not found</param>
+    /// <param name="errorMessage">The error message to use in the exception</param>
+    /// <param name="result">The found product if successful</param>
+    /// <returns>True if the product was found, false otherwise (unless strict mode throws an exception)</returns>
+    private static bool TryGetProductByVersion(IReadOnlyList<Product> products, string version, bool strictMode, string errorMessage, out Product result)
+    {
+        var product = products.FirstOrDefault(p => String.Equals(p.ProductVersion, version, StringComparison.OrdinalIgnoreCase));
+
+        if (product != null)
+        {
+            result = product;
+            return true;
+        }
+
+        if (strictMode)
+        {
+            throw new InvalidOperationException(errorMessage);
+        }
+
+        result = null!;
+        return false;
     }
 }

@@ -59,7 +59,10 @@
 
     private async Task Authenticate(EditContext context)
     {
-        if (IsWorking) return;
+        if (IsWorking) 
+        {
+            return;
+        }
 
         try
         {
