@@ -15,24 +15,22 @@
 
 <PageTitle>ADWH - Home</PageTitle>
 
-<FluentToolbar >
+<FluentToolbar>
     <FluentButton OnClick="CallReverseList">List Proxies</FluentButton>
     <FluentButton OnClick="CallReverseCreate">Create</FluentButton>
     <FluentButton OnClick="CallReverseUpdate">Update</FluentButton>
     <FluentTextField @bind-Value="Uuid" Style="width:auto;" autofocus />
-    <FluentButton OnClick="CallReverseDelete">Delete</FluentButton>    
+    <FluentButton OnClick="CallReverseDelete">Delete</FluentButton>
     <FluentSpacer />
     <FluentButton OnClick="CallFileStationList">List Files</FluentButton>
     <FluentTextField @bind-Value="FolderPath" Placeholder="/volume1/homes" Style="width:200px;" />
     <FluentButton OnClick="CallFileStationInfo">FileStation Info</FluentButton>
     <FluentSpacer />
     <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="Appearance.Outline">
-        <FluentIcon Value="@(new Icons.Regular.Size16.Code())" />
         .NET Version
     </FluentButton>
     <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="Appearance.Outline">
-        <FluentIcon Value="@(new Icons.Regular.Size16.Globe())" />
-        ASP.NET Core Online
+        ASP.NET Online
     </FluentButton>
 </FluentToolbar>
 <br />
@@ -44,8 +42,8 @@
     {
         foreach (var proxy in proxies)
         {
-                    <div>@JsonSerializer.Serialize(proxy)</div>
-                    <br />
+            <div>@JsonSerializer.Serialize(proxy)</div>
+            <br />
         }
     }
 </div>
@@ -70,7 +68,7 @@
                     }
                     @if (file.Additional.Time != null)
                     {
-                        <span> | Modified: @(file.Additional.Time.ModifyTime.HasValue ? DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value).ToString("yyyy-MM-dd HH:mm:ss") : "N/A")</span>
+                        <span> | Modified: @(file.Additional.Time.ModifyTime.HasValue? DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value).ToString("yyyy-MM-dd HH:mm:ss") : "N/A")</span>
                     }
                 }
                 <br />
@@ -84,21 +82,19 @@
     <FluentProgressRing />
 </FluentOverlay>
 
-<DotnetVersionsDialog Hidden="@isDotnetVersionsDialogHidden" HiddenChanged="@((bool hidden) => isDotnetVersionsDialogHidden = hidden)" />
-
 @code
 {
     private bool IsWorking { get; set; } = false;
     private List<ReverseProxy>? proxies { get; set; }
     private string? Uuid { get; set; }
-    
+
     // FileStation properties
     private List<FileStationFile>? files { get; set; }
     private string FolderPath { get; set; } = "/temp";
     private string CurrentFolderPath { get; set; } = "";
 
     // Dialog states
-    private bool isDotnetVersionsDialogHidden { get; set; } = true;
+    // Removed - dialogs now handled via DialogsService
 
     protected override async Task OnInitializedAsync()
     {
@@ -166,7 +162,7 @@
 
     private async Task<bool> CallAPI(IApiParameters parameters)
     {
-        if (IsWorking) 
+        if (IsWorking)
         {
             return false;
         }
@@ -195,7 +191,7 @@
     // FileStation methods
     private async Task CallFileStationList()
     {
-        if (IsWorking) 
+        if (IsWorking)
         {
             return;
         }
@@ -210,7 +206,7 @@
             parameters.Parameters.SortDirection = "asc";
 
             var response = await client.ExecuteAsync<FileStationListResponse>(parameters);
-            
+
             if (response?.Success == true && response.Data?.Files != null)
             {
                 files = response.Data.Files;
@@ -235,7 +231,7 @@
 
     private async Task CallFileStationInfo()
     {
-        if (IsWorking) 
+        if (IsWorking)
         {
             return;
         }
@@ -245,7 +241,7 @@
         {
             var parameters = new FileStationInfoParameters(client.ApiInformations);
             var response = await client.ExecuteAsync<FileStationInfoResponse>(parameters);
-            
+
             if (response?.Success == true && response.Data != null)
             {
                 var info = response.Data;
@@ -259,17 +255,16 @@
         catch (Exception ex)
         {
             await DialogsService.ShowErrorAsync($"Error calling FileStation Info: {ex.Message}");
-        }        finally
+        }
+        finally
         {
             IsWorking = false;
         }
     }
 
-    private void ShowDotnetVersionsDialog()
-    {
-        isDotnetVersionsDialogHidden = false;
-    }
+    private async Task ShowDotnetVersionsDialog()
+    => await DialogsService.ShowDialogAsync<DotnetVersionsDialog>(new() { Width = "", Height = "" });
 
     private async Task ShowAspNetReleasesDialog()
-        => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height="" });
+    => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height = "" });
 }

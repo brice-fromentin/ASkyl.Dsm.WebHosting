@@ -1,113 +1,82 @@
-@using System.Diagnostics
-@using Microsoft.FluentUI.AspNetCore.Components
-@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons
-@using Askyl.Dsm.WebHosting.Tools.Runtime
 @using Askyl.Dsm.WebHosting.Data.Runtime
 @using Askyl.Dsm.WebHosting.Ui.Services
+
+@implements IDialogContentComponent
+
 @inject IDialogService DialogService
 @inject IDotnetVersionService DotnetVersionService
 
-<FluentDialog @bind-Hidden="@Hidden" Modal="true" TrapFocus="true" PreventScroll="true" style="min-width: 600px;">
-    <FluentDialogHeader>
-        <h2>
-            <FluentIcon Value="@(new Icons.Regular.Size24.Code())" />
-            Global .NET Version
-        </h2>
-    </FluentDialogHeader>
+<FluentDialogHeader ShowDismiss="true">
+    <FluentLabel Typo="Typography.H2">.NET Versions</FluentLabel>
+</FluentDialogHeader>
 
-    <FluentDialogBody>
-        @if (IsLoading)
-        {
-            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center">
-                <FluentProgressRing />
-                <FluentLabel>Searching for .NET versions...</FluentLabel>
-            </FluentStack>
-        }
-        else if (DotnetVersions?.Any() == true)
-        {
+<FluentDialogFooter>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Style="flex-grow: 1;">Close</FluentButton>
+</FluentDialogFooter>
+
+<FluentDialogBody Style="min-height: auto;">
+    @if (IsLoading)
+    {
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center">
+            <FluentProgressRing />
+            <FluentLabel>Searching for .NET versions...</FluentLabel>
+        </FluentStack>
+    }
+    else if (DotnetVersions?.Any() == true)
+    {
+        <FluentCard>
             <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
-                <FluentLabel Typo="Typography.Body">
-                    <strong>Global .NET installation detected:</strong>
-                </FluentLabel>
-
-                <FluentCard style="padding: 16px;">
-                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="12">
-                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                            <FluentIcon Value="@(new Icons.Regular.Size20.CheckmarkCircle())" Color="Color.Success" />
-                            <FluentLabel Typo="Typography.Body">
-                                <strong>.NET Installation</strong>
-                            </FluentLabel>
-                            <FluentSpacer />
-                            <FluentLabel Typo="Typography.Subject" style="color: var(--neutral-foreground-rest);">
-                                Global version
-                            </FluentLabel>
-                        </FluentStack>
-
-                        <div style="margin-left: 28px;">
-                            @foreach (var framework in DotnetVersions)
-                            {
-                                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" style="margin-bottom: 8px;">
-                                    <FluentIcon Value="@GetFrameworkIcon(framework.Type)" Color="@GetFrameworkColor(framework.Type)" />
-                                    <FluentLabel Typo="Typography.Body">
-                                        <strong>@framework.Type:</strong> @framework.Version
-                                    </FluentLabel>
-                                </FluentStack>
-                            }
-                        </div>
+                @foreach (var framework in DotnetVersions)
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentIcon Value="@GetFrameworkIcon(framework.Type)" />
+                        <FluentLabel Typo="Typography.Body">
+                            <strong>@framework.Type:</strong> @framework.Version
+                        </FluentLabel>
                     </FluentStack>
-                </FluentCard>
+                }
             </FluentStack>
-        }
-        else if (ErrorMessage != null)
-        {
-            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                <FluentIcon Value="@(new Icons.Regular.Size20.Warning())" Color="Color.Error" />
-                <FluentLabel Typo="Typography.Body" style="color: var(--error);">
-                    @ErrorMessage
-                </FluentLabel>
-            </FluentStack>
-        }
-        else
-        {
-            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                <FluentIcon Value="@(new Icons.Regular.Size20.Info())" Color="Color.Warning" />
-                <FluentLabel Typo="Typography.Body">
-                    No global .NET installation found. Make sure .NET is installed and accessible in the PATH.
-                </FluentLabel>
-            </FluentStack>
-        }
-    </FluentDialogBody>
+        </FluentCard>
+    }
+    else if (ErrorMessage != null)
+    {
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new IconsRegular24.Warning())" Color="Color.Error" />
+            <FluentLabel Typo="Typography.Body" Color="Color.Error">
+                @ErrorMessage
+            </FluentLabel>
+        </FluentStack>
+    }
+    else
+    {
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@(new IconsRegular24.Info())" Color="Color.Warning" />
+            <FluentLabel Typo="Typography.Body">
+                No .NET installation found. Make sure .NET is installed.
+            </FluentLabel>
+        </FluentStack>
+    }
+</FluentDialogBody>
 
-    <FluentDialogFooter>
-        <FluentButton OnClick="RefreshVersions" Disabled="@IsLoading">
-            <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
-            Refresh
-        </FluentButton>
-        <FluentSpacer />
-        <FluentButton Appearance="Appearance.Accent" OnClick="CloseDialog">
-            Close
-        </FluentButton>
-    </FluentDialogFooter>
-</FluentDialog>
-
-@code {
-    [Parameter] public bool Hidden { get; set; } = true;
-    [Parameter] public EventCallback<bool> HiddenChanged { get; set; }
+@code
+{
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
 
     private bool IsLoading { get; set; } = false;
     private List<FrameworkInfo>? DotnetVersions { get; set; }
     private string? ErrorMessage { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadDotnetVersions();
-    }
+    protected override async Task OnParametersSetAsync()
+        => await LoadDotnetVersions();
+
+    private async Task CancelAsync()
+        => await Dialog.CancelAsync();
 
     private async Task LoadDotnetVersions()
     {
         IsLoading = true;
         ErrorMessage = null;
-        StateHasChanged();
 
         try
         {
@@ -120,20 +89,7 @@
         finally
         {
             IsLoading = false;
-            StateHasChanged();
         }
-    }
-
-    private int GetFrameworkOrder(string frameworkType)
-    {
-        return frameworkType switch
-        {
-            "SDK (Main)" => 1,
-            "SDK" => 2,
-            "Runtime" => 3,
-            "ASP.NET Core" => 4,
-            _ => 5
-        };
     }
 
     private Icon GetFrameworkIcon(string frameworkType)
@@ -146,28 +102,5 @@
             "Runtime" => new IconsRegular16.Play(),
             _ => new IconsRegular16.Code()
         };
-    }
-
-    private Color GetFrameworkColor(string frameworkType)
-    {
-        return frameworkType switch
-        {
-            "SDK (Main)" => Color.Accent,
-            "SDK" => Color.Info,
-            "ASP.NET Core" => Color.Success,
-            "Runtime" => Color.Warning,
-            _ => Color.Neutral
-        };
-    }
-
-    private async Task RefreshVersions()
-    {
-        await LoadDotnetVersions();
-    }
-
-    private async Task CloseDialog()
-    {
-        Hidden = true;
-        await HiddenChanged.InvokeAsync(Hidden);
     }
 }

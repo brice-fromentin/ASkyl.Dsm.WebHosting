@@ -43,7 +43,7 @@
     <FluentToolbar>
         <FluentLabel>Channel</FluentLabel>
 
-        <FluentSelect TOption="String" @onchange="OnChannelChanged" Width="120px" Value="@SelectedChannel" Disabled="@IsInstalling">
+        <FluentSelect TOption="String" @onchange="OnChannelChanged" Width="140px" Value="@SelectedChannel" Disabled="@IsInstalling">
             @if (Channels == null)
             {
                 <FluentOption Value="">Loading...</FluentOption>
@@ -52,8 +52,10 @@
             {
                 @foreach (var c in Channels)
                 {
-                    <FluentOption Value="@c.ProductVersion">@c.ProductVersion
+                    <FluentOption Value="@c.ProductVersion">
+                        @c.ProductVersion
                         @(c.IsLts ? "(LTS)" : String.Empty)
+                        @(DotnetVersionService.IsChannelInstalled(c.ProductVersion, "ASP.NET Core") ? " ✓" : String.Empty)
                     </FluentOption>
                 }
             }
@@ -115,13 +117,13 @@
     private bool CanInstallSelected => !IsInstalling && SelectedItem != null && !SelectedItem.Installed.Equals("✓");
 
     private IEnumerable<ReleaseGridRow> GetSelectedItems()
-        => SelectedItem != null ? new[] { SelectedItem } : Enumerable.Empty<ReleaseGridRow>();
+    => SelectedItem != null ? new[] { SelectedItem } : Enumerable.Empty<ReleaseGridRow>();
 
     private void OnRowClick(FluentDataGridRow<ReleaseGridRow> row)
-        => SelectedItem = row.Item;
+    => SelectedItem = row.Item;
 
     private string GetRowClass(ReleaseGridRow row)
-        => SelectedItem != null && SelectedItem.Version == row.Version ? "selected-row" : String.Empty;
+    => SelectedItem != null && SelectedItem.Version == row.Version ? "selected-row" : String.Empty;
 
     private string GetActionButtonText()
     {
@@ -190,6 +192,8 @@
     {
         try
         {
+            await DotnetVersionService.GetInstalledVersionsAsync();
+
             Channels = (await Downloader.GetAspNetCoreChannelsAsync());
 
             if (String.IsNullOrWhiteSpace(SelectedChannel))
