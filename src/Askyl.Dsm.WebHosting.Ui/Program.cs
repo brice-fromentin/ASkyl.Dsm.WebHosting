@@ -17,6 +17,7 @@ builder.Services.AddFluentUIComponents();
 // Add custom services
 builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
+builder.Services.AddScoped<IFileNavigationService, FileNavigationService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -38,6 +39,6 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+   .AddInteractiveServerRenderMode();
 
 app.Run();

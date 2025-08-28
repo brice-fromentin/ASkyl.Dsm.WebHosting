@@ -32,6 +32,9 @@
     <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="Appearance.Outline">
         ASP.NET Online
     </FluentButton>
+    <FluentButton OnClick="ShowFileSelectionDialog" Appearance="Appearance.Outline">
+        Select File
+    </FluentButton>
 </FluentToolbar>
 <br />
 
@@ -267,4 +270,22 @@
 
     private async Task ShowAspNetReleasesDialog()
     => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height = "" });
+
+    private async Task ShowFileSelectionDialog()
+    {
+        var dialog = await DialogsService.ShowDialogAsync<FileSelectionDialog>(new() { Width = "", Height = "" });
+        var result = await dialog.Result;
+
+        if (result.Cancelled || result.Data == null)
+        {
+            return;
+        }
+
+        // Handle the selected file
+        var selectedFile = result.Data as FileStationFile;
+        if (selectedFile != null)
+        {
+            await DialogsService.ShowInfoAsync($"Selected file: {selectedFile.Name}\nPath: {selectedFile.Path}");
+        }
+    }
 }

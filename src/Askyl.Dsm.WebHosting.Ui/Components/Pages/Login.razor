@@ -1,4 +1,5 @@
 ﻿@page "/login"
+
 @using System.Runtime.InteropServices
 @using Askyl.Dsm.WebHosting.Data.Security
 @using Askyl.Dsm.WebHosting.Tools.Network
@@ -21,14 +22,12 @@
         <FluentStack Orientation="Orientation.Vertical">
             <FluentTextField @bind-Value="Model.Login" autofocus>Login:</FluentTextField>
             <FluentValidationMessage For="(() => Model.Login)" />
-            <FluentTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password">Password:
-            </FluentTextField>
+            <FluentTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password">Password:</FluentTextField>
             <FluentTextField @bind-Value="Model.OtpCode">OTP:</FluentTextField>
         </FluentStack>
 
         <FluentDialogFooter>
-            <FluentSpacer />
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">OK</FluentButton>
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="flex-grow: 1;">OK</FluentButton>
         </FluentDialogFooter>
     </EditForm>
 </FluentDialog>
@@ -39,7 +38,6 @@
 
 @code
 {
-    
     private bool IsWorking { get; set; } = false;
 
     private LoginModel Model = new();
@@ -51,15 +49,15 @@
             DialogsService.ShowError("The application can only run on Linux or MacOS");
         }
 
-        if(client.IsConnected)
+        if (client.IsConnected)
         {
-            navigation.NavigateTo("/"); 
+            navigation.NavigateTo("/");
         }
     }
 
     private async Task Authenticate(EditContext context)
     {
-        if (IsWorking) 
+        if (IsWorking)
         {
             return;
         }

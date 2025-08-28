@@ -1,0 +1,303 @@
+@implements IDialogContentComponent
+
+@inject IDialogService DialogService
+@inject IFileNavigationService FileNavigationService
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentLabel Typo="Typography.H2">File Selection</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogBody>
+    <FluentGrid>
+        <FluentGridItem xs="4">
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                <FluentLabel Typo="Typography.Body" Style="font-weight: 600;">Shared Folders</FluentLabel>
+                @if (IsLoadingTree)
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentProgressRing Size="16" />
+                        <FluentLabel>Loading shared folders...</FluentLabel>
+                    </FluentStack>
+                }
+                else if (!String.IsNullOrEmpty(ErrorMessage))
+                {
+                    <FluentMessageBar Intent="MessageIntent.Error">
+                        @ErrorMessage
+                    </FluentMessageBar>
+                }
+                else
+                {
+                    <FluentStack Orientation="Orientation.Vertical" Style="overflow-y: auto; height: 400px;">
+                        <FluentTreeView Items="TreeNodes" LazyLoadItems="true" />
+                    </FluentStack>
+                }
+            </FluentStack>
+        </FluentGridItem>
+        <FluentGridItem xs="8">
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                <FluentLabel Typo="Typography.Body" Style="font-weight: 600;">
+                    Files in: @(SelectedPath ?? "Select a shared folder")
+                </FluentLabel>
+
+                @if (IsLoadingFiles)
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentProgressRing Size="16" />
+                        <FluentLabel>Loading files...</FluentLabel>
+                    </FluentStack>
+                }
+                else if (CurrentFiles?.Any() == true)
+                {
+                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="2" Style="overflow-y: auto; height: 400px;">
+                        @foreach (var file in CurrentFiles)
+                        {
+                            <FluentCard Appearance="@(SelectedFile == file ? Appearance.Filled : Appearance.Outline)" @onclick="() => OnFileClick(file)" Style="cursor: pointer;">
+                                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                                    <FluentIcon Value="@GetFileIcon(file)" />
+                                    <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+                                        <FluentLabel Style="font-weight: 600;">@file.Name</FluentLabel>
+                                        <FluentLabel Typo="Typography.Body" Style="font-size: 0.85em; opacity: 0.8;">
+                                            @file.Type | @GetFileSize(file) | @GetModifiedDate(file)
+                                        </FluentLabel>
+                                    </FluentStack>
+                                    @if (!file.IsDirectory)
+                                    {
+                                        <FluentButton Size="ButtonSize.Small" Appearance="Appearance.Outline" OnClick="() => OnSelectFile(file)">
+                                            Select
+                                        </FluentButton>
+                                    }
+                                </FluentStack>
+                            </FluentCard>
+                        }
+                    </FluentStack>
+                }
+                else if (!String.IsNullOrEmpty(SelectedPath))
+                {
+                    <FluentMessageBar Intent="MessageIntent.Info">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.Info())" Slot="icon" />
+                        No files found in this directory.
+                    </FluentMessageBar>
+                }
+                else
+                {
+                    <FluentMessageBar Intent="MessageIntent.Info">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.FolderOpen())" Slot="icon" />
+                        Select a shared folder from the tree to view its contents.
+                    </FluentMessageBar>
+                }
+            </FluentStack>
+        </FluentGridItem>
+    </FluentGrid>
+</FluentDialogBody>
+
+<FluentDialogFooter>
+    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" HorizontalGap="3">
+        <FluentButton OnClick="CancelAsync" Appearance="Appearance.Neutral">
+            Cancel
+        </FluentButton>
+        <FluentButton OnClick="ConfirmAsync" Appearance="Appearance.Accent" Disabled="@(SelectedFile == null)">
+            Select File
+        </FluentButton>
+    </FluentStack>
+</FluentDialogFooter>
+
+@code
+{
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<FileStationFile> OnFileSelected { get; set; }
+
+    private bool IsLoadingTree { get; set; } = true;
+    private bool IsLoadingFiles { get; set; } = false;
+    private List<DirectoryTreeNode> TreeNodes { get; set; } = [];
+    private List<FileStationFile>? CurrentFiles { get; set; }
+    private string? SelectedPath { get; set; }
+    private FileStationFile? SelectedFile { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    => await LoadSharedFolders();
+
+    private async Task LoadSharedFolders()
+    {
+        IsLoadingTree = true;
+        ErrorMessage = null;
+
+        try
+        {
+            TreeNodes = await FileNavigationService.GetSharedFoldersAsync();
+        }
+        catch (FileStationApiException ex)
+        {
+            TreeNodes = [];
+            ErrorMessage = $"FileStation API Error: {ex.Message}";
+            if (ex.ErrorCode.HasValue)
+            {
+                ErrorMessage += $" (Error Code: {ex.ErrorCode})";
+            }
+        }
+        catch (Exception ex)
+        {
+            TreeNodes = [];
+            ErrorMessage = $"Failed to load shared folders: {ex.Message}";
+        }
+        finally
+        {
+            IsLoadingTree = false;
+        }
+    }
+
+    private async Task OnTreeItemExpanded(ITreeViewItem? item)
+    {
+        if (item is DirectoryTreeNode node)
+        {
+            await LoadDirectoryContents(node.Path);
+        }
+    }
+
+    private async Task OnTreeItemSelected(ITreeViewItem? item)
+    {
+        if (item is DirectoryTreeNode node)
+        {
+            await LoadDirectoryContents(node.Path);
+        }
+    }
+
+    private async Task LoadDirectoryContents(string path)
+    {
+        if (SelectedPath == path)
+        {
+            return;
+        }
+
+        IsLoadingFiles = true;
+        SelectedPath = path;
+        SelectedFile = null;
+        StateHasChanged();
+
+        try
+        {
+            CurrentFiles = await FileNavigationService.GetDirectoryContentsAsync(path);
+        }
+        catch (FileStationApiException ex)
+        {
+            CurrentFiles = [];
+            ErrorMessage = $"Failed to load directory contents: {ex.Message}";
+            if (ex.ErrorCode.HasValue)
+            {
+                ErrorMessage += $" (Error Code: {ex.ErrorCode})";
+            }
+        }
+        catch (Exception ex)
+        {
+            CurrentFiles = [];
+            ErrorMessage = $"Failed to load directory contents: {ex.Message}";
+        }
+        finally
+        {
+            IsLoadingFiles = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnFileClick(FileStationFile file)
+    {
+        if (file.IsDirectory)
+        {
+            return;
+        }
+
+        SelectedFile = file;
+        StateHasChanged();
+    }
+
+    private void OnSelectFile(FileStationFile file)
+    {
+        SelectedFile = file;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmAsync()
+    {
+        if (SelectedFile != null)
+        {
+            await OnFileSelected.InvokeAsync(SelectedFile);
+            await Dialog.CloseAsync(SelectedFile);
+        }
+    }
+
+    private async Task CancelAsync()
+    => await Dialog.CancelAsync();
+
+    private Icon GetFileIcon(FileStationFile file)
+    {
+        if (file.IsDirectory || file.Type == "dir")
+        {
+            return new Icons.Regular.Size16.Folder();
+        }
+
+        var name = file.Name.ToLowerInvariant();
+
+        if (name.EndsWith(".txt") || name.EndsWith(".log"))
+        {
+            return new Icons.Regular.Size16.DocumentText();
+        }
+
+        if (name.EndsWith(".jpg") || name.EndsWith(".jpeg") || name.EndsWith(".png") || name.EndsWith(".gif"))
+        {
+            return new Icons.Regular.Size16.Image();
+        }
+
+        if (name.EndsWith(".zip") || name.EndsWith(".rar") || name.EndsWith(".7z"))
+        {
+            return new Icons.Regular.Size16.FolderZip();
+        }
+
+        if (name.EndsWith(".pdf"))
+        {
+            return new Icons.Regular.Size16.DocumentPdf();
+        }
+
+        return new Icons.Regular.Size16.Document();
+    }
+
+    private string GetFileSize(FileStationFile file)
+    {
+        if (file.IsDirectory || file.Additional?.Size == null)
+        {
+            return "-";
+        }
+
+        var bytes = file.Additional.Size.Value;
+
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024:F1} KB";
+        }
+
+        if (bytes < 1024L * 1024 * 1024)
+        {
+            return $"{bytes / (1024 * 1024):F1} MB";
+        }
+
+        return $"{bytes / (1024L * 1024 * 1024):F1} GB";
+    }
+
+    private string GetModifiedDate(FileStationFile file)
+    {
+        if (file.Additional?.Time?.ModifyTime == null)
+        {
+            return "-";
+        }
+
+        return DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value)
+        .ToString("yyyy-MM-dd HH:mm");
+    }
+}
