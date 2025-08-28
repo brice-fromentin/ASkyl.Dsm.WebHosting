@@ -266,14 +266,14 @@
     }
 
     private async Task ShowDotnetVersionsDialog()
-    => await DialogsService.ShowDialogAsync<DotnetVersionsDialog>(new() { Width = "", Height = "" });
+    => await DialogsService.ShowDialogAsync<DotnetVersionsDialog>(new() { Width = "", Height = "", Modal = true });
 
     private async Task ShowAspNetReleasesDialog()
-    => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height = "" });
+    => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height = "", Modal = true });
 
     private async Task ShowFileSelectionDialog()
     {
-        var dialog = await DialogsService.ShowDialogAsync<FileSelectionDialog>(new() { Width = "", Height = "" });
+        var dialog = await DialogsService.ShowDialogAsync<FileSelectionDialog>(new() { Width = "800px", Height = "600px", Modal = true });
         var result = await dialog.Result;
 
         if (result.Cancelled || result.Data == null)

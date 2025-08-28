@@ -3,15 +3,17 @@
 @inject IDialogService DialogService
 @inject IFileNavigationService FileNavigationService
 
+<link href="/css/file-selection-dialog.css" rel="stylesheet" />
+
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">File Selection</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogBody>
-    <FluentGrid>
-        <FluentGridItem xs="4">
-            <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
-                <FluentLabel Typo="Typography.Body" Style="font-weight: 600;">Shared Folders</FluentLabel>
+    <FluentSplitter Orientation="Orientation.Horizontal" Panel1Size="30%" Panel1MinSize="20%" Panel1MaxSize="50%" Class="file-dialog-splitter">
+        <Panel1>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="4" HorizontalGap="8">
+                <FluentLabel Typo="Typography.H6">Shared Folders</FluentLabel>
                 @if (IsLoadingTree)
                 {
                     <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
@@ -27,15 +29,15 @@
                 }
                 else
                 {
-                    <FluentStack Orientation="Orientation.Vertical" Style="overflow-y: auto; height: 400px;">
-                        <FluentTreeView Items="TreeNodes" LazyLoadItems="true" />
+                    <FluentStack Orientation="Orientation.Vertical" Class="file-dialog-scrollable">
+                        <FluentTreeView Items="TreeNodes" LazyLoadItems="true" Class="file-dialog-tree" OnSelectedChange="OnTreeSelectionChanged" />
                     </FluentStack>
                 }
             </FluentStack>
-        </FluentGridItem>
-        <FluentGridItem xs="8">
-            <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
-                <FluentLabel Typo="Typography.Body" Style="font-weight: 600;">
+        </Panel1>
+        <Panel2>
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="4" HorizontalGap="8">
+                <FluentLabel Typo="Typography.H6">
                     Files in: @(SelectedPath ?? "Select a shared folder")
                 </FluentLabel>
 
@@ -48,15 +50,15 @@
                 }
                 else if (CurrentFiles?.Any() == true)
                 {
-                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="2" Style="overflow-y: auto; height: 400px;">
+                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="2" Class="file-dialog-scrollable">
                         @foreach (var file in CurrentFiles)
                         {
-                            <FluentCard Appearance="@(SelectedFile == file ? Appearance.Filled : Appearance.Outline)" @onclick="() => OnFileClick(file)" Style="cursor: pointer;">
-                                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentCard Appearance="@(SelectedFile == file ? Appearance.Filled : Appearance.Outline)" @onclick="() => OnFileClick(file)" Class="file-dialog-clickable-card">
+                                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
                                     <FluentIcon Value="@GetFileIcon(file)" />
-                                    <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
-                                        <FluentLabel Style="font-weight: 600;">@file.Name</FluentLabel>
-                                        <FluentLabel Typo="Typography.Body" Style="font-size: 0.85em; opacity: 0.8;">
+                                    <FluentStack Orientation="Orientation.Vertical" Class="file-dialog-scrollable">
+                                        <FluentLabel Typo="Typography.Body">@file.Name</FluentLabel>
+                                        <FluentLabel Typo="Typography.Body">
                                             @file.Type | @GetFileSize(file) | @GetModifiedDate(file)
                                         </FluentLabel>
                                     </FluentStack>
@@ -86,8 +88,8 @@
                     </FluentMessageBar>
                 }
             </FluentStack>
-        </FluentGridItem>
-    </FluentGrid>
+        </Panel2>
+    </FluentSplitter>
 </FluentDialogBody>
 
 <FluentDialogFooter>
@@ -120,6 +122,50 @@
     protected override async Task OnInitializedAsync()
     => await LoadSharedFolders();
 
+    private async Task OnTreeSelectionChanged(FluentTreeItem selectedItem)
+    {
+        if (String.IsNullOrEmpty(selectedItem?.Id))
+        {
+            return;
+        }
+
+        // Use the Id which corresponds to the DirectoryTreeNode.Path
+        var selectedPath = selectedItem.Id;
+
+        if (SelectedPath == selectedPath)
+        {
+            return;
+        }
+
+        IsLoadingFiles = true;
+        SelectedPath = selectedPath;
+        SelectedFile = null;
+
+        try
+        {
+            CurrentFiles = await FileNavigationService.GetDirectoryContentsAsync(selectedPath);
+        }
+        catch (FileStationApiException ex)
+        {
+            CurrentFiles = [];
+            ErrorMessage = $"Failed to load directory contents: {ex.Message}";
+
+            if (ex.ErrorCode.HasValue)
+            {
+                ErrorMessage += $" (Error Code: {ex.ErrorCode})";
+            }
+        }
+        catch (Exception ex)
+        {
+            CurrentFiles = [];
+            ErrorMessage = $"Failed to load directory contents: {ex.Message}";
+        }
+        finally
+        {
+            IsLoadingFiles = false;
+        }
+    }
+
     private async Task LoadSharedFolders()
     {
         IsLoadingTree = true;
@@ -133,6 +179,7 @@
         {
             TreeNodes = [];
             ErrorMessage = $"FileStation API Error: {ex.Message}";
+
             if (ex.ErrorCode.HasValue)
             {
                 ErrorMessage += $" (Error Code: {ex.ErrorCode})";
@@ -149,59 +196,6 @@
         }
     }
 
-    private async Task OnTreeItemExpanded(ITreeViewItem? item)
-    {
-        if (item is DirectoryTreeNode node)
-        {
-            await LoadDirectoryContents(node.Path);
-        }
-    }
-
-    private async Task OnTreeItemSelected(ITreeViewItem? item)
-    {
-        if (item is DirectoryTreeNode node)
-        {
-            await LoadDirectoryContents(node.Path);
-        }
-    }
-
-    private async Task LoadDirectoryContents(string path)
-    {
-        if (SelectedPath == path)
-        {
-            return;
-        }
-
-        IsLoadingFiles = true;
-        SelectedPath = path;
-        SelectedFile = null;
-        StateHasChanged();
-
-        try
-        {
-            CurrentFiles = await FileNavigationService.GetDirectoryContentsAsync(path);
-        }
-        catch (FileStationApiException ex)
-        {
-            CurrentFiles = [];
-            ErrorMessage = $"Failed to load directory contents: {ex.Message}";
-            if (ex.ErrorCode.HasValue)
-            {
-                ErrorMessage += $" (Error Code: {ex.ErrorCode})";
-            }
-        }
-        catch (Exception ex)
-        {
-            CurrentFiles = [];
-            ErrorMessage = $"Failed to load directory contents: {ex.Message}";
-        }
-        finally
-        {
-            IsLoadingFiles = false;
-            StateHasChanged();
-        }
-    }
-
     private void OnFileClick(FileStationFile file)
     {
         if (file.IsDirectory)
@@ -210,13 +204,11 @@
         }
 
         SelectedFile = file;
-        StateHasChanged();
     }
 
     private void OnSelectFile(FileStationFile file)
     {
         SelectedFile = file;
-        StateHasChanged();
     }
 
     private async Task ConfirmAsync()
@@ -297,7 +289,6 @@
             return "-";
         }
 
-        return DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value)
-        .ToString("yyyy-MM-dd HH:mm");
+        return DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value).ToString("yyyy-MM-dd HH:mm");
     }
 }

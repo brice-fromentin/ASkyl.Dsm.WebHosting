@@ -5,7 +5,7 @@ Directives :
 - All generated messages for commit must be in english.
 - Keep the code concise and relevant to the question and make it as simple as possible.
 - Use early returns to avoid deep nesting.
-- Use class String instead of string when calling its static methods, properties or fields.
+- Use class String instead of string when calling its static methods, properties or fields otherwise use native type string.
 - Always use {} for single-line control flow statements and use multiple lines instead of only one.
 - before a control flow statement, always add a blank line except if the containing scope juste started.
 - Always sort the using statements by this order runtime, microsoft, ISV and user code last.
