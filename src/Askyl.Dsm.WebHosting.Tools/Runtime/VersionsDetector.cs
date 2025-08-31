@@ -33,7 +33,7 @@ public static partial class VersionsDetector
 
     public static async Task<List<FrameworkInfo>> GetInstalledVersionsAsync()
     {
-        var frameworks = new List<FrameworkInfo>();
+        var frameworks = (List<FrameworkInfo>)[];
 
         try
         {
@@ -97,7 +97,7 @@ public static partial class VersionsDetector
 
     private static List<FrameworkInfo> ParseDotnetInfo(string output)
     {
-        var frameworks = new List<FrameworkInfo>();
+        var frameworks = (List<FrameworkInfo>)[];
         var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
         string? currentSection = null;

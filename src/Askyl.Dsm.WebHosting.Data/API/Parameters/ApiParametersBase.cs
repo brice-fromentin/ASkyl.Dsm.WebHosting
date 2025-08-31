@@ -119,7 +119,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
             if (value is not null)
             {
                 var name = (property.CustomName.Length == 0) ? property.Info.Name.ToLowerInvariant() : property.CustomName;
-                var serialized = value.ToString();
+                var serialized = value?.ToString();
 
                 if (serialized is null)
                 {
@@ -129,7 +129,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
                 builder.Append('&');
                 builder.Append(name);
                 builder.Append('=');
-                builder.Append(serialized);
+                builder.Append(Uri.EscapeDataString(serialized));
             }
         }
 

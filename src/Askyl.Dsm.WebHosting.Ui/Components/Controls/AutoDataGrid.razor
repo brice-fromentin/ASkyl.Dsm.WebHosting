@@ -1,7 +1,5 @@
 @typeparam TItem where TItem : class
 
-@using Microsoft.FluentUI.AspNetCore.Components
-
 <link href="/css/auto-data-grid.css" rel="stylesheet" />
 
 <div class="auto-data-grid-content">
@@ -58,7 +56,7 @@
     [Parameter]
     public RenderFragment? EmptyContent { get; set; }
 
-    [Parameter]
+    [Parameter, EditorRequired]
     public string GridTemplateColumns { get; set; } = default!;
 
     [Parameter]
@@ -70,4 +68,6 @@
     protected override void OnInitialized() => pagination.ItemsPerPage = ItemsPerPage;
 
     public async Task RefreshAsync() => await Grid!.RefreshDataAsync();
+
+    public void SetLoadingState(bool? loading) => Grid?.SetLoadingState(loading);
 }

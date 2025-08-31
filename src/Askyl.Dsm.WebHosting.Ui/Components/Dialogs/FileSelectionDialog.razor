@@ -1,6 +1,3 @@
-@using Microsoft.AspNetCore.Components.Web
-@using Microsoft.FluentUI.AspNetCore.Components.Icons
-
 @using Askyl.Dsm.WebHosting.Ui.Components.Controls
 
 @implements IDialogContentComponent
@@ -53,12 +50,12 @@
                     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
                         @if (!String.IsNullOrEmpty(SelectedPath))
                         {
-                            <FluentIcon Value="@(new Icons.Regular.Size16.Info())" />
+                            <FluentIcon Value="@(new IconsRegular16.Info())" />
                             <FluentLabel>No files found in this directory.</FluentLabel>
                         }
                         else
                         {
-                            <FluentIcon Value="@(new Icons.Regular.Size16.FolderOpen())" />
+                            <FluentIcon Value="@(new IconsRegular16.FolderOpen())" />
                             <FluentLabel>Select a shared folder from the tree to view its contents.</FluentLabel>
                         }
                     </FluentStack>
@@ -81,6 +78,8 @@
 
 @code
 {
+    #region Parameters and Properties
+
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 
@@ -90,7 +89,6 @@
     private AutoDataGrid<FileStationFile>? AutoGrid { get; set; }
 
     private bool IsLoadingTree { get; set; } = true;
-    private bool IsLoadingFiles { get; set; } = false;
     private List<DirectoryTreeNode> TreeNodes { get; set; } = [];
     private List<FileStationFile>? CurrentFiles { get; set; }
     private string? SelectedPath { get; set; }
@@ -99,7 +97,15 @@
     // Sorted files for display: directories first, then alphabetical
     private IEnumerable<FileStationFile> SortedFiles => CurrentFiles?.OrderBy(f => !f.IsDirectory).ThenBy(f => f.Name) ?? Enumerable.Empty<FileStationFile>();
 
+    #endregion
+
+    #region Lifecycle Methods
+
     protected override async Task OnInitializedAsync() => await LoadSharedFolders();
+
+    #endregion
+
+    #region Data Providers
 
     private ValueTask<GridItemsProviderResult<FileStationFile>> GetItemsProvider(GridItemsProviderRequest<FileStationFile> req)
     {
@@ -113,6 +119,10 @@
         var result = GridItemsProviderResult.From<FileStationFile>(items, totalItemCount);
         return ValueTask.FromResult(result);
     }
+
+    #endregion
+
+    #region Event Handlers
 
     private async Task OnTreeSelectionChanged(FluentTreeItem selectedItem)
     {
@@ -129,13 +139,13 @@
             return;
         }
 
-        IsLoadingFiles = true;
+        AutoGrid!.SetLoadingState(true);
         SelectedPath = selectedPath;
         SelectedFile = null;
 
         try
         {
-            CurrentFiles = await FileNavigationService.GetDirectoryContentsAsync(selectedPath);
+            CurrentFiles = await FileNavigationService!.GetDirectoryContentsAsync(selectedPath);
         }
         catch (FileStationApiException ex)
         {
@@ -149,15 +159,26 @@
         }
         finally
         {
-            IsLoadingFiles = false;
-            
-            // Refresh the grid after loading new files
-            if (AutoGrid != null)
-            {
-                await AutoGrid.RefreshAsync();
-            }
+            AutoGrid!.SetLoadingState(false);
+            await AutoGrid!.RefreshAsync();
         }
     }
+
+    private void OnFileClick(FileStationFile file)
+    {
+        if (file.IsDirectory)
+        {
+            return;
+        }
+
+        SelectedFile = file;
+    }
+
+    private void OnSelectFile(FileStationFile file) => SelectedFile = file;
+
+    #endregion
+
+    #region Data Loading
 
     private async Task LoadSharedFolders()
     {
@@ -165,7 +186,7 @@
 
         try
         {
-            TreeNodes = await FileNavigationService.GetSharedFoldersAsync(ShowErrorAsync);
+            TreeNodes = await FileNavigationService!.GetSharedFoldersAsync(ShowErrorAsync);
         }
         catch (FileStationApiException ex)
         {
@@ -183,61 +204,57 @@
         }
     }
 
-    private void OnFileClick(FileStationFile file)
-    {
-        if (file.IsDirectory)
-        {
-            return;
-        }
+    #endregion
 
-        SelectedFile = file;
-    }
-
-    private void OnSelectFile(FileStationFile file) => SelectedFile = file;
+    #region Dialog Actions
 
     private async Task ConfirmAsync()
     {
         if (SelectedFile != null)
         {
             await OnFileSelected.InvokeAsync(SelectedFile);
-            await Dialog.CloseAsync(SelectedFile);
+            await Dialog!.CloseAsync(SelectedFile);
         }
     }
 
-    private async Task CancelAsync() => await Dialog.CancelAsync();
+    private async Task CancelAsync() => await Dialog!.CancelAsync();
 
-    private async Task ShowErrorAsync(string error) => await DialogService.ShowErrorAsync(error);
+    private async Task ShowErrorAsync(string error) => await DialogService!.ShowErrorAsync(error);
+
+    #endregion
+
+    #region File Display Helpers
 
     private Icon GetFileIcon(FileStationFile file)
     {
         if (file.IsDirectory || file.Type == "dir")
         {
-            return new Icons.Regular.Size16.Folder();
+            return new IconsRegular16.Folder();
         }
 
         var name = file.Name.ToLowerInvariant();
 
         if (name.EndsWith(".txt") || name.EndsWith(".log"))
         {
-            return new Icons.Regular.Size16.DocumentText();
+            return new IconsRegular16.DocumentText();
         }
 
         if (name.EndsWith(".jpg") || name.EndsWith(".jpeg") || name.EndsWith(".png") || name.EndsWith(".gif"))
         {
-            return new Icons.Regular.Size16.Image();
+            return new IconsRegular16.Image();
         }
 
         if (name.EndsWith(".zip") || name.EndsWith(".rar") || name.EndsWith(".7z"))
         {
-            return new Icons.Regular.Size16.FolderZip();
+            return new IconsRegular16.FolderZip();
         }
 
         if (name.EndsWith(".pdf"))
         {
-            return new Icons.Regular.Size16.DocumentPdf();
+            return new IconsRegular16.DocumentPdf();
         }
 
-        return new Icons.Regular.Size16.Document();
+        return new IconsRegular16.Document();
     }
 
     private string GetFileSize(FileStationFile file)
@@ -293,4 +310,6 @@
 
         return extension.ToUpperInvariant();
     }
+
+    #endregion
 }

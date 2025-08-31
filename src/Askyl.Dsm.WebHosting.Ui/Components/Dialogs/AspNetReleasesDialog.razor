@@ -1,8 +1,6 @@
 @using Askyl.Dsm.WebHosting.Constants
 @using Askyl.Dsm.WebHosting.Data.Runtime
 @using Askyl.Dsm.WebHosting.Tools.Runtime
-@using Askyl.Dsm.WebHosting.Ui.Models
-@using Askyl.Dsm.WebHosting.Ui.Services
 
 @implements IDialogContentComponent
 
@@ -247,7 +245,8 @@
         var pagedReleases = Releases.Skip(startIndex).Take(count);
 
         // Check which versions are installed locally
-        var pagedItems = new List<ReleaseGridRow>();
+        var pagedItems = (List<ReleaseGridRow>)[];
+
         foreach (var release in pagedReleases)
         {
             var isInstalled = DotnetVersionService.IsVersionInstalled(release.Version, "ASP.NET Core");
