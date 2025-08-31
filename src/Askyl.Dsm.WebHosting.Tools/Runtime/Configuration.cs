@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using System.IO;
 using Microsoft.Extensions.Configuration;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;

@@ -1,5 +1,3 @@
-using System;
-
 namespace Askyl.Dsm.WebHosting.Constants;
 
 public static class DsmDefaults

@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.Attributes;
@@ -44,7 +45,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
     }
 
     private static List<PropertyDefinition> GetDefinitions()
-        => typeof(T).GetProperties().Select(x => PropertyDefinition.Create(x)).ToList();
+        => [.. typeof(T).GetProperties().Select(x => PropertyDefinition.Create(x))];
 
     #endregion
 
@@ -68,8 +69,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
 
     public T Parameters { get; }
 
-    public string BuildUrl(string server, int port)
-        => $"https://{server}:{port}/webapi/{this.Path}/{this.Name}";
+    public string BuildUrl(string server, int port) => $"https://{server}:{port}/webapi/{this.Path}/{this.Name}";
 
     public StringContent ToForm()
     {

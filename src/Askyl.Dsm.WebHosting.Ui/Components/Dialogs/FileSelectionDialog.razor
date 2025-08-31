@@ -1,3 +1,8 @@
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.FluentUI.AspNetCore.Components.Icons
+
+@using Askyl.Dsm.WebHosting.Ui.Components.Controls
+
 @implements IDialogContentComponent
 
 @inject IDialogService DialogService
@@ -13,7 +18,6 @@
     <FluentSplitter Orientation="Orientation.Horizontal" Panel1Size="30%" Panel1MinSize="20%" Panel1MaxSize="50%" Class="file-dialog-splitter">
         <Panel1>
             <FluentStack Orientation="Orientation.Vertical" VerticalGap="4" HorizontalGap="8">
-                <FluentLabel Typo="Typography.H6">Shared Folders</FluentLabel>
                 @if (IsLoadingTree)
                 {
                     <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
@@ -21,73 +25,45 @@
                         <FluentLabel>Loading shared folders...</FluentLabel>
                     </FluentStack>
                 }
-                else if (!String.IsNullOrEmpty(ErrorMessage))
-                {
-                    <FluentMessageBar Intent="MessageIntent.Error">
-                        @ErrorMessage
-                    </FluentMessageBar>
-                }
                 else
                 {
-                    <FluentStack Orientation="Orientation.Vertical" Class="file-dialog-scrollable">
-                        <FluentTreeView Items="TreeNodes" LazyLoadItems="true" Class="file-dialog-tree" OnSelectedChange="OnTreeSelectionChanged" />
+                    <FluentStack Orientation="Orientation.Vertical" Class="full-size">
+                        <FluentTreeView Items="TreeNodes" LazyLoadItems="true" Class="full-size file-dialog-tree" OnSelectedChange="OnTreeSelectionChanged" />
                     </FluentStack>
                 }
             </FluentStack>
         </Panel1>
         <Panel2>
-            <FluentStack Orientation="Orientation.Vertical" VerticalGap="4" HorizontalGap="8">
-                <FluentLabel Typo="Typography.H6">
-                    Files in: @(SelectedPath ?? "Select a shared folder")
-                </FluentLabel>
+            <AutoDataGrid @ref="@AutoGrid" TItem="FileStationFile" ItemsProvider="@GetItemsProvider" GridTemplateColumns="1fr auto auto auto">
+                <ChildContent>
+                    <TemplateColumn TGridItem="FileStationFile" Title="Name" Sortable="false">
+                        <ChildContent Context="file">
+                            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="2">
+                                <FluentIcon Value="@GetFileIcon(file)" />
+                                <FluentLabel>@file.Name</FluentLabel>
+                            </FluentStack>
+                        </ChildContent>
+                    </TemplateColumn>
+                    <PropertyColumn TGridItem="FileStationFile" TProp="string" Title="Size" Property="@(f => GetFileSize(f))" Sortable="false" Align="Align.End" />
+                    <PropertyColumn TGridItem="FileStationFile" TProp="string" Title="Type" Property="@(f => GetFileType(f))" Sortable="false" Align="Align.Center" />
+                    <PropertyColumn TGridItem="FileStationFile" TProp="string" Title="Modified" Property="@(f => GetModifiedDate(f))" Sortable="false" Align="Align.Center" />
+                </ChildContent>
 
-                @if (IsLoadingFiles)
-                {
-                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                        <FluentProgressRing Size="16" />
-                        <FluentLabel>Loading files...</FluentLabel>
-                    </FluentStack>
-                }
-                else if (CurrentFiles?.Any() == true)
-                {
-                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="2" Class="file-dialog-scrollable">
-                        @foreach (var file in CurrentFiles)
+                <EmptyContent>
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                        @if (!String.IsNullOrEmpty(SelectedPath))
                         {
-                            <FluentCard Appearance="@(SelectedFile == file ? Appearance.Filled : Appearance.Outline)" @onclick="() => OnFileClick(file)" Class="file-dialog-clickable-card">
-                                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="3">
-                                    <FluentIcon Value="@GetFileIcon(file)" />
-                                    <FluentStack Orientation="Orientation.Vertical" Class="file-dialog-scrollable">
-                                        <FluentLabel Typo="Typography.Body">@file.Name</FluentLabel>
-                                        <FluentLabel Typo="Typography.Body">
-                                            @file.Type | @GetFileSize(file) | @GetModifiedDate(file)
-                                        </FluentLabel>
-                                    </FluentStack>
-                                    @if (!file.IsDirectory)
-                                    {
-                                        <FluentButton Size="ButtonSize.Small" Appearance="Appearance.Outline" OnClick="() => OnSelectFile(file)">
-                                            Select
-                                        </FluentButton>
-                                    }
-                                </FluentStack>
-                            </FluentCard>
+                            <FluentIcon Value="@(new Icons.Regular.Size16.Info())" />
+                            <FluentLabel>No files found in this directory.</FluentLabel>
+                        }
+                        else
+                        {
+                            <FluentIcon Value="@(new Icons.Regular.Size16.FolderOpen())" />
+                            <FluentLabel>Select a shared folder from the tree to view its contents.</FluentLabel>
                         }
                     </FluentStack>
-                }
-                else if (!String.IsNullOrEmpty(SelectedPath))
-                {
-                    <FluentMessageBar Intent="MessageIntent.Info">
-                        <FluentIcon Value="@(new Icons.Regular.Size16.Info())" Slot="icon" />
-                        No files found in this directory.
-                    </FluentMessageBar>
-                }
-                else
-                {
-                    <FluentMessageBar Intent="MessageIntent.Info">
-                        <FluentIcon Value="@(new Icons.Regular.Size16.FolderOpen())" Slot="icon" />
-                        Select a shared folder from the tree to view its contents.
-                    </FluentMessageBar>
-                }
-            </FluentStack>
+                </EmptyContent>
+            </AutoDataGrid>
         </Panel2>
     </FluentSplitter>
 </FluentDialogBody>
@@ -111,16 +87,32 @@
     [Parameter]
     public EventCallback<FileStationFile> OnFileSelected { get; set; }
 
+    private AutoDataGrid<FileStationFile>? AutoGrid { get; set; }
+
     private bool IsLoadingTree { get; set; } = true;
     private bool IsLoadingFiles { get; set; } = false;
     private List<DirectoryTreeNode> TreeNodes { get; set; } = [];
     private List<FileStationFile>? CurrentFiles { get; set; }
     private string? SelectedPath { get; set; }
     private FileStationFile? SelectedFile { get; set; }
-    private string? ErrorMessage { get; set; }
 
-    protected override async Task OnInitializedAsync()
-    => await LoadSharedFolders();
+    // Sorted files for display: directories first, then alphabetical
+    private IEnumerable<FileStationFile> SortedFiles => CurrentFiles?.OrderBy(f => !f.IsDirectory).ThenBy(f => f.Name) ?? Enumerable.Empty<FileStationFile>();
+
+    protected override async Task OnInitializedAsync() => await LoadSharedFolders();
+
+    private ValueTask<GridItemsProviderResult<FileStationFile>> GetItemsProvider(GridItemsProviderRequest<FileStationFile> req)
+    {
+        var sortedFiles = SortedFiles.ToList();
+        var totalItemCount = sortedFiles.Count;
+
+        var startIndex = req.StartIndex;
+        var count = Math.Min(req.Count ?? totalItemCount, totalItemCount - startIndex);
+        var items = sortedFiles.Skip(startIndex).Take(count).ToList();
+
+        var result = GridItemsProviderResult.From<FileStationFile>(items, totalItemCount);
+        return ValueTask.FromResult(result);
+    }
 
     private async Task OnTreeSelectionChanged(FluentTreeItem selectedItem)
     {
@@ -148,47 +140,42 @@
         catch (FileStationApiException ex)
         {
             CurrentFiles = [];
-            ErrorMessage = $"Failed to load directory contents: {ex.Message}";
-
-            if (ex.ErrorCode.HasValue)
-            {
-                ErrorMessage += $" (Error Code: {ex.ErrorCode})";
-            }
+            await ShowErrorAsync($"Failed to load directory contents: {ex.FormattedMessage}");
         }
         catch (Exception ex)
         {
             CurrentFiles = [];
-            ErrorMessage = $"Failed to load directory contents: {ex.Message}";
+            await ShowErrorAsync($"Failed to load directory contents: {ex.Message}");
         }
         finally
         {
             IsLoadingFiles = false;
+            
+            // Refresh the grid after loading new files
+            if (AutoGrid != null)
+            {
+                await AutoGrid.RefreshAsync();
+            }
         }
     }
 
     private async Task LoadSharedFolders()
     {
         IsLoadingTree = true;
-        ErrorMessage = null;
 
         try
         {
-            TreeNodes = await FileNavigationService.GetSharedFoldersAsync();
+            TreeNodes = await FileNavigationService.GetSharedFoldersAsync(ShowErrorAsync);
         }
         catch (FileStationApiException ex)
         {
             TreeNodes = [];
-            ErrorMessage = $"FileStation API Error: {ex.Message}";
-
-            if (ex.ErrorCode.HasValue)
-            {
-                ErrorMessage += $" (Error Code: {ex.ErrorCode})";
-            }
+            await ShowErrorAsync($"FileStation API Error: {ex.FormattedMessage}");
         }
         catch (Exception ex)
         {
             TreeNodes = [];
-            ErrorMessage = $"Failed to load shared folders: {ex.Message}";
+            await ShowErrorAsync($"Failed to load shared folders: {ex.Message}");
         }
         finally
         {
@@ -206,10 +193,7 @@
         SelectedFile = file;
     }
 
-    private void OnSelectFile(FileStationFile file)
-    {
-        SelectedFile = file;
-    }
+    private void OnSelectFile(FileStationFile file) => SelectedFile = file;
 
     private async Task ConfirmAsync()
     {
@@ -220,8 +204,9 @@
         }
     }
 
-    private async Task CancelAsync()
-    => await Dialog.CancelAsync();
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+
+    private async Task ShowErrorAsync(string error) => await DialogService.ShowErrorAsync(error);
 
     private Icon GetFileIcon(FileStationFile file)
     {
@@ -289,6 +274,23 @@
             return "-";
         }
 
-        return DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value).ToString("yyyy-MM-dd HH:mm");
+        return DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value).ToString("dd/MM/yyyy");
+    }
+
+    private string GetFileType(FileStationFile file)
+    {
+        if (file.IsDirectory)
+        {
+            return "Directory";
+        }
+
+        var extension = Path.GetExtension(file.Name);
+
+        if (String.IsNullOrEmpty(extension))
+        {
+            return "File";
+        }
+
+        return extension.ToUpperInvariant();
     }
 }

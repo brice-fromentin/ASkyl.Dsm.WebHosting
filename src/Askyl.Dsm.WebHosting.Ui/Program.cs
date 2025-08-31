@@ -1,9 +1,10 @@
+using Microsoft.FluentUI.AspNetCore.Components;
+
+using Serilog;
+
 using Askyl.Dsm.WebHosting.Tools;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
-
-using Microsoft.FluentUI.AspNetCore.Components;
-using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 

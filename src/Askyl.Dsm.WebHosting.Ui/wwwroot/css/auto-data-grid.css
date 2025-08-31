@@ -1,0 +1,28 @@
+/* AutoDataGrid - Reusable data grid component styles */
+
+/* CSS Grid layout for grid content */
+.auto-data-grid-content {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    height: 100%;
+    gap: 8px;
+}
+
+/* Grid area - takes remaining space with scroll */
+.auto-data-grid-area {
+    grid-row: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* Empty content cell styling - scoped to AutoDataGrid */
+.auto-data-grid-area td.empty-content-row.empty-content-cell {
+    border: 0;
+}
+
+/* Pager area - fixed at bottom */
+.auto-data-grid-pager-area {
+    grid-row: 2;
+    padding: 4px 0;
+}

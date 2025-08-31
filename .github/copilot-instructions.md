@@ -5,11 +5,10 @@ Directives :
 - All generated messages for commit must be in english.
 - Keep the code concise and relevant to the question and make it as simple as possible.
 - Use early returns to avoid deep nesting.
-- Use class String instead of string when calling its static methods, properties or fields otherwise use native type string.
+- When calling static methods, properties, or fields of the String class, use the fully qualified String type (e.g., String.IsNullOrEmpty, String.Empty). For all other uses (variable declarations, parameter types, return types, etc.), use the native string keyword.
 - Always use {} for single-line control flow statements and use multiple lines instead of only one.
 - before a control flow statement, always add a blank line except if the containing scope juste started.
-- Always sort the using statements by this order runtime, microsoft, ISV and user code last.
-- Always remove unused usings.
+
 - Apply DRY principles.
 - Apply SOLID principles.
 - Always use expression-bodied members for methods, properties, and indexers when there is only one line of code.
@@ -20,7 +19,11 @@ Directives :
 
 []: # Do not suggest code that has been deleted.
 
+- When the project supports implicit usings, never add using directives for types in the global usings, if you find one remove it.
+- Always remove unused usings in Razor and C#.
+- Always sort the using statements by this order runtime, microsoft, ISV and user code last.
 - Prefer additional usings instead of fully qualified names.
+
 - Use GeneratedRegexAttribute for regex patterns.
 - When possible use primary constructors for classes.
 - Fixes warnings after build.

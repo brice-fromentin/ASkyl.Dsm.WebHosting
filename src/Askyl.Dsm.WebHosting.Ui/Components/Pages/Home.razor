@@ -1,5 +1,9 @@
 ﻿@page "/"
+
 @using System.Text.Json
+
+@using Microsoft.AspNetCore.Components
+
 @using Askyl.Dsm.WebHosting.Constants
 @using Askyl.Dsm.WebHosting.Data.API.Definitions
 @using Askyl.Dsm.WebHosting.Data.API.Parameters
@@ -159,7 +163,7 @@
 
         if (await CallAPI(parameters))
         {
-            Uuid = "";
+            Uuid = String.Empty;
         }
     }
 
@@ -265,15 +269,15 @@
         }
     }
 
-    private async Task ShowDotnetVersionsDialog()
-    => await DialogsService.ShowDialogAsync<DotnetVersionsDialog>(new() { Width = "", Height = "", Modal = true });
+    private async Task ShowDotnetVersionsDialog() =>
+        await DialogsService.ShowDialogAsync<DotnetVersionsDialog>(new() { Width = "", Height = "", Modal = true });
 
-    private async Task ShowAspNetReleasesDialog()
-    => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height = "", Modal = true });
+    private async Task ShowAspNetReleasesDialog() =>
+        await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height = "", Modal = true });
 
     private async Task ShowFileSelectionDialog()
     {
-        var dialog = await DialogsService.ShowDialogAsync<FileSelectionDialog>(new() { Width = "800px", Height = "600px", Modal = true });
+        var dialog = await DialogsService.ShowDialogAsync<FileSelectionDialog>(new() { Width = "80%", Height = "80%", Modal = true,  });
         var result = await dialog.Result;
 
         if (result.Cancelled || result.Data == null)

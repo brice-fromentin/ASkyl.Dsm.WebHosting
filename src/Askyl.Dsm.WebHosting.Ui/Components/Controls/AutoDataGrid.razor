@@ -1,0 +1,73 @@
+@typeparam TItem where TItem : class
+
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<link href="/css/auto-data-grid.css" rel="stylesheet" />
+
+<div class="auto-data-grid-content">
+    <div class="auto-data-grid-area">
+        <FluentDataGrid @ref="@Grid" TGridItem="TItem" ItemsProvider="@ItemsProvider" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" Pagination="@pagination" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky">
+            <ChildContent>
+                @ChildContent
+            </ChildContent>
+
+            <LoadingContent>
+                @if (LoadingContent != null)
+                {
+                    @LoadingContent
+                }
+                else
+                {
+                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentProgressRing Size="16" />
+                        <FluentLabel>Loading items...</FluentLabel>
+                    </FluentStack>
+                }
+            </LoadingContent>
+
+            <EmptyContent>
+                @if (EmptyContent != null)
+                {
+                    @EmptyContent
+                }
+                else
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.Info())" />
+                        <FluentLabel>No items found.</FluentLabel>
+                    </FluentStack>
+                }
+            </EmptyContent>
+        </FluentDataGrid>
+    </div>
+    <div class="auto-data-grid-pager-area">
+        <FluentPaginator State="@pagination" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public GridItemsProvider<TItem> ItemsProvider { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? LoadingContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? EmptyContent { get; set; }
+
+    [Parameter]
+    public string GridTemplateColumns { get; set; } = default!;
+
+    [Parameter]
+    public int ItemsPerPage { get; set; } = 50;
+
+    private FluentDataGrid<TItem>? Grid { get; set; }
+    private readonly PaginationState pagination = new();
+
+    protected override void OnInitialized() => pagination.ItemsPerPage = ItemsPerPage;
+
+    public async Task RefreshAsync() => await Grid!.RefreshDataAsync();
+}
