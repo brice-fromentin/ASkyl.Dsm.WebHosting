@@ -13,5 +13,7 @@ dist/
 *.tmp
 *.temp
 *backup*
-*old*
+*.old
+*_old.*
+*-old.*
 
