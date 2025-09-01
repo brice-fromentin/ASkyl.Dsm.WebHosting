@@ -1,6 +1,7 @@
 using Microsoft.FluentUI.AspNetCore.Components;
 using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
 
+using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Ui.Services;
@@ -68,7 +69,7 @@ public sealed class DirectoryTreeNode : ITreeViewItem
 
     public static DirectoryTreeNode FromFileStationFile(FileStationFile file, IFileNavigationService fileNavigationService, Func<string, Task> errorHandler)
     {
-        if (!file.IsDirectory && file.Type != "dir")
+        if (!file.IsDirectory && file.Type != FileStationDefaults.TypeDirectory)
         {
             throw new ArgumentException("FileStationFile must be a directory", nameof(file));
         }

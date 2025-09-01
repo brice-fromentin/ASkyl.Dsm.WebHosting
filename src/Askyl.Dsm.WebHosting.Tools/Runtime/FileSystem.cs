@@ -5,7 +5,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 public static class FileSystem
 {
     private static readonly string _baseDir = AppContext.BaseDirectory;
-    private static string _dotnetRoot = "";
+    private static string _dotnetRoot = String.Empty;
     private static readonly ConcurrentDictionary<string, string> _existingFolders = [];
 
     public const string Downloads = "downloads";

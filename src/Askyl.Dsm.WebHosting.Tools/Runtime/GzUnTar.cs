@@ -13,14 +13,14 @@ public static class GzUnTar
         using var archiveStream = File.OpenRead(inputFile);
         using var gzipStream = new GZipStream(archiveStream, CompressionMode.Decompress);
         using var tarReader = new TarReader(gzipStream);
-        
+
         for (var entry = tarReader.GetNextEntry(); entry != null; entry = tarReader.GetNextEntry())
         {
             var entryName = entry.Name;
 
             if (doExclusion && Path.GetFileName(entryName).Equals(exclude, StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine ("Skipping " + entryName);
+                Console.WriteLine("Skipping " + entryName);
                 continue;
             }
 

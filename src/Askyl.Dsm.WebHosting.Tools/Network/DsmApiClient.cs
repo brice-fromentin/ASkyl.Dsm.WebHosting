@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Askyl.Dsm.WebHosting.Constants;
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.API.Parameters;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.AuthenticationAPI;
@@ -12,12 +13,12 @@ namespace Askyl.Dsm.WebHosting.Tools.Network;
 
 public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiClient> log)
 {
-    private readonly HttpClient _httpClient = HttpClientFactory.CreateClient(DsmDefaults.HttpClientName);
+    private readonly HttpClient _httpClient = HttpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
     private readonly ILogger<DsmApiClient> _log = log;
 
-    private string _server = "";
+    private string _server = String.Empty;
     private int _port = DsmDefaults.DefaultHttpsPort;
-    private string _sid = "";
+    private string _sid = String.Empty;
 
     public ApiInformationCollection ApiInformations { get; } = new();
 

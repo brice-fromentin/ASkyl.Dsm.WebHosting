@@ -1,11 +1,12 @@
 using Askyl.Dsm.WebHosting.Constants;
+using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
 
 public class FileStationExtractStartParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationExtract>(informations)
 {
-    public override string Name => DsmDefaults.DsmApiFileStationExtract;
+    public override string Name => DsmApiNames.FileStationExtract;
 
     public override int Version => 2;
 
@@ -16,7 +17,7 @@ public class FileStationExtractStartParameters(ApiInformationCollection informat
 
 public class FileStationExtractStatusParameters(ApiInformationCollection informations) : ApiParametersBase<ApiParametersNone>(informations)
 {
-    public override string Name => DsmDefaults.DsmApiFileStationExtract;
+    public override string Name => DsmApiNames.FileStationExtract;
 
     public override int Version => 2;
 
@@ -27,7 +28,7 @@ public class FileStationExtractStatusParameters(ApiInformationCollection informa
 
 public class FileStationExtractStopParameters(ApiInformationCollection informations) : ApiParametersBase<ApiParametersNone>(informations)
 {
-    public override string Name => DsmDefaults.DsmApiFileStationExtract;
+    public override string Name => DsmApiNames.FileStationExtract;
 
     public override int Version => 2;
 
@@ -38,7 +39,7 @@ public class FileStationExtractStopParameters(ApiInformationCollection informati
 
 public class FileStationExtractListParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationExtract>(informations)
 {
-    public override string Name => DsmDefaults.DsmApiFileStationExtract;
+    public override string Name => DsmApiNames.FileStationExtract;
 
     public override int Version => 2;
 

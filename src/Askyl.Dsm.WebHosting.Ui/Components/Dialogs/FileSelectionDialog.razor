@@ -1,5 +1,3 @@
-@using Askyl.Dsm.WebHosting.Ui.Components.Controls
-
 @implements IDialogContentComponent
 
 @inject IDialogService DialogService
@@ -14,19 +12,15 @@
 <FluentDialogBody>
     <FluentSplitter Orientation="Orientation.Horizontal" Panel1Size="30%" Panel1MinSize="20%" Panel1MaxSize="50%" Class="file-dialog-splitter">
         <Panel1>
-            <FluentStack Orientation="Orientation.Vertical" VerticalGap="4" HorizontalGap="8">
+            <FluentStack Orientation="Orientation.Horizontal" VerticalGap="4" HorizontalGap="8">
                 @if (IsLoadingTree)
                 {
-                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                        <FluentProgressRing Size="16" />
-                        <FluentLabel>Loading shared folders...</FluentLabel>
-                    </FluentStack>
+                    <FluentProgressRing Size="16" />
+                    <FluentLabel>Loading shared folders...</FluentLabel>
                 }
                 else
                 {
-                    <FluentStack Orientation="Orientation.Vertical" Class="full-size">
-                        <FluentTreeView Items="TreeNodes" LazyLoadItems="true" Class="full-size file-dialog-tree" OnSelectedChange="OnTreeSelectionChanged" />
-                    </FluentStack>
+                    <FluentTreeView Items="TreeNodes" LazyLoadItems="true" Class="full-size file-dialog-tree" OnSelectedChange="OnTreeSelectionChanged" />
                 }
             </FluentStack>
         </Panel1>

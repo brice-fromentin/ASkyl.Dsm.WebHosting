@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-using Askyl.Dsm.WebHosting.Constants;
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Tools.Network;
 
 namespace Askyl.Dsm.WebHosting.Tools;
@@ -9,7 +9,7 @@ public static class DsmToolsExtensions
 {
     public static IServiceCollection AddDsmApiClient(this IServiceCollection services)
     {
-        services.AddHttpClient(DsmDefaults.HttpClientName).ConfigurePrimaryHttpMessageHandler(() =>
+        services.AddHttpClient(ApplicationConstants.HttpClientName).ConfigurePrimaryHttpMessageHandler(() =>
         {
             return new HttpClientHandler
             {

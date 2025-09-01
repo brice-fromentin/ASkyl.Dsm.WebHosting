@@ -33,7 +33,7 @@ public static partial class VersionsDetector
 
     public static async Task<List<FrameworkInfo>> GetInstalledVersionsAsync()
     {
-        var frameworks = (List<FrameworkInfo>)[];
+        List<FrameworkInfo> frameworks = [];
 
         try
         {
@@ -66,7 +66,7 @@ public static partial class VersionsDetector
         try
         {
             using var process = new Process();
-            
+
             process.StartInfo.FileName = dotnetPath;
             process.StartInfo.Arguments = "--info";
             process.StartInfo.UseShellExecute = false;
@@ -97,7 +97,7 @@ public static partial class VersionsDetector
 
     private static List<FrameworkInfo> ParseDotnetInfo(string output)
     {
-        var frameworks = (List<FrameworkInfo>)[];
+        List<FrameworkInfo> frameworks = [];
         var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
         string? currentSection = null;
@@ -188,7 +188,7 @@ public static partial class VersionsDetector
     private static void TryAddFrameworkFromRegex(List<FrameworkInfo> frameworks, Regex regex, string trimmedLine, string frameworkType)
     {
         var match = regex.Match(trimmedLine);
-        
+
         if (match.Success)
         {
             var version = match.Groups[1].Value;

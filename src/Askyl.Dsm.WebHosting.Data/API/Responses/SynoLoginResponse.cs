@@ -9,5 +9,5 @@ public class SynoLoginResponse : ApiResponseBase<SynoLogin>
 public class SynoLogin
 {
     [JsonPropertyName("sid")]
-    public string Sid { get; set; } = "";
+    public string Sid { get; set; } = String.Empty;
 }

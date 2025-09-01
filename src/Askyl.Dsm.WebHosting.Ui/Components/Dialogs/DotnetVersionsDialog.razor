@@ -1,3 +1,5 @@
+@using Askyl.Dsm.WebHosting.Constants
+@using Askyl.Dsm.WebHosting.Constants.Runtime
 @using Askyl.Dsm.WebHosting.Data.Runtime
 
 @implements IDialogContentComponent
@@ -10,10 +12,10 @@
 </FluentDialogHeader>
 
 <FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Style="flex-grow: 1;">Close</FluentButton>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent">Close</FluentButton>
 </FluentDialogFooter>
 
-<FluentDialogBody Style="min-height: auto;">
+<FluentDialogBody>
     @if (IsLoading)
     {
         <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center">
@@ -59,6 +61,8 @@
 
 @code
 {
+    #region Properties and Fields
+
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 
@@ -66,11 +70,23 @@
     private List<FrameworkInfo>? DotnetVersions { get; set; }
     private string? ErrorMessage { get; set; }
 
+    #endregion
+
+    #region Lifecycle Methods
+
     protected override async Task OnParametersSetAsync()
         => await LoadDotnetVersions();
 
+    #endregion
+
+    #region Dialog Management
+
     private async Task CancelAsync()
         => await Dialog.CancelAsync();
+
+    #endregion
+
+    #region Data Loading
 
     private async Task LoadDotnetVersions()
     {
@@ -91,15 +107,21 @@
         }
     }
 
+    #endregion
+
+    #region UI Helper Methods
+
     private Icon GetFrameworkIcon(string frameworkType)
     {
         return frameworkType switch
         {
-            "SDK (Main)" => new IconsRegular16.Star(),
-            "SDK" => new IconsRegular16.Settings(),
-            "ASP.NET Core" => new IconsRegular16.Globe(),
-            "Runtime" => new IconsRegular16.Play(),
+            DotNetFrameworkTypes.SdkMain => new IconsRegular16.Star(),
+            DotNetFrameworkTypes.Sdk => new IconsRegular16.Settings(),
+            DotNetFrameworkTypes.AspNetCore => new IconsRegular16.Globe(),
+            DotNetFrameworkTypes.Runtime => new IconsRegular16.Play(),
             _ => new IconsRegular16.Code()
         };
     }
+
+    #endregion
 }

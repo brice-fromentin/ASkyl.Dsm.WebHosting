@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.Attributes;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
@@ -12,7 +13,7 @@ public class AuthenticateLogin : IGenericCloneable<AuthenticateLogin>
     public string Password { get; set; } = default!;
 
     [JsonPropertyName("format")]
-    public string Format { get; } = "cookie";
+    public string Format { get; } = AuthenticationDefaults.FormatCookie;
 
     [JsonPropertyName("otp_code")]
     public string? OtpCode { get; set; }

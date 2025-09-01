@@ -21,8 +21,18 @@
     border: 0;
 }
 
+/* Selected row styling */
+.auto-data-grid-area .selected-row {
+    background-color: var(--neutral-fill-secondary-rest);
+    border-color: var(--accent-fill-rest);
+}
+
+.auto-data-grid-area .selected-row:hover {
+    background-color: var(--neutral-fill-secondary-hover);
+}
 /* Pager area - fixed at bottom */
 .auto-data-grid-pager-area {
     grid-row: 2;
     padding: 4px 0;
 }
+

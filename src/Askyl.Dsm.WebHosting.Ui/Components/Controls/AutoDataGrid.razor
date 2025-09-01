@@ -4,7 +4,7 @@
 
 <div class="auto-data-grid-content">
     <div class="auto-data-grid-area">
-        <FluentDataGrid @ref="@Grid" TGridItem="TItem" ItemsProvider="@ItemsProvider" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" Pagination="@pagination" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky">
+        <FluentDataGrid @ref="@Grid" TGridItem="TItem" ItemsProvider="@ItemsProvider" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" Pagination="@pagination" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@OnRowClick">
             <ChildContent>
                 @ChildContent
             </ChildContent>
@@ -62,7 +62,20 @@
     [Parameter]
     public int ItemsPerPage { get; set; } = 50;
 
+    [Parameter]
+    public EventCallback<TItem> OnItemClick { get; set; }
+
+    [Parameter]
+    public TItem? SelectedItem { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem?> SelectedItemChanged { get; set; }
+
+    [Parameter]
+    public string SelectedRowClass { get; set; } = "selected-row";
+
     private FluentDataGrid<TItem>? Grid { get; set; }
+        
     private readonly PaginationState pagination = new();
 
     protected override void OnInitialized() => pagination.ItemsPerPage = ItemsPerPage;
@@ -70,4 +83,21 @@
     public async Task RefreshAsync() => await Grid!.RefreshDataAsync();
 
     public void SetLoadingState(bool? loading) => Grid?.SetLoadingState(loading);
+
+    private async Task OnRowClick(FluentDataGridRow<TItem> row)
+    {
+        SelectedItem = row.Item;
+        await SelectedItemChanged.InvokeAsync(SelectedItem);
+        await OnItemClick.InvokeAsync(SelectedItem);
+    }
+
+    private string? GetRowClass(TItem item)
+    {
+        if (SelectedItem != null && SelectedItem.Equals(item))
+        {
+            return SelectedRowClass;
+        }
+
+        return null;
+    }
 }

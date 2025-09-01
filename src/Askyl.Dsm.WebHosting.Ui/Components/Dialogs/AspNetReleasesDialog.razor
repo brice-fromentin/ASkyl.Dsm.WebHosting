@@ -1,4 +1,5 @@
 @using Askyl.Dsm.WebHosting.Constants
+@using Askyl.Dsm.WebHosting.Constants.Runtime
 @using Askyl.Dsm.WebHosting.Data.Runtime
 @using Askyl.Dsm.WebHosting.Tools.Runtime
 
@@ -8,22 +9,10 @@
 @inject IFrameworkManagementService ManagementService
 @inject IDotnetVersionService DotnetVersionService
 
-<style>
-    .selected-row {
-        background-color: var(--accent-fill-rest) !important;
-        color: var(--neutral-foreground-on-accent-rest) !important;
-    }
-
-    .selected-row:hover {
-        background-color: var(--accent-fill-hover) !important;
-        color: var(--neutral-foreground-on-accent-rest) !important;
-    }
-</style>
-
 <FluentOverlay @bind-Visible="@IsInstalling" Opacity="0.7">
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
         <FluentProgressRing Size="FluentProgressSize.Large" />
-        <FluentLabel Typo="Typography.Header">
+        <FluentLabel Typo="Typography.Header" Class="full-size">
             @(IsSelectedVersionInstalled ? "Uninstalling" : "Installing") ASP.NET Core @(SelectedItem?.Version ?? "")...
         </FluentLabel>
     </FluentStack>
@@ -53,7 +42,7 @@
                     <FluentOption Value="@c.ProductVersion">
                         @c.ProductVersion
                         @(c.IsLts ? "(LTS)" : String.Empty)
-                        @(DotnetVersionService.IsChannelInstalled(c.ProductVersion, "ASP.NET Core") ? " ✓" : String.Empty)
+                        @(DotnetVersionService.IsChannelInstalled(c.ProductVersion, DotNetFrameworkTypes.AspNetCore) ? " ✓" : String.Empty)
                     </FluentOption>
                 }
             }
@@ -74,41 +63,36 @@
     </FluentToolbar>
 
     <div style="width: 580px; height: 364px;">
-        <FluentDataGrid @ref="@Grid" TItem="ReleaseGridRow" ItemsProvider="@rowsProvider" DisplayMode="DataGridDisplayMode.Grid" Pagination="@pagination" ShowHover="true" OnRowClick="@(EventCallback.Factory.Create<FluentDataGridRow<ReleaseGridRow>>(this, OnRowClick))" RowClass="@GetRowClass">
-
+        <AutoDataGrid @ref="@Grid" TItem="ReleaseGridRow" ItemsProvider="@rowsProvider" GridTemplateColumns="240px 120px 100px 120px" @bind-SelectedItem="@SelectedItem">
             <ChildContent>
-                <PropertyColumn Title="Version" Property="@(r => r.Version)" Width="240px" />
-                <PropertyColumn Title="Installed" Property="@(r => r.Installed)" Align="Align.Center" Width="120px" />
-                <PropertyColumn Title="Security" Property="@(r => r.Security)" Align="Align.Center" Width="100px" />
-                <PropertyColumn Title="Release" Property="@(r => r.ReleaseDate)" Width="120px" />
+                <PropertyColumn TGridItem="ReleaseGridRow" TProp="string" Title="Version" Property="@(r => r.Version)" />
+                <PropertyColumn TGridItem="ReleaseGridRow" TProp="string" Title="Installed" Property="@(r => r.Installed)" Align="Align.Center" />
+                <PropertyColumn TGridItem="ReleaseGridRow" TProp="string" Title="Security" Property="@(r => r.Security)" Align="Align.Center" />
+                <PropertyColumn TGridItem="ReleaseGridRow" TProp="string" Title="Release" Property="@(r => r.ReleaseDate)" />
             </ChildContent>
-
-            <LoadingContent>
-                <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" Width="650px">
-                    Loading...<br />
-                    <FluentProgress Width="50%" />
-                </FluentStack>
-            </LoadingContent>
-        </FluentDataGrid>
+        </AutoDataGrid>
     </div>
-
-    <FluentPaginator State="@pagination" />
 </FluentDialogBody>
 
 @code
 {
+    #region Properties and Fields
+
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 
-    private FluentDataGrid<ReleaseGridRow>? Grid { get; set; }
-    private readonly PaginationState pagination = new() { ItemsPerPage = 10 };
+    private AutoDataGrid<ReleaseGridRow>? Grid { get; set; }
     private GridItemsProvider<ReleaseGridRow> rowsProvider = default!;
 
-    private List<AspNetCoreReleaseInfo>? Releases { get; set; }
+    private IReadOnlyList<AspNetCoreReleaseInfo>? Releases { get; set; }
     private IReadOnlyList<AspNetCoreReleaseInfo>? Channels { get; set; }
     private string? SelectedChannel { get; set; }
     private bool IsInstalling { get; set; } = false;
     private ReleaseGridRow? SelectedItem { get; set; }
+
+    #endregion
+
+    #region Computed Properties
 
     private bool IsSelectedVersionInstalled => SelectedItem?.Installed.Equals("✓") == true;
     private bool CanProcessSelected => !IsInstalling && SelectedItem != null;
@@ -117,11 +101,9 @@
     private IEnumerable<ReleaseGridRow> GetSelectedItems()
     => SelectedItem != null ? new[] { SelectedItem } : Enumerable.Empty<ReleaseGridRow>();
 
-    private void OnRowClick(FluentDataGridRow<ReleaseGridRow> row)
-    => SelectedItem = row.Item;
+    #endregion
 
-    private string GetRowClass(ReleaseGridRow row)
-    => SelectedItem != null && SelectedItem.Version == row.Version ? "selected-row" : String.Empty;
+    #region UI Helper Methods
 
     private string GetActionButtonText()
     {
@@ -168,6 +150,10 @@
         return $"Install ASP.NET Core {SelectedItem.Version}";
     }
 
+    #endregion
+
+    #region Lifecycle Methods
+
     protected override async Task OnParametersSetAsync()
     {
         await DotnetVersionService.GetInstalledVersionsAsync();
@@ -175,6 +161,10 @@
         rowsProvider = new(LoadRowsAsync);
         await LoadChannelsAsync();
     }
+
+    #endregion
+
+    #region Dialog Management
 
     private async Task CancelAsync()
     {
@@ -186,13 +176,17 @@
         await DialogsService.ShowErrorAsync(error);
     }
 
+    #endregion
+
+    #region Data Loading
+
     private async Task LoadChannelsAsync()
     {
         try
         {
             await DotnetVersionService.GetInstalledVersionsAsync();
 
-            Channels = (await Downloader.GetAspNetCoreChannelsAsync());
+            Channels = await Downloader.GetAspNetCoreChannelsAsync();
 
             if (String.IsNullOrWhiteSpace(SelectedChannel))
             {
@@ -217,7 +211,7 @@
     {
         if (String.IsNullOrWhiteSpace(SelectedChannel))
         {
-            return GridItemsProviderResult.From<ReleaseGridRow>(Array.Empty<ReleaseGridRow>(), 0);
+            return GridItemsProviderResult.From<ReleaseGridRow>([], 0);
         }
 
         // Load releases if not already loaded
@@ -225,33 +219,30 @@
         {
             try
             {
-                var list = await Downloader.GetAspNetCoreReleasesAsync(SelectedChannel);
-                Releases = list.ToList();
+                Releases = await Downloader.GetAspNetCoreReleasesAsync(SelectedChannel);
             }
             catch (Exception ex)
             {
                 await ShowErrorAsync(ex.Message);
-                return GridItemsProviderResult.From<ReleaseGridRow>(Array.Empty<ReleaseGridRow>(), 0);
+                return GridItemsProviderResult.From<ReleaseGridRow>([], 0);
             }
         }
 
         if (Releases == null || Releases.Count == 0)
         {
-            return GridItemsProviderResult.From<ReleaseGridRow>(Array.Empty<ReleaseGridRow>(), 0);
+            return GridItemsProviderResult.From<ReleaseGridRow>([], 0);
         }
 
         var startIndex = request.StartIndex;
         var count = Math.Min(request.Count ?? Releases.Count, Releases.Count - startIndex);
         var pagedReleases = Releases.Skip(startIndex).Take(count);
 
-        // Check which versions are installed locally
-        var pagedItems = (List<ReleaseGridRow>)[];
-
-        foreach (var release in pagedReleases)
+        // Check which versions are installed locally and create grid rows
+        var pagedItems = pagedReleases.Select(release =>
         {
-            var isInstalled = DotnetVersionService.IsVersionInstalled(release.Version, "ASP.NET Core");
-            pagedItems.Add(ReleaseGridRow.Create(release, isInstalled));
-        }
+            var isInstalled = DotnetVersionService.IsVersionInstalled(release.Version, DotNetFrameworkTypes.AspNetCore);
+            return ReleaseGridRow.Create(release, isInstalled);
+        }).ToList();
 
         return GridItemsProviderResult.From<ReleaseGridRow>(pagedItems, Releases.Count);
     }
@@ -270,10 +261,14 @@
         if (Grid != null)
         {
             Grid.SetLoadingState(true);
-            await Grid.RefreshDataAsync();
+            await Grid.RefreshAsync();
             Grid.SetLoadingState(false);
         }
     }
+
+    #endregion
+
+    #region Framework Management
 
     private async Task InstallSelectedFramework()
     {
@@ -283,7 +278,6 @@
         }
 
         IsInstalling = true;
-        StateHasChanged();
 
         try
         {
@@ -306,7 +300,6 @@
         finally
         {
             IsInstalling = false;
-            StateHasChanged();
         }
     }
 
@@ -327,7 +320,6 @@
         }
 
         IsInstalling = true;
-        StateHasChanged();
 
         try
         {
@@ -350,7 +342,8 @@
         finally
         {
             IsInstalling = false;
-            StateHasChanged();
         }
     }
+
+    #endregion
 }

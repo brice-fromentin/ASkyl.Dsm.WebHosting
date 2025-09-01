@@ -13,14 +13,6 @@ body {
     z-index: 1000;
 }
 
-fluent-text-field {
-    width: 100%;
-}
-
-fluent-toolbar {
-    width: 100%;
-}
-
 .full-width {
     width: 100% !important;
 }

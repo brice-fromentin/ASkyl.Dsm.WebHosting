@@ -1,7 +1,7 @@
 namespace Askyl.Dsm.WebHosting.Constants;
 
-    public enum SerializationFormats
-    {
-        Form,
-        Json
-    }
+public enum SerializationFormats
+{
+    Form,
+    Json
+}

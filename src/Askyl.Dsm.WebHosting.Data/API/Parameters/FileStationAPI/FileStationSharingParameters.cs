@@ -1,11 +1,12 @@
 using Askyl.Dsm.WebHosting.Constants;
+using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
 
 public class FileStationSharingListParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationSharing>(informations)
 {
-    public override string Name => DsmDefaults.DsmApiFileStationSharing;
+    public override string Name => DsmApiNames.FileStationSharing;
 
     public override int Version => 3;
 
@@ -16,7 +17,7 @@ public class FileStationSharingListParameters(ApiInformationCollection informati
 
 public class FileStationSharingCreateParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationSharing>(informations)
 {
-    public override string Name => DsmDefaults.DsmApiFileStationSharing;
+    public override string Name => DsmApiNames.FileStationSharing;
 
     public override int Version => 3;
 
@@ -27,7 +28,7 @@ public class FileStationSharingCreateParameters(ApiInformationCollection informa
 
 public class FileStationSharingDeleteParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationSharing>(informations)
 {
-    public override string Name => DsmDefaults.DsmApiFileStationSharing;
+    public override string Name => DsmApiNames.FileStationSharing;
 
     public override int Version => 3;
 
@@ -38,7 +39,7 @@ public class FileStationSharingDeleteParameters(ApiInformationCollection informa
 
 public class FileStationSharingEditParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationSharing>(informations)
 {
-    public override string Name => DsmDefaults.DsmApiFileStationSharing;
+    public override string Name => DsmApiNames.FileStationSharing;
 
     public override int Version => 3;
 
@@ -49,7 +50,7 @@ public class FileStationSharingEditParameters(ApiInformationCollection informati
 
 public class FileStationSharingClearInvalidParameters(ApiInformationCollection informations) : ApiParametersBase<ApiParametersNone>(informations)
 {
-    public override string Name => DsmDefaults.DsmApiFileStationSharing;
+    public override string Name => DsmApiNames.FileStationSharing;
 
     public override int Version => 3;
 

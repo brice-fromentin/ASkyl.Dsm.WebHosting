@@ -15,5 +15,5 @@ public class ReverseProxyBackend : IGenericCloneable<ReverseProxyBackend>
     public int Protocol { get; set; }
 
     public ReverseProxyBackend Clone()
-        => new () { Fqdn = this.Fqdn, Port = this.Port, Protocol = this.Protocol };
+        => new() { Fqdn = this.Fqdn, Port = this.Port, Protocol = this.Protocol };
 }

@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Runtime;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 
@@ -15,9 +16,9 @@ public class DotnetVersionService : IDotnetVersionService
     public Task<List<FrameworkInfo>> GetInstalledVersionsAsync()
         => VersionsDetector.GetInstalledVersionsAsync();
 
-    public bool IsChannelInstalled(string channel, string frameworkType = "ASP.NET Core")
+    public bool IsChannelInstalled(string channel, string frameworkType = DotNetFrameworkTypes.AspNetCore)
         => VersionsDetector.IsChannelInstalled(channel, frameworkType);
 
-    public bool IsVersionInstalled(string version, string frameworkType = "ASP.NET Core")
+    public bool IsVersionInstalled(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore)
         => VersionsDetector.IsVersionInstalled(version, frameworkType);
 }

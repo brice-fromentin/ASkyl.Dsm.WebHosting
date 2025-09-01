@@ -1,11 +1,12 @@
 using Askyl.Dsm.WebHosting.Constants;
+using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
 
 public class FileStationListParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationList>(informations)
 {
-    public override string Name => DsmDefaults.DsmApiFileStationList;
+    public override string Name => DsmApiNames.FileStationList;
 
     public override int Version => 2;
 

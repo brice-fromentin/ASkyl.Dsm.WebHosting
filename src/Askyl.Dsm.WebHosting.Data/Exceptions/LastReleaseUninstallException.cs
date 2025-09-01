@@ -10,7 +10,7 @@ public sealed class LastReleaseUninstallException : InvalidOperationException
     /// The version that was attempted to be uninstalled.
     /// </summary>
     public string Version { get; }
-    
+
     /// <summary>
     /// The configured channel for which this is the last release.
     /// </summary>

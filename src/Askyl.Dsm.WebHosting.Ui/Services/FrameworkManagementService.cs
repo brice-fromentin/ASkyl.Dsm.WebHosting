@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Models;
@@ -83,7 +84,7 @@ public class FrameworkManagementService(IDotnetVersionService dotnetVersionServi
 
         var channelPrefix = configuredChannel + ".";
 
-        var releasesInChannel = installed.Where(f => f.Type == "ASP.NET Core" && f.Version.StartsWith(channelPrefix, StringComparison.OrdinalIgnoreCase))
+        var releasesInChannel = installed.Where(f => f.Type == DotNetFrameworkTypes.AspNetCore && f.Version.StartsWith(channelPrefix, StringComparison.OrdinalIgnoreCase))
                                          .Select(f => f.Version)
                                          .Distinct(StringComparer.OrdinalIgnoreCase)
                                          .ToList();

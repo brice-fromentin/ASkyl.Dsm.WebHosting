@@ -43,7 +43,7 @@ public class StringBuilderBenchmark
     {
         var parameters = $"api={_api}&version={_version}&method={_method}";
 
-        foreach(var pair in _parameters)
+        foreach (var pair in _parameters)
         {
             parameters = $"{parameters}&{pair.Key}={pair.Value}";
         }
@@ -58,7 +58,7 @@ public class StringBuilderBenchmark
         builder.Append("&version=").Append(_version);
         builder.Append("&method=").Append(_method);
 
-        foreach(var pair in _parameters)
+        foreach (var pair in _parameters)
         {
             builder.Append('&');
             builder.Append(pair.Key);

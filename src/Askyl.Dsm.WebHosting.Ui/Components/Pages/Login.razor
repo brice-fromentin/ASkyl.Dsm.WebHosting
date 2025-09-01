@@ -21,10 +21,11 @@
         </FluentDialogHeader>
 
         <FluentStack Orientation="Orientation.Vertical">
-            <FluentTextField @bind-Value="Model.Login" autofocus>Login:</FluentTextField>
+            <FluentTextField @bind-Value="Model.Login" autofocus Class="full-size">Login:</FluentTextField>
             <FluentValidationMessage For="(() => Model.Login)" />
-            <FluentTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password">Password:</FluentTextField>
-            <FluentTextField @bind-Value="Model.OtpCode">OTP:</FluentTextField>
+            <FluentTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Class="full-size">Password:</FluentTextField>
+            <FluentValidationMessage For="(() => Model.Password)" />
+            <FluentTextField @bind-Value="Model.OtpCode" Class="full-size">OTP:</FluentTextField>
         </FluentStack>
 
         <FluentDialogFooter>

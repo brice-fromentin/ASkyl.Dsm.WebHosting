@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
 using Askyl.Dsm.WebHosting.Data.API.Responses;
@@ -44,9 +45,9 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
 
         var parameters = new FileStationListParameters(_apiClient.ApiInformations);
         parameters.Parameters.FolderPath = path;
-        parameters.Parameters.Additional = "real_path,size,owner,time,perm,mount_point_type,type";
-        parameters.Parameters.SortBy = "name";
-        parameters.Parameters.SortDirection = "asc";
+        parameters.Parameters.Additional = FileStationDefaults.AdditionalFields;
+        parameters.Parameters.SortBy = FileStationDefaults.SortByName;
+        parameters.Parameters.SortDirection = FileStationDefaults.SortDirectionAsc;
 
         var response = await _apiClient.ExecuteAsync<FileStationListResponse>(parameters);
 
@@ -66,9 +67,9 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
 
         var parameters = new FileStationListParameters(_apiClient.ApiInformations);
         parameters.Parameters.FolderPath = path;
-        parameters.Parameters.SortBy = "name";
-        parameters.Parameters.SortDirection = "asc";
-        parameters.Parameters.FileType = "dir"; // Only directories
+        parameters.Parameters.SortBy = FileStationDefaults.SortByName;
+        parameters.Parameters.SortDirection = FileStationDefaults.SortDirectionAsc;
+        parameters.Parameters.FileType = FileStationDefaults.TypeDirectory; // Only directories
 
         var response = await _apiClient.ExecuteAsync<FileStationListResponse>(parameters);
 

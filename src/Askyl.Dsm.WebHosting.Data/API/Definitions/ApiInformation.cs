@@ -11,5 +11,5 @@ public class ApiInformation
     public int MinVersion { get; set; }
 
     [JsonPropertyName("path")]
-    public string Path { get; set; } = "";
+    public string Path { get; set; } = String.Empty;
 }

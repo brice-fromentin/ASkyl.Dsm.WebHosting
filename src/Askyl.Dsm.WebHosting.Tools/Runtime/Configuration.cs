@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Configuration;
+using Askyl.Dsm.WebHosting.Constants.Application;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
@@ -35,20 +36,20 @@ public static class Configuration
     static Configuration()
     {
         var basePath = AppContext.BaseDirectory;
-        var configFilePath = Path.Combine(basePath, "appsettings.json");
+        var configFilePath = Path.Combine(basePath, ApplicationConstants.SettingsFileName);
 
         if (File.Exists(configFilePath))
         {
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(basePath)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                .AddJsonFile(ApplicationConstants.SettingsFileName, optional: true, reloadOnChange: false)
                 .Build();
 
-            ChannelVersion = configuration["Download:ChannelVersion"] ?? string.Empty;
+            ChannelVersion = configuration[ApplicationConstants.ChannelVersionKey] ?? String.Empty;
         }
         else
         {
-            ChannelVersion = string.Empty; // No configuration file present
+            ChannelVersion = String.Empty; // No configuration file present
         }
 
         // Get Executing Architecture
@@ -63,16 +64,16 @@ public static class Configuration
 
         Console.WriteLine($"Detected architecture = {CurrentArchitecture}");
 
-    // Retrieve Operating System information using switch expression (similar style to architecture).
+        // Retrieve Operating System information using switch expression (similar style to architecture).
 #if DEBUG
-    var platform = DetectPlatform();
-    CurrentOS = platform switch
-    {
-        Platform.Linux => "linux",
-        Platform.MacOS => "osx",
-        Platform.Windows => "windows",
-        _ => throw new NotSupportedException("Operating System is not supported in debug mode.")
-    };
+        var platform = DetectPlatform();
+        CurrentOS = platform switch
+        {
+            Platform.Linux => "linux",
+            Platform.MacOS => "osx",
+            Platform.Windows => "windows",
+            _ => throw new NotSupportedException("Operating System is not supported in debug mode.")
+        };
 #else
     var platform = DetectPlatform();
     CurrentOS = platform switch
@@ -81,7 +82,7 @@ public static class Configuration
         _ => throw new NotSupportedException("Operating System is not supported")
     };
 #endif
-        
+
         Console.WriteLine($"Detected OS = {CurrentOS}");
     }
 

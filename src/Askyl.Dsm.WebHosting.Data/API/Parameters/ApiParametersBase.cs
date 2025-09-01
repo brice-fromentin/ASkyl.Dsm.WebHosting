@@ -1,10 +1,10 @@
-using System.Data;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Askyl.Dsm.WebHosting.Constants;
+using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.Attributes;
 
@@ -16,8 +16,8 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
 
     public ApiParametersBase(ApiInformationCollection informations, T? entry = null)
     {
-        var infos = (this.Name == DsmDefaults.DsmApiInfo)
-                        ? new() { Path = DsmDefaults.DsmApiHandshakePath, MinVersion = 1, MaxVersion = 7 }
+        var infos = (this.Name == DsmApiNames.Info)
+                        ? CreateDefaultHandshakeInfo()
                         : informations.Get(this.Name) ?? throw new NullReferenceException("Empty API Information.");
 
         if (this.Version < infos.MinVersion || this.Version > infos.MaxVersion)
@@ -28,6 +28,13 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
         this.Path = infos.Path;
         this.Parameters = (entry == null) ? new() : entry.Clone();
     }
+
+    /// <summary>
+    /// Creates default API information for handshake operations.
+    /// </summary>
+    /// <returns>Default ApiInformation for handshake API.</returns>
+    private static ApiInformation CreateDefaultHandshakeInfo()
+        => new() { Path = DsmApiNames.Handshake, MinVersion = DsmApiVersions.MinVersion, MaxVersion = DsmApiVersions.MaxVersion };
 
     #region Reflections Caches
 
@@ -75,12 +82,12 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
     {
         var content = BuildForm().ToString();
 
-        return new (content, Encoding.UTF8, "application/x-www-form-urlencoded");
+        return new(content, Encoding.UTF8, "application/x-www-form-urlencoded");
     }
 
     public StringContent ToJson()
     {
-        ApiJsonParameterName??= this.GetType().GetCustomAttribute<DsmParameterNameAttribute>()?.Name;
+        ApiJsonParameterName ??= this.GetType().GetCustomAttribute<DsmParameterNameAttribute>()?.Name;
 
         if (String.IsNullOrWhiteSpace(ApiJsonParameterName))
         {
