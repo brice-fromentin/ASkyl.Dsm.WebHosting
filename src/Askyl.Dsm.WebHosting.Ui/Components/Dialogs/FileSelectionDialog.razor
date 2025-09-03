@@ -3,8 +3,6 @@
 @inject IDialogService DialogService
 @inject IFileNavigationService FileNavigationService
 
-<link href="/css/file-selection-dialog.css" rel="stylesheet" />
-
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">File Selection</FluentLabel>
 </FluentDialogHeader>
@@ -12,7 +10,7 @@
 <FluentDialogBody>
     <FluentSplitter Orientation="Orientation.Horizontal" Panel1Size="30%" Panel1MinSize="20%" Panel1MaxSize="50%" Class="file-dialog-splitter">
         <Panel1>
-            <FluentStack Orientation="Orientation.Horizontal" VerticalGap="4" HorizontalGap="8">
+            <FluentStack Orientation="Orientation.Horizontal">
                 @if (IsLoadingTree)
                 {
                     <FluentProgressRing Size="16" />
@@ -20,7 +18,7 @@
                 }
                 else
                 {
-                    <FluentTreeView Items="TreeNodes" LazyLoadItems="true" Class="full-size file-dialog-tree" OnSelectedChange="OnTreeSelectionChanged" />
+                    <FluentTreeView Items="TreeNodes" LazyLoadItems="false" Class="full-size file-dialog-tree" OnSelectedChange="OnTreeSelectionChanged" />
                 }
             </FluentStack>
         </Panel1>
@@ -29,9 +27,9 @@
                 <ChildContent>
                     <TemplateColumn TGridItem="FileStationFile" Title="Name" Sortable="false">
                         <ChildContent Context="file">
-                            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="2">
+                            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                                 <FluentIcon Value="@GetFileIcon(file)" />
-                                <FluentLabel>@file.Name</FluentLabel>
+                                <FluentLabel Class="file-name-label">@file.Name</FluentLabel>
                             </FluentStack>
                         </ChildContent>
                     </TemplateColumn>
@@ -44,12 +42,10 @@
                     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
                         @if (!String.IsNullOrEmpty(SelectedPath))
                         {
-                            <FluentIcon Value="@(new IconsRegular16.Info())" />
                             <FluentLabel>No files found in this directory.</FluentLabel>
                         }
                         else
                         {
-                            <FluentIcon Value="@(new IconsRegular16.FolderOpen())" />
                             <FluentLabel>Select a shared folder from the tree to view its contents.</FluentLabel>
                         }
                     </FluentStack>
@@ -60,7 +56,7 @@
 </FluentDialogBody>
 
 <FluentDialogFooter>
-    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End" HorizontalGap="3">
+    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
         <FluentButton OnClick="CancelAsync" Appearance="Appearance.Neutral">
             Cancel
         </FluentButton>
@@ -120,18 +116,8 @@
 
     private async Task OnTreeSelectionChanged(FluentTreeItem selectedItem)
     {
-        if (String.IsNullOrEmpty(selectedItem?.Id))
-        {
-            return;
-        }
-
         // Use the Id which corresponds to the DirectoryTreeNode.Path
         var selectedPath = selectedItem.Id;
-
-        if (SelectedPath == selectedPath)
-        {
-            return;
-        }
 
         AutoGrid!.SetLoadingState(true);
         SelectedPath = selectedPath;
@@ -219,38 +205,6 @@
 
     #region File Display Helpers
 
-    private Icon GetFileIcon(FileStationFile file)
-    {
-        if (file.IsDirectory || file.Type == "dir")
-        {
-            return new IconsRegular16.Folder();
-        }
-
-        var name = file.Name.ToLowerInvariant();
-
-        if (name.EndsWith(".txt") || name.EndsWith(".log"))
-        {
-            return new IconsRegular16.DocumentText();
-        }
-
-        if (name.EndsWith(".jpg") || name.EndsWith(".jpeg") || name.EndsWith(".png") || name.EndsWith(".gif"))
-        {
-            return new IconsRegular16.Image();
-        }
-
-        if (name.EndsWith(".zip") || name.EndsWith(".rar") || name.EndsWith(".7z"))
-        {
-            return new IconsRegular16.FolderZip();
-        }
-
-        if (name.EndsWith(".pdf"))
-        {
-            return new IconsRegular16.DocumentPdf();
-        }
-
-        return new IconsRegular16.Document();
-    }
-
     private string GetFileSize(FileStationFile file)
     {
         if (file.IsDirectory || file.Additional?.Size == null)
@@ -267,15 +221,15 @@
 
         if (bytes < 1024 * 1024)
         {
-            return $"{bytes / 1024:F1} KB";
+            return $"{bytes / 1024:F2} KB";
         }
 
         if (bytes < 1024L * 1024 * 1024)
         {
-            return $"{bytes / (1024 * 1024):F1} MB";
+            return $"{bytes / (1024 * 1024):F2} MB";
         }
 
-        return $"{bytes / (1024L * 1024 * 1024):F1} GB";
+        return $"{bytes / (1024L * 1024 * 1024):F2} GB";
     }
 
     private string GetModifiedDate(FileStationFile file)
@@ -285,24 +239,37 @@
             return "-";
         }
 
-        return DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value).ToString("dd/MM/yyyy");
+        return DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value).ToString("dd/MM/yyyy HH:mm:ss");
     }
 
-    private string GetFileType(FileStationFile file)
+    private string GetFileType(FileStationFile file) =>
+    file.IsDirectory ? "Directory" : "File";
+
+    private Icon GetFileIcon(FileStationFile file)
     {
         if (file.IsDirectory)
         {
-            return "Directory";
+            return new IconsRegular16.Folder();
         }
 
-        var extension = Path.GetExtension(file.Name);
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
 
-        if (String.IsNullOrEmpty(extension))
+        return extension switch
         {
-            return "File";
-        }
-
-        return extension.ToUpperInvariant();
+            ".txt" or ".md" or ".log" => new IconsRegular16.Document(),
+            ".pdf" => new IconsRegular16.DocumentPdf(),
+            ".doc" or ".docx" => new IconsRegular16.DocumentText(),
+            ".xls" or ".xlsx" => new IconsRegular16.DocumentTable(),
+            ".ppt" or ".pptx" => new IconsRegular16.SlideText(),
+            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" => new IconsRegular16.FolderZip(),
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" => new IconsRegular16.Image(),
+            ".mp4" or ".avi" or ".mov" or ".wmv" or ".flv" or ".mkv" => new IconsRegular16.Video(),
+            ".mp3" or ".wav" or ".flac" or ".aac" or ".ogg" => new IconsRegular16.MusicNote2(),
+            ".html" or ".htm" or ".css" or ".js" or ".ts" or ".json" => new IconsRegular16.Code(),
+            ".cs" or ".vb" or ".cpp" or ".c" or ".h" or ".java" or ".py" or ".php" => new IconsRegular16.CodeBlock(),
+            ".xml" or ".config" or ".ini" or ".cfg" => new IconsRegular16.DocumentSettings(),
+            _ => new IconsRegular16.Document()
+        };
     }
 
     #endregion

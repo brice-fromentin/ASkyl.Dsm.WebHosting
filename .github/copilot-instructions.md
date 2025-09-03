@@ -3,7 +3,7 @@
 ## General Directives
 - Respond in the same language as the question, but generate all code, comments, and commit messages in English.
 - Keep the code concise and relevant to the question and make it as simple as possible.
-- Never suggest to commit.
+- Only suggest commits when explicitly requested by the user.
 
 []: # Do not suggest code that has been deleted.
 
@@ -55,6 +55,36 @@
 - Always prefer FluentUI spacing over custom spacing.
 - Always prefer FluentUI typography over custom typography.
 - Never use inline styles, always use FluentUI theming and styling. Exception: minor positioning adjustments that cannot be achieved through FluentUI classes.
+- **CSS Minimalism**: Before adding custom CSS classes, verify if FluentUI components already provide the desired behavior natively. Question the necessity of each CSS class and prefer FluentUI's built-in layout capabilities (FluentStack, FluentGrid, etc.) over custom styling.
+- **Default Spacing**: Never use custom VerticalGap or HorizontalGap values on FluentStack components. Always rely on FluentUI's default spacing to maintain design system consistency.
 
 ## External APIs and Documentation
 - Synology FileStation API documentation : https://global.download.synology.com/download/Document/DeveloperGuide/Synology_File_Station_API_Guide.pdf
+
+## APPLICATION LAUNCH DIRECTIVE (Temporary)
+
+**CONTEXT** : The assistant cannot currently invoke the VS Code debugger directly.
+
+**TEMPORARY RESTRICTION** : While this limitation exists, apply the following rules:
+
+### Strict prohibitions:
+- Never use `dotnet run` or `run_in_terminal` to launch the application
+- Never use `open_simple_browser` 
+- Never suggest launching the application manually
+- Never use `create_and_run_task` for run tasks
+
+### Allowed actions:
+- Use only `dotnet build` to validate compilation
+- Use `dotnet clean` to clean build artifacts
+- Modify, create, edit code and configuration files
+- Manage NuGet packages and dependencies
+
+### Required behavior at end of intervention:
+- Always end with: **"Press F5 to launch the VS Code debugger"**
+- The user has full control over launching via their debug environment
+
+### Lift condition:
+This directive will be removed when the assistant has a tool to directly invoke the VS Code debugger.
+
+### Proactive notification requirement:
+When debugger invocation capability becomes available, the assistant must immediately notify the user with: **"I can now launch the VS Code debugger directly. This directive has been automatically lifted."**

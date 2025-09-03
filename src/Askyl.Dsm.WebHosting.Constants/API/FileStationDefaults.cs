@@ -11,7 +11,7 @@ public static class FileStationDefaults
     /// <summary>
     /// Default additional fields to request when listing files and folders.
     /// </summary>
-    public const string AdditionalFields = "real_path,size,owner,time,perm,mount_point_type,type";
+    public const string AdditionalPathSizeTimeFields = "[\"real_path\", \"size\", \"time\"]";
 
     /// <summary>
     /// Default sort field for file listings.

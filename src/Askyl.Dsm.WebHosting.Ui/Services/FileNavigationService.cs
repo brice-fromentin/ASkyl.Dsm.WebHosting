@@ -45,7 +45,7 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
 
         var parameters = new FileStationListParameters(_apiClient.ApiInformations);
         parameters.Parameters.FolderPath = path;
-        parameters.Parameters.Additional = FileStationDefaults.AdditionalFields;
+        parameters.Parameters.Additional = FileStationDefaults.AdditionalPathSizeTimeFields;
         parameters.Parameters.SortBy = FileStationDefaults.SortByName;
         parameters.Parameters.SortDirection = FileStationDefaults.SortDirectionAsc;
 

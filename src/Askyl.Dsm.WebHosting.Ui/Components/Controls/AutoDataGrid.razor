@@ -1,7 +1,5 @@
 @typeparam TItem where TItem : class
 
-<link href="/css/auto-data-grid.css" rel="stylesheet" />
-
 <div class="auto-data-grid-content">
     <div class="auto-data-grid-area">
         <FluentDataGrid @ref="@Grid" TGridItem="TItem" ItemsProvider="@ItemsProvider" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" Pagination="@pagination" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@OnRowClick">

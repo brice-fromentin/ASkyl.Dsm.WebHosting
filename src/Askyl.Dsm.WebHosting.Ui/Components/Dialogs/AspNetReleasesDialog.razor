@@ -23,11 +23,11 @@
 </FluentDialogHeader>
 
 <FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Style="flex-grow: 1;" Disabled="@IsInstalling">Close</FluentButton>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Disabled="@IsInstalling" Class="flex-full-width">Close</FluentButton>
 </FluentDialogFooter>
 
 <FluentDialogBody>
-    <FluentToolbar>
+    <FluentToolbar Class="full-width">
         <FluentLabel>Channel</FluentLabel>
 
         <FluentSelect TOption="String" @onchange="OnChannelChanged" Width="140px" Value="@SelectedChannel" Disabled="@IsInstalling">
@@ -52,17 +52,17 @@
             <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
         </FluentButton>
 
-        <FluentButton OnClick="@(IsSelectedVersionInstalled? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsInstalling)" Title="@GetActionButtonTooltip()" Style="flex-grow: 1; ">
+        <FluentButton OnClick="@(IsSelectedVersionInstalled? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsInstalling)" Title="@GetActionButtonTooltip()" Class="flex-full-width">
             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                 <FluentIcon Value="@(IsSelectedVersionInstalled ? (Icon)new IconsRegular16.Delete() : new IconsRegular16.CloudArrowDown())" Color="Color.Fill" />
-                <FluentLabel Color="Color.Fill" Style="margin-left: 4px;">
+                <FluentLabel Color="Color.Fill">
                     @GetActionButtonText()
                 </FluentLabel>
             </FluentStack>
         </FluentButton>
     </FluentToolbar>
 
-    <div style="width: 580px; height: 364px;">
+    <div class="dialog-grid-container">
         <AutoDataGrid @ref="@Grid" TItem="ReleaseGridRow" ItemsProvider="@rowsProvider" GridTemplateColumns="240px 120px 100px 120px" @bind-SelectedItem="@SelectedItem">
             <ChildContent>
                 <PropertyColumn TGridItem="ReleaseGridRow" TProp="string" Title="Version" Property="@(r => r.Version)" />

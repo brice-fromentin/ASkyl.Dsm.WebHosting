@@ -1,5 +1,5 @@
 package="AskylDsmWebHosting"
-version="0.2.1"
+version="0.2.2"
 displayname=".NET Web Hosting"
 description=".NET Web Hosting"
 beta="yes"

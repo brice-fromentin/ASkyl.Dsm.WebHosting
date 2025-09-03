@@ -48,7 +48,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
     {
         if (!File.Exists(DsmDefaults.ConfigurationFileName))
         {
-            _log.LogCritical("Configuration file \"{ConfigurationFileName}\" does not exists.", DsmDefaults.ConfigurationFileName);
+            _log.LogCritical($"Configuration file \"{DsmDefaults.ConfigurationFileName}\" does not exists.");
             return false;
         }
 
@@ -56,7 +56,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
                            .Where(x => x.Contains('='))
                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", ""));
 
-        _log.LogDebug("Configuration file loaded with {Count} parameters.", settings.Count);
+        _log.LogDebug($"Configuration file loaded with {settings.Count} parameters.");
         _server = settings[DsmDefaults.KeyExternalHostIp];
 
         if (!Int32.TryParse(settings[DsmDefaults.KeyExternalHttpsPort], out _port))

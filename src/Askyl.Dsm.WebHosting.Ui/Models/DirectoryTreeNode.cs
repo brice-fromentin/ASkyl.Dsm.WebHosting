@@ -1,18 +1,13 @@
-using Microsoft.FluentUI.AspNetCore.Components;
-using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;
-
 using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Ui.Services;
+using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Askyl.Dsm.WebHosting.Ui.Models;
 
 public sealed class DirectoryTreeNode : ITreeViewItem
 {
-    private static readonly Icon FolderIcon = new Icons.Regular.Size16.Folder();
-    private static readonly Icon SharedFolderIcon = new Icons.Regular.Size16.FolderOpen();
-
     private readonly IFileNavigationService _fileNavigationService;
     private readonly Func<string, Task> _errorHandler;
 
@@ -26,8 +21,8 @@ public sealed class DirectoryTreeNode : ITreeViewItem
     public bool Expanded { get; set; }
     public bool Selected { get; set; }
     public bool Disabled { get; set; }
-    public Icon? IconCollapsed { get => IsSharedFolder ? SharedFolderIcon : FolderIcon; set { } }
-    public Icon? IconExpanded { get => IsSharedFolder ? SharedFolderIcon : FolderIcon; set { } }
+    public Icon? IconCollapsed { get => null; set { } }
+    public Icon? IconExpanded { get => null; set { } }
     public IEnumerable<ITreeViewItem>? Items { get; set; } = [];
     public Func<TreeViewItemExpandedEventArgs, Task>? OnExpandedAsync { get => LoadChildrenAsync; set { } }
 
@@ -77,6 +72,6 @@ public sealed class DirectoryTreeNode : ITreeViewItem
         return new(file.Name, file.Path, false, fileNavigationService, errorHandler);
     }
 
-    public static DirectoryTreeNode CreateSharedFolder(string name, string path, IFileNavigationService fileNavigationService, Func<string, Task> errorHandler) =>
-        new(name, path, true, fileNavigationService, errorHandler);
+    public static DirectoryTreeNode CreateSharedFolder(string name, string path, IFileNavigationService fileNavigationService, Func<string, Task> errorHandler)
+        => new(name, path, true, fileNavigationService, errorHandler);
 }

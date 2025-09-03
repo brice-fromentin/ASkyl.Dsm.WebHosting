@@ -1,4 +1,4 @@
-/* AutoDataGrid - Reusable data grid component styles */
+/* AutoDataGrid Component Styles */
 
 /* CSS Grid layout for grid content */
 .auto-data-grid-content {
@@ -16,7 +16,7 @@
     min-height: 0;
 }
 
-/* Empty content cell styling - scoped to AutoDataGrid */
+/* Empty content cell styling */
 .auto-data-grid-area td.empty-content-row.empty-content-cell {
     border: 0;
 }
@@ -30,9 +30,9 @@
 .auto-data-grid-area .selected-row:hover {
     background-color: var(--neutral-fill-secondary-hover);
 }
+
 /* Pager area - fixed at bottom */
 .auto-data-grid-pager-area {
     grid-row: 2;
     padding: 4px 0;
 }
-
