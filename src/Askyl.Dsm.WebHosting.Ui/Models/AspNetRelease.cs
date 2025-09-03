@@ -2,11 +2,11 @@ using Askyl.Dsm.WebHosting.Data.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Ui.Models;
 
-public sealed class ReleaseGridRow
+public sealed class AspNetRelease
 {
-    public static ReleaseGridRow Create(AspNetCoreReleaseInfo releaseInfo, bool isInstalled = false)
+    public static AspNetRelease Create(AspNetCoreReleaseInfo releaseInfo, bool isInstalled = false)
     {
-        return new ReleaseGridRow
+        return new AspNetRelease
         {
             Version = releaseInfo.Version,
             Security = releaseInfo.IsSecurity ? "⚠" : String.Empty,

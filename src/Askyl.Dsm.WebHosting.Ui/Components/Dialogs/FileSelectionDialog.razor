@@ -23,7 +23,7 @@
             </FluentStack>
         </Panel1>
         <Panel2>
-            <AutoDataGrid @ref="@AutoGrid" TItem="FileStationFile" ItemsProvider="@GetItemsProvider" GridTemplateColumns="1fr auto auto auto">
+            <AutoDataGrid @ref="@AutoGrid" TItem="FileStationFile" Items="@SortedFiles.AsQueryable()" GridTemplateColumns="1fr auto auto auto">
                 <ChildContent>
                     <TemplateColumn TGridItem="FileStationFile" Title="Name" Sortable="false">
                         <ChildContent Context="file">
@@ -92,23 +92,6 @@
     #region Lifecycle Methods
 
     protected override async Task OnInitializedAsync() => await LoadSharedFolders();
-
-    #endregion
-
-    #region Data Providers
-
-    private ValueTask<GridItemsProviderResult<FileStationFile>> GetItemsProvider(GridItemsProviderRequest<FileStationFile> req)
-    {
-        var sortedFiles = SortedFiles.ToList();
-        var totalItemCount = sortedFiles.Count;
-
-        var startIndex = req.StartIndex;
-        var count = Math.Min(req.Count ?? totalItemCount, totalItemCount - startIndex);
-        var items = sortedFiles.Skip(startIndex).Take(count).ToList();
-
-        var result = GridItemsProviderResult.From<FileStationFile>(items, totalItemCount);
-        return ValueTask.FromResult(result);
-    }
 
     #endregion
 
