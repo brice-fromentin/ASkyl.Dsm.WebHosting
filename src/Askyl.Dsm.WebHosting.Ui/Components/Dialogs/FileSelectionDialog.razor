@@ -1,9 +1,12 @@
+@using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
+
 @implements IDialogContentComponent
+@implements IWorkingState
 
 @inject IDialogService DialogService
 @inject IFileNavigationService FileNavigationService
 
-<LoadingOverlay IsVisible="@IsLoadingTree" Message="Loading shared folders..." />
+<LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">File Selection</FluentLabel>
@@ -28,7 +31,7 @@
                     <TemplateColumn TGridItem="FileStationFile" Title="Size" Align="Align.End" Sortable="true" SortBy="GridSort<FileStationFile>.ByAscending(f => f.Additional != null && f.Additional.Size.HasValue ? f.Additional.Size.Value : 0)">
                         @(GetFileSize(context))
                     </TemplateColumn>
-                    <TemplateColumn TGridItem="FileStationFile" Title="Type" Align="Align.Center" Sortable="true" SortBy="GridSort<FileStationFile>.ByAscending(f => f.IsDirectory)" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
+                    <TemplateColumn TGridItem="FileStationFile" Title="Type" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
                         @(GetFileType(context))
                     </TemplateColumn>
                     <PropertyColumn TGridItem="FileStationFile" TProp="DateTimeOffset ?" Title="Modified" Property="@(f => GetModifiedDateTimeOffset(f))" Format="yyyy-MM-dd HH:mm" Align="Align.Center" Sortable="true" />
@@ -72,11 +75,34 @@
     [Parameter]
     public EventCallback<FileStationFile> OnFileSelected { get; set; }
 
-    private bool IsLoadingTree { get; set; } = true;
     private List<DirectoryTreeNode> Directories { get; set; } = [];
     private IQueryable<FileStationFile> Files { get; set; } = AutoDataGrid<FileStationFile>.Empty();
     private string? SelectedPath { get; set; }
     private FileStationFile? SelectedFile { get; set; }
+
+    #endregion
+
+    #region IWorkingState Implementation
+
+    public bool IsWorking { get; set; }
+    public string? WorkingMessage { get; set; }
+    
+    public void NotifyStateChanged() => StateHasChanged();
+    
+    public string GetContextualMessage()
+    {
+        if (Directories.Count == 0)
+        {
+            return "Loading shared folders...";
+        }
+        
+        if (!String.IsNullOrEmpty(SelectedPath))
+        {
+            return "Loading directory contents...";
+        }
+        
+        return "Loading...";
+    }
 
     #endregion
 
@@ -98,6 +124,14 @@
         SelectedPath = selectedPath;
         SelectedFile = null;
 
+        if (String.IsNullOrEmpty(selectedPath))
+        {
+            Files = AutoDataGrid<FileStationFile>.Empty();
+            return;
+        }
+
+        using var worker = this.CreateWorkingState("Loading directory contents...");
+
         try
         {
             var files = await FileNavigationService.GetDirectoryContentsAsync(selectedPath!);
@@ -105,13 +139,11 @@
         }
         catch (FileStationApiException ex)
         {
-            Files = AutoDataGrid<FileStationFile>.Empty();
-            await ShowErrorAsync($"Failed to load directory contents: {ex.FormattedMessage}");
+            await HandleDirectoryLoadError($"Failed to load directory contents: {ex.FormattedMessage}");
         }
         catch (Exception ex)
         {
-            Files = AutoDataGrid<FileStationFile>.Empty();
-            await ShowErrorAsync($"Failed to load directory contents: {ex.Message}");
+            await HandleDirectoryLoadError($"Failed to load directory contents: {ex.Message}");
         }
     }
 
@@ -132,7 +164,7 @@
 
     private async Task LoadSharedFolders()
     {
-        IsLoadingTree = true;
+        using var worker = this.CreateWorkingState("Loading shared folders...");
 
         try
         {
@@ -140,21 +172,27 @@
         }
         catch (FileStationApiException ex)
         {
-            Directories = [];
-            await ShowErrorAsync($"FileStation API Error: {ex.FormattedMessage}");
+            await HandleSharedFoldersLoadError($"FileStation API Error: {ex.FormattedMessage}");
         }
         catch (Exception ex)
         {
-            Directories = [];
-            await ShowErrorAsync($"Failed to load shared folders: {ex.Message}");
-        }
-        finally
-        {
-            IsLoadingTree = false;
+            await HandleSharedFoldersLoadError($"Failed to load shared folders: {ex.Message}");
         }
     }
 
     private async Task ShowErrorAsync(string error) => await DialogService.ShowErrorAsync(error);
+
+    private async Task HandleDirectoryLoadError(string errorMessage)
+    {
+        Files = AutoDataGrid<FileStationFile>.Empty();
+        await ShowErrorAsync(errorMessage);
+    }
+
+    private async Task HandleSharedFoldersLoadError(string errorMessage)
+    {
+        Directories = [];
+        await ShowErrorAsync(errorMessage);
+    }
 
     #endregion
 

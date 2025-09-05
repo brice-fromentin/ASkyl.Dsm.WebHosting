@@ -1,15 +1,17 @@
 @using Askyl.Dsm.WebHosting.Constants
 @using Askyl.Dsm.WebHosting.Constants.Runtime
 @using Askyl.Dsm.WebHosting.Tools.Runtime
+@using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
 @using Askyl.Dsm.WebHosting.Ui.Models
 
 @implements IDialogContentComponent
+@implements IWorkingState
 
 @inject IDialogService DialogsService
-@inject IFrameworkManagementService ManagementService
 @inject IDotnetVersionService DotnetVersionService
+@inject IFrameworkManagementService ManagementService
 
-<LoadingOverlay IsVisible="@IsWorking" Message="@GetWorkingMessage()" />
+<LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">ASP.NET Online</FluentLabel>
@@ -57,15 +59,38 @@
 
 @code
 {
+    #region IWorkingState Implementation
+
+    public bool IsWorking { get; set; }
+
+    public string? WorkingMessage { get; set; }
+
+    public void NotifyStateChanged() => StateHasChanged();
+
+    public string GetContextualMessage()
+    {
+        if (SelectedItem == null)
+        {
+            return "Loading...";
+        }
+
+        var action = IsSelectedVersionInstalled ? "Uninstalling" : "Installing";
+        return $"{action} ASP.NET Core {SelectedItem.Version}...";
+    }
+
+    #endregion
+
     #region Properties and Fields
 
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 
-    private bool IsWorking { get; set; }
     private List<AspNetChannel> Channels { get; set; } = [];
+
     private IQueryable<AspNetRelease> Releases { get; set; } = AutoDataGrid<AspNetRelease>.Empty();
+
     private AspNetChannel? SelectedChannel { get; set; }
+
     private AspNetRelease? SelectedItem { get; set; }
 
     #endregion
@@ -73,10 +98,20 @@
     #region Computed Properties
 
     private bool IsSelectedVersionInstalled => SelectedItem?.IsInstalled == true;
+
     private bool CanProcessSelected => !IsWorking && SelectedItem != null;
+
     private bool CanInstallSelected => !IsWorking && SelectedItem != null && !SelectedItem.IsInstalled;
 
-    private string GetWorkingMessage() => $"{(IsSelectedVersionInstalled ? "Uninstalling" : "Installing")} ASP.NET Core {SelectedItem?.Version ?? String.Empty}...";
+    private string GetActionButtonText()
+    {
+        if (SelectedItem == null)
+        {
+            return "Select a version";
+        }
+
+        return IsSelectedVersionInstalled ? $"Uninstall {SelectedItem.Version}" : $"Install {SelectedItem.Version}";
+    }
 
     #endregion
 
@@ -102,20 +137,6 @@
 
     #endregion
 
-    #region UI Helper Methods
-
-    private string GetActionButtonText()
-    {
-        if (SelectedItem == null)
-        {
-            return "Select a version";
-        }
-
-        return IsSelectedVersionInstalled ? $"Uninstall {SelectedItem.Version}" : $"Install {SelectedItem.Version}";
-    }
-
-    #endregion
-
     #region Dialog Management
 
     private async Task CancelAsync() => await Dialog.CancelAsync();
@@ -126,7 +147,7 @@
 
     private async Task LoadChannelsAsync()
     {
-        IsWorking = true;
+        using var worker = this.CreateWorkingState("Loading channels...");
 
         try
         {
@@ -138,10 +159,6 @@
             await ShowErrorAsync(ex.Message);
             Channels.Clear();
             SelectedChannel = null;
-        }
-        finally
-        {
-            IsWorking = false;
         }
     }
 
@@ -186,7 +203,7 @@
             return;
         }
 
-        IsWorking = true;
+        using var worker = this.CreateWorkingState($"Installing ASP.NET Core {SelectedItem.Version}...");
 
         try
         {
@@ -206,10 +223,6 @@
         {
             await DialogsService.ShowErrorAsync($"Installation error: {ex.Message}");
         }
-        finally
-        {
-            IsWorking = false;
-        }
     }
 
     private async Task UninstallSelectedFramework()
@@ -228,7 +241,7 @@
             return;
         }
 
-        IsWorking = true;
+        using var worker = this.CreateWorkingState($"Uninstalling ASP.NET Core {SelectedItem.Version}...");
 
         try
         {
@@ -248,11 +261,8 @@
         {
             await DialogsService.ShowErrorAsync($"Uninstallation error: {ex.Message}");
         }
-        finally
-        {
-            IsWorking = false;
-        }
     }
 
     #endregion
+
 }
