@@ -9,14 +9,14 @@ public sealed class AspNetRelease
         return new AspNetRelease
         {
             Version = releaseInfo.Version,
-            Security = releaseInfo.IsSecurity ? "⚠" : String.Empty,
-            ReleaseDate = releaseInfo.ReleaseDate?.ToString("yyyy-MM-dd") ?? String.Empty,
-            Installed = isInstalled ? "✓" : String.Empty
+            IsSecurity = releaseInfo.IsSecurity,
+            ReleaseDate = releaseInfo.ReleaseDate,
+            IsInstalled = isInstalled
         };
     }
 
     public required string Version { get; init; }
-    public required string Security { get; init; }
-    public required string ReleaseDate { get; init; }
-    public required string Installed { get; init; }
+    public required bool IsSecurity { get; init; }
+    public required DateTimeOffset? ReleaseDate { get; init; }
+    public required bool IsInstalled { get; init; }
 }

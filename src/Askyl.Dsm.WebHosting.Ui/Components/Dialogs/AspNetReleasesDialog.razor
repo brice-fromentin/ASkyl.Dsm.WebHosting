@@ -13,7 +13,7 @@
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
         <FluentProgressRing Size="FluentProgressSize.Large" />
         <FluentLabel Typo="Typography.Header" Class="full-size">
-            @(IsSelectedVersionInstalled ? "Uninstalling" : "Installing") ASP.NET Core @(SelectedItem?.Version ?? "")...
+            @(IsSelectedVersionInstalled ? "Uninstalling" : "Installing") ASP.NET Core @(SelectedItem?.Version ?? String.Empty)...
         </FluentLabel>
     </FluentStack>
 </FluentOverlay>
@@ -30,13 +30,13 @@
     <FluentToolbar Class="full-width">
         <FluentLabel>Channel</FluentLabel>
 
-        <FluentSelect Items="@Channels" @bind-SelectedOption="@SelectedChannel" Width="140px" Disabled="@IsWorking" />
+        <FluentSelect TOption="AspNetChannel" Items="@Channels" SelectedOption="@SelectedChannel" SelectedOptionChanged="OnChannelChanged" Width="140px" Disabled="@IsWorking" />
 
         <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="Refresh" Disabled="@IsWorking">
             <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
         </FluentButton>
 
-        <FluentButton OnClick="@(IsSelectedVersionInstalled? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsWorking)" Title="@GetActionButtonTooltip()" Class="flex-full-width">
+        <FluentButton OnClick="@(IsSelectedVersionInstalled ? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsWorking)" Title="@GetActionButtonTooltip()" Class="flex-full-width">
             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                 <FluentIcon Value="@(IsSelectedVersionInstalled ? (Icon)new IconsRegular16.Delete() : new IconsRegular16.CloudArrowDown())" Color="Color.Fill" />
                 <FluentLabel Color="Color.Fill">
@@ -47,12 +47,16 @@
     </FluentToolbar>
 
     <div class="dialog-grid-container">
-        <AutoDataGrid @ref="@Grid" TItem="AspNetRelease" GridTemplateColumns="100px 240px 120px 100px 120px">
+        <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="240px 120px 100px 120px" OnRowClick="@OnReleaseSelected">
             <ChildContent>
-                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="Version" Property="@(r => r.Version)" />
-                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="Installed" Property="@(r => r.Installed)" Align="Align.Center" />
-                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="Security" Property="@(r => r.Security)" Align="Align.Center" />
-                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="Release" Property="@(r => r.ReleaseDate)" />
+                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="Version" Property="@(r => r.Version)" Sortable="true" />
+                <TemplateColumn TGridItem="AspNetRelease" Title="Installed" Align="Align.Center">
+                    @(context.IsInstalled ? "✓" : String.Empty)
+                </TemplateColumn>
+                <TemplateColumn TGridItem="AspNetRelease" Title="Security" Align="Align.Center">
+                    @(context.IsSecurity ? "⚠" : String.Empty)
+                </TemplateColumn>
+                <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="Release" Property="@(r => r.ReleaseDate)" Format="yyyy-MM-dd" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending" />
             </ChildContent>
         </AutoDataGrid>
     </div>
@@ -65,36 +69,41 @@
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 
-    private AutoDataGrid<AspNetRelease>? Grid { get; set; }
-
+    private bool IsWorking { get; set; }
     private List<AspNetChannel> Channels { get; set; } = [];
-    private IQueryable<AspNetRelease> Releases { get; set; } = Enumerable.Empty<AspNetRelease>().AsQueryable();
-    private AspNetChannel? SelectedChannel
-    {
-        get => _selectedChannel;
-        set
-        {
-            if (_selectedChannel != value)
-            {
-                _selectedChannel = value;
-                InvokeAsync(async () => await LoadReleasesAsync(value));
-            }
-        }
-    }
-    private AspNetChannel? _selectedChannel;
-    private bool IsWorking { get; set; } = false;
-    private IEnumerable<AspNetRelease> SelectedItems { get; set; } = [];
-
-    // Helper property for backward compatibility
-    private AspNetRelease? SelectedItem => SelectedItems?.FirstOrDefault();
+    private IQueryable<AspNetRelease> Releases { get; set; } = IDotnetVersionService.EmptyReleasesQueryable();
+    private AspNetChannel? SelectedChannel { get; set; }
+    private AspNetRelease? SelectedItem { get; set; }
 
     #endregion
 
     #region Computed Properties
 
-    private bool IsSelectedVersionInstalled => SelectedItem?.Installed.Equals("✓") == true;
+    private bool IsSelectedVersionInstalled => SelectedItem?.IsInstalled == true;
     private bool CanProcessSelected => !IsWorking && SelectedItem != null;
-    private bool CanInstallSelected => !IsWorking && SelectedItem != null && !SelectedItem.Installed.Equals("✓");
+    private bool CanInstallSelected => !IsWorking && SelectedItem != null && !SelectedItem.IsInstalled;
+
+    #endregion
+
+    #region Lifecycle Methods
+
+    protected override async Task OnParametersSetAsync() => await LoadChannelsAsync();
+
+    #endregion
+
+    #region Event Handlers
+
+    private void OnReleaseSelected(AspNetRelease release)
+    {
+        SelectedItem = release;
+        StateHasChanged();
+    }
+
+    private async Task OnChannelChanged(AspNetChannel? channel)
+    {
+        SelectedChannel = channel;
+        await LoadReleasesAsync(channel);
+    }
 
     #endregion
 
@@ -125,39 +134,11 @@
         return IsSelectedVersionInstalled ? $"Uninstall ASP.NET Core {SelectedItem.Version}" : $"Install ASP.NET Core {SelectedItem.Version}";
     }
 
-    private string GetInstallButtonTooltip()
-    {
-        if (IsWorking)
-        {
-            return "Installation in progress...";
-        }
-
-        if (SelectedItem == null)
-        {
-            return "Select a framework version to install";
-        }
-
-        if (SelectedItem.Installed.Equals("✓"))
-        {
-            return $"Version {SelectedItem.Version} is already installed";
-        }
-
-        return $"Install ASP.NET Core {SelectedItem.Version}";
-    }
-
-    #endregion
-
-    #region Lifecycle Methods
-
-    protected override async Task OnParametersSetAsync()    => await LoadChannelsAsync();
-
     #endregion
 
     #region Dialog Management
 
-    private async Task CancelAsync()    => await Dialog.CancelAsync();
-
-    private async Task ShowErrorAsync(string error)    => await DialogsService.ShowErrorAsync(error);
+    private async Task CancelAsync() => await Dialog.CancelAsync();
 
     #endregion
 
@@ -169,12 +150,8 @@
 
         try
         {
-            Channels = await DotnetVersionService.GetAspNetChannelsAsync();
-
-            if (SelectedChannel == null && Channels.Count > 0)
-            {
-                SelectedChannel = Channels.First();
-            }
+            Channels = await DotnetVersionService.GetChannelsAsync();
+            await OnChannelChanged(SelectedChannel ?? Channels.FirstOrDefault());
         }
         catch (Exception ex)
         {
@@ -190,36 +167,33 @@
 
     private async Task LoadReleasesAsync(AspNetChannel? channel)
     {
+        SelectedItem = null;
+
         if (channel == null)
         {
-            Releases = Enumerable.Empty<AspNetRelease>().AsQueryable();
+            Releases = IDotnetVersionService.EmptyReleasesQueryable();
             return;
         }
 
         try
         {
-            var releases = await DotnetVersionService.GetAspNetReleasesWithStatusAsync(channel.ProductVersion);
+            var releases = await DotnetVersionService.GetReleasesWithStatusAsync(channel.ProductVersion);
             Releases = releases.AsQueryable();
         }
         catch (Exception ex)
         {
             await ShowErrorAsync(ex.Message);
-            Releases = Enumerable.Empty<AspNetRelease>().AsQueryable();
+            Releases = IDotnetVersionService.EmptyReleasesQueryable();
         }
-    }
-
-    private async Task Refresh()
-    {
-        Releases = Enumerable.Empty<AspNetRelease>().AsQueryable();
-        SelectedItems = [];
-
-        if (Grid != null)
+        finally
         {
-            Grid.SetLoadingState(true);
-            await LoadReleasesAsync(SelectedChannel);
-            Grid.SetLoadingState(false);
+            StateHasChanged();
         }
     }
+
+    private async Task Refresh() => await LoadChannelsAsync();
+
+    private async Task ShowErrorAsync(string error) => await DialogsService.ShowErrorAsync(error);
 
     #endregion
 
@@ -241,7 +215,7 @@
             if (result.Success)
             {
                 await DialogsService.ShowInfoAsync(result.Message);
-                await Refresh(); // Refresh to update the installed status
+                await Refresh();
             }
             else
             {

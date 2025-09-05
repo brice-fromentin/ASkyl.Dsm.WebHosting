@@ -2,9 +2,8 @@
 
 <div class="auto-data-grid-content">
     <div class="auto-data-grid-area">
-        <FluentDataGrid @ref="@Grid" TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" Pagination="@pagination" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky">
+        <FluentDataGrid @ref="@Grid" TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" Pagination="@pagination" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@HandleRowClick" OnRowDoubleClick="@HandleRowDoubleClick">
             <ChildContent>
-                <SelectColumn TGridItem="TItem" @bind-SelectedItems="@SelectedItems" SelectMode="DataGridSelectMode.Single" />
                 @ChildContent
             </ChildContent>
 
@@ -62,30 +61,48 @@
     public int ItemsPerPage { get; set; } = 50;
 
     [Parameter]
-    public IEnumerable<TItem> SelectedItems
-    {
-        get => _selectedItems;
-        set
-        {
-            _selectedItems = value;
-            SelectedItemsChanged.InvokeAsync(value);
-        }
-    }
-    private IEnumerable<TItem> _selectedItems = [];
+    public EventCallback<TItem> OnRowClick { get; set; }
 
     [Parameter]
-    public EventCallback<IEnumerable<TItem>> SelectedItemsChanged { get; set; }
+    public EventCallback<TItem> OnRowDoubleClick { get; set; }
 
     private FluentDataGrid<TItem>? Grid { get; set; }
+
     private readonly PaginationState pagination = new();
+
+    private TItem? SelectedItem { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
         pagination.ItemsPerPage = ItemsPerPage;
+
         await base.OnParametersSetAsync();
-    } 
+    }
 
-    public async Task RefreshAsync() => await Grid!.RefreshDataAsync();
+    private string? GetRowClass(TItem item) => SelectedItem != null && SelectedItem.Equals(item) ? "selected-row" : null;
 
-    public void SetLoadingState(bool? loading) => Grid?.SetLoadingState(loading);
+    private async Task HandleRowClick(FluentDataGridRow<TItem> row)
+    {
+        if (row.Item is null)
+        {
+            return;
+        }
+
+        SelectedItem = row.Item;
+
+        if (OnRowClick.HasDelegate)
+        {
+            await OnRowClick.InvokeAsync(row.Item);
+        }
+    }
+
+    private async Task HandleRowDoubleClick(FluentDataGridRow<TItem> row)
+    {
+        if (!OnRowDoubleClick.HasDelegate || row.Item is null)
+        {
+            return;
+        }
+
+        await OnRowDoubleClick.InvokeAsync(row.Item);
+    }
 }

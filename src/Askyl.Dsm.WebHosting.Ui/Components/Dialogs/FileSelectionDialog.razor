@@ -102,13 +102,12 @@
         // Use the Id which corresponds to the DirectoryTreeNode.Path
         var selectedPath = selectedItem.Id;
 
-        AutoGrid!.SetLoadingState(true);
         SelectedPath = selectedPath;
         SelectedFile = null;
 
         try
         {
-            CurrentFiles = await FileNavigationService!.GetDirectoryContentsAsync(selectedPath);
+            CurrentFiles = await FileNavigationService!.GetDirectoryContentsAsync(selectedPath!);
         }
         catch (FileStationApiException ex)
         {
@@ -119,11 +118,6 @@
         {
             CurrentFiles = [];
             await ShowErrorAsync($"Failed to load directory contents: {ex.Message}");
-        }
-        finally
-        {
-            AutoGrid!.SetLoadingState(false);
-            await AutoGrid!.RefreshAsync();
         }
     }
 

@@ -13,9 +13,12 @@ public interface IDotnetVersionService
 
     bool IsVersionInstalled(string version, string frameworkType);
 
-    Task<List<AspNetChannel>> GetAspNetChannelsAsync();
+    Task<List<AspNetChannel>> GetChannelsAsync();
 
-    Task<List<AspNetRelease>> GetAspNetReleasesWithStatusAsync(string channel);
+    Task<List<AspNetRelease>> GetReleasesWithStatusAsync(string channel);
+
+    static IQueryable<AspNetRelease> EmptyReleasesQueryable()
+        => Enumerable.Empty<AspNetRelease>().AsQueryable();
 }
 
 public class DotnetVersionService : IDotnetVersionService
@@ -29,7 +32,7 @@ public class DotnetVersionService : IDotnetVersionService
     public bool IsVersionInstalled(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore)
         => VersionsDetector.IsVersionInstalled(version, frameworkType);
 
-    public async Task<List<AspNetChannel>> GetAspNetChannelsAsync()
+    public async Task<List<AspNetChannel>> GetChannelsAsync()
     {
         await GetInstalledVersionsAsync();
 
@@ -38,10 +41,10 @@ public class DotnetVersionService : IDotnetVersionService
         return [.. channels.Select(channel => AspNetChannel.FromReleaseInfo(channel, this))];
     }
 
-    public async Task<List<AspNetRelease>> GetAspNetReleasesWithStatusAsync(string channel)
+    public async Task<List<AspNetRelease>> GetReleasesWithStatusAsync(string channel)
     {
         var releases = await Downloader.GetAspNetCoreReleasesAsync(channel);
-        
+
         return [.. releases.Select(release =>
         {
             var isInstalled = IsVersionInstalled(release.Version, DotNetFrameworkTypes.AspNetCore);
