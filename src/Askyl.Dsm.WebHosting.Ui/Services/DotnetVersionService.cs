@@ -16,9 +16,6 @@ public interface IDotnetVersionService
     Task<List<AspNetChannel>> GetChannelsAsync();
 
     Task<List<AspNetRelease>> GetReleasesWithStatusAsync(string channel);
-
-    static IQueryable<AspNetRelease> EmptyReleasesQueryable()
-        => Enumerable.Empty<AspNetRelease>().AsQueryable();
 }
 
 public class DotnetVersionService : IDotnetVersionService

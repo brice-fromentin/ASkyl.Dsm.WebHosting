@@ -9,14 +9,7 @@
 @inject IFrameworkManagementService ManagementService
 @inject IDotnetVersionService DotnetVersionService
 
-<FluentOverlay @bind-Visible="@IsWorking" Opacity="0.7">
-    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
-        <FluentProgressRing Size="FluentProgressSize.Large" />
-        <FluentLabel Typo="Typography.Header" Class="full-size">
-            @(IsSelectedVersionInstalled ? "Uninstalling" : "Installing") ASP.NET Core @(SelectedItem?.Version ?? String.Empty)...
-        </FluentLabel>
-    </FluentStack>
-</FluentOverlay>
+<LoadingOverlay IsVisible="@IsWorking" Message="@GetWorkingMessage()" />
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">ASP.NET Online</FluentLabel>
@@ -36,7 +29,7 @@
             <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
         </FluentButton>
 
-        <FluentButton OnClick="@(IsSelectedVersionInstalled ? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsWorking)" Title="@GetActionButtonTooltip()" Class="flex-full-width">
+        <FluentButton OnClick="@(IsSelectedVersionInstalled ? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsWorking)" Class="flex-full-width">
             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                 <FluentIcon Value="@(IsSelectedVersionInstalled ? (Icon)new IconsRegular16.Delete() : new IconsRegular16.CloudArrowDown())" Color="Color.Fill" />
                 <FluentLabel Color="Color.Fill">
@@ -71,7 +64,7 @@
 
     private bool IsWorking { get; set; }
     private List<AspNetChannel> Channels { get; set; } = [];
-    private IQueryable<AspNetRelease> Releases { get; set; } = IDotnetVersionService.EmptyReleasesQueryable();
+    private IQueryable<AspNetRelease> Releases { get; set; } = AutoDataGrid<AspNetRelease>.Empty();
     private AspNetChannel? SelectedChannel { get; set; }
     private AspNetRelease? SelectedItem { get; set; }
 
@@ -82,6 +75,8 @@
     private bool IsSelectedVersionInstalled => SelectedItem?.IsInstalled == true;
     private bool CanProcessSelected => !IsWorking && SelectedItem != null;
     private bool CanInstallSelected => !IsWorking && SelectedItem != null && !SelectedItem.IsInstalled;
+
+    private string GetWorkingMessage() => $"{(IsSelectedVersionInstalled ? "Uninstalling" : "Installing")} ASP.NET Core {SelectedItem?.Version ?? String.Empty}...";
 
     #endregion
 
@@ -117,21 +112,6 @@
         }
 
         return IsSelectedVersionInstalled ? $"Uninstall {SelectedItem.Version}" : $"Install {SelectedItem.Version}";
-    }
-
-    private string GetActionButtonTooltip()
-    {
-        if (IsWorking)
-        {
-            return IsSelectedVersionInstalled ? "Uninstallation in progress..." : "Installation in progress...";
-        }
-
-        if (SelectedItem == null)
-        {
-            return "Select a framework version";
-        }
-
-        return IsSelectedVersionInstalled ? $"Uninstall ASP.NET Core {SelectedItem.Version}" : $"Install ASP.NET Core {SelectedItem.Version}";
     }
 
     #endregion
@@ -171,7 +151,7 @@
 
         if (channel == null)
         {
-            Releases = IDotnetVersionService.EmptyReleasesQueryable();
+            Releases = AutoDataGrid<AspNetRelease>.Empty();
             return;
         }
 
@@ -183,7 +163,7 @@
         catch (Exception ex)
         {
             await ShowErrorAsync(ex.Message);
-            Releases = IDotnetVersionService.EmptyReleasesQueryable();
+            Releases = AutoDataGrid<AspNetRelease>.Empty();
         }
         finally
         {

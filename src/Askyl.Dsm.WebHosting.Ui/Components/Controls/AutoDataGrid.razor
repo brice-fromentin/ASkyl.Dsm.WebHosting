@@ -72,6 +72,8 @@
 
     private TItem? SelectedItem { get; set; }
 
+    public static IQueryable<TItem> Empty() => Enumerable.Empty<TItem>().AsQueryable();
+
     protected override async Task OnParametersSetAsync()
     {
         pagination.ItemsPerPage = ItemsPerPage;

@@ -3,6 +3,8 @@
 @inject IDialogService DialogService
 @inject IFileNavigationService FileNavigationService
 
+<LoadingOverlay IsVisible="@IsLoadingTree" Message="Loading shared folders..." />
+
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">File Selection</FluentLabel>
 </FluentDialogHeader>
@@ -10,22 +12,12 @@
 <FluentDialogBody>
     <FluentSplitter Orientation="Orientation.Horizontal" Panel1Size="30%" Panel1MinSize="20%" Panel1MaxSize="50%" Class="file-dialog-splitter">
         <Panel1>
-            <FluentStack Orientation="Orientation.Horizontal">
-                @if (IsLoadingTree)
-                {
-                    <FluentProgressRing Size="16" />
-                    <FluentLabel>Loading shared folders...</FluentLabel>
-                }
-                else
-                {
-                    <FluentTreeView Items="TreeNodes" LazyLoadItems="false" Class="full-size file-dialog-tree" OnSelectedChange="OnTreeSelectionChanged" />
-                }
-            </FluentStack>
+            <FluentTreeView Items="@Directories" LazyLoadItems="false" Class="full-size file-dialog-tree" OnSelectedChange="OnTreeSelectionChanged" />
         </Panel1>
         <Panel2>
-            <AutoDataGrid @ref="@AutoGrid" TItem="FileStationFile" Items="@SortedFiles.AsQueryable()" GridTemplateColumns="1fr auto auto auto">
+            <AutoDataGrid TItem="FileStationFile" Items="@Files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick">
                 <ChildContent>
-                    <TemplateColumn TGridItem="FileStationFile" Title="Name" Sortable="false">
+                    <TemplateColumn TGridItem="FileStationFile" Title="Name" Sortable="true" SortBy="GridSort<FileStationFile>.ByAscending(f => f.Name)" InitialSortDirection="SortDirection.Ascending">
                         <ChildContent Context="file">
                             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                                 <FluentIcon Value="@GetFileIcon(file)" />
@@ -33,9 +25,13 @@
                             </FluentStack>
                         </ChildContent>
                     </TemplateColumn>
-                    <PropertyColumn TGridItem="FileStationFile" TProp="string" Title="Size" Property="@(f => GetFileSize(f))" Sortable="false" Align="Align.End" />
-                    <PropertyColumn TGridItem="FileStationFile" TProp="string" Title="Type" Property="@(f => GetFileType(f))" Sortable="false" Align="Align.Center" />
-                    <PropertyColumn TGridItem="FileStationFile" TProp="string" Title="Modified" Property="@(f => GetModifiedDate(f))" Sortable="false" Align="Align.Center" />
+                    <TemplateColumn TGridItem="FileStationFile" Title="Size" Align="Align.End" Sortable="true" SortBy="GridSort<FileStationFile>.ByAscending(f => f.Additional != null && f.Additional.Size.HasValue ? f.Additional.Size.Value : 0)">
+                        @(GetFileSize(context))
+                    </TemplateColumn>
+                    <TemplateColumn TGridItem="FileStationFile" Title="Type" Align="Align.Center" Sortable="true" SortBy="GridSort<FileStationFile>.ByAscending(f => f.IsDirectory)" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
+                        @(GetFileType(context))
+                    </TemplateColumn>
+                    <PropertyColumn TGridItem="FileStationFile" TProp="DateTimeOffset ?" Title="Modified" Property="@(f => GetModifiedDateTimeOffset(f))" Format="yyyy-MM-dd HH:mm" Align="Align.Center" Sortable="true" />
                 </ChildContent>
 
                 <EmptyContent>
@@ -76,16 +72,15 @@
     [Parameter]
     public EventCallback<FileStationFile> OnFileSelected { get; set; }
 
-    private AutoDataGrid<FileStationFile>? AutoGrid { get; set; }
-
     private bool IsLoadingTree { get; set; } = true;
-    private List<DirectoryTreeNode> TreeNodes { get; set; } = [];
-    private List<FileStationFile>? CurrentFiles { get; set; }
+    private List<DirectoryTreeNode> Directories { get; set; } = [];
+    private IQueryable<FileStationFile> Files { get; set; } = AutoDataGrid<FileStationFile>.Empty();
     private string? SelectedPath { get; set; }
     private FileStationFile? SelectedFile { get; set; }
 
-    // Sorted files for display: directories first, then alphabetical
-    private IEnumerable<FileStationFile> SortedFiles => CurrentFiles?.OrderBy(f => !f.IsDirectory).ThenBy(f => f.Name) ?? Enumerable.Empty<FileStationFile>();
+    #endregion
+
+    #region Computed Properties
 
     #endregion
 
@@ -99,24 +94,23 @@
 
     private async Task OnTreeSelectionChanged(FluentTreeItem selectedItem)
     {
-        // Use the Id which corresponds to the DirectoryTreeNode.Path
         var selectedPath = selectedItem.Id;
-
         SelectedPath = selectedPath;
         SelectedFile = null;
 
         try
         {
-            CurrentFiles = await FileNavigationService!.GetDirectoryContentsAsync(selectedPath!);
+            var files = await FileNavigationService.GetDirectoryContentsAsync(selectedPath!);
+            Files = files.AsQueryable();
         }
         catch (FileStationApiException ex)
         {
-            CurrentFiles = [];
+            Files = AutoDataGrid<FileStationFile>.Empty();
             await ShowErrorAsync($"Failed to load directory contents: {ex.FormattedMessage}");
         }
         catch (Exception ex)
         {
-            CurrentFiles = [];
+            Files = AutoDataGrid<FileStationFile>.Empty();
             await ShowErrorAsync($"Failed to load directory contents: {ex.Message}");
         }
     }
@@ -129,9 +123,8 @@
         }
 
         SelectedFile = file;
+        StateHasChanged();
     }
-
-    private void OnSelectFile(FileStationFile file) => SelectedFile = file;
 
     #endregion
 
@@ -143,16 +136,16 @@
 
         try
         {
-            TreeNodes = await FileNavigationService!.GetSharedFoldersAsync(ShowErrorAsync);
+            Directories = await FileNavigationService.GetSharedFoldersAsync(ShowErrorAsync);
         }
         catch (FileStationApiException ex)
         {
-            TreeNodes = [];
+            Directories = [];
             await ShowErrorAsync($"FileStation API Error: {ex.FormattedMessage}");
         }
         catch (Exception ex)
         {
-            TreeNodes = [];
+            Directories = [];
             await ShowErrorAsync($"Failed to load shared folders: {ex.Message}");
         }
         finally
@@ -160,6 +153,8 @@
             IsLoadingTree = false;
         }
     }
+
+    private async Task ShowErrorAsync(string error) => await DialogService.ShowErrorAsync(error);
 
     #endregion
 
@@ -170,19 +165,17 @@
         if (SelectedFile != null)
         {
             await OnFileSelected.InvokeAsync(SelectedFile);
-            await Dialog!.CloseAsync(SelectedFile);
+            await Dialog.CloseAsync(SelectedFile);
         }
     }
 
-    private async Task CancelAsync() => await Dialog!.CancelAsync();
-
-    private async Task ShowErrorAsync(string error) => await DialogService!.ShowErrorAsync(error);
+    private async Task CancelAsync() => await Dialog.CancelAsync();
 
     #endregion
 
     #region File Display Helpers
 
-    private string GetFileSize(FileStationFile file)
+    private static string GetFileSize(FileStationFile file)
     {
         if (file.IsDirectory || file.Additional?.Size == null)
         {
@@ -209,20 +202,12 @@
         return $"{bytes / (1024L * 1024 * 1024):F2} GB";
     }
 
-    private string GetModifiedDate(FileStationFile file)
-    {
-        if (file.Additional?.Time?.ModifyTime == null)
-        {
-            return "-";
-        }
+    private static DateTimeOffset? GetModifiedDateTimeOffset(FileStationFile file)
+    => file.Additional?.Time?.ModifyTime is long unixTime ? DateTimeOffset.FromUnixTimeSeconds(unixTime) : null;
 
-        return DateTimeOffset.FromUnixTimeSeconds(file.Additional.Time.ModifyTime.Value).ToString("dd/MM/yyyy HH:mm:ss");
-    }
+    private static string GetFileType(FileStationFile file) => file.IsDirectory ? "Directory" : "File";
 
-    private string GetFileType(FileStationFile file) =>
-    file.IsDirectory ? "Directory" : "File";
-
-    private Icon GetFileIcon(FileStationFile file)
+    private static Icon GetFileIcon(FileStationFile file)
     {
         if (file.IsDirectory)
         {

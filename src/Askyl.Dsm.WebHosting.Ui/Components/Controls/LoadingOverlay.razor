@@ -1,0 +1,28 @@
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<FluentOverlay @bind-Visible="@IsVisible" Opacity="@Opacity">
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+        <FluentProgressRing />
+        <FluentLabel Typo="@MessageTypography" Class="full-size">
+            @Message
+        </FluentLabel>
+    </FluentStack>
+</FluentOverlay>
+
+@code
+{
+    [Parameter, EditorRequired]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> IsVisibleChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Message { get; set; } = default!;
+
+    [Parameter]
+    public double Opacity { get; set; } = 0.4;
+
+    [Parameter]
+    public Typography MessageTypography { get; set; } = Typography.Header;
+}
