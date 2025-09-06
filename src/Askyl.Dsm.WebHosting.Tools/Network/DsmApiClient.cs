@@ -1,4 +1,7 @@
 using System.Text.Json;
+
+using Microsoft.Extensions.Logging;
+
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
@@ -7,7 +10,6 @@ using Askyl.Dsm.WebHosting.Data.API.Parameters.AuthenticationAPI;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.InformationsAPI;
 using Askyl.Dsm.WebHosting.Data.API.Responses;
 using Askyl.Dsm.WebHosting.Data.Security;
-using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
 
@@ -54,9 +56,9 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
 
         var settings = File.ReadAllLines(DsmDefaults.ConfigurationFileName)
                            .Where(x => x.Contains('='))
-                           .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", ""));
+                           .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", String.Empty));
 
-        _log.LogDebug($"Configuration file loaded with {settings.Count} parameters.");
+        _log.LogDebug("Configuration file loaded with {Count} parameters.", settings.Count);
         _server = settings[DsmDefaults.KeyExternalHostIp];
 
         if (!Int32.TryParse(settings[DsmDefaults.KeyExternalHttpsPort], out _port))
@@ -69,7 +71,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
 
     private async Task<bool> HandShakeAsync()
     {
-        var parameters = new InformationsQueryParameters(this.ApiInformations);
+        var parameters = new InformationsQueryParameters(ApiInformations);
 
         var result = await ExecuteAsync<ApiInformationResponse>(parameters);
 
@@ -85,7 +87,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
 
     private async Task<bool> AuthenticateAsync(LoginModel model)
     {
-        var parameters = new AuthenticationLoginParameters(this.ApiInformations);
+        var parameters = new AuthenticationLoginParameters(ApiInformations);
 
         parameters.Parameters.Account = model.Login;
         parameters.Parameters.Password = model.Password;
@@ -93,7 +95,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
 
         var response = await ExecuteAsync<SynoLoginResponse>(parameters);
 
-        if (response == null || !response.Success || response.Data == null)
+        if (response is null || !response.Success || response.Data is null)
         {
             return false;
         }

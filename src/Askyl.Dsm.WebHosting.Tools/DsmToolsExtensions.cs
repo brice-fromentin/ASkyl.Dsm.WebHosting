@@ -9,13 +9,7 @@ public static class DsmToolsExtensions
 {
     public static IServiceCollection AddDsmApiClient(this IServiceCollection services)
     {
-        services.AddHttpClient(ApplicationConstants.HttpClientName).ConfigurePrimaryHttpMessageHandler(() =>
-        {
-            return new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-            };
-        });
+        services.AddHttpClient(ApplicationConstants.HttpClientName);
 
         services.AddScoped<DsmApiClient>();
         services.AddScoped((provider) => provider.GetRequiredService<DsmApiClient>().ApiInformations);

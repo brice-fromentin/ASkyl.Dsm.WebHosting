@@ -1,4 +1,5 @@
 @using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
+@using Askyl.Dsm.WebHosting.Constants.UI
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -222,22 +223,22 @@
 
         var bytes = file.Additional.Size.Value;
 
-        if (bytes < 1024)
+        if (bytes < FileSizeConstants.BytesPerKibibyte)
         {
-            return $"{bytes} B";
+            return $"{bytes} {FileSizeConstants.BytesSuffix}";
         }
 
-        if (bytes < 1024 * 1024)
+        if (bytes < FileSizeConstants.BytesPerMebibyte)
         {
-            return $"{bytes / 1024:F2} KB";
+            return $"{(bytes / FileSizeConstants.BytesPerKibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.KibibytesSuffix}";
         }
 
-        if (bytes < 1024L * 1024 * 1024)
+        if (bytes < FileSizeConstants.BytesPerGibibyte)
         {
-            return $"{bytes / (1024 * 1024):F2} MB";
+            return $"{(bytes / FileSizeConstants.BytesPerMebibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.MebibytesSuffix}";
         }
 
-        return $"{bytes / (1024L * 1024 * 1024):F2} GB";
+        return $"{(bytes / FileSizeConstants.BytesPerGibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.GibibytesSuffix}";
     }
 
     private static DateTimeOffset? GetModifiedDateTimeOffset(FileStationFile file)

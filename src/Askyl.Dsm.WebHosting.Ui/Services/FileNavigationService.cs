@@ -27,7 +27,7 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
         var parameters = new FileStationListShareParameters(_apiClient.ApiInformations);
         var response = await _apiClient.ExecuteAsync<FileStationListShareResponse>(parameters);
 
-        if (response?.Success != true || response.Data?.Shares == null)
+        if (response?.Success != true || response.Data?.Shares is null)
         {
             _logger.LogError("FileStation API call failed: Success={Success}, ErrorCode={ErrorCode}", response?.Success, response?.Error?.Code);
             throw new FileStationApiException($"FileStation API call failed: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code);
@@ -51,7 +51,7 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
 
         var response = await _apiClient.ExecuteAsync<FileStationListResponse>(parameters);
 
-        if (response?.Success != true || response.Data?.Files == null)
+        if (response?.Success != true || response.Data?.Files is null)
         {
             _logger.LogError("Failed to retrieve directory contents for {Path}: Success={Success}, ErrorCode={ErrorCode}", path, response?.Success, response?.Error?.Code);
             throw new FileStationApiException($"Failed to retrieve directory contents for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code, path);
@@ -73,7 +73,7 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
 
         var response = await _apiClient.ExecuteAsync<FileStationListResponse>(parameters);
 
-        if (response?.Success != true || response.Data?.Files == null)
+        if (response?.Success != true || response.Data?.Files is null)
         {
             _logger.LogError("Failed to retrieve directory children for {Path}: Success={Success}, ErrorCode={ErrorCode}", path, response?.Success, response?.Error?.Code);
             throw new FileStationApiException($"Failed to retrieve directory children for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code, path);

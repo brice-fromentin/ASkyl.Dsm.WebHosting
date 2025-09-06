@@ -2,34 +2,34 @@
 
 <div class="auto-data-grid-content">
     <div class="auto-data-grid-area">
-        <FluentDataGrid @ref="@Grid" TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" Pagination="@pagination" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@HandleRowClick" OnRowDoubleClick="@HandleRowDoubleClick">
+        <FluentDataGrid TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" Pagination="@pagination" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@HandleRowClick" OnRowDoubleClick="@HandleRowDoubleClick">
             <ChildContent>
                 @ChildContent
             </ChildContent>
 
             <LoadingContent>
-                @if (LoadingContent != null)
+                @if (LoadingContent is not null)
                 {
                     @LoadingContent
                 }
                 else
                 {
                     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
-                        <FluentProgressRing Size="16" />
+                        <FluentProgressRing />
                         <FluentLabel>Loading items...</FluentLabel>
                     </FluentStack>
                 }
             </LoadingContent>
 
             <EmptyContent>
-                @if (EmptyContent != null)
+                @if (EmptyContent is not null)
                 {
                     @EmptyContent
                 }
                 else
                 {
                     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
-                        <FluentIcon Value="@(new Icons.Regular.Size16.Info())" />
+                        <FluentIcon Value="@(new IconsRegular16.Info())" />
                         <FluentLabel>No items found.</FluentLabel>
                     </FluentStack>
                 }
@@ -66,8 +66,6 @@
     [Parameter]
     public EventCallback<TItem> OnRowDoubleClick { get; set; }
 
-    private FluentDataGrid<TItem>? Grid { get; set; }
-
     private readonly PaginationState pagination = new();
 
     private TItem? SelectedItem { get; set; }
@@ -77,11 +75,10 @@
     protected override async Task OnParametersSetAsync()
     {
         pagination.ItemsPerPage = ItemsPerPage;
-
         await base.OnParametersSetAsync();
     }
 
-    private string? GetRowClass(TItem item) => SelectedItem != null && SelectedItem.Equals(item) ? "selected-row" : null;
+    private string? GetRowClass(TItem item) => SelectedItem is not null && SelectedItem.Equals(item) ? "selected-row" : null;
 
     private async Task HandleRowClick(FluentDataGridRow<TItem> row)
     {

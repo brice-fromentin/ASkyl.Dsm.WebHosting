@@ -16,17 +16,17 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
 
     public ApiParametersBase(ApiInformationCollection informations, T? entry = null)
     {
-        var infos = (this.Name == DsmApiNames.Info)
+        var infos = (Name == DsmApiNames.Info)
                         ? CreateDefaultHandshakeInfo()
-                        : informations.Get(this.Name) ?? throw new NullReferenceException("Empty API Information.");
+                        : informations.Get(Name) ?? throw new NullReferenceException("Empty API Information.");
 
-        if (this.Version < infos.MinVersion || this.Version > infos.MaxVersion)
+        if (Version < infos.MinVersion || Version > infos.MaxVersion)
         {
-            throw new ArgumentOutOfRangeException($"Requested API version is {this.Version}, but {this.Name} support is between {infos.MinVersion} and {infos.MaxVersion}.");
+            throw new ArgumentOutOfRangeException($"Requested API version is {Version}, but {Name} support is between {infos.MinVersion} and {infos.MaxVersion}.");
         }
 
-        this.Path = infos.Path;
-        this.Parameters = (entry == null) ? new() : entry.Clone();
+        Path = infos.Path;
+        Parameters = (entry is null) ? new() : entry.Clone();
     }
 
     /// <summary>
@@ -48,11 +48,11 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
         public string CustomName { get; } = customName;
 
         public static PropertyDefinition Create(PropertyInfo info)
-            => new(info, info.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? "");
+            => new(info, info.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? String.Empty);
     }
 
     private static List<PropertyDefinition> GetDefinitions()
-        => [.. typeof(T).GetProperties().Select(x => PropertyDefinition.Create(x))];
+        => [.. typeof(T).GetProperties().Select(PropertyDefinition.Create)];
 
     #endregion
 
@@ -76,7 +76,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
 
     public T Parameters { get; }
 
-    public string BuildUrl(string server, int port) => $"https://{server}:{port}/webapi/{this.Path}/{this.Name}";
+    public string BuildUrl(string server, int port) => $"https://{server}:{port}/webapi/{Path}/{Name}";
 
     public StringContent ToForm()
     {
@@ -87,19 +87,19 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
 
     public StringContent ToJson()
     {
-        ApiJsonParameterName ??= this.GetType().GetCustomAttribute<DsmParameterNameAttribute>()?.Name;
+        ApiJsonParameterName ??= GetType().GetCustomAttribute<DsmParameterNameAttribute>()?.Name;
 
         if (String.IsNullOrWhiteSpace(ApiJsonParameterName))
         {
             throw new ArgumentException($"DsmParameterNameAttribute is not set for type {typeof(T).Name}");
         }
 
-        var builder = this.BuildForm(true);
+        var builder = BuildForm(true);
 
         builder.Append('&');
         builder.Append(ApiJsonParameterName);
         builder.Append('=');
-        builder.Append(JsonSerializer.Serialize(this.Parameters, JsonOptions));
+        builder.Append(JsonSerializer.Serialize(Parameters, JsonOptions));
 
         var content = builder.ToString();
 
@@ -110,9 +110,9 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
     {
         var builder = new StringBuilder();
 
-        builder.Append("&api=").Append(this.Name);
-        builder.Append("&version=").Append(this.Version);
-        builder.Append("&method=").Append(this.Method);
+        builder.Append("&api=").Append(Name);
+        builder.Append("&version=").Append(Version);
+        builder.Append("&method=").Append(Method);
 
         if (skipParameters)
         {
@@ -121,7 +121,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
 
         foreach (var property in Properties)
         {
-            var value = property.Info.GetValue(this.Parameters);
+            var value = property.Info.GetValue(Parameters);
 
             if (value is not null)
             {

@@ -35,7 +35,7 @@ public static class Downloader
         var releases = await product.GetReleasesAsync().ConfigureAwait(false);
         var isProductLts = product.ReleaseType == ReleaseType.LTS;
 
-        return [.. releases.Where(r => r.AspNetCoreRuntime != null)
+        return [.. releases.Where(r => r.AspNetCoreRuntime is not null)
                            .Select(r =>
                                     {
                                         var version = r.AspNetCoreRuntime!.Version.ToString();
@@ -52,7 +52,10 @@ public static class Downloader
     public static async Task<IReadOnlyList<AspNetCoreReleaseInfo>> GetAspNetCoreChannelsAsync()
     {
         var products = await ProductCollection.GetAsync().ConfigureAwait(false) ?? throw new InvalidOperationException("Unable to retrieve products");
-        if (products.Count == 0) { throw new InvalidOperationException("No products returned by ProductCollection"); }
+        if (products.Count == 0)
+        {
+            throw new InvalidOperationException("No products returned by ProductCollection");
+        }
 
         return [.. products.Select(p => (Product: p, Parsed: Version.TryParse(p.ProductVersion, out var v) ? v : new Version(0, 0)))
                            .OrderByDescending(t => t.Parsed)
@@ -96,7 +99,10 @@ public static class Downloader
     private static async Task<ProductRelease> GetLatestReleaseAsync(Product product)
     {
         var releases = await product.GetReleasesAsync().ConfigureAwait(false) ?? throw new InvalidOperationException("Unable to retrieve releases");
-        if (releases.Count == 0) { throw new InvalidOperationException("No releases for product"); }
+        if (releases.Count == 0)
+        {
+            throw new InvalidOperationException("No releases for product");
+        }
 
         var latest = releases.FirstOrDefault(r => r.Version == product.LatestReleaseVersion)
                      ?? releases.OrderByDescending(r => r.ReleaseDate).First();
@@ -107,12 +113,12 @@ public static class Downloader
     {
         var releases = await product.GetReleasesAsync().ConfigureAwait(false);
 
-        if (releases == null || releases.Count == 0)
+        if (releases is null || releases.Count == 0)
         {
             throw new InvalidOperationException("Unable to retrieve releases");
         }
 
-        var release = releases.FirstOrDefault(r => r.AspNetCoreRuntime != null &&
+        var release = releases.FirstOrDefault(r => r.AspNetCoreRuntime is not null &&
                                                    String.Equals(r.AspNetCoreRuntime.Version.ToString(), version, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"ASP.NET Core runtime version {version} not found.");
 
         return release;
@@ -152,7 +158,7 @@ public static class Downloader
     {
         var product = products.FirstOrDefault(p => String.Equals(p.ProductVersion, version, StringComparison.OrdinalIgnoreCase));
 
-        if (product != null)
+        if (product is not null)
         {
             result = product;
             return true;

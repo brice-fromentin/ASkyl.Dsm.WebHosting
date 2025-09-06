@@ -7,14 +7,14 @@ public static class GzUnTar
 {
     public static void Decompress(string inputFile, string? exclude = null)
     {
-        var targetDirectory = FileSystem.GetDirectory("");
+        var targetDirectory = FileSystem.GetDirectory(String.Empty);
         var doExclusion = !String.IsNullOrWhiteSpace(exclude);
 
         using var archiveStream = File.OpenRead(inputFile);
         using var gzipStream = new GZipStream(archiveStream, CompressionMode.Decompress);
         using var tarReader = new TarReader(gzipStream);
 
-        for (var entry = tarReader.GetNextEntry(); entry != null; entry = tarReader.GetNextEntry())
+        for (var entry = tarReader.GetNextEntry(); entry is not null; entry = tarReader.GetNextEntry())
         {
             var entryName = entry.Name;
 

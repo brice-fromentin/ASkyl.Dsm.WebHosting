@@ -11,7 +11,7 @@ public class ApiInformationCollection
 
     public ApiInformation? Get(string name)
     {
-        if (_collection == null || !_collection.TryGetValue(name, out var value))
+        if (_collection is null || !_collection.TryGetValue(name, out var value))
         {
             return null;
         }

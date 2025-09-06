@@ -51,7 +51,7 @@ public static partial class VersionsDetector
         return frameworks;
     }
 
-    public static bool IsChannelInstalled(string channel, string frameworkType = "ASP.NET Core")
+    public static bool IsChannelInstalled(string channel, string _ = "ASP.NET Core")
         => _cachedFrameworks.Any(x => x.Type == "ASP.NET Core" && x.Version.StartsWith(channel + "."));
 
     public static bool IsVersionInstalled(string version, string frameworkType = "ASP.NET Core")
@@ -115,14 +115,14 @@ public static partial class VersionsDetector
             // Detect main sections
             var detectedSection = DetectCurrentSection(trimmedLine);
 
-            if (detectedSection != null)
+            if (detectedSection is not null)
             {
                 currentSection = detectedSection;
                 continue;
             }
 
             // Parse versions in current section
-            if (currentSection != null)
+            if (currentSection is not null)
             {
                 ParseVersionsInSection(frameworks, currentSection, trimmedLine);
             }
