@@ -1,11 +1,12 @@
-@using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
 @using Askyl.Dsm.WebHosting.Constants.UI
+@using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
 
 @implements IDialogContentComponent
 @implements IWorkingState
 
 @inject IDialogService DialogService
 @inject IFileNavigationService FileNavigationService
+@inject IJSRuntime JSRuntime
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -16,10 +17,12 @@
 <FluentDialogBody>
     <FluentSplitter Orientation="Orientation.Horizontal" Panel1Size="30%" Panel1MinSize="20%" Panel1MaxSize="50%" Class="file-dialog-splitter">
         <Panel1>
-            <FluentTreeView Items="@Directories" LazyLoadItems="false" Class="full-size file-dialog-tree" OnSelectedChange="OnTreeSelectionChanged" />
+            <div class="full-size file-dialog-tree">
+            <FluentTreeView @ref="TreeView" Items="@TreeItems" LazyLoadItems="true" @bind-SelectedItem="@SelectedTreeItem" OnSelectedChange="OnTreeItemSelectionChanged" />
+            </div>
         </Panel1>
         <Panel2>
-            <AutoDataGrid TItem="FileStationFile" Items="@Files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick">
+            <AutoDataGrid TItem="FileStationFile" Items="@_files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick" OnRowDoubleClick="@OnFileDoubleClick">
                 <ChildContent>
                     <TemplateColumn TGridItem="FileStationFile" Title="Name" Sortable="true" SortBy="GridSort<FileStationFile>.ByAscending(f => f.Name)" InitialSortDirection="SortDirection.Ascending">
                         <ChildContent Context="file">
@@ -40,7 +43,7 @@
 
                 <EmptyContent>
                     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
-                        @if (!String.IsNullOrEmpty(SelectedPath))
+                        @if (!string.IsNullOrEmpty(_selectedPath))
                         {
                             <FluentLabel>No files found in this directory.</FluentLabel>
                         }
@@ -60,7 +63,7 @@
         <FluentButton OnClick="CancelAsync" Appearance="Appearance.Neutral">
             Cancel
         </FluentButton>
-        <FluentButton OnClick="ConfirmAsync" Appearance="Appearance.Accent" Disabled="@(SelectedFile == null)">
+        <FluentButton OnClick="ConfirmAsync" Appearance="Appearance.Accent" Disabled="@(_selectedFile == null)">
             Select File
         </FluentButton>
     </FluentStack>
@@ -68,7 +71,7 @@
 
 @code
 {
-    #region Parameters and Properties
+    #region Parameters
 
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
@@ -76,58 +79,72 @@
     [Parameter]
     public EventCallback<FileStationFile> OnFileSelected { get; set; }
 
-    private List<DirectoryTreeNode> Directories { get; set; } = [];
-    private IQueryable<FileStationFile> Files { get; set; } = AutoDataGrid<FileStationFile>.Empty();
-    private string? SelectedPath { get; set; }
-    private FileStationFile? SelectedFile { get; set; }
+    #endregion
+
+    #region Private Fields
+
+    private List<TreeViewItem> TreeItems { get; set; } = [];
+    private IQueryable<FileStationFile> _files = AutoDataGrid<FileStationFile>.Empty();
+    private string? _selectedPath;
+    private FileStationFile? _selectedFile;
+    private FluentTreeView? TreeView;
+    private ITreeViewItem? SelectedTreeItem { get; set; }
 
     #endregion
 
     #region IWorkingState Implementation
 
     public bool IsWorking { get; set; }
-    public string? WorkingMessage { get; set; }
-    
+    public string Message { get; set; } = "";
+
     public void NotifyStateChanged() => StateHasChanged();
-    
-    public string GetContextualMessage()
+
+    #endregion
+
+    #region Lifecycle
+
+    protected override async Task OnInitializedAsync() => await LoadSharedFoldersAsync();
+
+    #endregion
+
+    #region Tree Management
+
+    private async Task LoadSharedFoldersAsync()
     {
-        if (Directories.Count == 0)
+        using var worker = this.CreateWorkingState("Loading shared folders...");
+
+        try
         {
-            return "Loading shared folders...";
+            TreeItems = await FileNavigationService.GetSharedFoldersAsync(ShowErrorAsync);
         }
-        
-        if (!String.IsNullOrEmpty(SelectedPath))
+        catch
         {
-            return "Loading directory contents...";
+            TreeItems = [];
         }
-        
-        return "Loading...";
+    }
+
+    private async Task OnTreeItemSelectionChanged(FluentTreeItem selectedItem)
+    {
+        if (!selectedItem.Selected || selectedItem.Id is not string path)
+        {
+            return;
+        }
+
+        await LoadDirectoryContentsAsync(path);
     }
 
     #endregion
 
-    #region Computed Properties
+    #region File Management
 
-    #endregion
-
-    #region Lifecycle Methods
-
-    protected override async Task OnInitializedAsync() => await LoadSharedFolders();
-
-    #endregion
-
-    #region Event Handlers
-
-    private async Task OnTreeSelectionChanged(FluentTreeItem selectedItem)
+    private async Task LoadDirectoryContentsAsync(string selectedPath)
     {
-        var selectedPath = selectedItem.Id;
-        SelectedPath = selectedPath;
-        SelectedFile = null;
+        _selectedPath = selectedPath;
+        _selectedFile = null;
 
         if (String.IsNullOrEmpty(selectedPath))
         {
-            Files = AutoDataGrid<FileStationFile>.Empty();
+            _files = AutoDataGrid<FileStationFile>.Empty();
             return;
         }
 
@@ -135,16 +152,15 @@
 
         try
         {
-            var files = await FileNavigationService.GetDirectoryContentsAsync(selectedPath!);
-            Files = files.AsQueryable();
+            _files = await FileNavigationService.GetDirectoryContentsAsync(selectedPath);
         }
         catch (FileStationApiException ex)
         {
-            await HandleDirectoryLoadError($"Failed to load directory contents: {ex.FormattedMessage}");
+            await HandleDirectoryLoadErrorAsync($"Failed to load directory contents: {ex.FormattedMessage}");
         }
         catch (Exception ex)
         {
-            await HandleDirectoryLoadError($"Failed to load directory contents: {ex.Message}");
+            await HandleDirectoryLoadErrorAsync($"Failed to load directory contents: {ex.Message}");
         }
     }
 
@@ -155,43 +171,34 @@
             return;
         }
 
-        SelectedFile = file;
+        _selectedFile = file;
         StateHasChanged();
+    }
+
+    private async Task OnFileDoubleClick(FileStationFile file)
+    {
+        if (!file.IsDirectory)
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("selectChildItem", file.Path, Path.GetDirectoryName(file.Path));
+    }
+
+    private async Task NavigateToDirectoryAsync(string directoryPath)
+    {
+        await LoadDirectoryContentsAsync(directoryPath);
     }
 
     #endregion
 
-    #region Data Loading
-
-    private async Task LoadSharedFolders()
-    {
-        using var worker = this.CreateWorkingState("Loading shared folders...");
-
-        try
-        {
-            Directories = await FileNavigationService.GetSharedFoldersAsync(ShowErrorAsync);
-        }
-        catch (FileStationApiException ex)
-        {
-            await HandleSharedFoldersLoadError($"FileStation API Error: {ex.FormattedMessage}");
-        }
-        catch (Exception ex)
-        {
-            await HandleSharedFoldersLoadError($"Failed to load shared folders: {ex.Message}");
-        }
-    }
+    #region Error Handling
 
     private async Task ShowErrorAsync(string error) => await DialogService.ShowErrorAsync(error);
 
-    private async Task HandleDirectoryLoadError(string errorMessage)
+    private async Task HandleDirectoryLoadErrorAsync(string errorMessage)
     {
-        Files = AutoDataGrid<FileStationFile>.Empty();
-        await ShowErrorAsync(errorMessage);
-    }
-
-    private async Task HandleSharedFoldersLoadError(string errorMessage)
-    {
-        Directories = [];
+        _files = AutoDataGrid<FileStationFile>.Empty();
         await ShowErrorAsync(errorMessage);
     }
 
@@ -201,10 +208,10 @@
 
     private async Task ConfirmAsync()
     {
-        if (SelectedFile != null)
+        if (_selectedFile is not null)
         {
-            await OnFileSelected.InvokeAsync(SelectedFile);
-            await Dialog.CloseAsync(SelectedFile);
+            await OnFileSelected.InvokeAsync(_selectedFile);
+            await Dialog.CloseAsync(_selectedFile);
         }
     }
 
@@ -212,11 +219,11 @@
 
     #endregion
 
-    #region File Display Helpers
+    #region Display Helpers
 
     private static string GetFileSize(FileStationFile file)
     {
-        if (file.IsDirectory || file.Additional?.Size == null)
+        if (file.IsDirectory || file.Additional?.Size is null)
         {
             return "-";
         }
@@ -242,7 +249,7 @@
     }
 
     private static DateTimeOffset? GetModifiedDateTimeOffset(FileStationFile file)
-    => file.Additional?.Time?.ModifyTime is long unixTime ? DateTimeOffset.FromUnixTimeSeconds(unixTime) : null;
+        => file.Additional?.Time?.ModifyTime is long unixTime ? DateTimeOffset.FromUnixTimeSeconds(unixTime) : null;
 
     private static string GetFileType(FileStationFile file) => file.IsDirectory ? "Directory" : "File";
 

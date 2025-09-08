@@ -4,15 +4,14 @@ using Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
 using Askyl.Dsm.WebHosting.Data.API.Responses;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Tools.Network;
-using Askyl.Dsm.WebHosting.Ui.Models;
+using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
 public interface IFileNavigationService
 {
-    Task<List<DirectoryTreeNode>> GetSharedFoldersAsync(Func<string, Task> errorHandler);
-    Task<List<FileStationFile>> GetDirectoryContentsAsync(string path);
-    Task<List<DirectoryTreeNode>> GetDirectoryChildrenAsync(string path, Func<string, Task> errorHandler);
+    Task<List<TreeViewItem>> GetSharedFoldersAsync(Func<string, Task> errorHandler);
+    Task<IQueryable<FileStationFile>> GetDirectoryContentsAsync(string path);
 }
 
 public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigationService> logger) : IFileNavigationService
@@ -20,7 +19,7 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
     private readonly DsmApiClient _apiClient = apiClient;
     private readonly ILogger<FileNavigationService> _logger = logger;
 
-    public async Task<List<DirectoryTreeNode>> GetSharedFoldersAsync(Func<string, Task> errorHandler)
+    public async Task<List<TreeViewItem>> GetSharedFoldersAsync(Func<string, Task> errorHandler)
     {
         _logger.LogDebug("Retrieving shared folders from DSM FileStation API");
 
@@ -33,13 +32,13 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
             throw new FileStationApiException($"FileStation API call failed: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code);
         }
 
-        var sharedFolders = response.Data.Shares.Select(share => DirectoryTreeNode.CreateSharedFolder(share.Name, share.Path, this, errorHandler)).ToList();
+        var sharedFolders = response.Data.Shares.Select(share => CreateTreeViewItemWithLazyLoading(share.Path, share.Name, errorHandler)).ToList();
 
         _logger.LogInformation("Retrieved {Count} shared folders", sharedFolders.Count);
         return sharedFolders;
     }
 
-    public async Task<List<FileStationFile>> GetDirectoryContentsAsync(string path)
+    public async Task<IQueryable<FileStationFile>> GetDirectoryContentsAsync(string path)
     {
         _logger.LogDebug("Retrieving directory contents for path: {Path}", path);
 
@@ -58,10 +57,10 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
         }
 
         _logger.LogDebug("Retrieved {Count} files from directory {Path}", response.Data.Files.Count, path);
-        return response.Data.Files;
+        return response.Data.Files.AsQueryable();
     }
 
-    public async Task<List<DirectoryTreeNode>> GetDirectoryChildrenAsync(string path, Func<string, Task> errorHandler)
+    private async Task<List<TreeViewItem>> GetDirectoryChildrenInternalAsync(string path, Func<string, Task> errorHandler)
     {
         _logger.LogDebug("Retrieving directory children for path: {Path}", path);
 
@@ -69,7 +68,7 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
         parameters.Parameters.FolderPath = path;
         parameters.Parameters.SortBy = FileStationDefaults.SortByName;
         parameters.Parameters.SortDirection = FileStationDefaults.SortDirectionAsc;
-        parameters.Parameters.FileType = FileStationDefaults.TypeDirectory; // Only directories
+        parameters.Parameters.FileType = FileStationDefaults.TypeDirectory;
 
         var response = await _apiClient.ExecuteAsync<FileStationListResponse>(parameters);
 
@@ -79,9 +78,31 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
             throw new FileStationApiException($"Failed to retrieve directory children for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code, path);
         }
 
-        var children = response.Data.Files.Select(file => DirectoryTreeNode.FromFileStationFile(file, this, errorHandler)).ToList();
+        var children = response.Data.Files.Select(file => CreateTreeViewItemWithLazyLoading(file.Path, file.Name, errorHandler)).ToList();
 
         _logger.LogDebug("Found {Count} child directories in {Path}", children.Count, path);
         return children;
+    }
+
+    private TreeViewItem CreateTreeViewItemWithLazyLoading(string path, string name, Func<string, Task> errorHandler)
+    {
+        var item = new TreeViewItem
+        {
+            Id = path,
+            Text = name,
+            Items = TreeViewItem.LoadingTreeViewItems,
+            OnExpandedAsync = (args) => LoadChildDirectoriesAsync(args, errorHandler)
+        };
+
+        return item;
+    }
+
+    private async Task LoadChildDirectoriesAsync(TreeViewItemExpandedEventArgs args, Func<string, Task> errorHandler)
+    {
+        var path = args.CurrentItem.Id;
+        var children = await GetDirectoryChildrenInternalAsync(path, errorHandler);
+
+        args.CurrentItem.Expanded = args.Expanded;
+        args.CurrentItem.Items = children;
     }
 }

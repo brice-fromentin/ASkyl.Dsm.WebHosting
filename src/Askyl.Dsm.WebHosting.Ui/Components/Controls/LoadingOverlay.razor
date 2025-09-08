@@ -5,7 +5,7 @@
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
         <FluentProgressRing />
         <FluentLabel Typo="Typography.Header" Class="full-size">
-            @GetDisplayMessage()
+            @WorkingStateComponent.Message
         </FluentLabel>
     </FluentStack>
 </FluentOverlay>
@@ -17,6 +17,4 @@
 
     [Parameter]
     public double Opacity { get; set; } = 0.4;
-
-    private string GetDisplayMessage() => WorkingStateComponent.WorkingMessage ?? WorkingStateComponent.GetContextualMessage();
 }

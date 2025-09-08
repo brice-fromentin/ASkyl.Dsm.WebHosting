@@ -63,20 +63,9 @@
 
     public bool IsWorking { get; set; }
 
-    public string? WorkingMessage { get; set; }
+    public string Message { get; set; } = String.Empty;
 
     public void NotifyStateChanged() => StateHasChanged();
-
-    public string GetContextualMessage()
-    {
-        if (SelectedItem == null)
-        {
-            return "Loading...";
-        }
-
-        var action = IsSelectedVersionInstalled ? "Uninstalling" : "Installing";
-        return $"{action} ASP.NET Core {SelectedItem.Version}...";
-    }
 
     #endregion
 

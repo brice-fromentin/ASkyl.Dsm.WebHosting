@@ -1,8 +1,9 @@
-﻿@inherits LayoutComponentBase
+﻿@using System.Reflection
+@inherits LayoutComponentBase
 
-<FluentMainLayout Style="height: 100% !important;">
+<FluentMainLayout class="full-size">
     <Header>
-        ASkyl DSM Web Hosting For .NET
+        .NET Web Hosting @Assembly.GetExecutingAssembly().GetName().Version
     </Header>
 
     <Body>

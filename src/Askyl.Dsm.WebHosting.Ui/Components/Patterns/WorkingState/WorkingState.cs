@@ -37,7 +37,7 @@ public sealed class WorkingState : IDisposable
             startWorking: () => 
             { 
                 component.IsWorking = true; 
-                component.WorkingMessage = message; 
+                component.Message = message; 
             },
             stopWorking: () => component.IsWorking = false,
             stateChanged: component.NotifyStateChanged

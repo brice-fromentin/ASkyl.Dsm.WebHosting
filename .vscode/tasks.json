@@ -2,38 +2,35 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Update NuGet Packages",
+            "label": "Update NuGet",
             "type": "shell",
             "command": "sh",
             "args": [
                 "-c",
                 "if ! dotnet tool list -g | grep -q 'dotnet-outdated-tool'; then dotnet tool install --global dotnet-outdated-tool; fi && cd ${workspaceFolder}/src && dotnet outdated Askyl.Dsm.WebHosting.sln -u"
             ],
-            "group": "build",
             "presentation": {
                 "reveal": "always",
                 "panel": "new",
                 "clear": true
             },
-            "problemMatcher": []
         },
         {
-            "label": "build",
+            "label": "Build All",
             "type": "shell",
-            "command": "msbuild",
+            "command": "dotnet",
             "args": [
-                "/property:GenerateFullPaths=true",
-                "/t:build",
-                "/consoleloggerparameters:NoSummary"
+                "build",
+                "--no-incremental",
             ],
-            "group": "build"
+            "options": {
+                "cwd": "${workspaceFolder}/src"
+            }
         },
         {
-            "label": "Build & Package Synology SPK",
+            "label": "Build SPK",
             "type": "shell",
             "command": "sh ./build-spk.sh",
-            "group": "build",
-            "problemMatcher": []
         }
     ]
 }
