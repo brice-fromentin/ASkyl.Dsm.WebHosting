@@ -3,15 +3,23 @@
 @using System.Text.Json
 @using Askyl.Dsm.WebHosting.Constants
 @using Askyl.Dsm.WebHosting.Data.API.Parameters
+@using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Data.API.Parameters.ReverseProxyAPI
 @using Askyl.Dsm.WebHosting.Data.API.Responses
 @using Askyl.Dsm.WebHosting.Tools.Network
+@using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
+
+@implements IWorkingState
 
 @inject IDialogService DialogsService
 @inject DsmApiClient client
 @inject NavigationManager navigation
+@inject ILogDownloadService logDownloadService
+@inject ITemporaryTokenService tokenService
 
 <PageTitle>ADWH - Home</PageTitle>
+
+<LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentToolbar Class="full-width">
     <FluentButton OnClick="CallReverseList">List Proxies</FluentButton>
@@ -29,6 +37,9 @@
     <FluentButton OnClick="ShowFileSelectionDialog" Appearance="Appearance.Outline">
         Select File
     </FluentButton>
+    <FluentButton OnClick="DownloadLogs" Appearance="Appearance.Outline">
+        Download Logs
+    </FluentButton>
 </FluentToolbar>
 <br />
 
@@ -44,18 +55,20 @@
     }
 </div>
 
-<FluentOverlay @bind-Visible="@IsWorking" Opacity="0.2">
-    <FluentProgressRing />
-</FluentOverlay>
 
 @code
 {
-    private bool IsWorking { get; set; } = false;
     private List<ReverseProxy>? proxies { get; set; }
     private string? Uuid { get; set; }
 
-    // Dialog states
-    // Removed - dialogs now handled via DialogsService
+    #region IWorkingState Implementation
+
+    public bool IsWorking { get; set; }
+    public string Message { get; set; } = "";
+
+    public void NotifyStateChanged() => StateHasChanged();
+
+    #endregion
 
     protected override async Task OnInitializedAsync()
     {
@@ -116,7 +129,7 @@
 
         if (await CallAPI(parameters))
         {
-            Uuid = String.Empty;
+            Uuid = "";
         }
     }
 
@@ -127,7 +140,7 @@
             return false;
         }
 
-        IsWorking = true;
+        using var worker = this.CreateWorkingState("Processing API request...");
 
         try
         {
@@ -142,17 +155,18 @@
             await CallReverseList();
             return true;
         }
-        finally
+        catch (Exception ex)
         {
-            IsWorking = false;
+            await DialogsService.ShowErrorAsync($"Error during API call: {ex.Message}");
+            return false;
         }
     }
 
-    private async Task ShowDotnetVersionsDialog() =>
-    await DialogsService.ShowDialogAsync<DotnetVersionsDialog>(new() { Width = "", Height = "", Modal = true });
+    private async Task ShowDotnetVersionsDialog()
+    => await DialogsService.ShowDialogAsync<DotnetVersionsDialog>(new() { Width = "", Height = "", Modal = true });
 
-    private async Task ShowAspNetReleasesDialog() =>
-    await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height = "", Modal = true });
+    private async Task ShowAspNetReleasesDialog()
+    => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height = "", Modal = true });
 
     private async Task ShowFileSelectionDialog()
     {
@@ -169,6 +183,29 @@
         if (selectedFile != null)
         {
             await DialogsService.ShowInfoAsync($"Selected file: {selectedFile.Name}\nPath: {selectedFile.Path}");
+        }
+    }
+
+    private async Task DownloadLogs()
+    {
+        try
+        {
+            // Generate temporary token for authentication
+            var token = tokenService.GenerateToken();
+            
+            if (String.IsNullOrEmpty(token))
+            {
+                await DialogsService.ShowErrorAsync("Authentication required. Please make sure you are connected to DSM.");
+                return;
+            }
+            
+            // Direct navigation to trigger download (no popup)
+            var downloadUrl = $"{LogConstants.LogDownloadEndpoint}?{LogConstants.TokenQueryParameter}={Uri.EscapeDataString(token)}";
+            navigation.NavigateTo(downloadUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            await DialogsService.ShowErrorAsync($"Error downloading logs: {ex.Message}");
         }
     }
 }

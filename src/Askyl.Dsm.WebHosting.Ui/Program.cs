@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.FluentUI.AspNetCore.Components;
 
 using Serilog;
@@ -19,10 +20,21 @@ builder.Services.AddFluentUIComponents();
 builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
 builder.Services.AddScoped<IFileNavigationService, FileNavigationService>();
+builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
+builder.Services.AddScoped<ITemporaryTokenService, TemporaryTokenService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddControllers();
+
+builder.Services.AddMemoryCache();
+
+builder.Services.Configure<KestrelServerOptions>(options =>
+{
+    options.AllowSynchronousIO = true;
+});
 
 var app = builder.Build();
 
@@ -41,5 +53,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
    .AddInteractiveServerRenderMode();
+
+app.MapControllers();
 
 app.Run();

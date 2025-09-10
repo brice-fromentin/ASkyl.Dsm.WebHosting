@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL REMINDERS - APPLY SYSTEMATICALLY
+
+### String vs string Pattern (ABSOLUTE PRIORITY)
+- **String.** (PascalCase) for static methods: `String.IsNullOrEmpty()`, `String.Join()`, `String.Empty`
+- **string** (lowercase) for types/variables: `string token`, `public string Method()`
+- **""** instead of `String.Empty` for default values
+
+### Constants Management (MANDATORY)
+- NEVER use magic strings/numbers
+- ALWAYS use `Askyl.Dsm.WebHosting.Constants`
+- Create new constants if necessary
+
+### Comments Language (NON-NEGOTIABLE)
+- ALWAYS in English, never in French
+- Even if user communicates in French
+
+### Validation Phrase (REQUIRED)
+At the end of each code response, write:
+"✅ CLAUDE.md compliance verified: String/string pattern, constants usage, English comments"
+
 ## Project Overview
 
 ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+ (x64 architecture only). The solution consists of multiple projects that work together to provide a web-based UI for managing .NET web applications on Synology NAS devices.
@@ -137,3 +157,22 @@ dotnet outdated src/Askyl.Dsm.WebHosting.sln -u
 - Logs are structured using Serilog with configuration-based setup
 - The solution supports multiple CPU architectures (Debug/Release with Any CPU/x64/x86)
 - SPK packaging includes Docker-based multi-architecture builds for Synology compatibility
+
+## 🤖 Instructions for Claude
+
+AT EVERY session and EVERY code modification:
+
+1. **BEFORE writing code**: Read the "CRITICAL REMINDERS" section above
+2. **DURING writing**: Apply systematically:
+   - String. for static methods
+   - string for types/variables  
+   - Constants instead of magic strings
+   - Comments in English
+3. **AFTER writing**: Verify compliance before response
+
+### Mandatory Verification
+At the end of each code response, write:
+"✅ CLAUDE.md compliance verified: String/string pattern, constants usage, English comments"
+
+### Session Start Protocol
+When starting a new session, IMMEDIATELY read and acknowledge these critical reminders.

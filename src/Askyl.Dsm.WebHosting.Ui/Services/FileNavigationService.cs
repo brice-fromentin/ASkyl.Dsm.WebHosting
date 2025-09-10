@@ -16,8 +16,15 @@ public interface IFileNavigationService
 
 public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigationService> logger) : IFileNavigationService
 {
+
+    #region Fields
+
     private readonly DsmApiClient _apiClient = apiClient;
     private readonly ILogger<FileNavigationService> _logger = logger;
+
+    #endregion
+
+    #region Public Methods
 
     public async Task<List<TreeViewItem>> GetSharedFoldersAsync(Func<string, Task> errorHandler)
     {
@@ -42,11 +49,34 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
     {
         _logger.LogDebug("Retrieving directory contents for path: {Path}", path);
 
+        var directoriesTask = ExecuteFileStationListAsync(path, FileStationDefaults.PatternAll, FileStationDefaults.TypeDirectory);
+        var filesTask = ExecuteFileStationListAsync(path, FileStationDefaults.PatternDllsExes, FileStationDefaults.TypeFile);
+
+        var results = await Task.WhenAll(directoriesTask, filesTask);
+        var directories = results[0];
+        var files = results[1];
+
+        var allContents = directories.Concat(files).ToList();
+
+        _logger.LogDebug("Retrieved {DirectoryCount} directories and {FileCount} files from {Path}", directories.Count, files.Count, path);
+
+        return allContents.AsQueryable();
+    }
+
+    #endregion
+
+    #region Private Methods - API Operations
+
+    private async Task<List<FileStationFile>> ExecuteFileStationListAsync(string path, string pattern, string fileType)
+    {
         var parameters = new FileStationListParameters(_apiClient.ApiInformations);
         parameters.Parameters.FolderPath = path;
         parameters.Parameters.Additional = FileStationDefaults.AdditionalPathSizeTimeFields;
         parameters.Parameters.SortBy = FileStationDefaults.SortByName;
         parameters.Parameters.SortDirection = FileStationDefaults.SortDirectionAsc;
+
+        parameters.Parameters.Pattern = !String.IsNullOrEmpty(pattern) ? pattern : FileStationDefaults.PatternAll;
+        parameters.Parameters.FileType = !String.IsNullOrEmpty(fileType) ? fileType : FileStationDefaults.TypeAll;
 
         var response = await _apiClient.ExecuteAsync<FileStationListResponse>(parameters);
 
@@ -56,53 +86,34 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
             throw new FileStationApiException($"Failed to retrieve directory contents for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code, path);
         }
 
-        _logger.LogDebug("Retrieved {Count} files from directory {Path}", response.Data.Files.Count, path);
-        return response.Data.Files.AsQueryable();
+        return response.Data.Files;
     }
 
-    private async Task<List<TreeViewItem>> GetDirectoryChildrenInternalAsync(string path, Func<string, Task> errorHandler)
-    {
-        _logger.LogDebug("Retrieving directory children for path: {Path}", path);
+    #endregion
 
-        var parameters = new FileStationListParameters(_apiClient.ApiInformations);
-        parameters.Parameters.FolderPath = path;
-        parameters.Parameters.SortBy = FileStationDefaults.SortByName;
-        parameters.Parameters.SortDirection = FileStationDefaults.SortDirectionAsc;
-        parameters.Parameters.FileType = FileStationDefaults.TypeDirectory;
-
-        var response = await _apiClient.ExecuteAsync<FileStationListResponse>(parameters);
-
-        if (response?.Success != true || response.Data?.Files is null)
-        {
-            _logger.LogError("Failed to retrieve directory children for {Path}: Success={Success}, ErrorCode={ErrorCode}", path, response?.Success, response?.Error?.Code);
-            throw new FileStationApiException($"Failed to retrieve directory children for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code, path);
-        }
-
-        var children = response.Data.Files.Select(file => CreateTreeViewItemWithLazyLoading(file.Path, file.Name, errorHandler)).ToList();
-
-        _logger.LogDebug("Found {Count} child directories in {Path}", children.Count, path);
-        return children;
-    }
+    #region Private Methods - TreeView Support
 
     private TreeViewItem CreateTreeViewItemWithLazyLoading(string path, string name, Func<string, Task> errorHandler)
-    {
-        var item = new TreeViewItem
+        => new(path, name, TreeViewItem.LoadingTreeViewItems)
         {
-            Id = path,
-            Text = name,
-            Items = TreeViewItem.LoadingTreeViewItems,
             OnExpandedAsync = (args) => LoadChildDirectoriesAsync(args, errorHandler)
         };
-
-        return item;
-    }
 
     private async Task LoadChildDirectoriesAsync(TreeViewItemExpandedEventArgs args, Func<string, Task> errorHandler)
     {
         var path = args.CurrentItem.Id;
-        var children = await GetDirectoryChildrenInternalAsync(path, errorHandler);
+
+        _logger.LogDebug("Retrieving directory children for path: {Path}", path);
+
+        var files = await ExecuteFileStationListAsync(path, FileStationDefaults.PatternAll, FileStationDefaults.TypeDirectory);
+        var children = files.Select(file => CreateTreeViewItemWithLazyLoading(file.Path, file.Name, errorHandler)).ToList();
+
+        _logger.LogDebug("Found {Count} child directories in {Path}", children.Count, path);
 
         args.CurrentItem.Expanded = args.Expanded;
         args.CurrentItem.Items = children;
     }
+
+    #endregion
+
 }

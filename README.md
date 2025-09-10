@@ -15,6 +15,5 @@
 
     Micro
         - Manage uninstall correctly when versions of Microsoft.NETCore.App & Microsoft.AspNetCore.App are not the same (seen in 9.0.0 rc 2).
-        - Add an indicator that at least one release is installed on the channel displayed within the select.
         - Enhance logs for the installation and package life-cycle
         - ...

@@ -13,6 +13,10 @@ public static class FileStationDefaults
     /// </summary>
     public const string AdditionalPathSizeTimeFields = "[\"real_path\", \"size\", \"time\"]";
 
+    public const string PatternAll = "*";
+
+    public const string PatternDllsExes = "*.dll,*.exe";
+
     /// <summary>
     /// Default sort field for file listings.
     /// </summary>
@@ -22,6 +26,11 @@ public static class FileStationDefaults
     /// Default sort direction for file listings.
     /// </summary>
     public const string SortDirectionAsc = "asc";
+
+    /// <summary>
+    /// Type identifier for all entries (files and directories).
+    /// </summary>
+    public const string TypeAll = "all";
 
     /// <summary>
     /// Type identifier for directory entries.
