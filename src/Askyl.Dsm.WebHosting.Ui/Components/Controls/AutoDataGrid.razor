@@ -2,7 +2,7 @@
 
 <div class="auto-data-grid-content">
     <div class="auto-data-grid-area">
-        <FluentDataGrid TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" Pagination="@pagination" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@HandleRowClick" OnRowDoubleClick="@HandleRowDoubleClick">
+        <FluentDataGrid TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@HandleRowClick" OnRowDoubleClick="@HandleRowDoubleClick">
             <ChildContent>
                 @ChildContent
             </ChildContent>
@@ -36,8 +36,18 @@
             </EmptyContent>
         </FluentDataGrid>
     </div>
-    <div class="auto-data-grid-pager-area">
-        <FluentPaginator State="@pagination" />
+    <div class="auto-data-grid-infos-area">
+        <FluentToolbar>
+            <FluentSpacer />
+            <FluentLabel>Items : @Items?.Count()</FluentLabel>
+            @if (OnReload.HasDelegate)
+            {
+                <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
+                <FluentButton Appearance="Appearance.Stealth" OnClick="@HandleReloadClick" Disabled="@(!OnReload.HasDelegate)">
+                    <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
+                </FluentButton>
+            }
+        </FluentToolbar>
     </div>
 </div>
 
@@ -58,7 +68,7 @@
     public string GridTemplateColumns { get; set; } = default!;
 
     [Parameter]
-    public int ItemsPerPage { get; set; } = 50;
+    public EventCallback OnReload { get; set; }
 
     [Parameter]
     public EventCallback<TItem> OnRowClick { get; set; }
@@ -66,19 +76,20 @@
     [Parameter]
     public EventCallback<TItem> OnRowDoubleClick { get; set; }
 
-    private readonly PaginationState pagination = new();
 
     private TItem? SelectedItem { get; set; }
 
     public static IQueryable<TItem> Empty() => Enumerable.Empty<TItem>().AsQueryable();
 
-    protected override async Task OnParametersSetAsync()
-    {
-        pagination.ItemsPerPage = ItemsPerPage;
-        await base.OnParametersSetAsync();
-    }
-
     private string? GetRowClass(TItem item) => SelectedItem is not null && SelectedItem.Equals(item) ? "selected-row" : null;
+
+    private async Task HandleReloadClick()
+    {
+        if (OnReload.HasDelegate)
+        {
+            await OnReload.InvokeAsync();
+        }
+    }
 
     private async Task HandleRowClick(FluentDataGridRow<TItem> row)
     {

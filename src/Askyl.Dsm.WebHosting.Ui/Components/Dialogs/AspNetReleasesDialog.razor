@@ -42,7 +42,7 @@
     </FluentToolbar>
 
     <div class="dialog-grid-container">
-        <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="240px 120px 100px 120px" OnRowClick="@OnReleaseSelected">
+        <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="240px 120px 100px 120px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
             <ChildContent>
                 <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="Version" Property="@(r => r.Version)" Sortable="true" />
                 <TemplateColumn TGridItem="AspNetRelease" Title="Installed" Align="Align.Center">
@@ -179,6 +179,8 @@
 
     private async Task Refresh() => await LoadChannelsAsync();
 
+    private async Task ReloadReleases() => await LoadReleasesAsync(SelectedChannel);
+    
     private async Task ShowErrorAsync(string error) => await DialogsService.ShowErrorAsync(error);
 
     #endregion
@@ -253,5 +255,4 @@
     }
 
     #endregion
-
 }

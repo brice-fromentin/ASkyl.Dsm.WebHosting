@@ -21,22 +21,20 @@ RUN apt-get update && \
     g++-x86-64-linux-gnu
 
 # Copy sources
+FROM base AS build
 COPY . .
 
 # Build ARM in parallel
-FROM base AS build-arm
-RUN dotnet publish Askyl.Dsm.WebHosting.DotnetInstaller/Askyl.Dsm.WebHosting.DotnetInstaller.csproj \
-    -r linux-arm -c Release --self-contained -o /app/publish/arm
+FROM build AS build-arm
+RUN dotnet publish Askyl.Dsm.WebHosting.DotnetInstaller/Askyl.Dsm.WebHosting.DotnetInstaller.csproj -r linux-arm -c Release --self-contained -o /app/publish/arm
 
 # Build ARM64 in parallel
-FROM base AS build-arm64
-RUN dotnet publish Askyl.Dsm.WebHosting.DotnetInstaller/Askyl.Dsm.WebHosting.DotnetInstaller.csproj \
-    -r linux-arm64 -c Release --self-contained -o /app/publish/arm64
+FROM build AS build-arm64
+RUN dotnet publish Askyl.Dsm.WebHosting.DotnetInstaller/Askyl.Dsm.WebHosting.DotnetInstaller.csproj -r linux-arm64 -c Release --self-contained -o /app/publish/arm64
 
 # Build x64 in parallel
-FROM base AS build-x64
-RUN dotnet publish Askyl.Dsm.WebHosting.DotnetInstaller/Askyl.Dsm.WebHosting.DotnetInstaller.csproj \
-    -r linux-x64 -c Release --self-contained -o /app/publish/amd64
+FROM build AS build-x64
+RUN dotnet publish Askyl.Dsm.WebHosting.DotnetInstaller/Askyl.Dsm.WebHosting.DotnetInstaller.csproj -r linux-x64 -c Release --self-contained -o /app/publish/amd64
 
 # Merge all builds
 FROM scratch AS final

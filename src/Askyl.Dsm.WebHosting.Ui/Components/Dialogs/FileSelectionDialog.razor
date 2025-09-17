@@ -22,7 +22,7 @@
             </div>
         </Panel1>
         <Panel2>
-            <AutoDataGrid TItem="FileStationFile" Items="@_files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick" OnRowDoubleClick="@OnFileDoubleClick">
+            <AutoDataGrid TItem="FileStationFile" Items="@_files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick" OnRowDoubleClick="@OnFileDoubleClick" OnReload="@ReloadCurrentDirectory">
                 <ChildContent>
                     <TemplateColumn TGridItem="FileStationFile" Title="Name" Sortable="true" SortBy="GridSort<FileStationFile>.ByAscending(f => f.Name)" InitialSortDirection="SortDirection.Ascending">
                         <ChildContent Context="file">
@@ -189,6 +189,8 @@
     {
         await LoadDirectoryContentsAsync(directoryPath);
     }
+
+    private async Task ReloadCurrentDirectory() => await LoadDirectoryContentsAsync(_selectedPath);
 
     #endregion
 
