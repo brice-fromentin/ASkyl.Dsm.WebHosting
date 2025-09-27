@@ -1,0 +1,218 @@
+#!/bin/bash
+
+# Common functions for SPK package scripts
+# Usage: source "$(dirname "$0")/common-functions.sh"
+
+#region Environment Variables
+
+PACKAGE_DIR="${SYNOPKG_PKGDEST:-/var/packages/AskylWebHosting/target}"
+VAR_DIR="/var/packages/AskylWebHosting/var"
+LOG_FILE="${LOG_FILE:-$VAR_DIR/logs/install.log}"
+
+#endregion
+
+#region Core Logging Functions
+
+# Centralized logging function with timestamp and level formatting
+# Usage: log_to <level> <message> [destination_file]
+log_to() {
+    local level="$1"
+    local message="$2"
+    local logfile="${3:-$LOG_FILE}"
+    echo "$(date '+%Y-%m-%d %H:%M:%S')	$level	$message" >> "$logfile"
+}
+
+# Logging functions with standardized levels and optional destination
+# Usage: log_info <message> [destination_file]
+log_info() {
+    log_to "[INF]" "$1" "$2"
+}
+
+log_warning() {
+    log_to "[WRN]" "$1" "$2"
+}
+
+log_error() {
+    log_to "[ERR]" "$1" "$2"
+}
+
+log_fatal() {
+    log_to "[FTL]" "$1" "$2"
+}
+
+#endregion
+
+#region Debug Logging (Beta Mode Support)
+
+# Initialize beta mode detection (static-like variable)
+_init_beta_mode() {
+    if [ -z "$_BETA_MODE_INITIALIZED" ]; then
+        local info_file="$(dirname "$(dirname "$0")")/INFO"
+        if [ -f "$info_file" ] && grep -q '^beta="yes"' "$info_file" 2>/dev/null; then
+            _IS_BETA_MODE=true
+        else
+            _IS_BETA_MODE=false
+        fi
+        _BETA_MODE_INITIALIZED=true
+    fi
+}
+
+log_debug() {
+    local message="$1"
+
+    # Initialize beta mode detection only once
+    _init_beta_mode
+
+    if [ "$_IS_BETA_MODE" = "true" ]; then
+        # Beta mode: use separate debug log file
+        echo "$(date '+%Y-%m-%d %H:%M:%S')	[DBG]	$message" >> /tmp/adwh-debug.log
+    else
+        # Release mode: use standard logging system
+        log_to "[DBG]" "$message" "$LOG_FILE"
+    fi
+}
+
+#endregion
+
+#region Package Installation Progress
+
+# Update package installation progress
+# Usage: update_progress <progress_value> [description]
+# progress_value: float between 0.0 and 1.0 (e.g., 0.5 for 50%)
+# description: optional description for logging
+update_progress() {
+    local progress="$1"
+    local description="${2:-}"
+
+    if [ -n "$SYNOPKG_PKG_PROGRESS_PATH" ] && [ -n "$progress" ]; then
+        if flock -x "$SYNOPKG_PKG_PROGRESS_PATH" -c "echo $progress > \"$SYNOPKG_PKG_PROGRESS_PATH\"" 2>/dev/null; then
+            if [ -n "$description" ]; then
+                log_debug "Progress updated to $(awk "BEGIN {printf \"%.0f%%\", $progress * 100}") - $description"
+            else
+                log_debug "Progress updated to $(awk "BEGIN {printf \"%.0f%%\", $progress * 100}")"
+            fi
+        else
+            log_debug "Failed to update progress to $progress"
+        fi
+    fi
+}
+
+#endregion
+
+#region Synology Package Center Integration
+
+# Log to Synology Package Center temp file for user-facing messages
+log_temp() {
+    local message="$1"
+    if [ -n "$SYNOPKG_TEMP_LOGFILE" ]; then
+        echo "$message" > "$SYNOPKG_TEMP_LOGFILE"
+    fi
+}
+
+# Log fatal error with both technical and user-facing messages
+log_fatal_with_temp() {
+    local technical_message="$1"
+    local user_message="$2"
+    log_fatal "$technical_message"
+    log_temp "$user_message"
+}
+
+#endregion
+
+#region Log File Management
+
+# Common logging setup function
+# Usage: _setup_log <script_name> [logfile] [clear_log] [separator_style]
+_setup_log() {
+    local script_name="$1"
+    local logfile="${2:-$LOG_FILE}"
+    local clear_log="${3:-false}"
+    local separator_style="${4:-dashes}"
+
+    # Create log directory
+    mkdir -p "$(dirname "$logfile")"
+
+    # Clear log if requested
+    if [ "$clear_log" = "true" ]; then
+        rm -f "$logfile"
+    fi
+
+    # Set global LOG_FILE for subsequent calls
+    LOG_FILE="$logfile"
+
+    # Log start message with appropriate separator
+    if [ "$separator_style" = "equals" ]; then
+        log_info "==================== STARTING $script_name ===================="
+    else
+        log_info "-------------------- STARTING $script_name --------------------"
+    fi
+}
+
+# Initialize clean log file for installation
+init_log() {
+    _setup_log "$1" "$2" "true" "equals"
+}
+
+# Start logging for subsequent scripts (without clearing)
+start_log() {
+    _setup_log "$1" "$2" "false" "dashes"
+}
+
+#endregion
+
+#region Process Management
+
+# Check if a process is running by pattern
+is_process_running() {
+    local pattern="$1"
+    pgrep -f "$pattern" >/dev/null 2>&1
+}
+
+# Stop process by pattern with logging
+stop_process() {
+    local pattern="$1"
+    local description="${2:-process}"
+
+    if is_process_running "$pattern"; then
+        log_info "Found running $description, stopping them"
+        pkill -f "$pattern" || true
+        log_info "$description stopped"
+    else
+        log_info "No running $description found"
+    fi
+}
+
+#endregion
+
+#region File Management
+
+# Backup file with logging
+backup_file() {
+    local source="$1"
+    local backup_suffix="${2:-.backup}"
+
+    if [ -f "$source" ]; then
+        cp "$source" "${source}${backup_suffix}" && log_info "Backed up $source" || log_error "Failed to backup $source"
+    else
+        log_info "No file to backup at $source"
+    fi
+}
+
+# Restore file from backup with logging
+restore_file() {
+    local target="$1"
+    local backup_suffix="${2:-.backup}"
+    local backup_file="${target}${backup_suffix}"
+
+    if [ -f "$backup_file" ]; then
+        if [ ! -f "$target" ]; then
+            cp "$backup_file" "$target" && log_info "Restored $target from backup" || log_error "Failed to restore $target"
+        else
+            log_info "Target $target already exists, backup not restored"
+        fi
+    else
+        log_info "No backup file found at $backup_file"
+    fi
+}
+
+#endregion

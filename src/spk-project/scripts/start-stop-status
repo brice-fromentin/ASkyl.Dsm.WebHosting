@@ -2,67 +2,152 @@
 
 # Control script for Askyl DSM Web Hosting service
 
-SERVICE_SCRIPT="/var/packages/AskylDsmWebHosting/target/etc/adwh-dsm-services"
-LOG_FILE="/var/packages/AskylDsmWebHosting/var/start-stop.log"
+source "$(dirname "$0")/common-functions.sh"
 
-# Create log directory if it doesn't exist
-mkdir -p "$(dirname "$LOG_FILE")"
+# Environment variables
+export ASPNETCORE_ENVIRONMENT="Production"
+export ASPNETCORE_URLS="http://0.0.0.0:7120"
 
-log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
+# Application specific variables
+APP_DIR="$PACKAGE_DIR/admin-ui"
+APP_NAME="Askyl.Dsm.WebHosting.Ui"
+PID_FILE="$VAR_DIR/admin-ui.pid"
+SERVICE_LOG_FILE="$VAR_DIR/logs/service.log"
+APP_LOG_FILE="$VAR_DIR/logs/application.log"
+
+mkdir -p "$(dirname "$SERVICE_LOG_FILE")"
+start_log "start-stop-status" "$SERVICE_LOG_FILE"
+
+log_debug "START-STOP-STATUS: Starting with command: $1"
+log_debug "START-STOP-STATUS: User ID: $(id)"
+log_debug "START-STOP-STATUS: Working directory: $(pwd)"
+log_debug "START-STOP-STATUS: APP_DIR: $APP_DIR"
+log_debug "START-STOP-STATUS: PID_FILE: $PID_FILE"
+log_debug "START-STOP-STATUS: VAR_DIR: $VAR_DIR"
+log_debug "START-STOP-STATUS: VAR_DIR permissions: $(ls -la "$(dirname "$VAR_DIR")" 2>/dev/null | grep "$(basename "$VAR_DIR")" || echo 'not found')"
+log_debug "START-STOP-STATUS: Can write to VAR_DIR: $(test -w "$VAR_DIR" && echo 'yes' || echo 'no')"
+
+# Start application function
+start_app() {
+    log_info "START: Checking if application is already running"
+
+    # Check if already running
+    if [ -f "$PID_FILE" ]; then
+        if ps -p $(cat "$PID_FILE") > /dev/null 2>&1; then
+            log_debug "Application already running (PID: $(cat "$PID_FILE"))"
+            log_info "START: Application already running (PID: $(cat "$PID_FILE"))"
+            return 1
+        else
+            log_info "START: Removing stale PID file"
+            rm -f "$PID_FILE"
+        fi
+    fi
+
+    if [ ! -d "$APP_DIR" ]; then
+        log_fatal_with_temp "Application directory missing: $APP_DIR" \
+                           "Package corrupted - application directory missing"
+        log_debug "Error: Package corrupted - application directory missing"
+        return 1
+    fi
+
+    if [ ! -f "$APP_DIR/$APP_NAME.dll" ]; then
+        log_fatal_with_temp "Application DLL missing: $APP_NAME.dll" \
+                           "Package corrupted - application DLL missing"
+        log_debug "Error: Package corrupted - application DLL missing"
+        return 1
+    fi
+
+    log_info "START: Changing to application directory: $APP_DIR"
+    cd "$APP_DIR"
+
+    log_info "START: Starting .NET application"
+    nohup dotnet "$APP_NAME.dll" > "$APP_LOG_FILE" 2>&1 &
+    APP_PID=$!
+
+    if echo "$APP_PID" > "$PID_FILE" 2>/dev/null; then
+        log_info "START: Application started with PID: $APP_PID"
+        log_debug "START: Successfully wrote PID file: $PID_FILE"
+        log_debug "Application started (PID: $APP_PID)"
+        return 0
+    else
+        log_error "START: Failed to write PID file: $PID_FILE"
+        kill "$APP_PID" 2>/dev/null || true
+        log_debug "Error: Failed to write PID file"
+        return 1
+    fi
 }
 
-case $1 in
-    start)
-        log_message "START: Attempting to start service"
-        if [ -x "$SERVICE_SCRIPT" ]; then
-            log_message "START: Service script found, executing start"
-            "$SERVICE_SCRIPT" start
-            result=$?
-            log_message "START: Service script returned exit code $result"
-            exit $result
+# Stop application function
+stop_app() {
+    log_info "STOP: Attempting to stop application"
+
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat "$PID_FILE")
+        if ps -p $PID > /dev/null 2>&1; then
+            log_info "STOP: Killing process with PID: $PID"
+            kill $PID
+
+            sleep 2
+            if ps -p $PID > /dev/null 2>&1; then
+                log_warning "STOP: Process still running, force killing"
+                kill -9 $PID
+            fi
+
+            rm -f "$PID_FILE"
+            log_debug "Application stopped (PID: $PID)"
+            log_info "STOP: Application stopped successfully"
+            return 0
         else
-            log_message "START: ERROR - Service script not found or not executable at $SERVICE_SCRIPT"
-            echo "Service script not found or not executable"
-            exit 1
+            log_info "STOP: Process not running, removing stale PID file"
+            rm -f "$PID_FILE"
+            log_debug "Application already stopped"
+            return 1
         fi
+    else
+        log_info "STOP: PID file not found"
+        log_debug "Application not running"
+        return 1
+    fi
+}
+
+status_app() {
+    if [ -f "$PID_FILE" ]; then
+        PID=$(cat "$PID_FILE")
+        if ps -p $PID > /dev/null 2>&1; then
+            log_debug "Application running (PID: $PID)"
+            log_info "STATUS: Application running (PID: $PID)"
+            return 0
+        else
+            log_debug "Application stopped (stale PID file)"
+            log_info "STATUS: Application stopped (stale PID file)"
+            rm -f "$PID_FILE"
+            return 1
+        fi
+    else
+        log_debug "Application stopped"
+        log_info "STATUS: Application stopped"
+        return 1
+    fi
+}
+
+case "$1" in
+    start)
+        log_info "COMMAND: start"
+        start_app
         ;;
     stop)
-        log_message "STOP: Attempting to stop service"
-        if [ -x "$SERVICE_SCRIPT" ]; then
-            log_message "STOP: Service script found, executing stop"
-            "$SERVICE_SCRIPT" stop
-            result=$?
-            log_message "STOP: Service script returned exit code $result"
-            exit $result
-        else
-            log_message "STOP: ERROR - Service script not found or not executable at $SERVICE_SCRIPT"
-            echo "Service script not found or not executable"
-            exit 1
-        fi
+        log_info "COMMAND: stop"
+        stop_app
         ;;
     status)
-        if [ -x "$SERVICE_SCRIPT" ]; then
-            "$SERVICE_SCRIPT" status
-            result=$?
-            log_message "STATUS: Service script returned exit code $result"
-            exit $result
-        else
-            log_message "STATUS: ERROR - Service script not found or not executable at $SERVICE_SCRIPT"
-            echo "Service script not found or not executable"
-            exit 1
-        fi
-        ;;
-    killall)
-        log_message "KILLALL: Force stopping all related processes"
-        # Force stop all related processes
-        pkill -f "Askyl.Dsm.WebHosting.Ui" || true
-        rm -f "/var/packages/AskylDsmWebHosting/var/admin-ui.pid" || true
-        log_message "KILLALL: Completed force stop"
-        exit 0
+        log_info "COMMAND: status"
+        status_app
         ;;
     *)
-        log_message "ERROR: Invalid command: $1"
+        log_error "Invalid command: $1"
+        log_debug "Usage: $0 {start|stop|status}"
         exit 1
         ;;
 esac
+
+exit $?

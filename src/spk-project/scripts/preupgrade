@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Script executed before package upgrade
+
+source "$(dirname "$0")/common-functions.sh"
+
+start_log "preupgrade"
+
+log_info "Package dir: $PACKAGE_DIR"
+log_info "Var dir: $VAR_DIR"
+
+log_info "Stopping service for upgrade"
+
+START_STOP_SCRIPT="$(dirname "$0")/start-stop-status"
+if [ -x "$START_STOP_SCRIPT" ]; then
+    "$START_STOP_SCRIPT" stop || true
+    log_info "Service stopped successfully"
+else
+    log_info "start-stop-status script not found, using fallback stop method"
+    stop_process "Askyl.Dsm.WebHosting.Ui" "application processes"
+fi
+
+rm -f "$VAR_DIR/admin-ui.pid" || true
+log_info "Cleaned PID files"
+
+backup_file "$VAR_DIR/appsettings.json"
+
+log_info "Finished preupgrade script"
+
+exit 0

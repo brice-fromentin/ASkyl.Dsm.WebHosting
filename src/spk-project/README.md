@@ -4,7 +4,6 @@ This directory contains the complete structure for creating a Synology package (
 
 **Author:** Brice FROMENTIN  
 **Maintainer:** Brice FROMENTIN  
-**Version:** 0.1.6
 **Target DSM:** 7.2+
 
 ## Overview
@@ -19,26 +18,26 @@ Askyl DSM Web Hosting is a .NET web hosting management system designed to run on
 
 ```
 spk-project/
-├── INFO                      # Package metadata and configuration
-├── package.tgz              # Application files archive (auto-generated)
-├── scripts/                 # Lifecycle management scripts
-│   ├── preinst             # Pre-installation script
-│   ├── postinst            # Post-installation script  
-│   ├── preuninst           # Pre-uninstallation script
-│   ├── postuninst          # Post-uninstallation script
-│   └── start-stop-status   # Service control script
-├── conf/                    # SPK configuration files
-│   ├── privilege           # User privilege configuration
-│   └── resource            # Resource allocation (ports, nginx)
-├── package/                 # Application content (packaged to package.tgz)
-│   ├── etc/                # Configuration and service files
-│   │   ├── adwh-dsm-services      # Main service control script
+├── INFO                            # Package metadata and configuration
+├── package.tgz                     # Application files archive (auto-generated)
+├── scripts/                        # Lifecycle management scripts
+│   ├── preinst                     # Pre-installation script
+│   ├── postinst                    # Post-installation script
+│   ├── preuninst                   # Pre-uninstallation script
+│   ├── postuninst                  # Post-uninstallation script
+│   ├── start-stop-status           # Service control script
+│   └── common-functions.sh         # Shared functions library
+├── conf/                           # SPK configuration files
+│   ├── privilege                   # User privilege configuration
+│   └── resource                    # Resource allocation (ports, nginx)
+├── package/                        # Application content (packaged to package.tgz)
+│   ├── etc/                        # Configuration files
 │   │   ├── adwh-reverse-proxy.conf # Nginx HTTPS proxy config
-│   │   └── adwh.sc               # Port configuration file
-│   └── admin-ui/          # Published .NET application files
-├── PACKAGE_ICON.PNG         # 72x72 package icon
-├── PACKAGE_ICON_256.PNG     # 256x256 high-res icon
-└── LICENSE                  # Package license
+│   │   └── adwh.sc                 # Port configuration file
+│   └── admin-ui/                   # Published .NET application files
+├── PACKAGE_ICON.PNG                # 72x72 package icon
+├── PACKAGE_ICON_256.PNG            # 256x256 high-res icon
+└── LICENSE                         # Package license
 ```
 
 ## Key Features
@@ -95,10 +94,77 @@ Defines nginx configuration and port allocation for the Synology resource manage
 ### package/etc/adwh.sc
 Port service configuration file following official Synology documentation for firewall and port forwarding integration.
 
+## Environment Variables
+
+The package scripts use various environment variables for configuration and Synology DSM integration:
+
+### Synology Package Variables (Automatically Set)
+
+| Variable | Description | Example Value |
+|----------|-------------|---------------|
+| `SYNOPKG_PKGNAME` | Package name as defined in INFO file | `AskylWebHosting` |
+| `SYNOPKG_PKGDEST` | Package installation directory | `/var/packages/AskylWebHosting/target` |
+| `SYNOPKG_DSM_ARCH` | Target DSM architecture | `x86_64` |
+| `SYNOPKG_PKG_PROGRESS_PATH` | Installation progress file path | `/tmp/synopkg_progress.XXXXX` |
+| `SYNOPKG_TEMP_LOGFILE` | Temporary log file for user messages | `/tmp/synopkg_temp.log` |
+
+### Package-Defined Variables
+
+| Variable | Description | Default Value | Usage |
+|----------|-------------|---------------|-------|
+| `PACKAGE_DIR` | Package installation directory | `$SYNOPKG_PKGDEST` or `/var/packages/AskylWebHosting/target` | Application files location |
+| `VAR_DIR` | Package variable data directory | `/var/packages/AskylWebHosting/var` | Runtime data, logs, PID files |
+| `LOG_FILE` | Default log file path | `$VAR_DIR/logs/install.log` | Installation and upgrade logs |
+
+### Application-Specific Variables
+
+| Variable | Description | Value | Usage |
+|----------|-------------|-------|-------|
+| `ASPNETCORE_ENVIRONMENT` | .NET environment mode | `Production` | Application configuration |
+| `ASPNETCORE_URLS` | .NET application binding | `http://0.0.0.0:7120` | Internal application port |
+| `APP_DIR` | Application directory | `$PACKAGE_DIR/admin-ui` | .NET application files |
+| `APP_NAME` | Application executable name | `Askyl.Dsm.WebHosting.Ui` | Main DLL name |
+| `PID_FILE` | Service process ID file | `$VAR_DIR/admin-ui.pid` | Process management |
+| `SERVICE_LOG_FILE` | Service control logs | `$VAR_DIR/logs/service.log` | Start/stop operations |
+| `APP_LOG_FILE` | Application output logs | `$VAR_DIR/logs/application.log` | .NET app stdout/stderr |
+
+### Debug and Beta Mode Variables
+
+| Variable | Description | Values | Usage |
+|----------|-------------|--------|-------|
+| `_IS_BETA_MODE` | Beta mode detection (internal) | `true`/`false` | Debug logging behavior |
+| `_BETA_MODE_INITIALIZED` | Beta mode init flag (internal) | `true`/`false` | Performance optimization |
+
+### Usage Examples
+
+```bash
+# Access package directory
+echo "Application files in: $PACKAGE_DIR/admin-ui"
+
+# Check variable directory
+ls -la "$VAR_DIR/logs/"
+
+# Update installation progress (in scripts)
+update_progress 0.5 "Installing .NET runtime"
+
+# Log to specific file
+log_info "Custom message" "/path/to/custom.log"
+```
+
+### Beta Mode Behavior
+
+When `beta="yes"` in the INFO file:
+- Debug logs go to `/tmp/adwh-debug.log`
+- More verbose logging for troubleshooting
+
+When `beta="no"` (release mode):
+- Debug logs go to standard log files
+- Production-level logging
+
 ## Development Notes
 
 - All service and configuration files are centralized in `package/etc/`
-- Scripts reference the unified `/var/packages/AskylDsmWebHosting/target/etc/` path
+- Scripts reference the unified `/var/packages/AskylWebHosting/target/etc/` path
 - The package uses official Synology APIs and follows DSM developer guidelines
 - No custom DSM UI components - uses native admin link integration
 

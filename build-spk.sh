@@ -5,6 +5,27 @@
 
 set -e
 
+# Capture start time
+START_TIME=$(date +%s)
+
+# Function to clean unwanted files from package
+clean_package_artifacts() {
+    local target_dir="$1"
+    if [ -d "$target_dir" ]; then
+        echo "🧹 Cleaning artifacts from: $target_dir"
+        # Remove macOS artifacts
+        find "$target_dir" -name ".DS_Store" -delete 2>/dev/null || true
+        # Remove Windows thumbnails
+        find "$target_dir" -name "Thumbs.db" -delete 2>/dev/null || true
+        # Remove temporary files
+        find "$target_dir" -name "*.tmp" -delete 2>/dev/null || true
+        find "$target_dir" -name "*~" -delete 2>/dev/null || true
+        # Remove IDE artifacts
+        find "$target_dir" -name ".vscode" -type d -exec rm -rf {} + 2>/dev/null || true
+        find "$target_dir" -name ".vs" -type d -exec rm -rf {} + 2>/dev/null || true
+    fi
+}
+
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SPK_DIR="$PROJECT_DIR/src/spk-project"
 BUILD_DIR="$PROJECT_DIR/dist"
@@ -52,12 +73,21 @@ dotnet publish -c Release -o "$UI_PUBLISH_DIR" --self-contained false
 echo "🧹 Cleaning debug files..."
 find "$UI_PUBLISH_DIR" -name "*.pdb" -delete
 
+# Clean package artifacts
+clean_package_artifacts "$SPK_DIR/package"
+
 echo "✅ UI project published to: $UI_PUBLISH_DIR"
+
+# Clean installer directory before Docker build
+clean_package_artifacts "$INSTALLER_DIR"
 
 # Build DotnetInstaller with Docker for multiple architectures
 echo "🐳 Building DotnetInstaller with Docker for multiple architectures..."
 cd "$PROJECT_DIR"
 docker build -f src/Dockerfile --output="$INSTALLER_DIR" src
+
+# Final cleanup of package artifacts
+clean_package_artifacts "$SPK_DIR/package"
 
 echo "✅ DotnetInstaller binaries built to: $INSTALLER_DIR"
 
@@ -97,4 +127,11 @@ tar -tf "$BUILD_DIR/${SPK_FILENAME}" | head -20
 # Clean up
 rm -f package.tgz
 
+# Calculate and display execution time
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+MINUTES=$((DURATION / 60))
+SECONDS=$((DURATION % 60))
+
 echo "🎉 Build completed!"
+printf "⏱️  Execution time: %02d:%02d\n" $MINUTES $SECONDS

@@ -1,21 +1,22 @@
 #!/bin/bash
 
 # Script executed before package installation
-echo "$(date): Starting preinst script" >> /tmp/askyl-install.log
 
-# Check if .NET runtime is available
-if command -v dotnet >/dev/null 2>&1; then
-    echo "$(date): .NET runtime found: $(dotnet --version)" >> /tmp/askyl-install.log
-else
-    echo "$(date): Warning: .NET runtime not found" >> /tmp/askyl-install.log
-fi
+# Load common functions for logging
+source "$(dirname "$0")/common-functions.sh"
 
-# Check if the user exists
-if id "AskylDsmWebHosting" >/dev/null 2>&1; then
-    echo "$(date): User AskylDsmWebHosting already exists" >> /tmp/askyl-install.log
-else
-    echo "$(date): User AskylDsmWebHosting will be created" >> /tmp/askyl-install.log
-fi
+update_progress 0.0 "Starting pre-installation"
 
-echo "$(date): preinst script completed successfully" >> /tmp/askyl-install.log
+rm -f /tmp/adwh-debug.log
+log_debug "PREINST: Starting preinst script"
+update_progress 0.1 "Environment setup"
+
+log_debug "PREINST: User ID: $(id)"
+log_debug "PREINST: Environment variables:"
+log_debug "PREINST: SYNOPKG_PKGNAME=${SYNOPKG_PKGNAME}"
+log_debug "PREINST: SYNOPKG_PKGDEST=${SYNOPKG_PKGDEST}"
+log_debug "PREINST: SYNOPKG_DSM_ARCH=${SYNOPKG_DSM_ARCH}"
+
+update_progress 0.2 "Pre-installation checks completed"
+log_debug "PREINST: Completed successfully"
 exit 0

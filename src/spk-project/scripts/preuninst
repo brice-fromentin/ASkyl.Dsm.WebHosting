@@ -1,45 +1,26 @@
 #!/bin/bash
 
 # Script executed before package uninstallation
-echo "$(date): Starting preuninst script" >> /tmp/askyl-install.log
 
-# Stop the service if it's running
-SERVICE_SCRIPT="/var/packages/AskylDsmWebHosting/target/etc/adwh-dsm-services"
+source "$(dirname "$0")/common-functions.sh"
 
-if [ -x "$SERVICE_SCRIPT" ]; then
-    echo "Stopping Askyl DSM Web Hosting service..."
-    echo "$(date): Stopping Askyl DSM Web Hosting service" >> /tmp/askyl-install.log
-    "$SERVICE_SCRIPT" stop || true
-fi
+start_log "preuninst"
 
-# Force stop all processes related to the package
-pkill -f "Askyl.Dsm.WebHosting.Ui" || true
-echo "$(date): Stopped all related processes" >> /tmp/askyl-install.log
-
-# Clean PID files
-rm -f "/var/packages/AskylDsmWebHosting/var/admin-ui.pid" || true
-echo "$(date): Cleaned PID files" >> /tmp/askyl-install.log
-
-# Remove global dotnet symbolic link
-GLOBAL_DOTNET_LINK="/usr/local/bin/dotnet"
-PACKAGE_DOTNET="/var/packages/AskylDsmWebHosting/target/runtimes/dotnet"
-
-# Check if the link points to our dotnet installation
-if [ -L "$GLOBAL_DOTNET_LINK" ]; then
-    LINK_TARGET=$(readlink "$GLOBAL_DOTNET_LINK")
-    if [ "$LINK_TARGET" = "$PACKAGE_DOTNET" ]; then
-        echo "$(date): Removing global dotnet symbolic link: $GLOBAL_DOTNET_LINK" >> /tmp/askyl-install.log
-        rm -f "$GLOBAL_DOTNET_LINK"
-        echo "$(date): Global dotnet link removed successfully" >> /tmp/askyl-install.log
-    else
-        echo "$(date): Global dotnet link points to different installation, leaving it intact" >> /tmp/askyl-install.log
-    fi
-elif [ -f "$GLOBAL_DOTNET_LINK" ]; then
-    echo "$(date): Global dotnet exists but is not a symbolic link, leaving it intact" >> /tmp/askyl-install.log
+log_debug "Stopping Askyl DSM Web Hosting service..."
+log_info "Stopping Askyl DSM Web Hosting service"
+START_STOP_SCRIPT="$(dirname "$0")/start-stop-status"
+if [ -x "$START_STOP_SCRIPT" ]; then
+    "$START_STOP_SCRIPT" stop || true
 else
-    echo "$(date): No global dotnet link found" >> /tmp/askyl-install.log
+    log_info "start-stop-status script not found, using fallback stop method"
 fi
 
-echo "$(date): Finished preuninst script" >> /tmp/askyl-install.log
+stop_process "Askyl.Dsm.WebHosting.Ui" "application processes"
+
+rm -f "$VAR_DIR/admin-ui.pid" || true
+log_info "Cleaned PID files"
+
+
+log_info "Finished preuninst script"
 
 exit 0

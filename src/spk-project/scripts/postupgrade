@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Script executed after package upgrade
+
+source "$(dirname "$0")/common-functions.sh"
+
+start_log "postupgrade"
+
+log_info "Package dir: $PACKAGE_DIR"
+log_info "Var dir: $VAR_DIR"
+
+restore_file "$VAR_DIR/appsettings.json"
+
+
+DOTNET_RUNTIME_PATH="$PACKAGE_DIR/runtimes/dotnet"
+if [ -f "$DOTNET_RUNTIME_PATH" ]; then
+    if "$DOTNET_RUNTIME_PATH" --info >> /tmp/adwh-install.log 2>&1; then
+        log_info ".NET runtime verification successful after upgrade"
+    else
+        log_warning ".NET runtime verification failed after upgrade"
+    fi
+fi
+
+log_info "Finished postupgrade script"
+
+exit 0

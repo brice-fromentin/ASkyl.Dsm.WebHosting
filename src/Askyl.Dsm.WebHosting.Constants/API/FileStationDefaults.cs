@@ -17,6 +17,8 @@ public static class FileStationDefaults
 
     public const string PatternDllsExes = "*.dll,*.exe";
 
+    public const string PatternZip = "*.zip";
+
     /// <summary>
     /// Default sort field for file listings.
     /// </summary>
