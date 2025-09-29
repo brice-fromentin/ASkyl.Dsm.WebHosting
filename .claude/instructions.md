@@ -1,4 +1,4 @@
-# CLAUDE.md
+# Claude Code Instructions
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -18,13 +18,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ALWAYS in English, never in French
 - Even if user communicates in French
 
-### Validation Phrase (REQUIRED)
-At the end of each code response, write:
-"✅ CLAUDE.md compliance verified: String/string pattern, constants usage, English comments"
+### Commit messages (NON-NEGOTIABLE)
+- ALWAYS in English.
+- NEVER add to message that claude has generated the message.
 
 ## Project Overview
 
-ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+ (x64 architecture only). The solution consists of multiple projects that work together to provide a web-based UI for managing .NET web applications on Synology NAS devices.
+ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. The solution consists of multiple projects that work together to provide a web-based UI for managing .NET web applications on Synology NAS devices.
 
 ## Architecture
 
@@ -41,31 +41,6 @@ ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+ (
 - **FrameworkManagementService**: Manages .NET framework installations and versions
 - **DotnetVersionService**: Handles .NET version detection and management
 - **FileNavigationService**: File system navigation on Synology NAS
-
-## Development Commands
-
-### Build & Run
-```bash
-# Build solution
-dotnet build src/Askyl.Dsm.WebHosting.sln
-
-# Clean build
-dotnet clean src/Askyl.Dsm.WebHosting.sln
-
-# Development: Use F5 to launch VS Code debugger (do NOT use dotnet run)
-```
-
-### Package Management
-```bash
-# Update NuGet packages (automated via VS Code task)
-dotnet outdated src/Askyl.Dsm.WebHosting.sln -u
-```
-
-### Synology Package
-```bash
-# Build SPK package for Synology installation
-./build-spk.sh
-```
 
 ## Technology Stack
 
@@ -165,14 +140,10 @@ AT EVERY session and EVERY code modification:
 1. **BEFORE writing code**: Read the "CRITICAL REMINDERS" section above
 2. **DURING writing**: Apply systematically:
    - String. for static methods
-   - string for types/variables  
+   - string for types/variables
    - Constants instead of magic strings
    - Comments in English
 3. **AFTER writing**: Verify compliance before response
-
-### Mandatory Verification
-At the end of each code response, write:
-"✅ CLAUDE.md compliance verified: String/string pattern, constants usage, English comments"
 
 ### Session Start Protocol
 When starting a new session, IMMEDIATELY read and acknowledge these critical reminders.

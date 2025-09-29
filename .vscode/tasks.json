@@ -2,7 +2,20 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Update NuGet",
+            "label": "Version ⬆️",
+            "type": "shell",
+            "command": "sh",
+            "args": [
+                "./src/scripts/update-version.sh"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
+        },
+        {
+            "label": "NuGet ⬆️",
             "type": "shell",
             "command": "sh",
             "args": [
@@ -11,26 +24,56 @@
             ],
             "presentation": {
                 "reveal": "always",
-                "panel": "new",
+                "panel": "shared",
                 "clear": true
             },
         },
         {
-            "label": "Build All",
+            "label": "🧹✨",
             "type": "shell",
             "command": "dotnet",
             "args": [
-                "build",
-                "--no-incremental",
+                "clean",
+                "Askyl.Dsm.WebHosting.sln",
             ],
             "options": {
                 "cwd": "${workspaceFolder}/src"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
             }
         },
         {
-            "label": "Build SPK",
+            "label": "🔧 SLN",
             "type": "shell",
-            "command": "sh ./build-spk.sh",
+            "command": "sh",
+            "args": [
+                "-c",
+                "dotnet restore && dotnet build --no-incremental",
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/src"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
+        },
+        {
+            "label": "🔧 SPK",
+            "type": "shell",
+            "command": "sh",
+            "args": [
+                "./src/scripts/build-spk.sh"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
         }
     ]
 }

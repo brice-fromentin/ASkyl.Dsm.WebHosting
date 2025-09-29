@@ -26,7 +26,7 @@ clean_package_artifacts() {
     fi
 }
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SPK_DIR="$PROJECT_DIR/src/spk-project"
 BUILD_DIR="$PROJECT_DIR/dist"
 PACKAGE_NAME="AskylDsmWebHosting"

@@ -22,4 +22,9 @@
     <Folder Include="logs/" />
   </ItemGroup>
 
+  <Target Name="MoreClean" AfterTargets="Clean">
+    <RemoveDir Directories="$(BaseOutputPath)" />
+    <RemoveDir Directories="$(BaseIntermediateOutputPath)" />
+  </Target>
+
 </Project>
