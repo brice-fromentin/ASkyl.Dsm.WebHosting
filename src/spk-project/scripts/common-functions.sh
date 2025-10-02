@@ -121,41 +121,20 @@ log_fatal_with_temp() {
 
 #region Log File Management
 
-# Common logging setup function
-# Usage: _setup_log <script_name> [logfile] [clear_log] [separator_style]
-_setup_log() {
+# Start logging for script execution
+# Usage: start_log <script_name> [logfile]
+start_log() {
     local script_name="$1"
     local logfile="${2:-$LOG_FILE}"
-    local clear_log="${3:-false}"
-    local separator_style="${4:-dashes}"
 
     # Create log directory
     mkdir -p "$(dirname "$logfile")"
 
-    # Clear log if requested
-    if [ "$clear_log" = "true" ]; then
-        rm -f "$logfile"
-    fi
-
     # Set global LOG_FILE for subsequent calls
     LOG_FILE="$logfile"
 
-    # Log start message with appropriate separator
-    if [ "$separator_style" = "equals" ]; then
-        log_info "==================== STARTING $script_name ===================="
-    else
-        log_info "-------------------- STARTING $script_name --------------------"
-    fi
-}
-
-# Initialize clean log file for installation
-init_log() {
-    _setup_log "$1" "$2" "true" "equals"
-}
-
-# Start logging for subsequent scripts (without clearing)
-start_log() {
-    _setup_log "$1" "$2" "false" "dashes"
+    # Log start message
+    log_info "-------------------- STARTING $script_name --------------------"
 }
 
 #endregion
@@ -186,30 +165,38 @@ stop_process() {
 
 #region File Management
 
-# Backup file with logging
+BACKUP_DIR="$VAR_DIR/upgrade-backup"
+
+# Backup file to upgrade-backup directory with logging
+# Usage: backup_file <source_file>
 backup_file() {
     local source="$1"
-    local backup_suffix="${2:-.backup}"
+    local filename=$(basename "$source")
+    local backup_file="$BACKUP_DIR/$filename"
+
+    # Create backup directory if it doesn't exist
+    mkdir -p "$BACKUP_DIR"
 
     if [ -f "$source" ]; then
-        cp "$source" "${source}${backup_suffix}" && log_info "Backed up $source" || log_error "Failed to backup $source"
+        cp -f "$source" "$backup_file" && log_info "Backed up $source to $backup_file" || log_error "Failed to backup $source"
     else
         log_info "No file to backup at $source"
     fi
 }
 
-# Restore file from backup with logging
+# Restore file from upgrade-backup directory with logging
+# Usage: restore_file <target_file>
 restore_file() {
     local target="$1"
-    local backup_suffix="${2:-.backup}"
-    local backup_file="${target}${backup_suffix}"
+    local filename=$(basename "$target")
+    local backup_file="$BACKUP_DIR/$filename"
 
     if [ -f "$backup_file" ]; then
-        if [ ! -f "$target" ]; then
-            cp "$backup_file" "$target" && log_info "Restored $target from backup" || log_error "Failed to restore $target"
-        else
-            log_info "Target $target already exists, backup not restored"
+        if [ -f "$target" ]; then
+            log_info "Target $target already exists, overwriting with backup"
         fi
+        
+        cp -f "$backup_file" "$target" && log_info "Restored $target from $backup_file" || log_error "Failed to restore $target"
     else
         log_info "No backup file found at $backup_file"
     fi

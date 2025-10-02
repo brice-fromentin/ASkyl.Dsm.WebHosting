@@ -9,7 +9,7 @@ start_log "postupgrade"
 log_info "Package dir: $PACKAGE_DIR"
 log_info "Var dir: $VAR_DIR"
 
-restore_file "$VAR_DIR/appsettings.json"
+restore_file "$PACKAGE_DIR/admin-ui/websites.json"
 
 
 DOTNET_RUNTIME_PATH="$PACKAGE_DIR/runtimes/dotnet"

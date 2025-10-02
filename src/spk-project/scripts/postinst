@@ -6,8 +6,7 @@ source "$(dirname "$0")/common-functions.sh"
 
 update_progress 0.2 "Starting post-installation"
 
-# Initialize clean log file for installation
-init_log "postinst"
+start_log "postinst"
 
 log_debug "POSTINST: Starting postinst script"
 log_debug "POSTINST: User ID: $(id)"

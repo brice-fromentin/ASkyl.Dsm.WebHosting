@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.FluentUI.AspNetCore.Components;
-
 using Serilog;
-
+using Askyl.Dsm.WebHosting.Data.WebSites;
 using Askyl.Dsm.WebHosting.Tools;
+using Askyl.Dsm.WebHosting.Tools.WebSites;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -23,9 +23,13 @@ builder.Services.AddScoped<IFileNavigationService, FileNavigationService>();
 builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 builder.Services.AddScoped<ITemporaryTokenService, TemporaryTokenService>();
 
+// Add WebSite management services (late configuration)
+builder.Services.AddSingleton<IWebSitesConfigurationService, WebSitesConfigurationService>();
+builder.Services.AddHostedService<WebSiteHostingService>();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+                .AddInteractiveServerComponents();
 
 builder.Services.AddControllers();
 

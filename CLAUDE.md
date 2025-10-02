@@ -1,3 +1,14 @@
+# ⚠️ READ THIS FIRST - MANDATORY FOR CLAUDE
+
+**Before ANY code modification, Claude MUST:**
+1. **Read this entire file completely**
+2. **Apply ALL critical reminders systematically**
+3. **Verify compliance before responding**
+
+**FAILURE TO FOLLOW THESE INSTRUCTIONS IS UNACCEPTABLE**
+
+---
+
 # Claude Code Instructions
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -7,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### String vs string Pattern (ABSOLUTE PRIORITY)
 - **String.** (PascalCase) for static methods: `String.IsNullOrEmpty()`, `String.Join()`, `String.Empty`
 - **string** (lowercase) for types/variables: `string token`, `public string Method()`
-- **""** instead of `String.Empty` for default values
+- **""** instead of `String.Empty` for default values (String.Empty is not compile-time constant)
 
 ### Constants Management (MANDATORY)
 - NEVER use magic strings/numbers
@@ -76,7 +87,12 @@ ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. 
     - Instance method calls (e.g., `myString.Length`, `myInt.ToString()`)
   - Use `""` for default parameter values (String.Empty is not compile-time constant)
 - Use `GeneratedRegexAttribute` for regex patterns
-- Use primary constructors for classes when possible
+- **MANDATORY**: Use primary constructors for ALL classes with constructor parameters (except abstract classes and when inheritance requires it)
+  - Convert traditional constructors to primary constructors whenever possible
+  - Use primary constructor syntax: `public class MyService(ILogger<MyService> logger, IConfiguration config)`
+  - Apply to all new classes and refactor existing classes when modifying them
+- Prefer 'IsEmpty' check rather than using 'Any()', both for clarity and for performance
+- Prefer 'IsEmpty' check rather than using 'Xount', both for clarity and for performance
 - Use null-forgiving operator (!) for injected services and post-null-check contexts
 - Use conditional null operator (?) for truly optional scenarios
 - Fix all compiler warnings after build completion
@@ -135,15 +151,32 @@ ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. 
 
 ## 🤖 Instructions for Claude
 
-AT EVERY session and EVERY code modification:
+**MANDATORY PROTOCOL FOR EVERY SESSION AND CODE MODIFICATION:**
 
-1. **BEFORE writing code**: Read the "CRITICAL REMINDERS" section above
-2. **DURING writing**: Apply systematically:
-   - String. for static methods
-   - string for types/variables
-   - Constants instead of magic strings
-   - Comments in English
-3. **AFTER writing**: Verify compliance before response
+### 🔴 IMMEDIATE SESSION START REQUIREMENTS
+1. **FIRST ACTION**: Say Hello
+2. **ACKNOWLEDGE**: Confirm understanding of all critical reminders
+3. **APPLY**: Use directives throughout entire session
 
-### Session Start Protocol
-When starting a new session, IMMEDIATELY read and acknowledge these critical reminders.
+### 📋 CODE MODIFICATION CHECKLIST
+**BEFORE writing any code:**
+- [ ] Read "CRITICAL REMINDERS" section above
+- [ ] Identify required constants (no magic strings/numbers)
+- [ ] Plan String vs string usage
+
+**DURING writing:**
+- [ ] String. for static methods (`String.IsNullOrEmpty()`, `String.Join()`)
+- [ ] string for types/variables (`string token`, `public string Method()`)
+- [ ] "" for default values (not `String.Empty`)
+- [ ] Constants from `Askyl.Dsm.WebHosting.Constants` (create if needed)
+- [ ] Comments ONLY in English
+- [ ] Apply all architectural guidelines
+
+**AFTER writing:**
+- [ ] Verify 100% compliance with all directives
+- [ ] Check no magic strings remain
+- [ ] Confirm String/string pattern correctness
+- [ ] Validate English-only comments
+
+### 🚨 NON-COMPLIANCE CONSEQUENCES
+Failure to follow these instructions systematically is considered a critical error and must be corrected immediately.

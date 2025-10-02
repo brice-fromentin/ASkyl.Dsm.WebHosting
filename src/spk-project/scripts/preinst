@@ -7,8 +7,12 @@ source "$(dirname "$0")/common-functions.sh"
 
 update_progress 0.0 "Starting pre-installation"
 
-rm -f /tmp/adwh-debug.log
-log_debug "PREINST: Starting preinst script"
+# Only clear debug log on fresh install, not on upgrade
+if [ "$SYNOPKG_PKG_STATUS" != "UPGRADE" ]; then
+    rm -f /tmp/adwh-debug.log
+fi
+
+log_debug "PREINST: Starting preinst script (status: ${SYNOPKG_PKG_STATUS:-none})"
 update_progress 0.1 "Environment setup"
 
 log_debug "PREINST: User ID: $(id)"

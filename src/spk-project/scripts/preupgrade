@@ -23,7 +23,7 @@ fi
 rm -f "$VAR_DIR/admin-ui.pid" || true
 log_info "Cleaned PID files"
 
-backup_file "$VAR_DIR/appsettings.json"
+backup_file "$PACKAGE_DIR/admin-ui/websites.json"
 
 log_info "Finished preupgrade script"
 
