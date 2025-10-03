@@ -1,6 +1,6 @@
 using Askyl.Dsm.WebHosting.Data.Runtime;
 
-namespace Askyl.Dsm.WebHosting.Ui.Models;
+namespace Askyl.Dsm.WebHosting.Ui.Models.AspNet;
 
 public sealed class AspNetRelease
 {

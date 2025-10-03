@@ -2,7 +2,8 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.WebSites;
-using Askyl.Dsm.WebHosting.Ui.Models;
+using Askyl.Dsm.WebHosting.Ui.Models.Results;
+using Askyl.Dsm.WebHosting.Ui.Models.WebSites;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -17,6 +18,7 @@ public class WebSiteHostingService(ILogger<WebSiteHostingService> logger, IWebSi
         _logger.LogInformation("WebSite hosting service starting");
 
         await _configService.EnsureLoadedAsync();
+        await InitializeAllInstancesAsync();
         await StartEligibleSitesAsync();
 
         await base.StartAsync(cancellationToken);
@@ -43,19 +45,27 @@ public class WebSiteHostingService(ILogger<WebSiteHostingService> logger, IWebSi
         await base.StopAsync(stoppingToken);
     }
 
-    private async Task StartEligibleSitesAsync()
+    private async Task InitializeAllInstancesAsync()
     {
-        if (!_instances.IsEmpty)
+        var allSites = await _configService.GetAllSitesAsync();
+
+        foreach (var site in allSites)
         {
-            _logger.LogWarning("Some processes are already running at startup - this should not happen");
-            return;
+            var instance = new WebSiteInstance(site);
+            _instances[site.Name] = instance;
+            _logger.LogInformation("Instance created for site: {SiteName}", site.Name);
         }
 
+        _logger.LogInformation("All instances initialized: {Count} sites", _instances.Count);
+    }
+
+    private async Task StartEligibleSitesAsync()
+    {
         var sitesToStart = await _configService.GetSitesToStartAsync();
 
         foreach (var site in sitesToStart)
         {
-            await StartSiteAsync(site);
+            await StartSiteAsync(site.Name);
         }
     }
 
@@ -64,56 +74,77 @@ public class WebSiteHostingService(ILogger<WebSiteHostingService> logger, IWebSi
         return _instances.Values;
     }
 
-    private Task<bool> StartSiteAsync(WebSiteConfiguration site)
+    public Task<OperationResult> StartSiteAsync(string siteName)
     {
-        _logger.LogInformation("Starting site: {SiteName}", site.Name);
+        if (!_instances.TryGetValue(siteName, out var instance))
+        {
+            _logger.LogError("Instance not found for site: {SiteName}", siteName);
+            return Task.FromResult(OperationResult.CreateFailure($"Instance '{siteName}' not found"));
+        }
+
+        if (instance.IsRunning)
+        {
+            _logger.LogWarning("Site {SiteName} is already running", siteName);
+            return Task.FromResult(OperationResult.CreateFailure($"Site '{siteName}' is already running"));
+        }
+
+        _logger.LogInformation("Starting site: {SiteName}", siteName);
 
         try
         {
+            var site = instance.Configuration;
+
             if (!File.Exists(site.ApplicationPath))
             {
                 _logger.LogError("Application binary not found: {ApplicationPath}", site.ApplicationPath);
-                return Task.FromResult(false);
+                return Task.FromResult(OperationResult.CreateFailure($"Application binary not found: {site.ApplicationPath}"));
             }
 
             var startInfo = CreateProcessStartInfo(site);
             var process = Process.Start(startInfo);
+
             if (process == null)
             {
-                _logger.LogError("Failed to start process for site: {SiteName}", site.Name);
-                return Task.FromResult(false);
+                _logger.LogError("Failed to start process for site: {SiteName}", siteName);
+                return Task.FromResult(OperationResult.CreateFailure($"Failed to start process for site '{siteName}'"));
             }
 
-            var instance = new WebSiteInstance(site)
-            {
-                Process = new ProcessInfo(process, site)
-            };
+            instance.Process = new ProcessInfo(process, site);
+            _logger.LogInformation("Site {SiteName} started with PID {ProcessId}", siteName, process.Id);
 
-            _instances[site.Name] = instance;
-            _logger.LogInformation("Site {SiteName} started with PID {ProcessId}", site.Name, process.Id);
-
-            return Task.FromResult(true);
+            return Task.FromResult(OperationResult.CreateSuccess());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start site: {SiteName}", site.Name);
-            return Task.FromResult(false);
+            _logger.LogError(ex, "Failed to start site: {SiteName}", siteName);
+            return Task.FromResult(OperationResult.CreateFailure($"Failed to start site: {ex.Message}"));
         }
     }
 
-    private bool StopSite(WebSiteInstance instance)
+    public OperationResult StopSiteAsync(string siteName)
+    {
+        if (!_instances.TryGetValue(siteName, out var instance))
+        {
+            _logger.LogError("Instance not found for site: {SiteName}", siteName);
+            return OperationResult.CreateFailure($"Instance '{siteName}' not found");
+        }
+
+        return StopSiteAsync(instance);
+    }
+
+    public OperationResult StopSiteAsync(WebSiteInstance instance)
     {
         var siteName = instance.Configuration.Name;
 
+        if (!instance.IsRunning)
+        {
+            _logger.LogWarning("Site {SiteName} is not running", siteName);
+            return OperationResult.CreateFailure($"Site '{siteName}' is not running");
+        }
+
         try
         {
-            if (instance.Process == null)
-            {
-                _logger.LogWarning("Site {SiteName} has no running process", siteName);
-                return false;
-            }
-
-            var process = Process.GetProcessById(instance.Process.ProcessId);
+            var process = Process.GetProcessById(instance.Process!.ProcessId);
             process.CloseMainWindow();
 
             if (!process.WaitForExit(5000))
@@ -121,16 +152,18 @@ public class WebSiteHostingService(ILogger<WebSiteHostingService> logger, IWebSi
                 process.Kill();
             }
 
-            _instances.TryRemove(siteName, out _);
+            instance.Process = null;
             _logger.LogInformation("Site {SiteName} stopped", siteName);
-            return true;
+            return OperationResult.CreateSuccess();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to stop site: {SiteName}", siteName);
-            return false;
+            return OperationResult.CreateFailure($"Failed to stop site: {ex.Message}");
         }
     }
+
+    private OperationResult StopSite(WebSiteInstance instance) => StopSiteAsync(instance);
 
 
     private async Task StopAllSitesAsync()

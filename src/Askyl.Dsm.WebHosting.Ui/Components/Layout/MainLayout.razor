@@ -7,7 +7,9 @@
     </Header>
 
     <Body>
-        @Body
+        <div class="flex-column-container">
+            @Body
+        </div>
     </Body>
 </FluentMainLayout>
 
@@ -22,7 +24,7 @@
             <FluentIcon Value="@(new Icons.Regular.Size32.DismissCircle().WithColor(Color.Error))" />
         </span>
     </FluentHeader>
-</div
+</div>
 
 <FluentToastProvider />
 <FluentDialogProvider />

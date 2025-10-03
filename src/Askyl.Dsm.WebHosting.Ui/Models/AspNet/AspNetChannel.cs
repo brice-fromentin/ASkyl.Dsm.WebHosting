@@ -2,7 +2,7 @@ using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Services;
 
-namespace Askyl.Dsm.WebHosting.Ui.Models;
+namespace Askyl.Dsm.WebHosting.Ui.Models.AspNet;
 
 /// <summary>
 /// Wraps AspNetCoreReleaseInfo with custom ToString() formatting for UI display in FluentSelect.

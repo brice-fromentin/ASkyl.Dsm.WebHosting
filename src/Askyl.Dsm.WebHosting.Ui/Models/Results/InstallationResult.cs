@@ -1,4 +1,4 @@
-namespace Askyl.Dsm.WebHosting.Ui.Models;
+namespace Askyl.Dsm.WebHosting.Ui.Models.Results;
 
 public class InstallationResult
 {

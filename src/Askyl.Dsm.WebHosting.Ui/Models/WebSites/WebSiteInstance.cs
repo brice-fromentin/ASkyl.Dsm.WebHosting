@@ -1,6 +1,6 @@
 using Askyl.Dsm.WebHosting.Data.WebSites;
 
-namespace Askyl.Dsm.WebHosting.Ui.Models;
+namespace Askyl.Dsm.WebHosting.Ui.Models.WebSites;
 
 public class WebSiteInstance(WebSiteConfiguration configuration)
 {

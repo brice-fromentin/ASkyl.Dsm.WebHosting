@@ -51,7 +51,7 @@
             "command": "sh",
             "args": [
                 "-c",
-                "dotnet restore && dotnet build --no-incremental",
+                "dotnet msbuild Askyl.Dsm.WebHosting.sln -t:Clean && dotnet msbuild Askyl.Dsm.WebHosting.sln -t:Restore && dotnet msbuild Askyl.Dsm.WebHosting.sln -t:Build",
             ],
             "options": {
                 "cwd": "${workspaceFolder}/src"

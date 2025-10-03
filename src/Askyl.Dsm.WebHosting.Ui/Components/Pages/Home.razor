@@ -1,13 +1,11 @@
 ﻿@page "/"
 
-@using System.Text.Json
-@using Askyl.Dsm.WebHosting.Constants
-@using Askyl.Dsm.WebHosting.Data.API.Parameters
 @using Askyl.Dsm.WebHosting.Constants.Application
-@using Askyl.Dsm.WebHosting.Data.API.Parameters.ReverseProxyAPI
-@using Askyl.Dsm.WebHosting.Data.API.Responses
+@using Askyl.Dsm.WebHosting.Data.WebSites
 @using Askyl.Dsm.WebHosting.Tools.Network
 @using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
+@using Askyl.Dsm.WebHosting.Ui.Models.Results
+@using Askyl.Dsm.WebHosting.Ui.Models.WebSites
 
 @implements IWorkingState
 
@@ -16,17 +14,25 @@
 @inject NavigationManager navigation
 @inject ILogDownloadService logDownloadService
 @inject ITemporaryTokenService tokenService
+@inject WebSiteHostingService hostingService
 
 <PageTitle>ADWH - Home</PageTitle>
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentToolbar Class="full-width">
-    <FluentButton OnClick="CallReverseList">List Proxies</FluentButton>
-    <FluentButton OnClick="CallReverseCreate">Create</FluentButton>
-    <FluentButton OnClick="CallReverseUpdate">Update</FluentButton>
-    <FluentTextField @bind-Value="Uuid" autofocus />
-    <FluentButton OnClick="CallReverseDelete">Delete</FluentButton>
+    <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral">
+        Add
+    </FluentButton>
+    <FluentButton IconStart="@(new IconsRegular20.Edit())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)">
+        Edit
+    </FluentButton>
+    <FluentButton IconStart="@(new IconsRegular20.Delete())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)">
+        Delete
+    </FluentButton>
+    <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
+    <FluentButton IconStart="@(new IconsRegular20.Play())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null || SelectedInstance.IsRunning)" OnClick="StartSelectedInstance" />
+    <FluentButton IconStart="@(new IconsRegular20.Stop())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null || !SelectedInstance.IsRunning)" OnClick="StopSelectedInstance" />
     <FluentSpacer />
     <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="Appearance.Outline">
         .NET Version
@@ -41,26 +47,18 @@
         Download Logs
     </FluentButton>
 </FluentToolbar>
-<br />
 
-<h2>Existing reverse proxies</h2>
-<div>
-    @if (proxies is not null)
-    {
-        foreach (var proxy in proxies)
-        {
-            <div>@JsonSerializer.Serialize(proxy)</div>
-            <br />
-        }
-    }
-</div>
-
+<AutoDataGrid TItem="WebSiteInstance" Items="@Instances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" GridTemplateColumns="1fr 2fr 1fr 1fr">
+    <ChildContent>
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Name" Property="@(i => i.Configuration.Name)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Path" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="Port" Property="@(i => i.Configuration.Port)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="State" Property="@(i => i.State)" Sortable="true" />
+    </ChildContent>
+</AutoDataGrid>
 
 @code
 {
-    private List<ReverseProxy>? proxies { get; set; }
-    private string? Uuid { get; set; }
-
     #region IWorkingState Implementation
 
     public bool IsWorking { get; set; }
@@ -70,6 +68,16 @@
 
     #endregion
 
+    #region Properties and Fields
+
+    private IQueryable<WebSiteInstance> Instances { get; set; } = AutoDataGrid<WebSiteInstance>.Empty();
+
+    private WebSiteInstance? SelectedInstance { get; set; }
+
+    #endregion
+
+    #region Lifecycle Methods
+
     protected override async Task OnInitializedAsync()
     {
         if (!client.IsConnected)
@@ -78,89 +86,34 @@
             return;
         }
 
-        await CallReverseList();
+        await LoadInstancesAsync();
     }
 
-    private async Task CallReverseList()
+    #endregion
+
+    #region Data Loading
+
+    private async Task LoadInstancesAsync()
     {
-        var parameters = new ReverseProxyListParameters(client.ApiInformations);
-        var list = await client.ExecuteAsync<ReverseProxyListResponse>(parameters);
-        proxies = list?.Data?.Entries;
-    }
-
-    private async Task CallReverseCreate()
-    {
-        var parameters = new ReverseProxyCreateParameters(client.ApiInformations);
-        var entry = parameters.Parameters;
-
-        entry.Description = "test-name";
-        entry.Frontend = new() { Fqdn = "test-hostname", Port = 80, Protocol = 0 };
-        entry.Backend = new() { Fqdn = "test-target-name", Port = 80, Protocol = 0 };
-
-        await CallAPI(parameters);
-    }
-
-    private async Task CallReverseUpdate()
-    {
-        if (proxies is null || proxies.Count == 0)
-        {
-            await DialogsService.ShowErrorAsync($"No proxy available.");
-            return;
-        }
-
-        var parameters = new ReverseProxyUpdateParameters(client.ApiInformations, proxies[0]);
-        var entry = parameters.Parameters;
-
-        entry.Description += "-updated";
-
-        await CallAPI(parameters);
-    }
-
-    private async Task CallReverseDelete()
-    {
-        if (String.IsNullOrWhiteSpace(Uuid) || !Guid.TryParse(Uuid, out var id))
-        {
-            await DialogsService.ShowErrorAsync($"Invalid UUID.");
-            return;
-        }
-
-        var parameters = new ReverseProxyDeleteParameters(client.ApiInformations);
-        parameters.Parameters.Add(id);
-
-        if (await CallAPI(parameters))
-        {
-            Uuid = "";
-        }
-    }
-
-    private async Task<bool> CallAPI(IApiParameters parameters)
-    {
-        if (IsWorking)
-        {
-            return false;
-        }
-
-        using var worker = this.CreateWorkingState("Processing API request...");
-
         try
         {
-            var response = await client.ExecuteAsync<ApiGenericResponse>(parameters);
-
-            if (response == null || !response.Success)
-            {
-                await DialogsService.ShowErrorAsync($"Code = {response?.Error?.Code}, Reason = {response?.Error?.Errors?.Reason}, Index = [{String.Join(", ", response?.Error?.Errors?.Index ?? [])}]");
-                return false;
-            }
-
-            await CallReverseList();
-            return true;
+            var instances = hostingService.GetInstances();
+            Instances = instances.AsQueryable();
         }
         catch (Exception ex)
         {
-            await DialogsService.ShowErrorAsync($"Error during API call: {ex.Message}");
-            return false;
+            await DialogsService.ShowErrorAsync($"Error loading instances: {ex.Message}");
+            Instances = AutoDataGrid<WebSiteInstance>.Empty();
+        }
+        finally
+        {
+            StateHasChanged();
         }
     }
+
+    #endregion
+
+    #region Dialog Management
 
     private async Task ShowDotnetVersionsDialog()
     => await DialogsService.ShowDialogAsync<DotnetVersionsDialog>(new() { Width = "", Height = "", Modal = true });
@@ -186,19 +139,80 @@
         }
     }
 
+    #endregion
+
+    #region Instance Selection
+
+    private void HandleInstanceSelected(WebSiteInstance instance) => SelectedInstance = instance;
+
+    #endregion
+
+    #region Instance Lifecycle
+
+    private async Task StartSelectedInstance()
+    {
+        if (SelectedInstance is null)
+        {
+            return;
+        }
+
+        using var worker = this.CreateWorkingState($"Starting site '{SelectedInstance.Configuration.Name}'...");
+
+        await ExecuteSiteActionAsync(() => hostingService.StartSiteAsync(SelectedInstance.Configuration.Name), "started");
+    }
+
+    private async Task StopSelectedInstance()
+    {
+        if (SelectedInstance is null)
+        {
+            return;
+        }
+
+        using var worker = this.CreateWorkingState($"Stopping site '{SelectedInstance.Configuration.Name}'...");
+
+        await ExecuteSiteActionAsync(() => Task.FromResult(hostingService.StopSiteAsync(SelectedInstance)), "stopped");
+    }
+
+    private async Task ExecuteSiteActionAsync(Func<Task<OperationResult>> action, string actionVerb)
+    {
+        await Task.Delay(100); // Dig later to know why it is required
+
+        try
+        {
+            var result = await action();
+
+            if (result.Success)
+            {
+                await DialogsService.ShowSuccessAsync($"Site '{SelectedInstance!.Configuration.Name}' {actionVerb} successfully.");
+            }
+            else
+            {
+                await DialogsService.ShowErrorAsync(result.ErrorMessage ?? $"Failed to {actionVerb.TrimEnd('d', 'e')} site '{SelectedInstance!.Configuration.Name}'.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await DialogsService.ShowErrorAsync($"Error {actionVerb.TrimEnd('d', 'e')}ing site: {ex.Message}");
+        }
+    }
+
+    #endregion
+
+    #region Log Management
+
     private async Task DownloadLogs()
     {
         try
         {
             // Generate temporary token for authentication
             var token = tokenService.GenerateToken();
-            
+
             if (String.IsNullOrEmpty(token))
             {
                 await DialogsService.ShowErrorAsync("Authentication required. Please make sure you are connected to DSM.");
                 return;
             }
-            
+
             // Direct navigation to trigger download (no popup)
             var downloadUrl = $"{LogConstants.LogDownloadEndpoint}?{LogConstants.TokenQueryParameter}={Uri.EscapeDataString(token)}";
             navigation.NavigateTo(downloadUrl, forceLoad: true);
@@ -208,4 +222,6 @@
             await DialogsService.ShowErrorAsync($"Error downloading logs: {ex.Message}");
         }
     }
+
+    #endregion
 }

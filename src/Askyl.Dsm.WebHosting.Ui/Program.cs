@@ -25,7 +25,8 @@ builder.Services.AddScoped<ITemporaryTokenService, TemporaryTokenService>();
 
 // Add WebSite management services (late configuration)
 builder.Services.AddSingleton<IWebSitesConfigurationService, WebSitesConfigurationService>();
-builder.Services.AddHostedService<WebSiteHostingService>();
+builder.Services.AddSingleton<WebSiteHostingService>();
+builder.Services.AddHostedService(provider => provider.GetRequiredService<WebSiteHostingService>());
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

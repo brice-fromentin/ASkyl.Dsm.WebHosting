@@ -1,7 +1,7 @@
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Runtime;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
-using Askyl.Dsm.WebHosting.Ui.Models;
+using Askyl.Dsm.WebHosting.Ui.Models.AspNet;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
