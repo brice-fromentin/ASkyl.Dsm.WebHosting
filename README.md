@@ -7,7 +7,6 @@
 
 # TODO
     Macro
-        - Processes manager for dotnet web sites.
         - Certificates management for the reverse proxy configurations.
         - Reverse proxy manager.
         - Support deploying from a compressed file.

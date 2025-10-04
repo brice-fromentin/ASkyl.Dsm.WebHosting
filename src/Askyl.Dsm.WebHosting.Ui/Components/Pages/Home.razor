@@ -4,6 +4,7 @@
 @using Askyl.Dsm.WebHosting.Data.WebSites
 @using Askyl.Dsm.WebHosting.Tools.Network
 @using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
+@using Askyl.Dsm.WebHosting.Ui.Extensions
 @using Askyl.Dsm.WebHosting.Ui.Models.Results
 @using Askyl.Dsm.WebHosting.Ui.Models.WebSites
 
@@ -21,13 +22,13 @@
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentToolbar Class="full-width">
-    <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral">
+    <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral" OnClick="AddWebSite">
         Add
     </FluentButton>
-    <FluentButton IconStart="@(new IconsRegular20.Edit())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)">
+    <FluentButton IconStart="@(new IconsRegular20.Edit())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="EditWebSite">
         Edit
     </FluentButton>
-    <FluentButton IconStart="@(new IconsRegular20.Delete())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)">
+    <FluentButton IconStart="@(new IconsRegular20.Delete())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="DeleteWebSite">
         Delete
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
@@ -48,7 +49,7 @@
     </FluentButton>
 </FluentToolbar>
 
-<AutoDataGrid TItem="WebSiteInstance" Items="@Instances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" GridTemplateColumns="1fr 2fr 1fr 1fr">
+<AutoDataGrid TItem="WebSiteInstance" Items="@Instances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@EditWebSiteInstance" GridTemplateColumns="1fr 2fr 1fr 1fr">
     <ChildContent>
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Name" Property="@(i => i.Configuration.Name)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Path" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
@@ -115,27 +116,73 @@
 
     #region Dialog Management
 
-    private async Task ShowDotnetVersionsDialog()
-    => await DialogsService.ShowDialogAsync<DotnetVersionsDialog>(new() { Width = "", Height = "", Modal = true });
+    private async Task ShowDotnetVersionsDialog() => await DialogsService.ShowDialogAsync<DotnetVersionsDialog>();
 
-    private async Task ShowAspNetReleasesDialog()
-    => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>(new() { Width = "", Height = "", Modal = true });
+    private async Task ShowAspNetReleasesDialog() => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>();
 
     private async Task ShowFileSelectionDialog()
     {
-        var dialog = await DialogsService.ShowDialogAsync<FileSelectionDialog>(new() { Width = "80%", Height = "80%", Modal = true, });
+        var dialog = await DialogsService.ShowDialogAsync<FileSelectionDialog>("80%");
         var result = await dialog.Result;
 
-        if (result.Cancelled || result.Data == null)
+        if (result.Cancelled || result.Data is not FileStationFile selectedFile)
         {
             return;
         }
 
-        // Handle the selected file
-        var selectedFile = result.Data as FileStationFile;
-        if (selectedFile != null)
+        await DialogsService.ShowInfoAsync($"Selected file: {selectedFile.Name}\nPath: {selectedFile.Path}");
+    }
+
+    private async Task AddWebSite() => await ShowWebSiteConfigurationDialogAsync(WebSiteInstance.New());
+
+    private async Task EditWebSite() => await ShowWebSiteConfigurationDialogAsync(SelectedInstance);
+
+    private async Task EditWebSiteInstance(WebSiteInstance instance) => await ShowWebSiteConfigurationDialogAsync(instance);
+
+    private async Task DeleteWebSite()
+    {
+        if (SelectedInstance is null)
         {
-            await DialogsService.ShowInfoAsync($"Selected file: {selectedFile.Name}\nPath: {selectedFile.Path}");
+            return;
+        }
+
+        var dialog = await DialogsService.ShowConfirmationAsync($"Are you sure you want to delete '{SelectedInstance.Configuration.Name}'?");
+        var confirmResult = await dialog.Result;
+
+        if (confirmResult.Cancelled)
+        {
+            return;
+        }
+
+        var siteName = SelectedInstance.Configuration.Name;
+
+        using var worker = this.CreateWorkingState($"Deleting '{siteName}'...");
+
+        await Task.Delay(100);
+
+        var result = await hostingService.RemoveInstanceAsync(siteName);
+        await HandleOperationResultAsync(result, $"Site '{siteName}' deleted successfully.");
+
+        if (result.Success)
+        {
+            SelectedInstance = null;
+            await LoadInstancesAsync();
+        }
+    }
+
+    private async Task ShowWebSiteConfigurationDialogAsync(WebSiteInstance? instance)
+    {
+        if (instance is null)
+        {
+            return;
+        }
+
+        var dialog = await DialogsService.ShowDialogAsync<WebSiteConfigurationDialog>(instance, "600px");
+        var result = await dialog.Result;
+
+        if (!result.Cancelled)
+        {
+            await LoadInstancesAsync();
         }
     }
 
@@ -158,7 +205,10 @@
 
         using var worker = this.CreateWorkingState($"Starting site '{SelectedInstance.Configuration.Name}'...");
 
-        await ExecuteSiteActionAsync(() => hostingService.StartSiteAsync(SelectedInstance.Configuration.Name), "started");
+        await Task.Delay(100);
+
+        var result = await hostingService.StartSiteAsync(SelectedInstance.Configuration.Name);
+        await HandleOperationResultAsync(result, $"Site '{SelectedInstance.Configuration.Name}' started successfully.");
     }
 
     private async Task StopSelectedInstance()
@@ -170,29 +220,21 @@
 
         using var worker = this.CreateWorkingState($"Stopping site '{SelectedInstance.Configuration.Name}'...");
 
-        await ExecuteSiteActionAsync(() => Task.FromResult(hostingService.StopSiteAsync(SelectedInstance)), "stopped");
+        await Task.Delay(100);
+
+        var result = hostingService.StopSiteAsync(SelectedInstance);
+        await HandleOperationResultAsync(result, $"Site '{SelectedInstance.Configuration.Name}' stopped successfully.");
     }
 
-    private async Task ExecuteSiteActionAsync(Func<Task<OperationResult>> action, string actionVerb)
+    private async Task HandleOperationResultAsync(OperationResult result, string successMessage)
     {
-        await Task.Delay(100); // Dig later to know why it is required
-
-        try
+        if (result.Success)
         {
-            var result = await action();
-
-            if (result.Success)
-            {
-                await DialogsService.ShowSuccessAsync($"Site '{SelectedInstance!.Configuration.Name}' {actionVerb} successfully.");
-            }
-            else
-            {
-                await DialogsService.ShowErrorAsync(result.ErrorMessage ?? $"Failed to {actionVerb.TrimEnd('d', 'e')} site '{SelectedInstance!.Configuration.Name}'.");
-            }
+            await DialogsService.ShowSuccessAsync(successMessage);
         }
-        catch (Exception ex)
+        else
         {
-            await DialogsService.ShowErrorAsync($"Error {actionVerb.TrimEnd('d', 'e')}ing site: {ex.Message}");
+            await DialogsService.ShowErrorAsync(result.ErrorMessage!);
         }
     }
 

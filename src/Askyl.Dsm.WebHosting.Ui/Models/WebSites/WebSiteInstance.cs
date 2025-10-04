@@ -4,7 +4,10 @@ namespace Askyl.Dsm.WebHosting.Ui.Models.WebSites;
 
 public class WebSiteInstance(WebSiteConfiguration configuration)
 {
-    public WebSiteConfiguration Configuration { get; set; } = configuration;
+    public static WebSiteInstance New()
+        => new(new());
+        
+    public WebSiteConfiguration Configuration { get; set; } = configuration ?? new();
 
     public ProcessInfo? Process { get; set; }
 

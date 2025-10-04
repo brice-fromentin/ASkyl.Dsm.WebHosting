@@ -74,6 +74,59 @@ public class WebSiteHostingService(ILogger<WebSiteHostingService> logger, IWebSi
         return _instances.Values;
     }
 
+    public void AddInstance(WebSiteConfiguration configuration)
+    {
+        var instance = new WebSiteInstance(configuration);
+        _instances[configuration.Name] = instance;
+        _logger.LogInformation("Instance added for site: {SiteName}", configuration.Name);
+    }
+
+    public void UpdateInstance(WebSiteConfiguration configuration)
+    {
+        if (_instances.TryGetValue(configuration.Name, out var instance))
+        {
+            instance.Configuration = configuration;
+            _logger.LogInformation("Instance updated for site: {SiteName}", configuration.Name);
+        }
+        else
+        {
+            _logger.LogWarning("Cannot update instance: site {SiteName} not found", configuration.Name);
+        }
+    }
+
+    public async Task<OperationResult> RemoveInstanceAsync(string siteName)
+    {
+        if (!_instances.TryRemove(siteName, out var instance))
+        {
+            _logger.LogWarning("Cannot remove instance: site {SiteName} not found", siteName);
+            return OperationResult.CreateFailure($"Instance '{siteName}' not found");
+        }
+
+        try
+        {
+            if (instance.IsRunning)
+            {
+                var stopResult = StopSiteAsync(instance);
+
+                if (!stopResult.Success)
+                {
+                    _instances[siteName] = instance;
+                    return OperationResult.CreateFailure($"Failed to stop site before deletion: {stopResult.ErrorMessage}");
+                }
+            }
+
+            await _configService.RemoveSiteAsync(siteName);
+            _logger.LogInformation("Instance removed for site: {SiteName}", siteName);
+            return OperationResult.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            _instances[siteName] = instance;
+            _logger.LogError(ex, "Failed to remove site: {SiteName}", siteName);
+            return OperationResult.CreateFailure($"Failed to remove site: {ex.Message}");
+        }
+    }
+
     public Task<OperationResult> StartSiteAsync(string siteName)
     {
         if (!_instances.TryGetValue(siteName, out var instance))

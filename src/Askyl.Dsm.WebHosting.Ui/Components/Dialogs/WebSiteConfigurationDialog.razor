@@ -1,0 +1,149 @@
+@using Askyl.Dsm.WebHosting.Data.WebSites
+@using Askyl.Dsm.WebHosting.Tools.Network
+@using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
+@using Askyl.Dsm.WebHosting.Ui.Extensions
+@using Askyl.Dsm.WebHosting.Ui.Models.WebSites
+
+@implements IDialogContentComponent<WebSiteInstance>
+@implements IWorkingState
+
+@inject IDialogService DialogService
+@inject IWebSitesConfigurationService ConfigService
+@inject WebSiteHostingService HostingService
+
+<LoadingOverlay WorkingStateComponent="@this" />
+
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentLabel Typo="Typography.H2">@(IsEditMode ? "Edit Website" : "Add Website")</FluentLabel>
+</FluentDialogHeader>
+
+
+
+<FluentDialogBody>
+    <EditForm Model="@Configuration" OnValidSubmit="ConfirmAsync">
+        <DataAnnotationsValidator />
+        <FluentStack Orientation="Orientation.Vertical">
+            <FluentTextField @bind-Value="Configuration.Name" Label="Name" Required autofocus Class="full-size" />
+            <FluentValidationMessage For="@(() => Configuration.Name)" />
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentLabel>Application Path *</FluentLabel>
+                <FluentStack Orientation="Orientation.Horizontal">
+                    <FluentTextField @bind-Value="Configuration.ApplicationPath" Required Style="flex: 1;" />
+                    <FluentButton IconStart="@(new IconsRegular20.FolderOpen())" Appearance="Appearance.Outline" OnClick="SelectApplicationPath" Type="ButtonType.Button" />
+                </FluentStack>
+            </FluentStack>
+            <FluentValidationMessage For="@(() => Configuration.ApplicationPath)" />
+            <FluentStack Orientation="Orientation.Horizontal">
+                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+                    <FluentTextField @bind-Value="Configuration.Environment" Label="Environment" Required Class="full-size" />
+                    <FluentValidationMessage For="@(() => Configuration.Environment)" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+                    <FluentNumberField @bind-Value="Configuration.Port" Label="Port" Required Class="full-size" />
+                    <FluentValidationMessage For="@(() => Configuration.Port)" />
+                </FluentStack>
+            </FluentStack>
+            <FluentCheckbox @bind-Value="Configuration.IsEnabled" Label="Enabled" />
+            <FluentCheckbox @bind-Value="Configuration.AutoStart" Label="Auto Start" />
+        </FluentStack>
+        <div class="fluent-dialog-footer">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
+                <FluentButton OnClick="CancelAsync" Appearance="Appearance.Neutral" Type="ButtonType.Button">
+                    Cancel
+                </FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">
+                    @(IsEditMode ? "Update" : "Create")
+                </FluentButton>
+            </FluentStack>
+        </div>
+    </EditForm>
+</FluentDialogBody>
+
+<FluentDialogFooter Style="display: none;">
+    Workaround
+</FluentDialogFooter>
+
+@code
+{
+    #region Parameters
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    [Parameter]
+    public WebSiteInstance Content { get; set; } = default!;
+
+    #endregion
+
+    #region Properties and Fields
+
+    private WebSiteConfiguration Configuration { get; set; } = default!;
+
+    private bool IsEditMode => !String.IsNullOrEmpty(Content?.Configuration?.Name);
+
+    #endregion
+
+    #region IWorkingState Implementation
+
+    public bool IsWorking { get; set; }
+
+    public string Message { get; set; } = "";
+
+    public void NotifyStateChanged() => StateHasChanged();
+
+    #endregion
+
+    #region Lifecycle
+
+    protected override void OnInitialized() => Configuration = Content?.Configuration?.Clone() ?? new();
+
+    #endregion
+
+    #region Dialog Actions
+
+    private async Task SelectApplicationPath()
+    {
+        var dialog = await DialogService.ShowDialogAsync<FileSelectionDialog>("80%");
+        var result = await dialog.Result;
+
+        if (result.Cancelled || result.Data is not FileStationFile selectedFile)
+        {
+            return;
+        }
+
+        Configuration.ApplicationPath = selectedFile.Additional?.RealPath ?? "";
+    }
+
+    private async Task ConfirmAsync(EditContext context)
+    {
+        using var worker = this.CreateWorkingState(IsEditMode ? $"Updating '{Configuration.Name}'..." : $"Creating '{Configuration.Name}'...");
+
+        await Task.Delay(100);
+
+        try
+        {
+            if (IsEditMode)
+            {
+                await ConfigService.UpdateSiteAsync(Configuration);
+                HostingService.UpdateInstance(Configuration);
+            }
+            else
+            {
+                await ConfigService.AddSiteAsync(Configuration);
+                HostingService.AddInstance(Configuration);
+            }
+
+            await DialogService.ShowSuccessAsync($"Website '{Configuration.Name}' {(IsEditMode ? "updated" : "created")} successfully.");
+            await Dialog.CloseAsync(Configuration);
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowErrorAsync($"Error {(IsEditMode ? "updating" : "creating")} website: {ex.Message}");
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+
+    #endregion
+}
