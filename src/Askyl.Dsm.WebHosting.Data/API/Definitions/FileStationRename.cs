@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationRename : IGenericCloneable<FileStationRename>
+[GenerateClone]
+public partial class FileStationRename
 {
     [JsonPropertyName("path")]
     public string Path { get; set; } = default!;
@@ -12,12 +14,4 @@ public class FileStationRename : IGenericCloneable<FileStationRename>
 
     [JsonPropertyName("additional")]
     public string? Additional { get; set; }
-
-    public FileStationRename Clone()
-        => new()
-        {
-            Path = this.Path,
-            Name = this.Name,
-            Additional = this.Additional
-        };
 }

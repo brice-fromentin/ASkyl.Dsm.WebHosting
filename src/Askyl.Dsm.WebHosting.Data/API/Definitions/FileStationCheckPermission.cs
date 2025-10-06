@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationCheckPermission : IGenericCloneable<FileStationCheckPermission>
+[GenerateClone]
+public partial class FileStationCheckPermission
 {
     [JsonPropertyName("path")]
     public string Path { get; set; } = default!;
@@ -12,12 +14,4 @@ public class FileStationCheckPermission : IGenericCloneable<FileStationCheckPerm
 
     [JsonPropertyName("overwrite")]
     public bool? Overwrite { get; set; }
-
-    public FileStationCheckPermission Clone()
-        => new()
-        {
-            Path = this.Path,
-            Filename = this.Filename,
-            Overwrite = this.Overwrite
-        };
 }

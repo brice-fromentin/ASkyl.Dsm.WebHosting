@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationThumb : IGenericCloneable<FileStationThumb>
+[GenerateClone]
+public partial class FileStationThumb
 {
     [JsonPropertyName("path")]
     public string Path { get; set; } = default!;
@@ -12,12 +14,4 @@ public class FileStationThumb : IGenericCloneable<FileStationThumb>
 
     [JsonPropertyName("rotate")]
     public int? Rotate { get; set; } = 0; // 0, 90, 180, 270
-
-    public FileStationThumb Clone()
-        => new()
-        {
-            Path = this.Path,
-            Size = this.Size,
-            Rotate = this.Rotate
-        };
 }

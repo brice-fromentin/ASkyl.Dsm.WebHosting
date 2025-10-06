@@ -1,7 +1,8 @@
+using Askyl.Dsm.WebHosting.SourceGenerators;
+
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters;
 
-public class ApiParametersNone : IGenericCloneable<ApiParametersNone>
+[GenerateClone]
+public partial class ApiParametersNone
 {
-    public ApiParametersNone Clone()
-        => new();
 }

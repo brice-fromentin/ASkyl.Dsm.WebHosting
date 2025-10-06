@@ -1,10 +1,11 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationCompress : IGenericCloneable<FileStationCompress>
+[GenerateClone]
+public partial class FileStationCompress
 {
     [JsonPropertyName("path")]
     public List<string> Paths { get; set; } = [];
@@ -23,15 +24,4 @@ public class FileStationCompress : IGenericCloneable<FileStationCompress>
 
     [JsonPropertyName("password")]
     public string? Password { get; set; }
-
-    public FileStationCompress Clone()
-        => new()
-        {
-            Paths = [.. this.Paths],
-            DestFilePath = this.DestFilePath,
-            Level = this.Level,
-            Mode = this.Mode,
-            Format = this.Format,
-            Password = this.Password
-        };
 }

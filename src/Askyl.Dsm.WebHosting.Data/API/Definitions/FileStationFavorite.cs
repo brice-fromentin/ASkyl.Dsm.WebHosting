@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationFavorite : IGenericCloneable<FileStationFavorite>
+[GenerateClone]
+public partial class FileStationFavorite
 {
     [JsonPropertyName("path")]
     public string? Path { get; set; }
@@ -21,15 +23,4 @@ public class FileStationFavorite : IGenericCloneable<FileStationFavorite>
 
     [JsonPropertyName("sort_direction")]
     public string? SortDirection { get; set; } = "asc";
-
-    public FileStationFavorite Clone()
-        => new()
-        {
-            Path = this.Path,
-            Name = this.Name,
-            Offset = this.Offset,
-            Limit = this.Limit,
-            SortBy = this.SortBy,
-            SortDirection = this.SortDirection
-        };
 }

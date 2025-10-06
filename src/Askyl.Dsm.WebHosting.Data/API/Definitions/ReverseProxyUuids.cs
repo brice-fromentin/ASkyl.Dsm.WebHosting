@@ -1,7 +1,8 @@
+using Askyl.Dsm.WebHosting.SourceGenerators;
+
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class ReverseProxyUuids : List<Guid>, IGenericCloneable<ReverseProxyUuids>
+[GenerateClone]
+public partial class ReverseProxyUuids : List<Guid>
 {
-    public ReverseProxyUuids Clone()
-        => [.. this];
 }

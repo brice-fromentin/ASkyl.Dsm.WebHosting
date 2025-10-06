@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationTime : IGenericCloneable<FileStationTime>
+[GenerateClone]
+public partial class FileStationTime
 {
     [JsonPropertyName("atime")]
     public long? AccessTime { get; set; }
@@ -15,13 +17,4 @@ public class FileStationTime : IGenericCloneable<FileStationTime>
 
     [JsonPropertyName("crtime")]
     public long? CreationTime { get; set; }
-
-    public FileStationTime Clone()
-        => new()
-        {
-            AccessTime = this.AccessTime,
-            ModifyTime = this.ModifyTime,
-            CreateTime = this.CreateTime,
-            CreationTime = this.CreationTime
-        };
 }

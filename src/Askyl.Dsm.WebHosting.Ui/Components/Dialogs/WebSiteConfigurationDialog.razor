@@ -2,7 +2,7 @@
 @using Askyl.Dsm.WebHosting.Tools.Network
 @using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
 @using Askyl.Dsm.WebHosting.Ui.Extensions
-@using Askyl.Dsm.WebHosting.Ui.Models.WebSites
+
 
 @implements IDialogContentComponent<WebSiteInstance>
 @implements IWorkingState
@@ -10,15 +10,13 @@
 @inject IDialogService DialogService
 @inject IWebSitesConfigurationService ConfigService
 @inject WebSiteHostingService HostingService
+@inject IFileSystemService FileSystemService
 
 <LoadingOverlay WorkingStateComponent="@this" />
-
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">@(IsEditMode ? "Edit Website" : "Add Website")</FluentLabel>
 </FluentDialogHeader>
-
-
 
 <FluentDialogBody>
     <EditForm Model="@Configuration" OnValidSubmit="ConfirmAsync">
@@ -80,7 +78,7 @@
 
     private WebSiteConfiguration Configuration { get; set; } = default!;
 
-    private bool IsEditMode => !String.IsNullOrEmpty(Content?.Configuration?.Name);
+    private bool IsEditMode => Content?.Configuration?.Id != Guid.Empty;
 
     #endregion
 
@@ -112,29 +110,37 @@
             return;
         }
 
-        Configuration.ApplicationPath = selectedFile.Additional?.RealPath ?? "";
+        Configuration.ApplicationPath = selectedFile.Path;
+        Configuration.ApplicationRealPath = selectedFile.Additional?.RealPath ?? "";
     }
 
     private async Task ConfirmAsync(EditContext context)
     {
-        using var worker = this.CreateWorkingState(IsEditMode ? $"Updating '{Configuration.Name}'..." : $"Creating '{Configuration.Name}'...");
-
-        await Task.Delay(100);
-
         try
         {
+            if (String.IsNullOrEmpty(Configuration.ApplicationPath) || String.IsNullOrEmpty(Configuration.ApplicationRealPath))
+            {
+                await DialogService.ShowErrorAsync("Application path is required. Please select a valid application path.");
+                return;
+            }
+
+            using var worker = this.CreateWorkingState("Setting permissions for http group...");
+
+            await FileSystemService.SetHttpGroupPermissionsAsync(Configuration.ApplicationPath, Configuration.ApplicationRealPath);
+
+            worker.UpdateMessage(IsEditMode ? $"Updating '{Configuration.Name}'..." : $"Creating '{Configuration.Name}'...");
+
             if (IsEditMode)
             {
                 await ConfigService.UpdateSiteAsync(Configuration);
-                HostingService.UpdateInstance(Configuration);
+                await HostingService.UpdateInstanceAsync(Content, Configuration);
             }
             else
             {
                 await ConfigService.AddSiteAsync(Configuration);
-                HostingService.AddInstance(Configuration);
+                await HostingService.AddInstanceAsync(Configuration);
             }
 
-            await DialogService.ShowSuccessAsync($"Website '{Configuration.Name}' {(IsEditMode ? "updated" : "created")} successfully.");
             await Dialog.CloseAsync(Configuration);
         }
         catch (Exception ex)

@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationExtract : IGenericCloneable<FileStationExtract>
+[GenerateClone]
+public partial class FileStationExtract
 {
     [JsonPropertyName("file_path")]
     public string FilePath { get; set; } = default!;
@@ -27,17 +29,4 @@ public class FileStationExtract : IGenericCloneable<FileStationExtract>
 
     [JsonPropertyName("item_id")]
     public List<int>? ItemIds { get; set; }
-
-    public FileStationExtract Clone()
-        => new()
-        {
-            FilePath = this.FilePath,
-            DestFolderPath = this.DestFolderPath,
-            Overwrite = this.Overwrite,
-            KeepDir = this.KeepDir,
-            CreateSubfolder = this.CreateSubfolder,
-            Codepage = this.Codepage,
-            Password = this.Password,
-            ItemIds = this.ItemIds?.ToList()
-        };
 }

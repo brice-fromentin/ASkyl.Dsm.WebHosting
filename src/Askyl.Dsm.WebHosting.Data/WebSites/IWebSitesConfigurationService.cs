@@ -2,13 +2,7 @@ namespace Askyl.Dsm.WebHosting.Data.WebSites;
 
 public interface IWebSitesConfigurationService
 {
-    Task<WebSitesConfiguration> LoadConfigurationAsync();
-
-    Task SaveConfigurationAsync(WebSitesConfiguration collection);
-
-    Task EnsureLoadedAsync();
-
-    Task<WebSiteConfiguration?> GetSiteAsync(string siteName);
+    Task<WebSiteConfiguration?> GetSiteAsync(Guid siteId);
 
     Task<IEnumerable<WebSiteConfiguration>> GetAllSitesAsync();
 
@@ -18,7 +12,5 @@ public interface IWebSitesConfigurationService
 
     Task UpdateSiteAsync(WebSiteConfiguration site);
 
-    Task RemoveSiteAsync(string siteName);
-
-    Task<bool> SiteExistsAsync(string siteName);
+    Task RemoveSiteAsync(Guid siteId);
 }

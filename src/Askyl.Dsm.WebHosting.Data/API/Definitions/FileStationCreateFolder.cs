@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationCreateFolder : IGenericCloneable<FileStationCreateFolder>
+[GenerateClone]
+public partial class FileStationCreateFolder
 {
     [JsonPropertyName("folder_path")]
     public string FolderPath { get; set; } = default!;
@@ -15,13 +17,4 @@ public class FileStationCreateFolder : IGenericCloneable<FileStationCreateFolder
 
     [JsonPropertyName("additional")]
     public string? Additional { get; set; }
-
-    public FileStationCreateFolder Clone()
-        => new()
-        {
-            FolderPath = this.FolderPath,
-            Name = this.Name,
-            ForceParent = this.ForceParent,
-            Additional = this.Additional
-        };
 }

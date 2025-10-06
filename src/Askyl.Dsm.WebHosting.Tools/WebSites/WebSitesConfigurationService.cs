@@ -2,33 +2,30 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.WebSites;
+using Askyl.Dsm.WebHosting.Tools.Threading;
 
 namespace Askyl.Dsm.WebHosting.Tools.WebSites;
 
 public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> logger) : IWebSitesConfigurationService
 {
-    private readonly string _configurationFilePath = InitializeConfigurationPath();
+    #region Fields
+
+    private readonly string _configurationFilePath = Path.Combine(AppContext.BaseDirectory, ApplicationConstants.WebSitesConfigFileName);
     private readonly ILogger<WebSitesConfigurationService> _logger = logger;
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     private WebSitesConfiguration? _cachedConfiguration;
 
-    private static string InitializeConfigurationPath()
-    {
-        var configPath = Path.Combine(AppContext.BaseDirectory, ApplicationConstants.WebSitesConfigFileName);
-        var configDirectory = Path.GetDirectoryName(configPath);
-        if (!String.IsNullOrEmpty(configDirectory))
-        {
-            Directory.CreateDirectory(configDirectory);
-        }
-        return configPath;
-    }
+    #endregion
 
-    public async Task<WebSitesConfiguration> LoadConfigurationAsync()
+    #region Configuration Management
+
+    private async Task<WebSitesConfiguration> LoadConfigurationAsync()
     {
         try
         {
@@ -50,7 +47,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         }
     }
 
-    public async Task SaveConfigurationAsync(WebSitesConfiguration collection)
+    private async Task SaveConfigurationAsync(WebSitesConfiguration collection)
     {
         try
         {
@@ -67,7 +64,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         }
     }
 
-    public async Task EnsureLoadedAsync()
+    private async Task EnsureLoadedAsync()
     {
         if (_cachedConfiguration == null)
         {
@@ -76,68 +73,83 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         }
     }
 
-    public async Task<WebSiteConfiguration?> GetSiteAsync(string siteName)
+    #endregion
+
+    #region Site Retrieval
+
+    public async Task<WebSiteConfiguration?> GetSiteAsync(Guid siteId)
     {
-        await EnsureLoadedAsync();
-        return _cachedConfiguration!.Sites.FirstOrDefault(s => s.Name == siteName);
+        using (await SemaphoreLock.AcquireAsync(_semaphore, EnsureLoadedAsync))
+        {
+            return _cachedConfiguration!.Sites.FirstOrDefault(s => s.Id == siteId);
+        }
     }
 
     public async Task<IEnumerable<WebSiteConfiguration>> GetAllSitesAsync()
     {
-        await EnsureLoadedAsync();
-        return _cachedConfiguration!.Sites;
+        using (await SemaphoreLock.AcquireAsync(_semaphore, EnsureLoadedAsync))
+        {
+            return [.. _cachedConfiguration!.Sites];
+        }
     }
 
     public async Task<IEnumerable<WebSiteConfiguration>> GetSitesToStartAsync()
     {
-        await EnsureLoadedAsync();
-        return _cachedConfiguration!.Sites.Where(site => site.IsEnabled && site.AutoStart);
+        using (await SemaphoreLock.AcquireAsync(_semaphore, EnsureLoadedAsync))
+        {
+            return [.. _cachedConfiguration!.Sites.Where(site => site.IsEnabled && site.AutoStart)];
+        }
     }
+
+    #endregion
+
+    #region Site Modification
 
     public async Task AddSiteAsync(WebSiteConfiguration site)
     {
-        await EnsureLoadedAsync();
-
-        if (_cachedConfiguration!.Sites.Any(s => s.Name == site.Name))
+        using (await SemaphoreLock.AcquireAsync(_semaphore, EnsureLoadedAsync))
         {
-            throw new InvalidOperationException($"Site with name '{site.Name}' already exists");
-        }
+            if (_cachedConfiguration!.Sites.Any(s => s.Name == site.Name))
+            {
+                throw new InvalidOperationException($"Site with name '{site.Name}' already exists");
+            }
 
-        _cachedConfiguration.Sites.Add(site);
-        await SaveConfigurationAsync(_cachedConfiguration);
+            site.Id = Guid.NewGuid();
+            _cachedConfiguration.Sites.Add(site);
+            await SaveConfigurationAsync(_cachedConfiguration);
+        }
     }
 
     public async Task UpdateSiteAsync(WebSiteConfiguration site)
     {
-        await EnsureLoadedAsync();
-        var existingSiteIndex = _cachedConfiguration!.Sites.FindIndex(s => s.Name == site.Name);
-
-        if (existingSiteIndex == -1)
+        using (await SemaphoreLock.AcquireAsync(_semaphore, EnsureLoadedAsync))
         {
-            throw new InvalidOperationException($"Site with name '{site.Name}' not found");
-        }
+            var existingSiteIndex = _cachedConfiguration!.Sites.FindIndex(s => s.Id == site.Id);
 
-        _cachedConfiguration.Sites[existingSiteIndex] = site;
-        await SaveConfigurationAsync(_cachedConfiguration);
+            if (existingSiteIndex == -1)
+            {
+                throw new InvalidOperationException($"Site with Id '{site.Id}' not found");
+            }
+
+            if (_cachedConfiguration.Sites.Any(s => s.Name == site.Name && s.Id != site.Id))
+            {
+                throw new InvalidOperationException($"Site with name '{site.Name}' already exists");
+            }
+
+            _cachedConfiguration.Sites[existingSiteIndex] = site;
+            await SaveConfigurationAsync(_cachedConfiguration);
+        }
     }
 
-    public async Task RemoveSiteAsync(string siteName)
+    public async Task RemoveSiteAsync(Guid siteId)
     {
-        await EnsureLoadedAsync();
-        var site = _cachedConfiguration!.Sites.FirstOrDefault(s => s.Name == siteName);
-
-        if (site == null)
+        using (await SemaphoreLock.AcquireAsync(_semaphore, EnsureLoadedAsync))
         {
-            throw new InvalidOperationException($"Site with name '{siteName}' not found");
+            var site = _cachedConfiguration!.Sites.FirstOrDefault(s => s.Id == siteId) ?? throw new InvalidOperationException($"Site with Id '{siteId}' not found");
+            _cachedConfiguration.Sites.Remove(site);
+            await SaveConfigurationAsync(_cachedConfiguration);
         }
-
-        _cachedConfiguration.Sites.Remove(site);
-        await SaveConfigurationAsync(_cachedConfiguration);
     }
 
-    public async Task<bool> SiteExistsAsync(string siteName)
-    {
-        await EnsureLoadedAsync();
-        return _cachedConfiguration!.Sites.Any(s => s.Name == siteName);
-    }
+    #endregion
 }

@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationSharing : IGenericCloneable<FileStationSharing>
+[GenerateClone]
+public partial class FileStationSharing
 {
     [JsonPropertyName("path")]
     public string? Path { get; set; }
@@ -33,19 +35,4 @@ public class FileStationSharing : IGenericCloneable<FileStationSharing>
 
     [JsonPropertyName("id")]
     public string? Id { get; set; }
-
-    public FileStationSharing Clone()
-        => new()
-        {
-            Path = this.Path,
-            Password = this.Password,
-            DateExpired = this.DateExpired,
-            DateAvailable = this.DateAvailable,
-            Offset = this.Offset,
-            Limit = this.Limit,
-            SortBy = this.SortBy,
-            SortDirection = this.SortDirection,
-            ForceSecure = this.ForceSecure,
-            Id = this.Id
-        };
 }

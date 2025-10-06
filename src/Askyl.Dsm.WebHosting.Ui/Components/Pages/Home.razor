@@ -6,7 +6,6 @@
 @using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
 @using Askyl.Dsm.WebHosting.Ui.Extensions
 @using Askyl.Dsm.WebHosting.Ui.Models.Results
-@using Askyl.Dsm.WebHosting.Ui.Models.WebSites
 
 @implements IWorkingState
 
@@ -32,17 +31,18 @@
         Delete
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
-    <FluentButton IconStart="@(new IconsRegular20.Play())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null || SelectedInstance.IsRunning)" OnClick="StartSelectedInstance" />
-    <FluentButton IconStart="@(new IconsRegular20.Stop())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null || !SelectedInstance.IsRunning)" OnClick="StopSelectedInstance" />
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null || SelectedInstance.IsRunning)" OnClick="StartSelectedInstance" >
+        <FluentIcon Value="@(new IconsRegular20.Play())" Color="Color.Success" />    
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null || !SelectedInstance.IsRunning)" OnClick="StopSelectedInstance" >
+        <FluentIcon Value="@(new IconsRegular20.Stop())" Color="Color.Error" />    
+    </FluentButton>
     <FluentSpacer />
     <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="Appearance.Outline">
         .NET Version
     </FluentButton>
     <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="Appearance.Outline">
         ASP.NET Online
-    </FluentButton>
-    <FluentButton OnClick="ShowFileSelectionDialog" Appearance="Appearance.Outline">
-        Select File
     </FluentButton>
     <FluentButton OnClick="DownloadLogs" Appearance="Appearance.Outline">
         Download Logs
@@ -120,19 +120,6 @@
 
     private async Task ShowAspNetReleasesDialog() => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>();
 
-    private async Task ShowFileSelectionDialog()
-    {
-        var dialog = await DialogsService.ShowDialogAsync<FileSelectionDialog>("80%");
-        var result = await dialog.Result;
-
-        if (result.Cancelled || result.Data is not FileStationFile selectedFile)
-        {
-            return;
-        }
-
-        await DialogsService.ShowInfoAsync($"Selected file: {selectedFile.Name}\nPath: {selectedFile.Path}");
-    }
-
     private async Task AddWebSite() => await ShowWebSiteConfigurationDialogAsync(WebSiteInstance.New());
 
     private async Task EditWebSite() => await ShowWebSiteConfigurationDialogAsync(SelectedInstance);
@@ -160,7 +147,7 @@
 
         await Task.Delay(100);
 
-        var result = await hostingService.RemoveInstanceAsync(siteName);
+        var result = await hostingService.RemoveInstanceAsync(SelectedInstance.Id);
         await HandleOperationResultAsync(result, $"Site '{siteName}' deleted successfully.");
 
         if (result.Success)
@@ -207,7 +194,7 @@
 
         await Task.Delay(100);
 
-        var result = await hostingService.StartSiteAsync(SelectedInstance.Configuration.Name);
+        var result = await hostingService.StartSiteAsync(SelectedInstance);
         await HandleOperationResultAsync(result, $"Site '{SelectedInstance.Configuration.Name}' started successfully.");
     }
 
@@ -222,7 +209,7 @@
 
         await Task.Delay(100);
 
-        var result = hostingService.StopSiteAsync(SelectedInstance);
+        var result = await hostingService.StopSiteAsync(SelectedInstance);
         await HandleOperationResultAsync(result, $"Site '{SelectedInstance.Configuration.Name}' stopped successfully.");
     }
 

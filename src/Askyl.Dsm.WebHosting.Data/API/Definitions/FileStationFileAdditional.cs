@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationFileAdditional : IGenericCloneable<FileStationFileAdditional>
+[GenerateClone]
+public partial class FileStationFileAdditional
 {
     [JsonPropertyName("real_path")]
     public string? RealPath { get; set; }
@@ -24,16 +26,4 @@ public class FileStationFileAdditional : IGenericCloneable<FileStationFileAdditi
 
     [JsonPropertyName("type")]
     public string? FileType { get; set; }
-
-    public FileStationFileAdditional Clone()
-        => new()
-        {
-            RealPath = this.RealPath,
-            Size = this.Size,
-            Owner = this.Owner?.Clone(),
-            Time = this.Time?.Clone(),
-            Permission = this.Permission?.Clone(),
-            MountPointType = this.MountPointType,
-            FileType = this.FileType
-        };
 }

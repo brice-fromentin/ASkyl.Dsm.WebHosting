@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
+using Askyl.Dsm.WebHosting.Data.API.Parameters.CoreAclAPI;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
 using Askyl.Dsm.WebHosting.Data.API.Responses;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
@@ -8,19 +9,20 @@ using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
-public interface IFileNavigationService
+public interface IFileSystemService
 {
     Task<List<TreeViewItem>> GetSharedFoldersAsync(Func<string, Task> errorHandler);
     Task<IQueryable<FileStationFile>> GetDirectoryContentsAsync(string path);
+    Task<string> SetHttpGroupPermissionsAsync(string path, string realPath, bool isDirectory = false);
 }
 
-public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigationService> logger) : IFileNavigationService
+public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService> logger) : IFileSystemService
 {
 
     #region Fields
 
     private readonly DsmApiClient _apiClient = apiClient;
-    private readonly ILogger<FileNavigationService> _logger = logger;
+    private readonly ILogger<FileSystemService> _logger = logger;
 
     #endregion
 
@@ -61,6 +63,73 @@ public class FileNavigationService(DsmApiClient apiClient, ILogger<FileNavigatio
         _logger.LogDebug("Retrieved {DirectoryCount} directories and {FileCount} files from {Path}", directories.Count, files.Count, path);
 
         return allContents.AsQueryable();
+    }
+
+    public async Task<string> SetHttpGroupPermissionsAsync(string path, string realPath, bool isDirectory = false)
+    {
+        _logger.LogDebug("Setting HTTP group permissions for path: {Path}", path);
+
+        if (String.IsNullOrEmpty(realPath))
+        {
+            throw new ArgumentException($"RealPath is null or empty for path: {path}");
+        }
+
+        var targetPath = isDirectory ? path : Path.GetDirectoryName(path) ?? path;
+        var targetRealPath = isDirectory ? realPath : Path.GetDirectoryName(realPath) ?? realPath;
+
+        _logger.LogDebug("Target path: {TargetPath}, Real path: {TargetRealPath}", targetPath, targetRealPath);
+
+        var parameters = new CoreAclSetParameters(_apiClient.ApiInformations);
+        parameters.Parameters.FilePath = targetRealPath;
+        parameters.Parameters.Files = targetRealPath;
+        parameters.Parameters.DirPaths = targetPath;
+        parameters.Parameters.ChangeAcl = true;
+        parameters.Parameters.Inherited = true;
+        parameters.Parameters.AclRecur = false;
+
+        parameters.Parameters.Rules =
+        [
+            new()
+            {
+                OwnerType = "group",
+                OwnerName = "http",
+                PermissionType = "allow",
+                Permission = new()
+                {
+                    ReadData = true,
+                    WriteData = true,
+                    ExeFile = true,
+                    AppendData = true,
+                    Delete = true,
+                    DeleteSub = true,
+                    ReadAttr = true,
+                    WriteAttr = true,
+                    ReadExtAttr = true,
+                    WriteExtAttr = true,
+                    ReadPerm = true,
+                    ChangePerm = false,
+                    TakeOwnership = false
+                },
+                Inherit = new()
+                {
+                    ChildFiles = true,
+                    ChildFolders = true,
+                    ThisFolder = true,
+                    AllDescendants = true
+                }
+            }
+        ];
+
+        var response = await _apiClient.ExecuteAsync<CoreAclSetResponse>(parameters);
+
+        if (response?.Success != true || response.Data?.TaskId is null)
+        {
+            _logger.LogError("Failed to set ACL permissions for {Path}: Success={Success}, ErrorCode={ErrorCode}", path, response?.Success, response?.Error?.Code);
+            throw new FileStationApiException($"Failed to set ACL permissions for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code, path);
+        }
+
+        _logger.LogInformation("ACL permissions set successfully for {Path}, TaskId: {TaskId}", path, response.Data.TaskId);
+        return response.Data.TaskId;
     }
 
     #endregion

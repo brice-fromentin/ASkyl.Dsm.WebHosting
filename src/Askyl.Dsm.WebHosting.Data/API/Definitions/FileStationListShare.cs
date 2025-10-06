@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationListShare : IGenericCloneable<FileStationListShare>
+[GenerateClone]
+public partial class FileStationListShare
 {
     [JsonPropertyName("offset")]
     public int? Offset { get; set; }
@@ -21,15 +23,4 @@ public class FileStationListShare : IGenericCloneable<FileStationListShare>
 
     [JsonPropertyName("additional")]
     public string? Additional { get; set; } // "real_path,owner,time,perm,mount_point_type,volume_status"
-
-    public FileStationListShare Clone()
-        => new()
-        {
-            Offset = this.Offset,
-            Limit = this.Limit,
-            SortBy = this.SortBy,
-            SortDirection = this.SortDirection,
-            OnlyWritable = this.OnlyWritable,
-            Additional = this.Additional
-        };
 }

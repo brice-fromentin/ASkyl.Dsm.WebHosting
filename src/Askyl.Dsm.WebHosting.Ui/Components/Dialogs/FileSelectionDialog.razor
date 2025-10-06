@@ -5,7 +5,7 @@
 @implements IWorkingState
 
 @inject IDialogService DialogService
-@inject IFileNavigationService FileNavigationService
+@inject IFileSystemService FileSystemService
 @inject IJSRuntime JSRuntime
 
 <LoadingOverlay WorkingStateComponent="@this" />
@@ -115,7 +115,7 @@
 
         try
         {
-            TreeItems = await FileNavigationService.GetSharedFoldersAsync(ShowErrorAsync);
+            TreeItems = await FileSystemService.GetSharedFoldersAsync(ShowErrorAsync);
         }
         catch
         {
@@ -152,7 +152,7 @@
 
         try
         {
-            _files = await FileNavigationService.GetDirectoryContentsAsync(selectedPath);
+            _files = await FileSystemService.GetDirectoryContentsAsync(selectedPath);
         }
         catch (FileStationApiException ex)
         {
@@ -177,12 +177,14 @@
 
     private async Task OnFileDoubleClick(FileStationFile file)
     {
-        if (!file.IsDirectory)
+        if (file.IsDirectory)
         {
+            await JSRuntime.InvokeVoidAsync("selectChildItem", file.Path, Path.GetDirectoryName(file.Path));
             return;
         }
 
-        await JSRuntime.InvokeVoidAsync("selectChildItem", file.Path, Path.GetDirectoryName(file.Path));
+        _selectedFile = file;
+        await ConfirmAsync();
     }
 
     private async Task NavigateToDirectoryAsync(string directoryPath)

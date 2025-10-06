@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationAcl : IGenericCloneable<FileStationAcl>
+[GenerateClone]
+public partial class FileStationAcl
 {
     [JsonPropertyName("append")]
     public bool? Append { get; set; }
@@ -18,14 +20,4 @@ public class FileStationAcl : IGenericCloneable<FileStationAcl>
 
     [JsonPropertyName("write")]
     public bool? Write { get; set; }
-
-    public FileStationAcl Clone()
-        => new()
-        {
-            Append = this.Append,
-            Delete = this.Delete,
-            Execute = this.Execute,
-            Read = this.Read,
-            Write = this.Write
-        };
 }

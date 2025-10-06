@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class ReverseProxy : IGenericCloneable<ReverseProxy>
+[GenerateClone]
+public partial class ReverseProxy
 {
     [JsonPropertyName("UUID")]
     public string UUID { get; set; } = default!;
@@ -36,20 +38,4 @@ public class ReverseProxy : IGenericCloneable<ReverseProxy>
 
     [JsonPropertyName("proxy_send_timeout")]
     public int ProxySendTimeout { get; set; } = 60;
-
-    public ReverseProxy Clone()
-        => new()
-        {
-            UUID = this.UUID,
-            Key = this.Key,
-            Backend = this.Backend?.Clone() ?? new(),
-            CustomizeHeaders = this.CustomizeHeaders?.Select(x => x.Clone()).ToList() ?? [],
-            Description = this.Description,
-            Frontend = this.Frontend?.Clone() ?? new(),
-            ProxyConnectTimeout = this.ProxyConnectTimeout,
-            ProxyHttpVersion = this.ProxyHttpVersion,
-            ProxyInterceptErrors = this.ProxyInterceptErrors,
-            ProxyReadTimeout = this.ProxyReadTimeout,
-            ProxySendTimeout = this.ProxySendTimeout
-        };
 }

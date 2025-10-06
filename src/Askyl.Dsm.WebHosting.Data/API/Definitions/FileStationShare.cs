@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationShare : IGenericCloneable<FileStationShare>
+[GenerateClone]
+public partial class FileStationShare
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = default!;
@@ -15,18 +17,10 @@ public class FileStationShare : IGenericCloneable<FileStationShare>
 
     [JsonPropertyName("additional")]
     public FileStationShareAdditional? Additional { get; set; }
-
-    public FileStationShare Clone()
-        => new()
-        {
-            Name = this.Name,
-            Path = this.Path,
-            IsDirectory = this.IsDirectory,
-            Additional = this.Additional?.Clone()
-        };
 }
 
-public class FileStationShareAdditional : IGenericCloneable<FileStationShareAdditional>
+[GenerateClone]
+public partial class FileStationShareAdditional
 {
     [JsonPropertyName("real_path")]
     public string? RealPath { get; set; }
@@ -45,20 +39,10 @@ public class FileStationShareAdditional : IGenericCloneable<FileStationShareAddi
 
     [JsonPropertyName("volume_status")]
     public FileStationVolumeStatus? VolumeStatus { get; set; }
-
-    public FileStationShareAdditional Clone()
-        => new()
-        {
-            RealPath = this.RealPath,
-            Owner = this.Owner?.Clone(),
-            Time = this.Time?.Clone(),
-            Permission = this.Permission?.Clone(),
-            MountPointType = this.MountPointType,
-            VolumeStatus = this.VolumeStatus?.Clone()
-        };
 }
 
-public class FileStationVolumeStatus : IGenericCloneable<FileStationVolumeStatus>
+[GenerateClone]
+public partial class FileStationVolumeStatus
 {
     [JsonPropertyName("freespace")]
     public long? FreeSpace { get; set; }
@@ -68,12 +52,4 @@ public class FileStationVolumeStatus : IGenericCloneable<FileStationVolumeStatus
 
     [JsonPropertyName("readonly")]
     public bool? ReadOnly { get; set; }
-
-    public FileStationVolumeStatus Clone()
-        => new()
-        {
-            FreeSpace = this.FreeSpace,
-            TotalSpace = this.TotalSpace,
-            ReadOnly = this.ReadOnly
-        };
 }

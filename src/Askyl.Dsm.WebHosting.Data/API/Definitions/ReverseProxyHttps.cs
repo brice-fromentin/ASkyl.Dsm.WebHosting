@@ -1,12 +1,11 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class ReverseProxyHttps : IGenericCloneable<ReverseProxyHttps>
+[GenerateClone]
+public partial class ReverseProxyHttps
 {
     [JsonPropertyName("hsts")]
     public bool Hsts { get; set; }
-
-    public ReverseProxyHttps Clone()
-        => new() { Hsts = this.Hsts };
 }

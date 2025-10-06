@@ -8,7 +8,7 @@ namespace Askyl.Dsm.WebHosting.Data.API.Parameters.ReverseProxyAPI;
 [DsmParameterName("uuids")]
 public class ReverseProxyDeleteParameters(ApiInformationCollection informations) : ApiParametersBase<ReverseProxyUuids>(informations)
 {
-    public override string Name => DsmApiNames.ReverseProxy;
+    public override string Name => DsmApiNames.AppPortalReverseProxy;
 
     public override int Version => 1;
 

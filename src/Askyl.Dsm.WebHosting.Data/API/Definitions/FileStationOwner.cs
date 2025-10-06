@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationOwner : IGenericCloneable<FileStationOwner>
+[GenerateClone]
+public partial class FileStationOwner
 {
     [JsonPropertyName("user")]
     public string? User { get; set; }
@@ -15,13 +17,4 @@ public class FileStationOwner : IGenericCloneable<FileStationOwner>
 
     [JsonPropertyName("gid")]
     public int? Gid { get; set; }
-
-    public FileStationOwner Clone()
-        => new()
-        {
-            User = this.User,
-            Group = this.Group,
-            Uid = this.Uid,
-            Gid = this.Gid
-        };
 }

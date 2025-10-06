@@ -1,10 +1,11 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationVirtualFolder : IGenericCloneable<FileStationVirtualFolder>
+[GenerateClone]
+public partial class FileStationVirtualFolder
 {
     [JsonPropertyName("type")]
     public string Type { get; set; } = FileStationDefaults.VirtualFolderTypeAll;
@@ -23,15 +24,4 @@ public class FileStationVirtualFolder : IGenericCloneable<FileStationVirtualFold
 
     [JsonPropertyName("additional")]
     public string? Additional { get; set; }
-
-    public FileStationVirtualFolder Clone()
-        => new()
-        {
-            Type = this.Type,
-            Offset = this.Offset,
-            Limit = this.Limit,
-            SortBy = this.SortBy,
-            SortDirection = this.SortDirection,
-            Additional = this.Additional
-        };
 }

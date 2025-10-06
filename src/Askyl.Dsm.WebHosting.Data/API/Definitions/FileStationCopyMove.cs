@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationCopyMove : IGenericCloneable<FileStationCopyMove>
+[GenerateClone]
+public partial class FileStationCopyMove
 {
     [JsonPropertyName("path")]
     public List<string> Paths { get; set; } = [];
@@ -21,15 +23,4 @@ public class FileStationCopyMove : IGenericCloneable<FileStationCopyMove>
 
     [JsonPropertyName("search_taskid")]
     public string? SearchTaskId { get; set; }
-
-    public FileStationCopyMove Clone()
-        => new()
-        {
-            Paths = [.. this.Paths],
-            DestFolderPath = this.DestFolderPath,
-            Overwrite = this.Overwrite,
-            RemoveSource = this.RemoveSource,
-            AccurateProgress = this.AccurateProgress,
-            SearchTaskId = this.SearchTaskId
-        };
 }

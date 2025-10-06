@@ -19,7 +19,7 @@ builder.Services.AddFluentUIComponents();
 // Add custom services
 builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
-builder.Services.AddScoped<IFileNavigationService, FileNavigationService>();
+builder.Services.AddScoped<IFileSystemService, FileSystemService>();
 builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 builder.Services.AddScoped<ITemporaryTokenService, TemporaryTokenService>();
 

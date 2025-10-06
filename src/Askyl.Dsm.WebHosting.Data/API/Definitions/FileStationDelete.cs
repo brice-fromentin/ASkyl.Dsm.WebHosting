@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationDelete : IGenericCloneable<FileStationDelete>
+[GenerateClone]
+public partial class FileStationDelete
 {
     [JsonPropertyName("path")]
     public List<string> Paths { get; set; } = [];
@@ -12,12 +14,4 @@ public class FileStationDelete : IGenericCloneable<FileStationDelete>
 
     [JsonPropertyName("recursive")]
     public bool? Recursive { get; set; } = true;
-
-    public FileStationDelete Clone()
-        => new()
-        {
-            Paths = [.. this.Paths],
-            AccurateProgress = this.AccurateProgress,
-            Recursive = this.Recursive
-        };
 }

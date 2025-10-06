@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationBackgroundTask : IGenericCloneable<FileStationBackgroundTask>
+[GenerateClone]
+public partial class FileStationBackgroundTask
 {
     [JsonPropertyName("taskid")]
     public string? TaskId { get; set; }
@@ -12,12 +14,4 @@ public class FileStationBackgroundTask : IGenericCloneable<FileStationBackground
 
     [JsonPropertyName("limit")]
     public int? Limit { get; set; } = 100;
-
-    public FileStationBackgroundTask Clone()
-        => new()
-        {
-            TaskId = this.TaskId,
-            Offset = this.Offset,
-            Limit = this.Limit
-        };
 }

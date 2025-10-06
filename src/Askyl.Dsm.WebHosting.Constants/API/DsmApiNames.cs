@@ -36,13 +36,19 @@ public static class DsmApiNames
 
     #region Core APIs
 
-    public const string ReverseProxy = "SYNO.Core.AppPortal.ReverseProxy";
+    public const string CoreAcl = "SYNO.Core.ACL";
+
+    #endregion
+
+    #region AppPortal
+    
+    public const string AppPortalReverseProxy = "SYNO.Core.AppPortal.ReverseProxy";
 
     #endregion
 
     #region Required APIs Collection
 
-    public static readonly string[] RequiredApis = [Auth, FileStationInfo, FileStationList, ReverseProxy];
+    public static readonly string[] RequiredApis = [Auth, FileStationInfo, FileStationList, CoreAcl, AppPortalReverseProxy];
 
     public static readonly string RequiredApisJoined = String.Join(",", RequiredApis);
 

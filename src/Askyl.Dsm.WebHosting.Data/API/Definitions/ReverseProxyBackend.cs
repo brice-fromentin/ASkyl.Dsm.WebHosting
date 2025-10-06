@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class ReverseProxyBackend : IGenericCloneable<ReverseProxyBackend>
+[GenerateClone]
+public partial class ReverseProxyBackend
 {
 
     [JsonPropertyName("fqdn")]
@@ -13,7 +15,4 @@ public class ReverseProxyBackend : IGenericCloneable<ReverseProxyBackend>
 
     [JsonPropertyName("protocol")]
     public int Protocol { get; set; }
-
-    public ReverseProxyBackend Clone()
-        => new() { Fqdn = this.Fqdn, Port = this.Port, Protocol = this.Protocol };
 }

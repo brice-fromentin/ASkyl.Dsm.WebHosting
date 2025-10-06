@@ -1,15 +1,21 @@
 using System.ComponentModel.DataAnnotations;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.WebSites;
 
-public class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
+[GenerateClone]
+public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
 {
+    public Guid Id { get; set; }
+
     [Required(ErrorMessage = ApplicationConstants.SiteNameRequiredErrorMessage)]
     public string Name { get; set; } = "";
 
     [Required(ErrorMessage = ApplicationConstants.ApplicationPathRequiredErrorMessage)]
     public string ApplicationPath { get; set; } = "";
+
+    public string ApplicationRealPath { get; set; } = "";
 
     [Required(ErrorMessage = ApplicationConstants.PortRequiredErrorMessage)]
     [Range(ApplicationConstants.MinWebApplicationPort, ApplicationConstants.MaxWebApplicationPort, ErrorMessage = ApplicationConstants.PortRangeErrorMessage)]
@@ -23,18 +29,4 @@ public class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
     public bool AutoStart { get; set; } = true;
 
     public Dictionary<string, string> AdditionalEnvironmentVariables { get; set; } = [];
-
-    public WebSiteConfiguration Clone()
-    {
-        return new()
-        {
-            Name = Name,
-            ApplicationPath = ApplicationPath,
-            Port = Port,
-            Environment = Environment,
-            IsEnabled = IsEnabled,
-            AutoStart = AutoStart,
-            AdditionalEnvironmentVariables = new(AdditionalEnvironmentVariables)
-        };
-    }
 }

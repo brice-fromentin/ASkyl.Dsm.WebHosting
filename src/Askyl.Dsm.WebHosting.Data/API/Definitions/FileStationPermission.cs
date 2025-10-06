@@ -1,8 +1,10 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class FileStationPermission : IGenericCloneable<FileStationPermission>
+[GenerateClone]
+public partial class FileStationPermission
 {
     [JsonPropertyName("posix")]
     public int? Posix { get; set; }
@@ -12,12 +14,4 @@ public class FileStationPermission : IGenericCloneable<FileStationPermission>
 
     [JsonPropertyName("acl")]
     public FileStationAcl? Acl { get; set; }
-
-    public FileStationPermission Clone()
-        => new()
-        {
-            Posix = this.Posix,
-            IsAclMode = this.IsAclMode,
-            Acl = this.Acl?.Clone()
-        };
 }

@@ -1,10 +1,11 @@
 using System.Text.Json.Serialization;
 using Askyl.Dsm.WebHosting.Constants.API;
-using Askyl.Dsm.WebHosting.Data.Attributes;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
 
-public class AuthenticateLogin : IGenericCloneable<AuthenticateLogin>
+[GenerateClone]
+public partial class AuthenticateLogin
 {
     [JsonPropertyName("account")]
     public string Account { get; set; } = default!;
@@ -17,7 +18,4 @@ public class AuthenticateLogin : IGenericCloneable<AuthenticateLogin>
 
     [JsonPropertyName("otp_code")]
     public string? OtpCode { get; set; }
-
-    public AuthenticateLogin Clone()
-        => new() { Account = this.Account, Password = this.Password, OtpCode = this.OtpCode };
 }

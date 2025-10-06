@@ -4,10 +4,15 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- For Generators Debugging -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Constants/Askyl.Dsm.WebHosting.Constants.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.SourceGenerators/Askyl.Dsm.WebHosting.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <Target Name="MoreClean" AfterTargets="Clean">

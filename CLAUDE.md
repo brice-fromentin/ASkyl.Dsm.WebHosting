@@ -70,7 +70,7 @@ ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. 
 ### Code Structure and Style
 - Use early returns to avoid deep nesting
 - Always use {} for single-line control flow statements and use multiple lines
-- Add blank lines before control flow statements, except immediately after opening braces
+- Add blank lines before control flow statements, except when they are the first statement in a scope (method body, if/else/try/catch/finally block, loop body, etc.)
 - Use expression-bodied members for single expressions without method chaining or multiple statements
 - Conditional (ternary) operators are acceptable in expression-bodied members
 - When a property has both get and set accessors, always use multi-line format
@@ -101,6 +101,7 @@ ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. 
 - Use `var` with `[]` initializers when type is obvious from immediate context
 - Use explicit type declarations with `[]` when type clarity is needed
 - Always use `new()` when type can be inferred and constructor parameters are provided
+- Prefer collection expressions `[..]` over `.ToList()`, `.ToArray()` for materializing LINQ queries or spreading existing collections
 
 ### Using Directives
 - Never add using directives for types in global usings (remove if found)

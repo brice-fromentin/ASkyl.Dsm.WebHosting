@@ -7,9 +7,11 @@ using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions;
 using Askyl.Dsm.WebHosting.Data.Attributes;
+using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters;
 
+[GenerateClone]
 public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGenericCloneable<T>, new()
 {
     private ApiParametersBase() => throw new NotImplementedException();
@@ -29,10 +31,6 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
         Parameters = (entry is null) ? new() : entry.Clone();
     }
 
-    /// <summary>
-    /// Creates default API information for handshake operations.
-    /// </summary>
-    /// <returns>Default ApiInformation for handshake API.</returns>
     private static ApiInformation CreateDefaultHandshakeInfo()
         => new() { Path = DsmApiNames.Handshake, MinVersion = DsmApiVersions.MinVersion, MaxVersion = DsmApiVersions.MaxVersion };
 
@@ -62,6 +60,12 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
         IndentCharacter = ' ',
         IndentSize = 4,
         WriteIndented = true
+    };
+
+    private static JsonSerializerOptions CompactJsonOptions { get; } = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        WriteIndented = false
     };
 
     public abstract string Name { get; }
@@ -126,20 +130,35 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
             if (value is not null)
             {
                 var name = (property.CustomName.Length == 0) ? property.Info.Name.ToLowerInvariant() : property.CustomName;
-                var serialized = value?.ToString();
+                var serialized = SerializeValue(value);
 
-                if (serialized is null)
+                if (!String.IsNullOrEmpty(serialized))
                 {
-                    continue;
+                    builder.Append('&');
+                    builder.Append(name);
+                    builder.Append('=');
+                    builder.Append(Uri.EscapeDataString(serialized));
                 }
-
-                builder.Append('&');
-                builder.Append(name);
-                builder.Append('=');
-                builder.Append(Uri.EscapeDataString(serialized));
             }
         }
 
         return builder;
+    }
+
+    private static string? SerializeValue(object value)
+    {
+        if (value is System.Collections.IEnumerable and not string)
+        {
+            return JsonSerializer.Serialize(value, CompactJsonOptions);
+        }
+
+        if (value is bool boolValue)
+        {
+            return boolValue ? "true" : "false";
+        }
+
+        var result = value.ToString();
+
+        return String.IsNullOrEmpty(result) ? null : result;
     }
 }
