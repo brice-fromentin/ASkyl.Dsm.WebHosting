@@ -4,15 +4,26 @@
 
 **Author:** Brice FROMENTIN  
 
+Currently, the project is a Blazor Server app for security reasons and cold start performances, will re-evaluate when migrating to .NET 10.
+
+This project has also the following goals :
+ - Test IA for coding assistant.
+
 
 # TODO
     Macro
-        - Certificates management for the reverse proxy configurations.
         - Reverse proxy manager.
+        - Certificates management for the reverse proxy configurations.
+        - Check required .NET version when configuraring an application.
+        - Route applications stdout and errout to downloadable logs.
         - Support deploying from a compressed file.
         - ...
 
     Micro
         - Manage uninstall correctly when versions of Microsoft.NETCore.App & Microsoft.AspNetCore.App are not the same (seen in 9.0.0 rc 2).
         - Enhance logs for the installation and package life-cycle
+        - ...
+    
+    Technical
+        - Implement unit tests.
         - ...

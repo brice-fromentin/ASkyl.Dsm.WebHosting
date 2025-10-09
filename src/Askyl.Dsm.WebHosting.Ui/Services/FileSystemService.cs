@@ -1,5 +1,5 @@
 using Askyl.Dsm.WebHosting.Constants.API;
-using Askyl.Dsm.WebHosting.Data.API.Definitions;
+using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.CoreAclAPI;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
 using Askyl.Dsm.WebHosting.Data.API.Responses;

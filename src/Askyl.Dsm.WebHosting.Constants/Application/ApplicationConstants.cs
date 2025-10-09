@@ -84,4 +84,14 @@ public static class ApplicationConstants
     /// Validation error message for required environment.
     /// </summary>
     public const string EnvironmentRequiredErrorMessage = "Environment is required.";
+
+    /// <summary>
+    /// Validation error message for required host name.
+    /// </summary>
+    public const string HostNameRequiredErrorMessage = "Host name is required.";
+
+    /// <summary>
+    /// Validation error message for protocol range.
+    /// </summary>
+    public const string ProtocolRangeErrorMessage = "Protocol must be either 0 (HTTP) or 1 (HTTPS).";
 }

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
+namespace Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
 
 public class ApiInformation
 {

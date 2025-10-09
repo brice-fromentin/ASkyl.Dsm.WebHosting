@@ -4,7 +4,8 @@ using Microsoft.Extensions.Logging;
 
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Data.API.Definitions;
+using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
+using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
 using Askyl.Dsm.WebHosting.Data.API.Parameters;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.AuthenticationAPI;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.InformationsAPI;

@@ -5,7 +5,10 @@ using System.Text.Json.Serialization;
 
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.API;
-using Askyl.Dsm.WebHosting.Data.API.Definitions;
+using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
+using Askyl.Dsm.WebHosting.Data.API.Definitions.Core.Acl;
+using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
+using Askyl.Dsm.WebHosting.Data.API.Definitions.ReverseProxy;
 using Askyl.Dsm.WebHosting.Data.Attributes;
 using Askyl.Dsm.WebHosting.SourceGenerators;
 

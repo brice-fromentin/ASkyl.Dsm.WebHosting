@@ -6,12 +6,15 @@ using Askyl.Dsm.WebHosting.Tools.Threading;
 
 namespace Askyl.Dsm.WebHosting.Tools.WebSites;
 
-public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> logger) : IWebSitesConfigurationService
+using Askyl.Dsm.WebHosting.Tools.Network;
+
+public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> logger, DsmApiClient dsmApiClient) : IWebSitesConfigurationService
 {
     #region Fields
 
     private readonly string _configurationFilePath = Path.Combine(AppContext.BaseDirectory, ApplicationConstants.WebSitesConfigFileName);
     private readonly ILogger<WebSitesConfigurationService> _logger = logger;
+    private readonly DsmApiClient _dsmApiClient = dsmApiClient;
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,

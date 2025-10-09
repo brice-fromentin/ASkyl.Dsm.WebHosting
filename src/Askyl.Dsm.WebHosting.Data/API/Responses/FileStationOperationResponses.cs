@@ -1,4 +1,4 @@
-using Askyl.Dsm.WebHosting.Data.API.Definitions;
+using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Responses;
 

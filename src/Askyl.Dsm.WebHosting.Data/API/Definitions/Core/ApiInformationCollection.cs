@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
+namespace Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
 
 public class ApiInformationCollection
 {

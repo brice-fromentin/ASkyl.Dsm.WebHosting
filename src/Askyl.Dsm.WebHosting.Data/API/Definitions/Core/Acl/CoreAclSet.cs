@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Askyl.Dsm.WebHosting.SourceGenerators;
 
-namespace Askyl.Dsm.WebHosting.Data.API.Definitions;
+namespace Askyl.Dsm.WebHosting.Data.API.Definitions.Core.Acl;
 
 [GenerateClone]
 public partial class CoreAclSet

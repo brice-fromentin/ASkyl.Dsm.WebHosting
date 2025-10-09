@@ -53,7 +53,7 @@
     <ChildContent>
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Name" Property="@(i => i.Configuration.Name)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Path" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="Port" Property="@(i => i.Configuration.Port)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="Internal Port" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="State" Property="@(i => i.State)" Sortable="true" />
     </ChildContent>
 </AutoDataGrid>

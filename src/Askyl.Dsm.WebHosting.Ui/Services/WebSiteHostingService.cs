@@ -127,7 +127,7 @@ public class WebSiteHostingService(ILogger<WebSiteHostingService> logger, IWebSi
     private static bool ConfigurationRequiresRestart(WebSiteConfiguration oldConfig, WebSiteConfiguration newConfig)
     {
         return oldConfig.ApplicationPath != newConfig.ApplicationPath
-            || oldConfig.Port != newConfig.Port
+            || oldConfig.InternalPort != newConfig.InternalPort
             || oldConfig.Environment != newConfig.Environment
             || !oldConfig.AdditionalEnvironmentVariables.SequenceEqual(newConfig.AdditionalEnvironmentVariables);
     }
@@ -285,7 +285,7 @@ public class WebSiteHostingService(ILogger<WebSiteHostingService> logger, IWebSi
             CreateNoWindow = true
         };
 
-        startInfo.Environment[ApplicationConstants.AspNetCoreUrlsEnvironmentVariable] = $"http://localhost:{site.Port}";
+        startInfo.Environment[ApplicationConstants.AspNetCoreUrlsEnvironmentVariable] = $"http://localhost:{site.InternalPort}";
         startInfo.Environment[ApplicationConstants.AspNetCoreEnvironmentVariable] = site.Environment;
 
         foreach (var envVar in site.AdditionalEnvironmentVariables)

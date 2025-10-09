@@ -1,8 +1,9 @@
+@using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Data.WebSites
+@using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation
 @using Askyl.Dsm.WebHosting.Tools.Network
 @using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
 @using Askyl.Dsm.WebHosting.Ui.Extensions
-
 
 @implements IDialogContentComponent<WebSiteInstance>
 @implements IWorkingState
@@ -24,8 +25,12 @@
         <FluentStack Orientation="Orientation.Vertical">
             <FluentTextField @bind-Value="Configuration.Name" Label="Name" Required autofocus Class="full-size" />
             <FluentValidationMessage For="@(() => Configuration.Name)" />
+
+            <FluentDivider />
+            <FluentLabel Typo="Typography.H3">Application Settings</FluentLabel>
+
             <FluentStack Orientation="Orientation.Vertical">
-                <FluentLabel>Application Path *</FluentLabel>
+                <FluentLabel>Application Path</FluentLabel>
                 <FluentStack Orientation="Orientation.Horizontal">
                     <FluentTextField @bind-Value="Configuration.ApplicationPath" Required Style="flex: 1;" />
                     <FluentButton IconStart="@(new IconsRegular20.FolderOpen())" Appearance="Appearance.Outline" OnClick="SelectApplicationPath" Type="ButtonType.Button" />
@@ -38,12 +43,34 @@
                     <FluentValidationMessage For="@(() => Configuration.Environment)" />
                 </FluentStack>
                 <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
-                    <FluentNumberField @bind-Value="Configuration.Port" Label="Port" Required Class="full-size" />
-                    <FluentValidationMessage For="@(() => Configuration.Port)" />
+                    <FluentNumberField @bind-Value="Configuration.InternalPort" Label="Internal Port" Required Class="full-size" />
+                    <FluentValidationMessage For="@(() => Configuration.InternalPort)" />
                 </FluentStack>
             </FluentStack>
             <FluentCheckbox @bind-Value="Configuration.IsEnabled" Label="Enabled" />
             <FluentCheckbox @bind-Value="Configuration.AutoStart" Label="Auto Start" />
+
+            <FluentDivider />
+            <FluentLabel Typo="Typography.H3">Reverse Proxy</FluentLabel>
+
+            <FluentTextField @bind-Value="Configuration.HostName" Label="Hostname" Required Class="full-size" />
+            <FluentValidationMessage For="@(() => Configuration.HostName)" />
+            <FluentStack Orientation="Orientation.Horizontal">
+                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+                    <FluentNumberField @bind-Value="Configuration.PublicPort" Label="Public Port" Required Class="full-size" />
+                    <FluentValidationMessage For="@(() => Configuration.PublicPort)" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
+                    <FluentSelect TOption="string" @bind-Value="ProtocolProxy" Label="Protocol" Required="true" Class="full-size">
+                        @foreach (var protocol in Enum.GetValues<ProtocolType>())
+                        {
+                            <FluentOption Value="@(((int)protocol).ToString())">@protocol.ToString()</FluentOption>
+                        }
+                    </FluentSelect>
+                    <FluentValidationMessage For="@(() => Configuration.Protocol)" />
+                </FluentStack>
+            </FluentStack>
+            <FluentCheckbox @bind-Value="Configuration.EnableHSTS" Label="Enable HSTS" />
         </FluentStack>
         <div class="fluent-dialog-footer">
             <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
@@ -79,6 +106,12 @@
     private WebSiteConfiguration Configuration { get; set; } = default!;
 
     private bool IsEditMode => Content?.Configuration?.Id != Guid.Empty;
+
+    private string ProtocolProxy
+    {
+        get => ((int)Configuration.Protocol).ToString();
+        set => Configuration.Protocol = Enum.Parse<ProtocolType>(value);
+    }
 
     #endregion
 
