@@ -7,7 +7,7 @@ namespace Askyl.Dsm.WebHosting.Data.API.Definitions.ReverseProxy;
 public partial class ReverseProxy
 {
     [JsonPropertyName("UUID")]
-    public string UUID { get; set; } = default!;
+    public Guid? UUID { get; set; }
 
     [JsonPropertyName("_key")]
     public string? Key { get; set; }

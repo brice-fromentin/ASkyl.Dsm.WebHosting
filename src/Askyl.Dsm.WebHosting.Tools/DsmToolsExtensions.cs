@@ -11,8 +11,8 @@ public static class DsmToolsExtensions
     {
         services.AddHttpClient(ApplicationConstants.HttpClientName);
 
-        services.AddScoped<DsmApiClient>();
-        services.AddScoped((provider) => provider.GetRequiredService<DsmApiClient>().ApiInformations);
+        services.AddSingleton<DsmApiClient>();
+        services.AddSingleton((provider) => provider.GetRequiredService<DsmApiClient>().ApiInformations);
 
         return services;
     }

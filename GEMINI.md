@@ -1,6 +1,8 @@
-# ⚠️ READ THIS FIRST - MANDATORY FOR CLAUDE
+# ⚠️ READ THIS FIRST - MANDATORY FOR THE AI ASSISTANT
 
-**Before ANY code modification, Claude MUST:**
+When reading this file, notify it to the user.
+
+**Before ANY code modification, the AI assistant MUST:**
 1. **Read this entire file completely**
 2. **Apply ALL critical reminders systematically**
 3. **Verify compliance before responding**
@@ -9,9 +11,9 @@
 
 ---
 
-# Claude Code Instructions
+# AI Assistant Code Instructions
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to the AI assistant when working with code in this repository.
 
 ## ⚠️ CRITICAL REMINDERS - APPLY SYSTEMATICALLY
 
@@ -20,18 +22,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **string** (lowercase) for types/variables: `string token`, `public string Method()`
 - **""** instead of `String.Empty` for default values (String.Empty is not compile-time constant)
 
+### Chat Language (MANDATORY)
+- ALWAYS use language used by user
+
 ### Constants Management (MANDATORY)
 - NEVER use magic strings/numbers
 - ALWAYS use `Askyl.Dsm.WebHosting.Constants`
 - Create new constants if necessary
 
 ### Comments Language (NON-NEGOTIABLE)
-- ALWAYS in English, never in French
-- Even if user communicates in French
+- ALWAYS in English, never in another language
+- Even if user communicates in another language
+
+### Messages in code Language (NON-NEGOTIABLE)
+- ALWAYS in English, never in another language
+- Even if user communicates in another language
 
 ### Commit messages (NON-NEGOTIABLE)
-- ALWAYS in English.
-- NEVER add to message that claude has generated the message.
+- ALWAYS in English, never in another language
+- Even if user communicates in another language
+- NEVER add to message that the AI assistant has generated the message.
 
 ## Project Overview
 
@@ -91,8 +101,8 @@ ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. 
   - Convert traditional constructors to primary constructors whenever possible
   - Use primary constructor syntax: `public class MyService(ILogger<MyService> logger, IConfiguration config)`
   - Apply to all new classes and refactor existing classes when modifying them
-- Prefer 'IsEmpty' check rather than using 'Any()', both for clarity and for performance
-- Prefer 'IsEmpty' check rather than using 'Xount', both for clarity and for performance
+For simple emptiness checks on a collection, prefer using an `IsEmpty` property if available, or a `Count == 0` check, instead of using `!collection.Any()`. The use of `Any(predicate)` to check for the existence of items matching a specific condition remains the correct and preferred approach.
+- Prefer 'IsEmpty' check rather than using 'Count', both for clarity and for performance
 - Use null-forgiving operator (!) for injected services and post-null-check contexts
 - Use conditional null operator (?) for truly optional scenarios
 - Fix all compiler warnings after build completion
@@ -150,7 +160,7 @@ ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. 
 - The solution supports multiple CPU architectures (Debug/Release with Any CPU/x64/x86)
 - SPK packaging includes Docker-based multi-architecture builds for Synology compatibility
 
-## 🤖 Instructions for Claude
+## 🤖 Instructions for the AI Assistant
 
 **MANDATORY PROTOCOL FOR EVERY SESSION AND CODE MODIFICATION:**
 
@@ -171,6 +181,7 @@ ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. 
 - [ ] "" for default values (not `String.Empty`)
 - [ ] Constants from `Askyl.Dsm.WebHosting.Constants` (create if needed)
 - [ ] Comments ONLY in English
+- [ ] Messages ONLY in English
 - [ ] Apply all architectural guidelines
 
 **AFTER writing:**

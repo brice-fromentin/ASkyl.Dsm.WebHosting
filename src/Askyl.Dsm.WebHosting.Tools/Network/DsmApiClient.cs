@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
-using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
 using Askyl.Dsm.WebHosting.Data.API.Parameters;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.AuthenticationAPI;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.InformationsAPI;
@@ -123,6 +122,11 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
         };
 
         return result;
+    }
+
+    public async Task<ApiResponseBase<EmptyResponse>?> ExecuteSimpleAsync(IApiParameters parameters)
+    {
+        return await ExecuteAsync<ApiResponseBase<EmptyResponse>>(parameters);
     }
 
     private async Task<R?> ExecuteFormAsync<R>(string url, IApiParameters parameters)

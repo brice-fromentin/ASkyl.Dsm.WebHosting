@@ -24,6 +24,7 @@ builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 builder.Services.AddScoped<ITemporaryTokenService, TemporaryTokenService>();
 
 // Add WebSite management services (late configuration)
+builder.Services.AddSingleton<IReverseProxyManager, ReverseProxyManager>();
 builder.Services.AddSingleton<IWebSitesConfigurationService, WebSitesConfigurationService>();
 builder.Services.AddSingleton<WebSiteHostingService>();
 builder.Services.AddHostedService(provider => provider.GetRequiredService<WebSiteHostingService>());

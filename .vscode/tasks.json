@@ -18,15 +18,12 @@
             "label": "NuGet ⬆️",
             "type": "shell",
             "command": "sh",
-            "args": [
-                "-c",
-                "if ! dotnet tool list -g | grep -q 'dotnet-outdated-tool'; then dotnet tool install --global dotnet-outdated-tool; fi && cd ${workspaceFolder}/src && dotnet outdated Askyl.Dsm.WebHosting.sln -u"
-            ],
+            "args": ["./src/scripts/update-nuget.sh"],
             "presentation": {
                 "reveal": "always",
                 "panel": "shared",
                 "clear": true
-            },
+            }
         },
         {
             "label": "🧹✨",
@@ -34,11 +31,8 @@
             "command": "dotnet",
             "args": [
                 "clean",
-                "Askyl.Dsm.WebHosting.sln",
+                "./src/Askyl.Dsm.WebHosting.sln"
             ],
-            "options": {
-                "cwd": "${workspaceFolder}/src"
-            },
             "presentation": {
                 "reveal": "always",
                 "panel": "shared",
@@ -49,13 +43,7 @@
             "label": "🔧 SLN",
             "type": "shell",
             "command": "sh",
-            "args": [
-                "-c",
-                "dotnet msbuild Askyl.Dsm.WebHosting.sln -t:Clean && dotnet msbuild Askyl.Dsm.WebHosting.sln -t:Restore && dotnet msbuild Askyl.Dsm.WebHosting.sln -t:Build",
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/src"
-            },
+            "args": ["./src/scripts/build-solution.sh"],
             "presentation": {
                 "reveal": "always",
                 "panel": "shared",

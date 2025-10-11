@@ -111,10 +111,22 @@
             return;
         }
 
-        var parameters = new ReverseProxyUpdateParameters(client.ApiInformations, proxies[0]);
-        var entry = parameters.Parameters;
+        var originalProxy = proxies.First();
+        var parameters = new ReverseProxyUpdateParameters(client.ApiInformations, originalProxy);
 
-        entry.Description += "-updated";
+        // Manually copy properties from originalProxy to the new Parameters object
+        var entry = parameters.Parameters;
+        entry.UUID = originalProxy.UUID;
+        entry.Description = originalProxy.Description + "-updated"; // The only change
+        entry.Frontend = originalProxy.Frontend;
+        entry.Backend = originalProxy.Backend;
+        entry.ProxyConnectTimeout = originalProxy.ProxyConnectTimeout;
+        entry.ProxyHttpVersion = originalProxy.ProxyHttpVersion;
+        entry.ProxyInterceptErrors = originalProxy.ProxyInterceptErrors;
+        entry.ProxyReadTimeout = originalProxy.ProxyReadTimeout;
+        entry.ProxySendTimeout = originalProxy.ProxySendTimeout;
+        entry.CustomizeHeaders = originalProxy.CustomizeHeaders;
+        entry.Key = originalProxy.Key;
 
         await CallAPI(parameters);
     }

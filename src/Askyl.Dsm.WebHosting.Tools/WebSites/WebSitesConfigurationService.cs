@@ -1,23 +1,21 @@
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.WebSites;
 using Askyl.Dsm.WebHosting.Tools.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.WebSites;
 
-using Askyl.Dsm.WebHosting.Tools.Network;
-
-public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> logger, DsmApiClient dsmApiClient) : IWebSitesConfigurationService
+public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> logger, IReverseProxyManager reverseProxyManager) : IWebSitesConfigurationService
 {
     #region Fields
 
     private readonly string _configurationFilePath = Path.Combine(AppContext.BaseDirectory, ApplicationConstants.WebSitesConfigFileName);
-    private readonly ILogger<WebSitesConfigurationService> _logger = logger;
-    private readonly DsmApiClient _dsmApiClient = dsmApiClient;
-    private readonly JsonSerializerOptions _jsonOptions = new()
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,
+        IndentCharacter = '\t',
+        IndentSize = 1,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
     private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -34,7 +32,8 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         {
             if (!File.Exists(_configurationFilePath))
             {
-                _logger.LogInformation("Configuration file not found, creating empty collection");
+                logger.LogInformation("Configuration file not found, creating empty collection");
+
                 return new();
             }
 
@@ -45,7 +44,8 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load configuration from {FilePath}", _configurationFilePath);
+            logger.LogError(ex, "Failed to load configuration from {FilePath}", _configurationFilePath);
+
             return new();
         }
     }
@@ -56,13 +56,15 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         {
             collection.LastModified = DateTime.UtcNow;
             var jsonContent = JsonSerializer.Serialize(collection, _jsonOptions);
+
             await File.WriteAllTextAsync(_configurationFilePath, jsonContent);
 
-            _logger.LogInformation("Configuration saved successfully to {FilePath}", _configurationFilePath);
+            logger.LogInformation("Configuration saved successfully to {FilePath}", _configurationFilePath);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save configuration to {FilePath}", _configurationFilePath);
+            logger.LogError(ex, "Failed to save configuration to {FilePath}", _configurationFilePath);
+
             throw;
         }
     }
@@ -72,7 +74,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         if (_cachedConfiguration == null)
         {
             _cachedConfiguration = await LoadConfigurationAsync();
-            _logger.LogInformation("Configuration loaded and cached. Found {SiteCount} sites", _cachedConfiguration.Sites.Count);
+            logger.LogInformation("Configuration loaded and cached. Found {SiteCount} sites", _cachedConfiguration.Sites.Count);
         }
     }
 
@@ -117,8 +119,20 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
                 throw new InvalidOperationException($"Site with name '{site.Name}' already exists");
             }
 
+            // Create reverse proxy rule
+            try
+            {
+                await reverseProxyManager.CreateAsync(site);
+                logger.LogInformation("Reverse proxy rule created with ID {ReverseProxyId}", site.IdReverseProxy);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An error occurred while creating the reverse proxy rule for site {SiteName}", site.Name);
+            }
+
             site.Id = Guid.NewGuid();
             _cachedConfiguration.Sites.Add(site);
+
             await SaveConfigurationAsync(_cachedConfiguration);
         }
     }
@@ -139,7 +153,10 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
                 throw new InvalidOperationException($"Site with name '{site.Name}' already exists");
             }
 
+            await reverseProxyManager.UpdateAsync(site);
+
             _cachedConfiguration.Sites[existingSiteIndex] = site;
+
             await SaveConfigurationAsync(_cachedConfiguration);
         }
     }
@@ -149,7 +166,11 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         using (await SemaphoreLock.AcquireAsync(_semaphore, EnsureLoadedAsync))
         {
             var site = _cachedConfiguration!.Sites.FirstOrDefault(s => s.Id == siteId) ?? throw new InvalidOperationException($"Site with Id '{siteId}' not found");
+
+            await reverseProxyManager.DeleteAsync(site);
+
             _cachedConfiguration.Sites.Remove(site);
+
             await SaveConfigurationAsync(_cachedConfiguration);
         }
     }

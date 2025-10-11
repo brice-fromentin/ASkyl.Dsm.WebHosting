@@ -6,9 +6,6 @@ using System.Text.Json.Serialization;
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
-using Askyl.Dsm.WebHosting.Data.API.Definitions.Core.Acl;
-using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
-using Askyl.Dsm.WebHosting.Data.API.Definitions.ReverseProxy;
 using Askyl.Dsm.WebHosting.Data.Attributes;
 using Askyl.Dsm.WebHosting.SourceGenerators;
 
@@ -60,14 +57,14 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
     private static JsonSerializerOptions JsonOptions { get; } = new()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        IndentCharacter = ' ',
-        IndentSize = 4,
+        IndentCharacter = '\t',
+        IndentSize = 1,
         WriteIndented = true
     };
 
-    private static JsonSerializerOptions CompactJsonOptions { get; } = new()
+    private static JsonSerializerOptions JsonOptionsCompact { get; } = new()
     {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
         WriteIndented = false
     };
 
@@ -102,11 +99,13 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
         }
 
         var builder = BuildForm(true);
+        var serialized = JsonSerializer.Serialize(Parameters, JsonOptions);
+        var encoded = Uri.EscapeDataString(serialized);
 
         builder.Append('&');
         builder.Append(ApiJsonParameterName);
         builder.Append('=');
-        builder.Append(JsonSerializer.Serialize(Parameters, JsonOptions));
+        builder.Append(encoded);
 
         var content = builder.ToString();
 
@@ -117,7 +116,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
     {
         var builder = new StringBuilder();
 
-        builder.Append("&api=").Append(Name);
+        builder.Append("api=").Append(Name);
         builder.Append("&version=").Append(Version);
         builder.Append("&method=").Append(Method);
 
@@ -152,7 +151,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
     {
         if (value is System.Collections.IEnumerable and not string)
         {
-            return JsonSerializer.Serialize(value, CompactJsonOptions);
+            return JsonSerializer.Serialize(value, JsonOptionsCompact);
         }
 
         if (value is bool boolValue)

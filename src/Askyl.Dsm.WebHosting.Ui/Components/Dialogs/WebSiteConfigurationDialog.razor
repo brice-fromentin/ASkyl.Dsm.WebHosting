@@ -1,6 +1,8 @@
+@using Askyl.Dsm.WebHosting.Tools.WebSites
+@using Microsoft.FluentUI.AspNetCore.Components
 @using Askyl.Dsm.WebHosting.Constants.UI
-@using Askyl.Dsm.WebHosting.Data.WebSites
 @using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation
+@using Askyl.Dsm.WebHosting.Data.WebSites
 @using Askyl.Dsm.WebHosting.Tools.Network
 @using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
 @using Askyl.Dsm.WebHosting.Ui.Extensions
@@ -23,7 +25,7 @@
     <EditForm Model="@Configuration" OnValidSubmit="ConfirmAsync">
         <DataAnnotationsValidator />
         <FluentStack Orientation="Orientation.Vertical">
-            <FluentTextField @bind-Value="Configuration.Name" Label="Name" Required autofocus Class="full-size" />
+            <FluentTextField @bind-Value="Configuration.Name" Label="Name" autofocus Class="full-size" />
             <FluentValidationMessage For="@(() => Configuration.Name)" />
 
             <FluentDivider />
@@ -32,18 +34,18 @@
             <FluentStack Orientation="Orientation.Vertical">
                 <FluentLabel>Application Path</FluentLabel>
                 <FluentStack Orientation="Orientation.Horizontal">
-                    <FluentTextField @bind-Value="Configuration.ApplicationPath" Required Style="flex: 1;" />
+                    <FluentTextField @bind-Value="Configuration.ApplicationPath" Class="flex-full-width" />
                     <FluentButton IconStart="@(new IconsRegular20.FolderOpen())" Appearance="Appearance.Outline" OnClick="SelectApplicationPath" Type="ButtonType.Button" />
                 </FluentStack>
             </FluentStack>
             <FluentValidationMessage For="@(() => Configuration.ApplicationPath)" />
             <FluentStack Orientation="Orientation.Horizontal">
-                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
-                    <FluentTextField @bind-Value="Configuration.Environment" Label="Environment" Required Class="full-size" />
+                <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
+                    <FluentTextField @bind-Value="Configuration.Environment" Label="Environment" Class="full-size" />
                     <FluentValidationMessage For="@(() => Configuration.Environment)" />
                 </FluentStack>
-                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
-                    <FluentNumberField @bind-Value="Configuration.InternalPort" Label="Internal Port" Required Class="full-size" />
+                <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
+                    <FluentNumberField @bind-Value="Configuration.InternalPort" Label="Internal Port" Class="full-size" />
                     <FluentValidationMessage For="@(() => Configuration.InternalPort)" />
                 </FluentStack>
             </FluentStack>
@@ -53,21 +55,20 @@
             <FluentDivider />
             <FluentLabel Typo="Typography.H3">Reverse Proxy</FluentLabel>
 
-            <FluentTextField @bind-Value="Configuration.HostName" Label="Hostname" Required Class="full-size" />
-            <FluentValidationMessage For="@(() => Configuration.HostName)" />
+            <FluentTextField @bind-Value="Configuration.HostName" @bind-Value:after="() => { if (String.IsNullOrEmpty(Configuration.HostName)) Configuration.HostName = null; }" Label="Hostname" Class="full-size" />
             <FluentStack Orientation="Orientation.Horizontal">
-                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
-                    <FluentNumberField @bind-Value="Configuration.PublicPort" Label="Public Port" Required Class="full-size" />
-                    <FluentValidationMessage For="@(() => Configuration.PublicPort)" />
-                </FluentStack>
-                <FluentStack Orientation="Orientation.Vertical" Style="flex: 1;">
-                    <FluentSelect TOption="string" @bind-Value="ProtocolProxy" Label="Protocol" Required="true" Class="full-size">
+                <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
+                    <FluentSelect TOption="string" @bind-Value="ProtocolProxy" Label="Protocol" Class="full-size">
                         @foreach (var protocol in Enum.GetValues<ProtocolType>())
                         {
                             <FluentOption Value="@(((int)protocol).ToString())">@protocol.ToString()</FluentOption>
                         }
                     </FluentSelect>
                     <FluentValidationMessage For="@(() => Configuration.Protocol)" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
+                    <FluentNumberField @bind-Value="Configuration.PublicPort" Label="Public Port" Class="full-size" />
+                    <FluentValidationMessage For="@(() => Configuration.PublicPort)" />
                 </FluentStack>
             </FluentStack>
             <FluentCheckbox @bind-Value="Configuration.EnableHSTS" Label="Enable HSTS" />

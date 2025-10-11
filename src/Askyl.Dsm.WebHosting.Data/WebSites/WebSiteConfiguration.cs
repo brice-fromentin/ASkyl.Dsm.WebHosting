@@ -41,17 +41,16 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 
     #region Reverse Proxy
 
-    public string? IdReverseProxy { get; set; }
+    public Guid? IdReverseProxy { get; set; }
 
-    public ProtocolType Protocol { get; set; }
-
-    [Required(ErrorMessage = ApplicationConstants.HostNameRequiredErrorMessage)]
-    public string HostName { get; set; } = "";
+    public string? HostName { get; set; }
 
     [Range(ApplicationConstants.MinWebApplicationPort, ApplicationConstants.MaxWebApplicationPort, ErrorMessage = ApplicationConstants.PortRangeErrorMessage)]
     public int PublicPort { get; set; }
 
-    public bool EnableHSTS { get; set; }
+    public ProtocolType Protocol { get; set; } = ProtocolType.HTTPS;
+
+    public bool EnableHSTS { get; set; } = true;
 
     #endregion
 }
