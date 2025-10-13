@@ -1,12 +1,25 @@
 {
+    "version": "0.2.0",
     "configurations": [
         {
-            "name": "UI: Local Debug",
-            "type": "dotnet",
+            "name": "UI: Launch (coreclr)",
+            "type": "coreclr",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj",
+            "preLaunchTask": "🔧",
+            "program": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net9.0/Askyl.Dsm.WebHosting.Ui.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui",
+            "stopAtEntry": false,
             "serverReadyAction": {
                 "action": "openExternally",
+                "pattern": "^\\[[0-9:]+ [A-Z]+] Now listening on: (https?://\\S+)",
+                "uriFormat": "%s/adwh"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
             }
         }
     ]

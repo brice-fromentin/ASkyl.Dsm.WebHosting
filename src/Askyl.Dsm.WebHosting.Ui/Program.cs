@@ -1,17 +1,19 @@
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.FluentUI.AspNetCore.Components;
-using Serilog;
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.WebSites;
 using Askyl.Dsm.WebHosting.Tools;
 using Askyl.Dsm.WebHosting.Tools.WebSites;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.FluentUI.AspNetCore.Components;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
 Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration).CreateLogger();
 builder.Host.UseSerilog();
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 builder.Services.AddDsmApiClient();
 builder.Services.AddFluentUIComponents();
@@ -44,11 +46,12 @@ builder.Services.Configure<KestrelServerOptions>(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UsePathBase(ApplicationConstants.ApplicationUrlSubPath);
+app.MapBlazorHub(ApplicationConstants.ApplicationUrlSubPath + "/_blazor");
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 

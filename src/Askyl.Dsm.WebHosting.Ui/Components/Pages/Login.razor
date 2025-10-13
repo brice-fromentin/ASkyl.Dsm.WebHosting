@@ -2,6 +2,7 @@
 
 @using System.Runtime.InteropServices
 
+@using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Data.Security
 @using Askyl.Dsm.WebHosting.Tools.Network
 
@@ -53,7 +54,7 @@
 
         if (client.IsConnected)
         {
-            navigation.NavigateTo("/");
+            navigation.NavigateTo(ApplicationConstants.HomePagePath);
         }
     }
 
@@ -77,8 +78,8 @@
 
             // success
             ToastService.ShowSuccess("Authentication successful");
-            await Task.Delay(500);
-            navigation.NavigateTo("/");
+            await Task.Delay(ApplicationConstants.ShortUiDelay);
+            navigation.NavigateTo(ApplicationConstants.HomePagePath);
         }
         finally
         {

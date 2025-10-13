@@ -1,3 +1,28 @@
+# 🔴 MANDATORY PRE-RESPONSE CODE CHECKLIST 🔴
+
+**THE AI ASSISTANT MUST IMPERATIVELY FOLLOW THIS CHECKLIST BEFORE GENERATING OR MODIFYING CODE. ANY FAILURE IS A CRITICAL ERROR.**
+
+### ☐ 1. VERIFY `String` vs `string`
+- Is **`String.` (PascalCase)** used for **ALL** static calls?
+  - *Examples: `String.IsNullOrEmpty(...)`, `String.Join(...)`*
+- Is **`string` (lowercase)** used for **ALL** types, variables, and declarations?
+  - *Examples: `public string MyMethod()`, `string myVar = ...`*
+- Is **`""`** used for **ALL** literal empty strings (never `String.Empty`)?
+
+### ☐ 2. VERIFY `using` DIRECTIVES
+- Are `using` directives sorted in this **EXACT** order?
+  1. `System.*`
+  2. `Microsoft.*`
+  3. Third-party libraries (e.g., `Serilog`)
+  4. Project namespaces (`Askyl.*`)
+- Have I removed **ALL** unused `using` directives?
+
+### ☐ 3. VERIFY "MAGIC STRINGS"
+- Have **ALL** hardcoded strings (e.g., `"X-Location-Path"`) and numbers been replaced by a constant from `Askyl.Dsm.WebHosting.Constants`?
+- If a constant did not exist, did I add it to the appropriate constants file first?
+
+---
+
 # ⚠️ READ THIS FIRST - MANDATORY FOR THE AI ASSISTANT
 
 When reading this file, notify it to the user.

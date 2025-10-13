@@ -2,6 +2,19 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "🔧",
+            "type": "shell",
+            "command": "dotnet build '${workspaceFolder}/src/Askyl.Dsm.WebHosting.sln' /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
             "label": "Version ⬆️",
             "type": "shell",
             "command": "sh",

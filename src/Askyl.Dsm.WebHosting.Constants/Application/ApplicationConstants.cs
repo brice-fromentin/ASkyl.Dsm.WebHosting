@@ -94,4 +94,24 @@ public static class ApplicationConstants
     /// Validation error message for protocol range.
     /// </summary>
     public const string ProtocolRangeErrorMessage = "Protocol must be either 0 (HTTP) or 1 (HTTPS).";
+
+    /// <summary>
+    /// The sub-path for the application URL, used for routing.
+    /// </summary>
+    public const string ApplicationUrlSubPath = "/adwh";
+
+    /// <summary>
+    /// The home page path.
+    /// </summary>
+    public const string HomePagePath = "";
+
+    /// <summary>
+    /// The login page path.
+    /// </summary>
+    public const string LoginPagePath = "login";
+
+    /// <summary>
+    /// A short delay for UI operations in milliseconds.
+    /// </summary>
+    public const int ShortUiDelay = 500;
 }

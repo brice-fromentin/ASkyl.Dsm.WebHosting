@@ -11,15 +11,8 @@
     "nginx-static-config": {
       "enable": [
         {
-          "type": "server",
-          "relpath": "etc/adwh-reverse-proxy.conf",
-          "ports": [
-            {
-              "port": 7121,
-              "protocol": "tcp",
-              "schema": "https"
-            }
-          ]
+          "type": "dsm",
+          "relpath": "etc/adwh-alias.conf"
         }
       ]
     }
