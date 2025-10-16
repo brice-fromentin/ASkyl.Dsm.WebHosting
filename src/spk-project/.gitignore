@@ -10,6 +10,8 @@ ehthumbs.db
 Thumbs.db
 
 # Build artifacts
+package/runtimes/downloads/aspnetcore*.tar.gz
+package/runtimes/downloads/releases-*.json
 package.tgz
 *.spk
 

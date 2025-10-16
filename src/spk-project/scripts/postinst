@@ -4,123 +4,49 @@
 
 source "$(dirname "$0")/common-functions.sh"
 
-update_progress 0.2 "Starting post-installation"
-
+# -----------------------------------------------------------------------------
+# Initialization
+# -----------------------------------------------------------------------------
+update_progress 0.1 "Initializing installation"
 start_log "postinst"
+log_info "Starting post-installation script..."
+log_debug "Package dir: $PACKAGE_DIR"
+log_debug "Var dir: $VAR_DIR"
 
-log_debug "POSTINST: Starting postinst script"
-log_debug "POSTINST: User ID: $(id)"
-log_debug "POSTINST: Working directory: $(pwd)"
-log_debug "POSTINST: Environment variables:"
-log_debug "POSTINST: SYNOPKG_PKGNAME=${SYNOPKG_PKGNAME}"
-log_debug "POSTINST: SYNOPKG_PKGDEST=${SYNOPKG_PKGDEST}"
-log_debug "POSTINST: SYNOPKG_DSM_ARCH=${SYNOPKG_DSM_ARCH}"
-log_debug "POSTINST: SYNOPKG_TEMP_LOGFILE=${SYNOPKG_TEMP_LOGFILE}"
-
-log_info "Package dir: $PACKAGE_DIR"
-log_info "Var dir: $VAR_DIR"
-
-update_progress 0.3 "Setting up directories"
-
-# Create var directory if it doesn't exist
+# -----------------------------------------------------------------------------
+# Directory Setup
+# -----------------------------------------------------------------------------
+update_progress 0.2 "Setting up directories"
+log_info "Creating var directory..."
 mkdir -p "$VAR_DIR"
 mkdir -p "$VAR_DIR/logs"
-log_info "Created var directory: $VAR_DIR"
-log_debug "POSTINST: Var directory permissions: $(ls -la "$VAR_DIR" 2>/dev/null || echo 'not accessible')"
-log_debug "POSTINST: Var directory owner: $(stat -c '%U:%G' "$VAR_DIR" 2>/dev/null || echo 'unknown')"
+log_info "Var directory created at: $VAR_DIR"
 
-# Detect system architecture from OS
-OS_ARCH=$(uname -m)
-INSTALLER_ARCH=""
-
-# Map OS architecture to .NET installer architectures
-case "$OS_ARCH" in
-    x86_64|amd64)
-        INSTALLER_ARCH="amd64"
-        ;;
-    aarch64|arm64)
-        INSTALLER_ARCH="arm64"
-        ;;
-    armv7l|armv7)
-        INSTALLER_ARCH="arm"
-        ;;
-    *)
-        log_error "Unsupported OS architecture: $OS_ARCH"
-        log_debug "Error: Unsupported OS architecture: $OS_ARCH"
-        log_debug "Supported architectures: x86_64, aarch64, armv7l"
-        exit 1
-        ;;
-esac
-
-log_info "Detected OS architecture: $OS_ARCH -> Using installer: $INSTALLER_ARCH"
-update_progress 0.4 "Architecture detection completed"
-
-# Path to the architecture-specific installer source and destination
-RUNTIMES_DIR="$PACKAGE_DIR/runtimes"
-SOURCE_INSTALLER_PATH="$PACKAGE_DIR/installer/$INSTALLER_ARCH/dotnet-installer"
-SOURCE_APPSETTINGS_PATH="$PACKAGE_DIR/installer/$INSTALLER_ARCH/appsettings.json"
-DEST_INSTALLER_PATH="$RUNTIMES_DIR/dotnet-installer"
-DEST_APPSETTINGS_PATH="$RUNTIMES_DIR/appsettings.json"
-
-if [ ! -f "$SOURCE_INSTALLER_PATH" ]; then
-    log_fatal_with_temp "dotnet-installer missing at: $SOURCE_INSTALLER_PATH" \
-                       "Package corrupted - .NET installer missing for architecture $INSTALLER_ARCH"
-    log_debug "Error: Package corrupted - dotnet-installer missing for architecture $INSTALLER_ARCH"
+# -----------------------------------------------------------------------------
+# .NET Runtime Installation
+# -----------------------------------------------------------------------------
+update_progress 0.3 "Installing .NET runtime"
+if ! install_dotnet_runtime; then
+    # Error is logged inside the function
     exit 1
 fi
+log_info ".NET runtime installation step completed."
 
-log_info "Found source dotnet-installer at: $SOURCE_INSTALLER_PATH"
-
-update_progress 0.5 "Copying installer files"
-
-# Copy the appropriate installer to runtimes directory
-cp "$SOURCE_INSTALLER_PATH" "$DEST_INSTALLER_PATH"
-log_info "Copied dotnet-installer to: $DEST_INSTALLER_PATH"
-
-if [ ! -f "$SOURCE_APPSETTINGS_PATH" ]; then
-    log_fatal_with_temp "appsettings.json missing at: $SOURCE_APPSETTINGS_PATH" \
-                       "Package corrupted - appsettings.json missing for architecture $INSTALLER_ARCH"
-    log_debug "Error: Package corrupted - appsettings.json missing for architecture $INSTALLER_ARCH"
+# -----------------------------------------------------------------------------
+# .NET Runtime Verification
+# -----------------------------------------------------------------------------
+update_progress 0.8 "Verifying .NET runtime"
+if ! verify_dotnet_runtime; then
+    log_fatal_with_temp "Failed to verify .NET runtime installation." \
+                       "The .NET runtime could not be installed or is corrupted."
     exit 1
 fi
+log_info ".NET runtime verification step completed."
 
-# Copy the appsettings.json file
-cp "$SOURCE_APPSETTINGS_PATH" "$DEST_APPSETTINGS_PATH"
-log_info "Copied appsettings.json to: $DEST_APPSETTINGS_PATH"
-update_progress 0.6 "Files copied successfully"
-
-# Run the installer from runtimes directory
-update_progress 0.7 "Installing .NET runtime"
-log_info "Executing dotnet-installer from runtimes..."
-if "$DEST_INSTALLER_PATH" 2>&1; then
-    log_info "dotnet-installer completed successfully"
-    update_progress 0.9 ".NET runtime installed"
-else
-    log_fatal_with_temp "dotnet-installer failed with exit code $?" \
-                       ".NET installation failed - please check system requirements"
-    log_debug "Error: dotnet-installer execution failed. Check logs for details."
-    exit 1
-fi
-
-# Verify that .NET runtime has been installed in runtimes directory
-DOTNET_RUNTIME_PATH="$RUNTIMES_DIR/dotnet"
-if [ -f "$DOTNET_RUNTIME_PATH" ]; then
-    log_info ".NET runtime successfully installed at: $DOTNET_RUNTIME_PATH"
-    
-    # Test if dotnet executable works
-    if "$DOTNET_RUNTIME_PATH" --info >> /tmp/adwh-install.log 2>&1; then
-        log_info ".NET runtime verification successful"
-        update_progress 0.95 "Runtime verification successful"
-    else
-        log_warning ".NET runtime exists but failed version check"
-        log_debug "Warning: .NET runtime verification failed. Check /tmp/adwh-install.log for details."
-    fi
-else
-    log_error ".NET runtime not found at expected location: $DOTNET_RUNTIME_PATH"
-    log_debug "Error: .NET runtime installation failed. Runtime not found at $DOTNET_RUNTIME_PATH"
-fi
-
-update_progress 1.0 "Installation completed successfully"
-log_info "Finished postinst script"
+# -----------------------------------------------------------------------------
+# Finalization
+# -----------------------------------------------------------------------------
+update_progress 1.0 "Installation completed"
+log_info "Post-installation script finished successfully."
 
 exit 0

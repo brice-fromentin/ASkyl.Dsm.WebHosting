@@ -1,5 +1,5 @@
 package="AskylWebHosting"
-version="0.3.9"
+version="0.3.10"
 displayname="ASkyl DSM Web Hosting"
 description="Provides the ability to host and manage .NET Web sites."
 beta="yes"

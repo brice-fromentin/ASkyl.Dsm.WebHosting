@@ -48,7 +48,8 @@ log_fatal() {
 _init_beta_mode() {
     if [ -z "$_BETA_MODE_INITIALIZED" ]; then
         local info_file="$(dirname "$(dirname "$0")")/INFO"
-        if [ -f "$info_file" ] && grep -q '^beta="yes"' "$info_file" 2>/dev/null; then
+        if [ -f "$info_file" ] && grep -q '^beta="yes"' "$info_file" 2>/dev/null;
+        then
             _IS_BETA_MODE=true
         else
             _IS_BETA_MODE=false
@@ -85,7 +86,8 @@ update_progress() {
     local description="${2:-}"
 
     if [ -n "$SYNOPKG_PKG_PROGRESS_PATH" ] && [ -n "$progress" ]; then
-        if flock -x "$SYNOPKG_PKG_PROGRESS_PATH" -c "echo $progress > \"$SYNOPKG_PKG_PROGRESS_PATH\"" 2>/dev/null; then
+        if flock -x "$SYNOPKG_PKG_PROGRESS_PATH" -c "echo $progress > \"$SYNOPKG_PKG_PROGRESS_PATH\"" 2>/dev/null;
+        then
             if [ -n "$description" ]; then
                 log_debug "Progress updated to $(awk "BEGIN {printf \"%.0f%%\", $progress * 100}") - $description"
             else
@@ -199,6 +201,87 @@ restore_file() {
         cp -f "$backup_file" "$target" && log_info "Restored $target from $backup_file" || log_error "Failed to restore $target"
     else
         log_info "No backup file found at $backup_file"
+    fi
+}
+
+#endregion
+
+#region .NET Runtime Management
+
+# Detects architecture and installs the .NET runtime by extracting the correct archive.
+install_dotnet_runtime() {
+    log_info "Starting .NET runtime installation..."
+
+    # Detect system architecture from OS
+    local OS_ARCH=$(uname -m)
+    local ARCHIVE_NAME=""
+    log_info "Detected OS architecture: $OS_ARCH"
+
+    # Map OS architecture to runtime archive name
+    case "$OS_ARCH" in
+        x86_64|amd64)
+            ARCHIVE_NAME="aspnetcore-runtime-linux-x64.tar.gz"
+            ;; 
+        aarch64|arm64)
+            ARCHIVE_NAME="aspnetcore-runtime-linux-arm64.tar.gz"
+            ;; 
+        armv7l|armv7)
+            ARCHIVE_NAME="aspnetcore-runtime-linux-arm.tar.gz"
+            ;; 
+        *)
+            log_fatal_with_temp "Unsupported OS architecture: $OS_ARCH" \
+                               "This package does not support your Synology model's architecture."
+            log_debug "Error: Unsupported OS architecture: $OS_ARCH. Supported: x86_64, aarch64, armv7l"
+            return 1
+            ;; 
+    esac
+
+    log_info "Using archive: $ARCHIVE_NAME"
+
+    local RUNTIMES_DIR="$PACKAGE_DIR/runtimes"
+    local DOWNLOADS_DIR="$RUNTIMES_DIR/downloads"
+    local SOURCE_ARCHIVE="$DOWNLOADS_DIR/$ARCHIVE_NAME"
+
+    if [ ! -f "$SOURCE_ARCHIVE" ]; then
+        log_fatal_with_temp "Runtime archive not found at $SOURCE_ARCHIVE" ".NET installation failed - runtime archive is missing."
+        log_debug "Error: Runtime archive not found for $OS_ARCH. Looked for $SOURCE_ARCHIVE"
+        return 1
+    fi
+
+    log_info "Found runtime archive: $SOURCE_ARCHIVE"
+    log_info "Extracting to $RUNTIMES_DIR..."
+
+    if tar -xzf "$SOURCE_ARCHIVE" -C "$RUNTIMES_DIR" --strip-components=1;
+    then
+        log_info ".NET runtime extracted successfully"
+    else
+        log_fatal_with_temp "Failed to extract runtime archive with exit code $?" ".NET installation failed - could not extract archive."
+        log_debug "Error: tar command failed for $SOURCE_ARCHIVE"
+        return 1
+    fi
+}
+
+# Verifies the .NET runtime installation.
+verify_dotnet_runtime() {
+    log_info "Verifying .NET runtime installation..."
+    local RUNTIMES_DIR="$PACKAGE_DIR/runtimes"
+    local DOTNET_RUNTIME_PATH="$RUNTIMES_DIR/dotnet"
+
+    if [ -f "$DOTNET_RUNTIME_PATH" ]; then
+        log_info ".NET runtime found at: $DOTNET_RUNTIME_PATH"
+        
+        # Test if dotnet executable works
+        if "$DOTNET_RUNTIME_PATH" --info >> /tmp/adwh-install.log 2>&1; then
+            log_info ".NET runtime verification successful"
+        else
+            log_warning ".NET runtime exists but failed version check"
+            log_debug "Warning: .NET runtime verification failed. Check /tmp/adwh-install.log for details."
+            return 1
+        fi
+    else
+        log_error ".NET runtime not found at expected location: $DOTNET_RUNTIME_PATH"
+        log_debug "Error: .NET runtime installation failed. Runtime not found at $DOTNET_RUNTIME_PATH"
+        return 1
     fi
 }
 
