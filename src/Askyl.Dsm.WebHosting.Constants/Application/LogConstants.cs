@@ -33,7 +33,8 @@ public static class LogConstants
 
     #region API Endpoints
 
-    public const string LogDownloadEndpoint = "/api/LogDownload/logs";
+    public const string LogDownloadEndpoint = ApplicationConstants.ApplicationSubPath + "/api/LogDownload/logs";
+    
     public const string TokenQueryParameter = "token";
 
     #endregion

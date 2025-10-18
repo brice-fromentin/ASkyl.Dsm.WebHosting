@@ -22,19 +22,14 @@
 
     <link rel="icon" type="image/svg+xml" href="images/adwh-logo.svg" sizes="any">
     <link rel="icon" type="image/png" href="images/favicon.png" sizes="any" />
-    <HeadOutlet @rendermode="RenderMode" />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <FluentDesignTheme Mode="@DesignThemeModes.System" />
 
 <body>
-    <Routes @rendermode="RenderMode" />
+    <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
 </body>
 
 </html>
-
-@code
-{
-    private static readonly IComponentRenderMode RenderMode = new InteractiveServerRenderMode(prerender: false);
-}

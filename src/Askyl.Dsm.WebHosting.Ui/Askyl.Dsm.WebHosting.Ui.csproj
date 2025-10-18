@@ -22,6 +22,10 @@
     <Folder Include="logs/" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Licenses/**/*.txt" />
+  </ItemGroup>
+
   <Target Name="MoreClean" AfterTargets="Clean">
     <RemoveDir Directories="$(BaseOutputPath)" />
     <RemoveDir Directories="$(BaseIntermediateOutputPath)" />

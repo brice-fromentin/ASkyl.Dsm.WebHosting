@@ -1,0 +1,35 @@
+@using Askyl.Dsm.WebHosting.Ui.Models
+@using Askyl.Dsm.WebHosting.Ui.Services
+
+@implements IDialogContentComponent
+
+@inject ILicenseService LicenseService
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentLabel Typo="Typography.H2">Licenses</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogFooter>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Class="flex-full-width">Close</FluentButton>
+</FluentDialogFooter>
+
+<FluentDialogBody>
+    <FluentTabs Orientation="Orientation.Vertical" Class="full-size">
+        @foreach (var license in LicenseService.Licenses)
+        {
+            <FluentTab>
+                <Header>@license.Name</Header>
+                <ChildContent>
+                    <pre>@license.Content</pre>
+                </ChildContent>
+            </FluentTab>
+        }
+    </FluentTabs>
+</FluentDialogBody>
+
+@code {
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

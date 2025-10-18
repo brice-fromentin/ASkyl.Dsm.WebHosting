@@ -41,7 +41,7 @@ public static class DsmApiNames
     #endregion
 
     #region AppPortal
-    
+
     public const string AppPortalReverseProxy = "SYNO.Core.AppPortal.ReverseProxy";
 
     #endregion

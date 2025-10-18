@@ -77,10 +77,6 @@ if [[ ! -f "$DIRECTORY_BUILD_PROPS" ]]; then
     exit 1
 fi
 
-# Create backup
-cp "$DIRECTORY_BUILD_PROPS" "$DIRECTORY_BUILD_PROPS.backup"
-print_info "Backup created: $DIRECTORY_BUILD_PROPS.backup"
-
 # Update version in Directory.Build.props
 sed -i.tmp "s|<Version>.*</Version>|<Version>$NEW_VERSION</Version>|g" "$DIRECTORY_BUILD_PROPS"
 sed -i.tmp "s|<AssemblyVersion>.*</AssemblyVersion>|<AssemblyVersion>$NEW_VERSION.0</AssemblyVersion>|g" "$DIRECTORY_BUILD_PROPS"
@@ -102,10 +98,6 @@ if [[ ! -f "$SPK_INFO_FILE" ]]; then
     exit 1
 fi
 
-# Create backup
-cp "$SPK_INFO_FILE" "$SPK_INFO_FILE.backup"
-print_info "Backup created: $SPK_INFO_FILE.backup"
-
 # Update version in INFO file
 sed -i.tmp "s|version=\".*\"|version=\"$NEW_VERSION\"|g" "$SPK_INFO_FILE"
 
@@ -122,5 +114,3 @@ NEW_BUILD_VERSION=$(grep '<Version>' "$DIRECTORY_BUILD_PROPS" | sed 's/.*<Versio
 NEW_SPK_VERSION=$(grep 'version=' "$SPK_INFO_FILE" | sed 's/.*version="\([^"]*\)".*/\1/')
 print_info "  Directory.Build.props: $NEW_BUILD_VERSION"
 print_info "  SPK INFO file: $NEW_SPK_VERSION"
-
-print_warning "Backup files created (.backup) - you can remove them after verification"

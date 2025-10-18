@@ -1,12 +1,12 @@
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.FluentUI.AspNetCore.Components;
+using Serilog;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.WebSites;
 using Askyl.Dsm.WebHosting.Tools;
 using Askyl.Dsm.WebHosting.Tools.WebSites;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.FluentUI.AspNetCore.Components;
-using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +24,7 @@ builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
 builder.Services.AddScoped<IFileSystemService, FileSystemService>();
 builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 builder.Services.AddScoped<ITemporaryTokenService, TemporaryTokenService>();
+builder.Services.AddSingleton<ILicenseService, LicenseService>();
 
 // Add WebSite management services (late configuration)
 builder.Services.AddSingleton<IReverseProxyManager, ReverseProxyManager>();

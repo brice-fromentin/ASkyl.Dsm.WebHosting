@@ -40,3 +40,8 @@ body {
 fluent-toolbar fluent-divider {
     height: var(--type-ramp-base-line-height);
 }
+
+fluent-tab-panel {
+    height: 100%;
+    overflow-y: auto;
+}

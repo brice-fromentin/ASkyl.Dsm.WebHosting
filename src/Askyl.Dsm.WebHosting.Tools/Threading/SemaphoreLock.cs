@@ -22,6 +22,13 @@ public sealed class SemaphoreLock : IDisposable
         _disposed = true;
     }
 
+    public static SemaphoreLock Acquire(SemaphoreSlim semaphore)
+    {
+        ArgumentNullException.ThrowIfNull(semaphore);
+        semaphore.Wait();
+        return new SemaphoreLock(semaphore);
+    }
+
     public static async Task<SemaphoreLock> AcquireAsync(SemaphoreSlim semaphore, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(semaphore);

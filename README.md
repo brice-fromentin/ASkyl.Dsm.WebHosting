@@ -12,11 +12,11 @@ This project has also the following goals :
 
 # TODO
     Macro
-        - Reverse proxy manager.
         - Certificates management for the reverse proxy configurations.
         - Check required .NET version when configuraring an application.
         - Route applications stdout and errout to downloadable logs.
         - Support deploying from a compressed file.
+        - Implement multi language support.
         - ...
 
     Micro

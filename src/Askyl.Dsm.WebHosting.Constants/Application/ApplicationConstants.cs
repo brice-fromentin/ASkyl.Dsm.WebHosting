@@ -26,6 +26,11 @@ public static class ApplicationConstants
     public const string WebSitesConfigFileName = "websites.json";
 
     /// <summary>
+    /// The root path for the .NET runtimes directory.
+    /// </summary>
+    public const string RuntimesRootPath = "../runtimes";
+
+    /// <summary>
     /// Default environment for ASP.NET Core applications.
     /// </summary>
     public const string DefaultEnvironment = "Production";
@@ -96,9 +101,14 @@ public static class ApplicationConstants
     public const string ProtocolRangeErrorMessage = "Protocol must be either 0 (HTTP) or 1 (HTTPS).";
 
     /// <summary>
+    /// The sub-path alias for the application
+    /// </summary>
+    public const string ApplicationSubPath = "adwh";
+
+    /// <summary>
     /// The sub-path for the application URL, used for routing.
     /// </summary>
-    public const string ApplicationUrlSubPath = "/adwh";
+    public const string ApplicationUrlSubPath = "/" + ApplicationSubPath;
 
     /// <summary>
     /// The home page path.
@@ -114,4 +124,14 @@ public static class ApplicationConstants
     /// A short delay for UI operations in milliseconds.
     /// </summary>
     public const int ShortUiDelay = 500;
+
+    /// <summary>
+    /// The resource path for licenses.
+    /// </summary>
+    public const string LicensesResourcePath = ".Licenses.";
+
+    /// <summary>
+    /// The file extension for license files.
+    /// </summary>
+    public const string LicenseFileExtension = ".txt";
 }

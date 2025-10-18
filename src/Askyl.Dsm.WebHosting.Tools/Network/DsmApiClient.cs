@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
 using Askyl.Dsm.WebHosting.Data.API.Parameters;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.AuthenticationAPI;
@@ -101,7 +102,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
         }
 
         _sid = response.Data.Sid;
-        _httpClient.DefaultRequestHeaders.Add("Cookie", "_SSID=" + response.Data.Sid);
+        _httpClient.DefaultRequestHeaders.Add(NetworkConstants.CookieHeader, NetworkConstants.SsidCookiePrefix + response.Data.Sid);
 
         return true;
     }

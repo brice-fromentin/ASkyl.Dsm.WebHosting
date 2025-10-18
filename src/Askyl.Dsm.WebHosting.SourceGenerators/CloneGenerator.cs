@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -68,10 +67,9 @@ namespace Askyl.Dsm.WebHosting.SourceGenerators
         var namespaceName = GetNamespace(classDeclaration);
         var className = classDeclaration.Identifier.Text;
 
-        var properties = classDeclaration.Members
-            .OfType<PropertyDeclarationSyntax>()
-            .Where(p => p.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration) || a.IsKind(SyntaxKind.InitAccessorDeclaration)) == true)
-            .ToList();
+        var properties = classDeclaration.Members.OfType<PropertyDeclarationSyntax>()
+                                                 .Where(p => p.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration) || a.IsKind(SyntaxKind.InitAccessorDeclaration)) == true)
+                                                 .ToList();
 
         var source = GenerateCloneMethod(namespaceName, className, properties, classDeclaration);
 

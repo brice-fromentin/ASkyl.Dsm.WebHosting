@@ -1,3 +1,5 @@
+using Microsoft.FluentUI.AspNetCore.Components;
+
 using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.CoreAclAPI;
@@ -5,7 +7,6 @@ using Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
 using Askyl.Dsm.WebHosting.Data.API.Responses;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Tools.Network;
-using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -41,7 +42,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
             throw new FileStationApiException($"FileStation API call failed: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code);
         }
 
-        var sharedFolders = response.Data.Shares.Select(share => CreateTreeViewItemWithLazyLoading(share.Path, share.Name, errorHandler)).ToList();
+        List<TreeViewItem> sharedFolders = [.. response.Data.Shares.Select(share => CreateTreeViewItemWithLazyLoading(share.Path, share.Name, errorHandler))];
 
         _logger.LogInformation("Retrieved {Count} shared folders", sharedFolders.Count);
         return sharedFolders;

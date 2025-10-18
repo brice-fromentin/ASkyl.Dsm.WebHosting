@@ -5,7 +5,7 @@ using Askyl.Dsm.WebHosting.Ui.Services;
 namespace Askyl.Dsm.WebHosting.Ui.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route(ApplicationConstants.ApplicationUrlSubPath + "/api/[controller]")]
 public class LogDownloadController(ILogger<LogDownloadController> logger, ITemporaryTokenService tokenService, ILogDownloadService logDownloadService) : ControllerBase
 {
 
@@ -85,10 +85,10 @@ public class FileCallbackResult(string contentType, string fileName, Func<Stream
     public async Task ExecuteResultAsync(ActionContext context)
     {
         var response = context.HttpContext.Response;
-        
+
         response.ContentType = _contentType;
         response.Headers.Append("Content-Disposition", $"attachment; filename=\"{_fileName}\"");
-        
+
         await _callback(response.Body, context);
     }
 

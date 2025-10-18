@@ -7,7 +7,7 @@
   - *Examples: `String.IsNullOrEmpty(...)`, `String.Join(...)`*
 - Is **`string` (lowercase)** used for **ALL** types, variables, and declarations?
   - *Examples: `public string MyMethod()`, `string myVar = ...`*
-- Is **`""`** used for **ALL** literal empty strings (never `String.Empty`)?
+- Use `String.Empty` (not `string.Empty` or `""`) for empty string constants. **Exception**: Use `""` for default parameter values.
 
 ### ☐ 2. VERIFY `using` DIRECTIVES
 - Are `using` directives sorted in this **EXACT** order?
@@ -45,7 +45,7 @@ This file provides guidance to the AI assistant when working with code in this r
 ### String vs string Pattern (ABSOLUTE PRIORITY)
 - **String.** (PascalCase) for static methods: `String.IsNullOrEmpty()`, `String.Join()`, `String.Empty`
 - **string** (lowercase) for types/variables: `string token`, `public string Method()`
-- **""** instead of `String.Empty` for default values (String.Empty is not compile-time constant)
+- Use `String.Empty` (not `string.Empty` or `""`) for empty string constants. **Exception**: Use `""` for default parameter values.
 
 ### Chat Language (MANDATORY)
 - ALWAYS use language used by user

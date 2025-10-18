@@ -47,6 +47,9 @@
     <FluentButton OnClick="DownloadLogs" Appearance="Appearance.Outline">
         Download Logs
     </FluentButton>
+    <FluentButton OnClick="ShowLicensesDialog" Appearance="Appearance.Outline">
+        Licenses
+    </FluentButton>
 </FluentToolbar>
 
 <AutoDataGrid TItem="WebSiteInstance" Items="@Instances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@EditWebSiteInstance" GridTemplateColumns="1fr 2fr 1fr 1fr">
@@ -79,16 +82,21 @@
 
     #region Lifecycle Methods
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!client.IsConnected)
+        if (firstRender)
         {
-            navigation.NavigateTo(ApplicationConstants.LoginPagePath);
-            return;
+            if (!client.IsConnected)
+            {
+                navigation.NavigateTo(ApplicationConstants.LoginPagePath);
+                return;
+            }
+
+            await LoadInstancesAsync();
         }
 
-        await LoadInstancesAsync();
-    }
+        await base.OnAfterRenderAsync(firstRender);
+    }  
 
     #endregion
 
@@ -119,6 +127,19 @@
     private async Task ShowDotnetVersionsDialog() => await DialogsService.ShowDialogAsync<DotnetVersionsDialog>();
 
     private async Task ShowAspNetReleasesDialog() => await DialogsService.ShowDialogAsync<AspNetReleasesDialog>();
+
+    private async Task ShowLicensesDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            Width = "900px",
+            Height = "70vh",
+            Modal = true,
+            PreventScroll = true
+        };
+        
+        await DialogsService.ShowDialogAsync<LicensesDialog>(parameters);
+    }
 
     private async Task AddWebSite() => await ShowWebSiteConfigurationDialogAsync(WebSiteInstance.New());
 

@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
@@ -19,7 +20,7 @@ public class FrameworkManagementService(IDotnetVersionService dotnetVersionServi
     {
         try
         {
-            FileSystem.Initialize("../runtimes");
+            FileSystem.Initialize(ApplicationConstants.RuntimesRootPath);
 
             // Download the specific framework version
             var fileName = await Downloader.DownloadVersionToAsync(version, channel, true);
@@ -47,7 +48,7 @@ public class FrameworkManagementService(IDotnetVersionService dotnetVersionServi
             await EnsureUninstallAllowedForChannelAsync(version);
 
             // Delete the directories related to the specified version
-            FileSystem.Initialize("../runtimes");
+            FileSystem.Initialize(ApplicationConstants.RuntimesRootPath);
             FileSystem.DeleteDirectory($"host/fxr/{version}");
             FileSystem.DeleteDirectory($"shared/Microsoft.AspNetCore.App/{version}");
             FileSystem.DeleteDirectory($"shared/Microsoft.NETCore.App/{version}");
