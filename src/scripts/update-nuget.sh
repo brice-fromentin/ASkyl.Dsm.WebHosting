@@ -11,7 +11,7 @@ else
     echo "dotnet-outdated-tool is already installed."
 fi
 
-echo "Updating NuGet packages for Askyl.Dsm.WebHosting.sln..."
-dotnet outdated ./src/Askyl.Dsm.WebHosting.sln -u
+echo "Updating NuGet packages for Askyl.Dsm.WebHosting.slnx..."
+dotnet outdated ./src/Askyl.Dsm.WebHosting.slnx -u
 
 echo "NuGet package update process finished."

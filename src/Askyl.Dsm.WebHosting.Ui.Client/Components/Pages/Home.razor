@@ -1,0 +1,23 @@
+﻿@page "/"
+
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app = [@message]
+
+@code
+{
+    string message { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var client = HttpClientFactory.CreateClient("John");
+ 
+        message = await client.GetFromJsonAsync<string>("api/helloworld/hello") ?? "No message";
+ 
+        await base.OnInitializedAsync();
+    }
+}

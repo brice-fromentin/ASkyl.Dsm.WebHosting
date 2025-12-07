@@ -4,7 +4,7 @@
         {
             "label": "🔧",
             "type": "shell",
-            "command": "dotnet build '${workspaceFolder}/src/Askyl.Dsm.WebHosting.sln' /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary",
+            "command": "dotnet build '${workspaceFolder}/src/Askyl.Dsm.WebHosting.slnx' /property:GenerateFullPaths=true /consoleloggerparameters:NoSummary",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -44,7 +44,7 @@
             "command": "dotnet",
             "args": [
                 "clean",
-                "./src/Askyl.Dsm.WebHosting.sln"
+                "./src/Askyl.Dsm.WebHosting.slnx"
             ],
             "presentation": {
                 "reveal": "always",

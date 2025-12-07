@@ -24,7 +24,7 @@
 - Apply SOLID principles.
 
 ## C# Language Features
-- We are targeting .NET 9, use the latest C# features.
+- We are targeting .NET 10, use the latest C# 14 features.
 - **String vs string usage**:
   - Use `String.Empty` (not `string.Empty` or `""`) for empty string constants
   - Use `String.IsNullOrEmpty()`, `String.IsNullOrWhiteSpace()` for static method calls

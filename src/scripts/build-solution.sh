@@ -4,9 +4,9 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 
 echo "Cleaning the solution..."
-dotnet clean ./src/Askyl.Dsm.WebHosting.sln
+dotnet clean ./src/Askyl.Dsm.WebHosting.slnx
 
 echo "Building the solution..."
-dotnet build ./src/Askyl.Dsm.WebHosting.sln
+dotnet build ./src/Askyl.Dsm.WebHosting.slnx
 
 echo "Solution build finished successfully."

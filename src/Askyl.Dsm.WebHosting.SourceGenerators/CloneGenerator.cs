@@ -43,23 +43,14 @@ namespace Askyl.Dsm.WebHosting.SourceGenerators
     {
         var classDeclaration = (ClassDeclarationSyntax)context.Node;
 
-        foreach (var attributeList in classDeclaration.AttributeLists)
-        {
-            foreach (var attribute in attributeList.Attributes)
-            {
-                var attributeSymbol = context.SemanticModel.GetSymbolInfo(attribute).Symbol;
-                if (attributeSymbol is IMethodSymbol attributeConstructor)
-                {
-                    var attributeType = attributeConstructor.ContainingType;
-                    if (attributeType.Name == "GenerateCloneAttribute")
-                    {
-                        return classDeclaration;
-                    }
-                }
-            }
-        }
-
-        return null;
+        return classDeclaration.AttributeLists
+            .SelectMany(al => al.Attributes)
+            .Select(attr => context.SemanticModel.GetSymbolInfo(attr).Symbol)
+            .OfType<IMethodSymbol>()
+            .Where(symbol => symbol.ContainingType.Name == "GenerateCloneAttribute")
+            .Any() 
+            ? classDeclaration 
+            : null;
     }
 
     private static void Execute(ClassDeclarationSyntax classDeclaration, SourceProductionContext context)

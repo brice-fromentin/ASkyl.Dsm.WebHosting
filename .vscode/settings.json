@@ -1,5 +1,5 @@
 {
-    "dotnet.defaultSolution": "src/Askyl.Dsm.WebHosting.sln",
+    "dotnet.defaultSolution": "src/Askyl.Dsm.WebHosting.slnx",
     "editor.wordWrap": "off",
     "dotnet.formatting.organizeImportsOnFormat": true,
     "html.format.wrapLineLength": 500,

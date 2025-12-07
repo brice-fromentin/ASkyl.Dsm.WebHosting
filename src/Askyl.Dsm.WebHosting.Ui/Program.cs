@@ -1,69 +1,48 @@
-using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Askyl.Dsm.WebHosting.Ui.Components;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
-using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Data.WebSites;
-using Askyl.Dsm.WebHosting.Tools;
-using Askyl.Dsm.WebHosting.Tools.WebSites;
-using Askyl.Dsm.WebHosting.Ui.Components;
-using Askyl.Dsm.WebHosting.Ui.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration).CreateLogger();
 builder.Host.UseSerilog();
 
-builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
-builder.Services.AddDsmApiClient();
 builder.Services.AddFluentUIComponents();
 
-// Add custom services
-builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();
-builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
-builder.Services.AddScoped<IFileSystemService, FileSystemService>();
-builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
-builder.Services.AddScoped<ITemporaryTokenService, TemporaryTokenService>();
-builder.Services.AddSingleton<ILicenseService, LicenseService>();
-
-// Add WebSite management services (late configuration)
-builder.Services.AddSingleton<IReverseProxyManager, ReverseProxyManager>();
-builder.Services.AddSingleton<IWebSitesConfigurationService, WebSitesConfigurationService>();
-builder.Services.AddSingleton<WebSiteHostingService>();
-builder.Services.AddHostedService(provider => provider.GetRequiredService<WebSiteHostingService>());
+// Add controllers
+builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-                .AddInteractiveServerComponents();
-
-builder.Services.AddControllers();
-
-builder.Services.AddMemoryCache();
-
-builder.Services.Configure<KestrelServerOptions>(options =>
-{
-    options.AllowSynchronousIO = true;
-});
+                .AddInteractiveWebAssemblyComponents();
 
 var app = builder.Build();
 
-app.UsePathBase(ApplicationConstants.ApplicationUrlSubPath);
-app.MapBlazorHub(ApplicationConstants.ApplicationUrlSubPath + "/_blazor");
+app.UsePathBase("/adwh");
 
-if (!app.Environment.IsDevelopment())
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseWebAssemblyDebugging();
+}
+else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
 app.UseAntiforgery();
 
+app.MapControllers();
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-   .AddInteractiveServerRenderMode();
-
-app.MapControllers();
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(typeof(Askyl.Dsm.WebHosting.Ui.Client._Imports).Assembly);
 
 app.Run();

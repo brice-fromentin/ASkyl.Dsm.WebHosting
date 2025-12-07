@@ -150,7 +150,7 @@ download_and_verify() {
         fi
     fi
 
-    echo "⬇️  Downloading '$filename'..."
+    echo "⬇️  Downloading [$filename] from [$url] in [$dest_path]"
     curl -s -L -o "$dest_path" "$url"
 
     echo "🔎 Verifying checksum for '$filename'..."
@@ -202,7 +202,8 @@ download_dotnet_runtimes() {
     for arch in "${archs[@]}"; do
         echo "--- Processing architecture: $arch ---"
 
-        local file_info=$(echo "$files_json" | jq ".[] | select(.rid == \"$arch\" and (.name | test(\"composite\") | not))")
+        local expected="aspnetcore-runtime-$arch.tar.gz"
+        local file_info=$(echo "$files_json" | jq ".[] | select(.rid == \"$arch\" and .name == \"$expected\")")
         
         if [ -z "$file_info" ]; then
             printf "⚠️ Warning: Could not find file info for architecture %s in version %s\n" "$arch" "$latest_version_string" >&2

@@ -90,7 +90,7 @@ ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. 
 
 ## Technology Stack
 
-- **.NET 9**: Latest C# features with nullable reference types and implicit usings enabled
+- **.NET 10**: Latest C# features with nullable reference types and implicit usings enabled
 - **Blazor Server**: Interactive server-side rendering
 - **FluentUI Components**: Microsoft's design system for Blazor (v4.12.1+)
 - **Serilog**: Structured logging framework
@@ -111,7 +111,7 @@ ASkyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. 
 - When a property has both get and set accessors, always use multi-line format
 - Always put blank line after #region and before #endregion
 
-### C# Language Features (.NET 9)
+### C# Language Features (.NET 10 & C# 14)
 - **Native types usage (consistent with String pattern)**:
   - Use PascalCase class names (`String`, `Int32`, `Boolean`, `Double`, etc.) for:
     - Static method calls (e.g., `String.IsNullOrEmpty()`, `Int32.TryParse()`, `Boolean.Parse()`)
