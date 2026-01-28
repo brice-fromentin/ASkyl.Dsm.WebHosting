@@ -13,7 +13,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Constants/Askyl.Dsm.WebHosting.Constants.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Data/Askyl.Dsm.WebHosting.Data.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Logging/Askyl.Dsm.WebHosting.Logging.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Tools/Askyl.Dsm.WebHosting.Tools.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Ui.Client/Askyl.Dsm.WebHosting.Ui.Client.csproj" />
   </ItemGroup>
 

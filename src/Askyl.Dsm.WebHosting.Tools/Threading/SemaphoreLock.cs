@@ -5,7 +5,8 @@ public sealed class SemaphoreLock : IDisposable
     private readonly SemaphoreSlim _semaphore;
     private bool _disposed;
 
-    private SemaphoreLock(SemaphoreSlim semaphore)
+
+    public SemaphoreLock(SemaphoreSlim semaphore)
     {
         ArgumentNullException.ThrowIfNull(semaphore);
         _semaphore = semaphore;
@@ -36,17 +37,23 @@ public sealed class SemaphoreLock : IDisposable
         return new SemaphoreLock(semaphore);
     }
 
-    public static async Task<SemaphoreLock> AcquireAsync(SemaphoreSlim semaphore, Func<Task> onAcquired, CancellationToken cancellationToken = default)
+
+    public static async Task<SemaphoreLock> AcquireAsync(SemaphoreSlim semaphore, Func<Task>? onAcquired = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(semaphore);
-        ArgumentNullException.ThrowIfNull(onAcquired);
+
 
         await semaphore.WaitAsync(cancellationToken);
         var lockInstance = new SemaphoreLock(semaphore);
 
         try
         {
-            await onAcquired();
+
+            if (onAcquired != null)
+            {
+                await onAcquired();
+            }
+            
             return lockInstance;
         }
         catch

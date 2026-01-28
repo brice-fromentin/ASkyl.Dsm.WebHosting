@@ -1,6 +1,7 @@
-using Askyl.Dsm.WebHosting.Ui.Components;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
+using Askyl.Dsm.WebHosting.Ui.Components;
+using Askyl.Dsm.WebHosting.Constants.Application;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +20,7 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 
-app.UsePathBase("/adwh");
+app.UsePathBase(ApplicationConstants.ApplicationSubPath);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

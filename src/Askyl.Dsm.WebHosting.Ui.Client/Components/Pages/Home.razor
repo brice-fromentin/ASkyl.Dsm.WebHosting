@@ -1,23 +1,120 @@
 ﻿@page "/"
 
+@implements IWorkingState
+
+@using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
+
 @inject IHttpClientFactory HttpClientFactory
 
-<PageTitle>Home</PageTitle>
+<PageTitle>ADWH - Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<LoadingOverlay WorkingStateComponent="@this" />
 
-Welcome to your new app = [@message]
+<FluentToolbar Class="full-width">
+    <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral" OnClick="AddWebSite">
+        Add
+    </FluentButton>
+    <FluentButton IconStart="@(new IconsRegular20.Edit())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="EditWebSite">
+        Edit
+    </FluentButton>
+    <FluentButton IconStart="@(new IconsRegular20.Delete())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="DeleteWebSite">
+        Delete
+    </FluentButton>
+    <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null || SelectedInstance.IsRunning)" OnClick="StartSelectedInstance">
+        <FluentIcon Value="@(new IconsRegular20.Play())" Color="Color.Success" />
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null || !SelectedInstance.IsRunning)" OnClick="StopSelectedInstance">
+        <FluentIcon Value="@(new IconsRegular20.Stop())" Color="Color.Error" />
+    </FluentButton>
+    <FluentSpacer />
+    <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="Appearance.Outline">
+        .NET Version
+    </FluentButton>
+    <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="Appearance.Outline">
+        ASP.NET Online
+    </FluentButton>
+    <FluentButton OnClick="DownloadLogs" Appearance="Appearance.Outline">
+        Download Logs
+    </FluentButton>
+    <FluentButton OnClick="ShowLicensesDialog" Appearance="Appearance.Outline">
+        Licenses
+    </FluentButton>
+</FluentToolbar>
+
+Welcome to your new app = [@apiMessage]
 
 @code
 {
-    string message { get; set; } = "";
+    #region IWorkingState Implementation
+
+    public bool IsWorking { get; set; }
+    public string Message { get; set; } = "";
+
+    public void NotifyStateChanged() => StateHasChanged();
+
+    #endregion
+
+    record WebSiteInstance
+    {
+        public bool IsRunning;
+    }
+
+    private WebSiteInstance? SelectedInstance;
+
+    string apiMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
         var client = HttpClientFactory.CreateClient("John");
- 
-        message = await client.GetFromJsonAsync<string>("api/helloworld/hello") ?? "No message";
- 
+
+        apiMessage = await client.GetFromJsonAsync<string>("api/helloworld/hello") ?? "No message";
+
         await base.OnInitializedAsync();
+    }
+
+    private void AddWebSite()
+    {
+        // TODO: Implement AddWebSite logic
+    }
+
+    private void EditWebSite()
+    {
+        // TODO: Implement EditWebSite logic
+    }
+
+    private void DeleteWebSite()
+    {
+        // TODO: Implement DeleteWebSite logic
+    }
+
+    private void StartSelectedInstance()
+    {
+        // TODO: Implement StartSelectedInstance logic
+    }
+
+    private void StopSelectedInstance()
+    {
+        // TODO: Implement StopSelectedInstance logic
+    }
+
+    private void ShowDotnetVersionsDialog()
+    {
+        // TODO: Implement ShowDotnetVersionsDialog logic
+    }
+
+    private void ShowAspNetReleasesDialog()
+    {
+        // TODO: Implement ShowAspNetReleasesDialog logic
+    }
+
+    private void DownloadLogs()
+    {
+        // TODO: Implement DownloadLogs logic
+    }
+
+    private void ShowLicensesDialog()
+    {
+        // TODO: Implement ShowLicensesDialog logic
     }
 }
