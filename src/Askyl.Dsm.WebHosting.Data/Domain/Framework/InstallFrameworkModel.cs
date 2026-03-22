@@ -1,3 +1,3 @@
-namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
+namespace Askyl.Dsm.WebHosting.Data.Domain.Framework;
 
 public record InstallFrameworkModel(string Version, string Channel);
