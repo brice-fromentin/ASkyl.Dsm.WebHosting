@@ -1,4 +1,4 @@
-using Askyl.Dsm.WebHosting.Data;
+using Askyl.Dsm.WebHosting.Data.Domain.Licensing;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 

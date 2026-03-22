@@ -1,9 +1,9 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
-using Askyl.Dsm.WebHosting.Data;
-using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
-using Askyl.Dsm.WebHosting.Data.API.Parameters.CoreAclAPI;
-using Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
-using Askyl.Dsm.WebHosting.Data.API.Responses;
+using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreAcl;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.FileStation;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Tools.Network;

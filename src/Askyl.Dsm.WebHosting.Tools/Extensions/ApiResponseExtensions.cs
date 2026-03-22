@@ -1,6 +1,6 @@
 namespace Askyl.Dsm.WebHosting.Tools.Extensions;
 
-using Askyl.Dsm.WebHosting.Data.API.Responses;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 
 /// <summary>
 /// Extension methods for API response types that provide convenient validation helpers.

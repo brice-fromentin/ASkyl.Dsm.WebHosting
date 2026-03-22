@@ -1,5 +1,5 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Data;
+using Askyl.Dsm.WebHosting.Data.Domain.Licensing;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
