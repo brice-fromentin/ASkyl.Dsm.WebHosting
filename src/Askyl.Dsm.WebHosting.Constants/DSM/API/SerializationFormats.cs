@@ -6,12 +6,12 @@ namespace Askyl.Dsm.WebHosting.Constants.DSM.API;
 public enum SerializationFormats
 {
     /// <summary>
-    /// Form-encoded data format.
+    /// Form-encoded data format (application/x-www-form-urlencoded).
     /// </summary>
     Form,
 
     /// <summary>
-    /// JSON data format.
+    /// JSON data format (application/json).
     /// </summary>
     Json
 }

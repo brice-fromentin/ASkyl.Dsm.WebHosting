@@ -5,10 +5,16 @@ namespace Askyl.Dsm.WebHosting.Constants.Application;
 /// </summary>
 public static class LicenseConstants
 {
+    #region File Size Limits
+
     /// <summary>
     /// Maximum allowed license file size in bytes (100KB).
     /// </summary>
     public const int MaxLicenseSizeBytes = 100 * 1024;
+
+    #endregion
+
+    #region License Files
 
     /// <summary>
     /// List of license file names to fetch from wwwroot/licenses/.
@@ -20,4 +26,6 @@ public static class LicenseConstants
         "NET.txt",
         "Serilog.txt"
     ];
+
+    #endregion
 }

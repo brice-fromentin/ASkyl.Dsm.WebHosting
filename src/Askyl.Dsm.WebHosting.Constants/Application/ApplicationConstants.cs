@@ -5,20 +5,12 @@ namespace Askyl.Dsm.WebHosting.Constants.Application;
 /// </summary>
 public static class ApplicationConstants
 {
+    #region Configuration Files
+
     /// <summary>
     /// Default name for the application settings file.
     /// </summary>
     public const string SettingsFileName = "appsettings.json";
-
-    /// <summary>
-    /// Configuration key for the download channel version setting.
-    /// </summary>
-    public const string ChannelVersionKey = "Download:ChannelVersion";
-
-    /// <summary>
-    /// HTTP client name identifier.
-    /// </summary>
-    public const string HttpClientName = "UiClient";
 
     /// <summary>
     /// Default name for the websites configuration file.
@@ -26,9 +18,18 @@ public static class ApplicationConstants
     public const string WebSitesConfigFileName = "websites.json";
 
     /// <summary>
-    /// The root path for the .NET runtimes directory.
+    /// Configuration key for the download channel version setting.
     /// </summary>
-    public const string RuntimesRootPath = "../runtimes";
+    public const string ChannelVersionKey = "Download:ChannelVersion";
+
+    /// <summary>
+    /// Default configuration version.
+    /// </summary>
+    public const string DefaultConfigurationVersion = "1.0";
+
+    #endregion
+
+    #region Environment & Runtime
 
     /// <summary>
     /// Default environment for ASP.NET Core applications.
@@ -51,9 +52,51 @@ public static class ApplicationConstants
     public const string DotnetExecutable = "dotnet";
 
     /// <summary>
-    /// Default configuration version.
+    /// The root path for the .NET runtimes directory.
     /// </summary>
-    public const string DefaultConfigurationVersion = "1.0";
+    public const string RuntimesRootPath = "../runtimes";
+
+    #endregion
+
+    #region HTTP Client
+
+    /// <summary>
+    /// HTTP client name identifier.
+    /// </summary>
+    public const string HttpClientName = "UiClient";
+
+    /// <summary>
+    /// HTTP client timeout in seconds.
+    /// </summary>
+    public const int HttpClientTimeoutSeconds = 10;
+
+    #endregion
+
+    #region Application Paths & Routing
+
+    /// <summary>
+    /// The sub-path alias for the application.
+    /// </summary>
+    public const string ApplicationSubPath = "adwh";
+
+    /// <summary>
+    /// The sub-path for the application URL, used for routing.
+    /// </summary>
+    public const string ApplicationUrlSubPath = "/" + ApplicationSubPath;
+
+    /// <summary>
+    /// The home page path.
+    /// </summary>
+    public const string HomePagePath = "";
+
+    /// <summary>
+    /// The login page path.
+    /// </summary>
+    public const string LoginPagePath = "login";
+
+    #endregion
+
+    #region Port Configuration
 
     /// <summary>
     /// Minimum port number for web applications (avoiding system services).
@@ -64,6 +107,28 @@ public static class ApplicationConstants
     /// Maximum port number for web applications.
     /// </summary>
     public const int MaxWebApplicationPort = 65535;
+
+    #endregion
+
+    #region Session & Authentication
+
+    /// <summary>
+    /// Session key for DSM authentication SID.
+    /// </summary>
+    public const string DsmSessionKey = "DsmSid";
+
+    #endregion
+
+    #region File Extensions
+
+    /// <summary>
+    /// File extension for DLL files.
+    /// </summary>
+    public const string DllFileExtension = ".dll";
+
+    #endregion
+
+    #region Validation Error Messages
 
     /// <summary>
     /// Validation error message for required site name.
@@ -95,40 +160,9 @@ public static class ApplicationConstants
     /// </summary>
     public const string HostNameRequiredErrorMessage = "Host name is required.";
 
-    /// <summary>
-    /// The sub-path alias for the application
-    /// </summary>
-    public const string ApplicationSubPath = "adwh";
+    #endregion
 
-    /// <summary>
-    /// The sub-path for the application URL, used for routing.
-    /// </summary>
-    public const string ApplicationUrlSubPath = "/" + ApplicationSubPath;
-
-    /// <summary>
-    /// The home page path.
-    /// </summary>
-    public const string HomePagePath = "";
-
-    /// <summary>
-    /// The login page path.
-    /// </summary>
-    public const string LoginPagePath = "login";
-
-    /// <summary>
-    /// HTTP client timeout in seconds.
-    /// </summary>
-    public const int HttpClientTimeoutSeconds = 10;
-
-    /// <summary>
-    /// File extension for DLL files.
-    /// </summary>
-    public const string DllFileExtension = ".dll";
-
-    /// <summary>
-    /// Session key for DSM authentication SID.
-    /// </summary>
-    public const string DsmSessionKey = "DsmSid";
+    #region Status Messages
 
     /// <summary>
     /// Error message when platform is not supported.
@@ -145,6 +179,10 @@ public static class ApplicationConstants
     /// </summary>
     public const string AuthenticationSuccessfulMessage = "Authentication successful";
 
+    #endregion
+
+    #region Loading Messages
+
     /// <summary>
     /// Error message when failing to load directory contents.
     /// </summary>
@@ -159,4 +197,6 @@ public static class ApplicationConstants
     /// Loading message for directory contents.
     /// </summary>
     public const string LoadingDirectoryContentsMessage = "Loading directory contents...";
+
+    #endregion
 }

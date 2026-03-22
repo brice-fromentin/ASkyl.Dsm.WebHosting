@@ -5,13 +5,30 @@ namespace Askyl.Dsm.WebHosting.Constants.DSM.API;
 /// </summary>
 public static class ApiMethods
 {
+    #region CRUD Operations
+
+    /// <summary>
+    /// Method for creating new resources.
+    /// </summary>
+    public const string Create = "create";
+
     /// <summary>
     /// Method for adding resources.
     /// </summary>
     public const string Add = "add";
 
     /// <summary>
-    /// Method for updating resources.
+    /// Method for getting information or retrieving resources.
+    /// </summary>
+    public const string Get = "get";
+
+    /// <summary>
+    /// Method for listing resources.
+    /// </summary>
+    public const string List = "list";
+
+    /// <summary>
+    /// Method for updating existing resources.
     /// </summary>
     public const string Update = "update";
 
@@ -20,33 +37,28 @@ public static class ApiMethods
     /// </summary>
     public const string Delete = "delete";
 
-    /// <summary>
-    /// Method for listing resources.
-    /// </summary>
-    public const string List = "list";
+    #endregion
+
+    #region Lifecycle Operations
 
     /// <summary>
-    /// Method for getting information.
-    /// </summary>
-    public const string Get = "get";
-
-    /// <summary>
-    /// Method for creating resources.
-    /// </summary>
-    public const string Create = "create";
-
-    /// <summary>
-    /// Method for starting operations.
+    /// Method for starting operations or services.
     /// </summary>
     public const string Start = "start";
 
     /// <summary>
-    /// Method for stopping operations.
+    /// Method for stopping operations or services.
     /// </summary>
     public const string Stop = "stop";
+
+    #endregion
+
+    #region Status Operations
 
     /// <summary>
     /// Method for getting status information.
     /// </summary>
     public const string Status = "status";
+
+    #endregion
 }

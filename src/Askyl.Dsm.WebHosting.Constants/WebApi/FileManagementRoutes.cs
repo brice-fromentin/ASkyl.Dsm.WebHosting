@@ -5,17 +5,34 @@ namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 /// </summary>
 public static class FileManagementRoutes
 {
+    #region Route Configuration
+
     /// <summary>
     /// Base route prefix for the File Management controller (versioned).
     /// </summary>
     public const string ControllerBaseRoute = "api/v1/files";
 
-    #region Shared Folders
+    #endregion
+
+    #region Route Segments - Shared Folders
 
     /// <summary>
     /// Route segment to get shared folders.
     /// </summary>
     public const string SharedFoldersRoute = "shared-folders";
+
+    #endregion
+
+    #region Route Segments - Directory Contents
+
+    /// <summary>
+    /// Route segment to get directory contents.
+    /// </summary>
+    public const string DirectoryContentsRoute = "directory";
+
+    #endregion
+
+    #region Computed Routes - Shared Folders
 
     /// <summary>
     /// Full route for the shared folders endpoint.
@@ -24,12 +41,7 @@ public static class FileManagementRoutes
 
     #endregion
 
-    #region Directory Contents
-
-    /// <summary>
-    /// Route segment to get directory contents.
-    /// </summary>
-    public const string DirectoryContentsRoute = "directory";
+    #region Computed Routes - Directory Contents
 
     /// <summary>
     /// Full route for the directory contents endpoint.

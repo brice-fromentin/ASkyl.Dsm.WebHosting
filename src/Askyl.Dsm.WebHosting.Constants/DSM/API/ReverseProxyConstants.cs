@@ -5,10 +5,16 @@ namespace Askyl.Dsm.WebHosting.Constants.DSM.API;
 /// </summary>
 public static class ReverseProxyConstants
 {
+    #region Description Prefix
+
     /// <summary>
     /// Prefix added to reverse proxy descriptions to identify ADWH-managed proxies.
     /// </summary>
     public const string DescriptionPrefix = "ADWH - ";
+
+    #endregion
+
+    #region Error Codes
 
     /// <summary>
     /// DSM API error code indicating resource not found (HTTP 404).
@@ -24,4 +30,6 @@ public static class ReverseProxyConstants
     /// DSM API specific error code for resource not found.
     /// </summary>
     public const int ErrorCodeResourceNotFound = 4004;
+
+    #endregion
 }

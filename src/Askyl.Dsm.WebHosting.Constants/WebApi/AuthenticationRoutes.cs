@@ -5,10 +5,16 @@ namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 /// </summary>
 public static class AuthenticationRoutes
 {
+    #region Route Configuration
+
     /// <summary>
     /// Base route prefix for the Authentication controller (versioned).
     /// </summary>
     public const string ControllerBaseRoute = "api/v1/authentication";
+
+    #endregion
+
+    #region Route Segments
 
     /// <summary>
     /// Login endpoint route segment.
@@ -25,6 +31,10 @@ public static class AuthenticationRoutes
     /// </summary>
     public const string StatusRoute = "status";
 
+    #endregion
+
+    #region Computed Routes
+
     /// <summary>
     /// Full route for the login endpoint.
     /// </summary>
@@ -39,4 +49,6 @@ public static class AuthenticationRoutes
     /// Full route for the status endpoint.
     /// </summary>
     public static string StatusFullRoute => String.Join("/", ControllerBaseRoute, StatusRoute);
+
+    #endregion
 }

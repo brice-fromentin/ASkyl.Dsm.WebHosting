@@ -5,10 +5,16 @@ namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 /// </summary>
 public static class WebsiteHostingRoutes
 {
+    #region Route Configuration
+
     /// <summary>
     /// Base route prefix for the Website Hosting controller (versioned).
     /// </summary>
     public const string ControllerBaseRoute = "api/v1/websites";
+
+    #endregion
+
+    #region Route Segments
 
     /// <summary>
     /// Route segment to get all websites.
@@ -40,6 +46,10 @@ public static class WebsiteHostingRoutes
     /// </summary>
     public const string StopRoute = "stop";
 
+    #endregion
+
+    #region Computed Routes
+
     /// <summary>
     /// Full route for the all endpoint.
     /// </summary>
@@ -69,4 +79,6 @@ public static class WebsiteHostingRoutes
     /// Full route for the stop endpoint.
     /// </summary>
     public static string StopFullRoute => String.Join("/", ControllerBaseRoute, StopRoute);
+
+    #endregion
 }

@@ -5,10 +5,16 @@ namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 /// </summary>
 public static class RuntimeManagementRoutes
 {
+    #region Route Configuration
+
     /// <summary>
     /// Base route prefix for the Runtime Management controller (versioned).
     /// </summary>
     public const string ControllerBaseRoute = "api/v1/runtime";
+
+    #endregion
+
+    #region Route Segments
 
     /// <summary>
     /// Route segment to get installed .NET versions.
@@ -35,6 +41,10 @@ public static class RuntimeManagementRoutes
     /// </summary>
     public const string ReleasesWithStatusRoute = "releases/status";
 
+    #endregion
+
+    #region Computed Routes
+
     /// <summary>
     /// Full route for the versions endpoint.
     /// </summary>
@@ -59,4 +69,6 @@ public static class RuntimeManagementRoutes
     /// Full route for the releases with status endpoint.
     /// </summary>
     public static string ReleasesWithStatusFullRoute(string productVersion) => String.Join("/", ControllerBaseRoute, ReleasesWithStatusRoute, productVersion);
+
+    #endregion
 }
