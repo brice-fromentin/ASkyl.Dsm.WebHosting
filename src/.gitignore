@@ -1,0 +1,35 @@
+# .NET Build Artifacts
+bin/
+obj/
+logs/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# NuGet packages
+*.nupkg
+
+# The packages folder can be ignored because of Package Restore
+**/packages/*
+# except build/, which is used as an MSBuild target.
+!**/packages/build/
+
+# Benchmark Artifacts
+Askyl.Dsm.WebHosting.Benchmarks/BenchmarkDotNet.Artifacts
+
+# Custom configuration
+Askyl.Dsm.WebHosting.Ui/websites.json
+
+# macOS system files (project-specific)
+.DS_Store
+*/.DS_Store
+*/*/.DS_Store
+*/*/*/.DS_Store

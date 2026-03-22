@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Script executed before package installation
+
+# Load common functions for logging
+source "$(dirname "$0")/common-functions.sh"
+
+update_progress 0.0 "Starting pre-installation"
+
+# Only clear debug log on fresh install, not on upgrade
+if [ "$SYNOPKG_PKG_STATUS" != "UPGRADE" ]; then
+    rm -f /tmp/adwh-debug.log
+fi
+
+log_debug "PREINST: Starting preinst script (status: ${SYNOPKG_PKG_STATUS:-none})"
+update_progress 0.1 "Environment setup"
+
+log_debug "PREINST: User ID: $(id)"
+log_debug "PREINST: Environment variables:"
+log_debug "PREINST: SYNOPKG_PKGNAME=${SYNOPKG_PKGNAME}"
+log_debug "PREINST: SYNOPKG_PKGDEST=${SYNOPKG_PKGDEST}"
+log_debug "PREINST: SYNOPKG_DSM_ARCH=${SYNOPKG_DSM_ARCH}"
+
+update_progress 0.2 "Pre-installation checks completed"
+log_debug "PREINST: Completed successfully"
+exit 0

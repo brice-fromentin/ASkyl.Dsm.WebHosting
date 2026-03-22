@@ -1,0 +1,152 @@
+@typeparam TItem where TItem : class
+
+<div class="auto-data-grid-content">
+    <div class="auto-data-grid-area">
+        <FluentDataGrid TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@HandleRowClick">
+            <ChildContent>
+                @ChildContent
+            </ChildContent>
+
+            <LoadingContent>
+                @if (LoadingContent is not null)
+                {
+                    @LoadingContent
+                }
+                else
+                {
+                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentProgressRing />
+                        <FluentLabel>Loading items...</FluentLabel>
+                    </FluentStack>
+                }
+            </LoadingContent>
+
+            <EmptyContent>
+                @if (EmptyContent is not null)
+                {
+                    @EmptyContent
+                }
+                else
+                {
+                    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                        <FluentIcon Value="@(new IconsRegular16.Info())" />
+                        <FluentLabel>No items found.</FluentLabel>
+                    </FluentStack>
+                }
+            </EmptyContent>
+        </FluentDataGrid>
+    </div>
+    <div class="auto-data-grid-infos-area">
+        <FluentToolbar>
+            <FluentSpacer />
+            <FluentLabel>Items : @Items?.Count()</FluentLabel>
+            @if (OnReload.HasDelegate)
+            {
+                <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
+                <FluentButton Appearance="Appearance.Stealth" OnClick="@HandleReloadClick" Disabled="@(!OnReload.HasDelegate)">
+                    <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
+                </FluentButton>
+            }
+        </FluentToolbar>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IQueryable<TItem>? Items { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? LoadingContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? EmptyContent { get; set; }
+
+    [Parameter, EditorRequired]
+    public string GridTemplateColumns { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnReload { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> OnRowClick { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> OnRowDoubleClick { get; set; }
+
+
+    // NOTE: Emulating double-click because FluentDataGrid's OnRowDoubleClick is buggy and never fires.
+    // Using a timer-based approach with timestamp comparison (simplest solution).
+    private TItem? SelectedItem { get; set; }
+    private TItem? _lastClickedItem { get; set; }
+    private DateTime _lastClickTime { get; set; }
+    private const int DoubleClickTimeoutMs = 400;
+
+    public static IQueryable<TItem> Empty() => Enumerable.Empty<TItem>().AsQueryable();
+
+    private string? GetRowClass(TItem item) => SelectedItem is not null && SelectedItem.Equals(item) ? "selected-row" : null;
+
+    private async Task HandleReloadClick()
+    {
+        if (OnReload.HasDelegate)
+        {
+            await OnReload.InvokeAsync();
+        }
+    }
+
+    private async Task HandleRowClick(FluentDataGridRow<TItem> row)
+    {
+        if (row.Item is null)
+        {
+            return;
+        }
+
+        SelectedItem = row.Item;
+
+        // Try to emulate double-click detection - returns true if handled as double-click
+        var isDoubleClick = await TryHandleDoubleClickAsync(row.Item);
+        if (isDoubleClick)
+        {
+            return; // Double-click was handled, skip single-click logic
+        }
+
+        // Handle single-click event
+        if (OnRowClick.HasDelegate)
+        {
+            await OnRowClick.InvokeAsync(row.Item);
+        }
+
+        // Update state for potential next double-click only after successful single-click
+        _lastClickedItem = SelectedItem;
+        _lastClickTime = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Emulates double-click detection by comparing current click with previous one.
+    /// This is a workaround because FluentDataGrid's OnRowDoubleClick event never fires.
+    /// Returns true if this was detected as a double-click and handled.
+    /// </summary>
+    private async Task<bool> TryHandleDoubleClickAsync(TItem item)
+    {
+        var now = DateTime.UtcNow;
+        var timeSinceLastClick = (now - _lastClickTime).TotalMilliseconds;
+
+        if (_lastClickedItem is null || timeSinceLastClick > DoubleClickTimeoutMs || false == SelectedItem?.Equals(_lastClickedItem))
+        {
+            return false; // Not a double-click
+        }
+
+        // This is a double-click
+        _lastClickedItem = null;
+
+        if (!OnRowDoubleClick.HasDelegate)
+        {
+            return false;
+        }
+
+        await OnRowDoubleClick.InvokeAsync(SelectedItem);
+        return true;
+    }
+}

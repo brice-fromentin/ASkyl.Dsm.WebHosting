@@ -1,0 +1,20 @@
+{
+  "usr-local-linker": {
+    "bin": [
+      "runtimes/dotnet"
+    ]
+  },
+  "port-config": {
+    "protocol-file": "etc/adwh.sc"
+  },
+  "web-config": {
+    "nginx-static-config": {
+      "enable": [
+        {
+          "type": "dsm",
+          "relpath": "etc/adwh-alias.conf"
+        }
+      ]
+    }
+  }
+}

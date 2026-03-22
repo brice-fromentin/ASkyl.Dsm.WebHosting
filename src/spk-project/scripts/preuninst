@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Script executed before package uninstallation
+
+source "$(dirname "$0")/common-functions.sh"
+
+start_log "preuninst"
+
+log_debug "Stopping Askyl DSM Web Hosting service..."
+log_info "Stopping Askyl DSM Web Hosting service"
+START_STOP_SCRIPT="$(dirname "$0")/start-stop-status"
+if [ -x "$START_STOP_SCRIPT" ]; then
+    "$START_STOP_SCRIPT" stop || true
+else
+    log_info "start-stop-status script not found, using fallback stop method"
+fi
+
+stop_process "Askyl.Dsm.WebHosting.Ui" "application processes"
+
+rm -f "$VAR_DIR/admin-ui.pid" || true
+log_info "Cleaned PID files"
+
+
+log_info "Finished preuninst script"
+
+exit 0

@@ -1,0 +1,66 @@
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Askyl.Dsm.WebHosting.Data
+@using Askyl.Dsm.WebHosting.Ui.Client.Interfaces
+
+@implements IDialogContentComponent
+@implements IWorkingState
+
+@inject ILicenseService LicenseService
+
+<LoadingOverlay WorkingStateComponent="@this" />
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentLabel Typo="Typography.H2">Licenses</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogFooter>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Class="flex-full-width">Close</FluentButton>
+</FluentDialogFooter>
+
+<FluentDialogBody>
+    @if (_licenses is not null)
+    {
+        <FluentTabs Orientation="Orientation.Vertical" Class="full-size">
+            @foreach (var license in _licenses)
+            {
+                <FluentTab>
+                    <Header>@license.Name</Header>
+                    <ChildContent>
+                        <pre>@license.Content</pre>
+                    </ChildContent>
+                </FluentTab>
+            }
+        </FluentTabs>
+    }
+    else
+    {
+        <FluentProgressRing />
+    }
+</FluentDialogBody>
+
+@code
+{
+    #region IWorkingState Implementation
+
+    public bool IsWorking { get; set; }
+
+    public string Message { get; set; } = String.Empty;
+
+    public void NotifyStateChanged() => StateHasChanged();
+
+    #endregion
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private IReadOnlyList<LicenseInfo>? _licenses;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var worker = this.CreateWorkingState("Loading licenses...");
+
+        _licenses = await LicenseService.GetLicensesAsync();
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+}

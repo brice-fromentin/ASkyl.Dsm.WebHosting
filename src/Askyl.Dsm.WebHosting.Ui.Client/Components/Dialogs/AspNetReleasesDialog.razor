@@ -1,0 +1,253 @@
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Askyl.Dsm.WebHosting.Constants.Runtime
+@using Askyl.Dsm.WebHosting.Data.Runtime
+@using Askyl.Dsm.WebHosting.Data.Services
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Controls
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
+
+@implements IDialogContentComponent
+@implements IWorkingState
+
+@inject IDialogService DialogService
+@inject IDotnetVersionService DotnetVersionService
+@inject IFrameworkManagementService ManagementService
+@inject IToastService ToastService
+
+<LoadingOverlay WorkingStateComponent="@this" />
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentLabel Typo="Typography.H2">ASP.NET Online</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogFooter>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Disabled="@IsWorking" Class="flex-full-width">Close</FluentButton>
+</FluentDialogFooter>
+
+<FluentDialogBody>
+    <FluentToolbar Class="full-width">
+        <FluentLabel>Channel</FluentLabel>
+
+        <FluentSelect TOption="AspNetChannel" Items="@Channels" SelectedOption="@SelectedChannel" SelectedOptionChanged="OnChannelChanged" Width="140px" Disabled="@IsWorking" />
+
+        <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="Refresh" Disabled="@IsWorking">
+            <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
+        </FluentButton>
+
+        <FluentButton OnClick="@(IsSelectedVersionInstalled? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsWorking)" Class="flex-full-width">
+            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(IsSelectedVersionInstalled ? (Icon)new IconsRegular16.Delete() : new IconsRegular16.CloudArrowDown())" Color="Color.Fill" />
+                <FluentLabel Color="Color.Fill">
+                    @GetActionButtonText()
+                </FluentLabel>
+            </FluentStack>
+        </FluentButton>
+    </FluentToolbar>
+
+    <div class="dialog-grid-container">
+        <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="240px 120px 100px 120px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
+            <ChildContent>
+                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="Version" Property="@(r => r.Version)" Sortable="true" />
+                <TemplateColumn TGridItem="AspNetRelease" Title="Installed" Align="Align.Center">
+                    @(context.IsInstalled ? "✓" : String.Empty)
+                </TemplateColumn>
+                <TemplateColumn TGridItem="AspNetRelease" Title="Security" Align="Align.Center">
+                    @(context.IsSecurity ? "⚠" : String.Empty)
+                </TemplateColumn>
+                <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="Release" Property="@(r => r.ReleaseDate)" Format="yyyy-MM-dd" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending" />
+            </ChildContent>
+        </AutoDataGrid>
+    </div>
+</FluentDialogBody>
+
+@code
+{
+    #region IWorkingState Implementation
+
+    public bool IsWorking { get; set; }
+
+    public string Message { get; set; } = "";
+
+    public void NotifyStateChanged() => StateHasChanged();
+
+    #endregion
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    private List<AspNetChannel> Channels { get; set; } = [];
+
+    private IQueryable<AspNetRelease> Releases { get; set; } = AutoDataGrid<AspNetRelease>.Empty();
+
+    private AspNetChannel? SelectedChannel { get; set; }
+
+    private AspNetRelease? SelectedItem { get; set; }
+
+    #region Computed Properties
+
+    private bool IsSelectedVersionInstalled => SelectedItem?.IsInstalled == true;
+
+    private bool CanProcessSelected => !IsWorking && SelectedItem != null;
+
+    private bool CanInstallSelected => !IsWorking && SelectedItem != null && !SelectedItem.IsInstalled;
+
+    private string GetActionButtonText()
+    {
+        if (SelectedItem == null)
+        {
+            return "Select a version";
+        }
+
+        return IsSelectedVersionInstalled ? $"Uninstall {SelectedItem.Version}" : $"Install {SelectedItem.Version}";
+    }
+
+    #endregion
+
+    protected override async Task OnParametersSetAsync() => await LoadChannelsAsync();
+
+    private void OnReleaseSelected(AspNetRelease release)
+    {
+        SelectedItem = release;
+        StateHasChanged();
+    }
+
+    private async Task OnChannelChanged(AspNetChannel? channel)
+    {
+        SelectedChannel = channel;
+        await LoadReleasesAsync(channel);
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+
+    private async Task LoadChannelsAsync()
+    {
+        try
+        {
+            var channelsResult = await DotnetVersionService.GetChannelsAsync();
+
+            if (!channelsResult.Success)
+            {
+                await ShowErrorAsync(channelsResult.Message ?? "Failed to load channels");
+                Channels.Clear();
+                SelectedChannel = null;
+                return;
+            }
+
+            Channels = channelsResult.Value ?? [];
+            await OnChannelChanged(SelectedChannel ?? Channels.FirstOrDefault());
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync(ex.Message);
+            Channels.Clear();
+            SelectedChannel = null;
+        }
+    }
+
+    private async Task LoadReleasesAsync(AspNetChannel? channel)
+    {
+        SelectedItem = null;
+
+        if (channel == null)
+        {
+            Releases = AutoDataGrid<AspNetRelease>.Empty();
+            return;
+        }
+
+        try
+        {
+            var releasesResult = await DotnetVersionService.GetReleasesWithStatusAsync(channel.ProductVersion);
+
+            if (!releasesResult.Success)
+            {
+                await ShowErrorAsync(releasesResult.Message ?? "Failed to load releases");
+                Releases = AutoDataGrid<AspNetRelease>.Empty();
+                return;
+            }
+
+            var releases = releasesResult.Value ?? [];
+            Releases = releases.AsQueryable();
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync(ex.Message);
+            Releases = AutoDataGrid<AspNetRelease>.Empty();
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task Refresh() => await LoadChannelsAsync();
+
+    private async Task ReloadReleases() => await LoadReleasesAsync(SelectedChannel);
+
+    private async Task ShowErrorAsync(string error) => await DialogService.ShowErrorAsync(error);
+
+    private async Task InstallSelectedFramework()
+    {
+        if (!CanInstallSelected || SelectedItem == null)
+        {
+            return;
+        }
+
+        try
+        {
+            using var worker = this.CreateWorkingState("Installing ...");
+
+            var result = await ManagementService.InstallFrameworkAsync(SelectedItem.Version, SelectedChannel?.ProductVersion ?? String.Empty);
+
+            if (result.Success)
+            {
+                await DialogService.ShowInfoAsync(result.Message ?? "Installation completed successfully");
+                await Refresh();
+            }
+            else
+            {
+                await DialogService.ShowErrorAsync(result.Message ?? "Installation failed");
+            }
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowErrorAsync($"Installation error: {ex.Message}");
+        }
+    }
+
+    private async Task UninstallSelectedFramework()
+    {
+        if (!IsSelectedVersionInstalled || SelectedItem == null)
+        {
+            return;
+        }
+
+        var confirmationMessage = $"Click OK if you want to proceed with uninstalling ASP.NET Core {SelectedItem.Version}";
+        var confirmation = await DialogService.ShowConfirmationAsync(confirmationMessage);
+        var result = await confirmation.Result;
+
+        if (result == null || result.Cancelled)
+        {
+            return;
+        }
+
+        try
+        {
+            using var worker = this.CreateWorkingState("Uninstalling ...");
+
+            var uninstallResult = await ManagementService.UninstallFrameworkAsync(SelectedItem.Version);
+
+            if (uninstallResult.Success)
+            {
+                await DialogService.ShowInfoAsync(uninstallResult.Message ?? "Uninstallation completed successfully");
+                await Refresh();
+            }
+            else
+            {
+                await DialogService.ShowErrorAsync(uninstallResult.Message ?? "Uninstallation failed");
+            }
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowErrorAsync($"Uninstallation error: {ex.Message}");
+        }
+    }
+}

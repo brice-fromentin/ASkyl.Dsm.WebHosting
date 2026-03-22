@@ -1,0 +1,12 @@
+{
+   ".url": {
+     "com.askyl.adwh": {
+       "title": "ASkyl Web Hosting",
+       "desc": ".NET Web Hosting",
+       "icon": "images/icon.png",
+       "type": "url",
+       "url": "adwh",
+       "allUsers": false
+      }
+    }
+}

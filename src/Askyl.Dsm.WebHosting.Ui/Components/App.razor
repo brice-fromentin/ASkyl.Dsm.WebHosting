@@ -1,0 +1,34 @@
+﻿@using Askyl.Dsm.WebHosting.Constants.Application
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="@(ApplicationConstants.ApplicationUrlSubPath + "/")" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css"]" />
+    <link rel="stylesheet" href="@Assets["Askyl.Dsm.WebHosting.Ui.styles.css"]" />
+
+    <ImportMap />
+
+    <script src="@Assets["js/tree-navigation.js"]"></script>
+
+    <link rel="icon" type="image/svg+xml" href="images/adwh-logo.svg" sizes="any">
+    <link rel="icon" type="image/png" href="images/favicon.png" sizes="any" />
+
+    <HeadOutlet @rendermode="InteractiveWebAssembly" />
+</head>
+
+<body>
+    <Routes @rendermode="@wasm" />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+</body>
+
+</html>
+
+@code
+{
+    IComponentRenderMode wasm = new InteractiveWebAssemblyRenderMode(false);
+}

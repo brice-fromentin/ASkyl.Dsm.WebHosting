@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Script executed after package installation
+
+source "$(dirname "$0")/common-functions.sh"
+
+# -----------------------------------------------------------------------------
+# Initialization
+# -----------------------------------------------------------------------------
+update_progress 0.1 "Initializing installation"
+start_log "postinst"
+log_info "Starting post-installation script..."
+log_debug "Package dir: $PACKAGE_DIR"
+log_debug "Var dir: $VAR_DIR"
+
+# -----------------------------------------------------------------------------
+# Directory Setup
+# -----------------------------------------------------------------------------
+update_progress 0.2 "Setting up directories"
+log_info "Creating var directory..."
+mkdir -p "$VAR_DIR"
+mkdir -p "$VAR_DIR/logs"
+log_info "Var directory created at: $VAR_DIR"
+
+# -----------------------------------------------------------------------------
+# .NET Runtime Installation
+# -----------------------------------------------------------------------------
+update_progress 0.3 "Installing .NET runtime"
+if ! install_dotnet_runtime; then
+    # Error is logged inside the function
+    exit 1
+fi
+log_info ".NET runtime installation step completed."
+
+# -----------------------------------------------------------------------------
+# .NET Runtime Verification
+# -----------------------------------------------------------------------------
+update_progress 0.8 "Verifying .NET runtime"
+if ! verify_dotnet_runtime; then
+    log_fatal_with_temp "Failed to verify .NET runtime installation." \
+                       "The .NET runtime could not be installed or is corrupted."
+    exit 1
+fi
+log_info ".NET runtime verification step completed."
+
+# -----------------------------------------------------------------------------
+# Finalization
+# -----------------------------------------------------------------------------
+update_progress 1.0 "Installation completed"
+log_info "Post-installation script finished successfully."
+
+exit 0
