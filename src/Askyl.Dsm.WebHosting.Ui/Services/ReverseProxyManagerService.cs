@@ -1,6 +1,5 @@
-using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.Network;
-using Askyl.Dsm.WebHosting.Constants.UI;
 
 using Askyl.Dsm.WebHosting.Data.API.Definitions.ReverseProxy;
 using Askyl.Dsm.WebHosting.Data.API.Parameters.ReverseProxyAPI;

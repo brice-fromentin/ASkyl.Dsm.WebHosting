@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Constants.UI;
+using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.WebSites;

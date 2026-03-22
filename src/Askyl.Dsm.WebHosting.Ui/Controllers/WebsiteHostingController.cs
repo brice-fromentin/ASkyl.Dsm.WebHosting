@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Data.Services;
 using Askyl.Dsm.WebHosting.Data.WebSites;
@@ -11,14 +11,14 @@ namespace Askyl.Dsm.WebHosting.Ui.Controllers;
 /// Controller for website management operations (CRUD + start/stop).
 /// </summary>
 [ApiController]
-[Route(WebsiteHostingDefaults.ControllerBaseRoute)]
+[Route(WebsiteHostingRoutes.ControllerBaseRoute)]
 public class WebsiteHostingController(IWebSiteHostingService hostingService) : ControllerBase
 {
     /// <summary>
     /// Gets all websites with their current runtime status.
     /// </summary>
     /// <returns>A list of WebSiteInstance objects.</returns>
-    [HttpGet(WebsiteHostingDefaults.AllRoute)]
+    [HttpGet(WebsiteHostingRoutes.AllRoute)]
     public async Task<ActionResult<List<WebSiteInstance>>> GetAllWebsitesAsync()
         => Ok(await hostingService.GetAllWebsitesAsync());
 
@@ -27,7 +27,7 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// </summary>
     /// <param name="configuration">The website configuration.</param>
     /// <returns>The created WebSiteInstance with runtime status.</returns>
-    [HttpPost(WebsiteHostingDefaults.AddRoute)]
+    [HttpPost(WebsiteHostingRoutes.AddRoute)]
     public async Task<ActionResult<WebSiteInstance>> AddWebsite([FromBody] WebSiteConfiguration configuration)
         => Ok(await hostingService.AddWebsiteAsync(configuration));
 
@@ -36,7 +36,7 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// </summary>
     /// <param name="configuration">The updated website configuration.</param>
     /// <returns>The updated WebSiteInstance with runtime status.</returns>
-    [HttpPost(WebsiteHostingDefaults.UpdateRoute)]
+    [HttpPost(WebsiteHostingRoutes.UpdateRoute)]
     public async Task<ActionResult<WebSiteInstance>> UpdateWebsite([FromBody] WebSiteConfiguration configuration)
         => Ok(await hostingService.UpdateWebsiteAsync(configuration));
 
@@ -45,7 +45,7 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// </summary>
     /// <param name="id">The ID of the website to remove.</param>
     /// <returns>An ApiResult indicating success or failure (always HTTP 200).</returns>
-    [HttpDelete(WebsiteHostingDefaults.RemoveRoute + "/{id}")]
+    [HttpDelete(WebsiteHostingRoutes.RemoveRoute + "/{id}")]
     public async Task<ActionResult<ApiResult>> RemoveWebsite(Guid id)
         => Ok(await hostingService.RemoveWebsiteAsync(id));
 
@@ -54,7 +54,7 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// </summary>
     /// <param name="id">The ID of the website to start.</param>
     /// <returns>An ApiResult indicating success or failure (always HTTP 200).</returns>
-    [HttpPost(WebsiteHostingDefaults.StartRoute + "/{id}")]
+    [HttpPost(WebsiteHostingRoutes.StartRoute + "/{id}")]
     public async Task<ActionResult<ApiResult>> StartWebsite(Guid id)
         => Ok(await hostingService.StartWebsiteAsync(id));
 
@@ -63,7 +63,7 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// </summary>
     /// <param name="id">The ID of the website to stop.</param>
     /// <returns>An ApiResult indicating success or failure (always HTTP 200).</returns>
-    [HttpPost(WebsiteHostingDefaults.StopRoute + "/{id}")]
+    [HttpPost(WebsiteHostingRoutes.StopRoute + "/{id}")]
     public async Task<ActionResult<ApiResult>> StopWebsite(Guid id)
         => Ok(await hostingService.StopWebsiteAsync(id));
 }

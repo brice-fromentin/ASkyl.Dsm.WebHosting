@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;

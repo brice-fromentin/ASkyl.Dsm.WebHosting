@@ -1,9 +1,9 @@
-namespace Askyl.Dsm.WebHosting.Constants.API;
+namespace Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 
 /// <summary>
 /// Defines default pagination parameters for DSM API requests.
 /// </summary>
-public static class DsmPaginationDefaults
+public static class PaginationDefaults
 {
     /// <summary>
     /// Default offset for paginated requests (starting position).

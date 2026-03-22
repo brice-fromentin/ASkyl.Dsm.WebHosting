@@ -1,4 +1,4 @@
-using Askyl.Dsm.WebHosting.Constants;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Parameters;
 

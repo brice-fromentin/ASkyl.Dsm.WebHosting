@@ -1,9 +1,9 @@
-namespace Askyl.Dsm.WebHosting.Constants.API;
+namespace Askyl.Dsm.WebHosting.Constants.DSM.API;
 
 /// <summary>
 /// Defines API method names used in DSM API calls.
 /// </summary>
-public static class DsmApiMethods
+public static class ApiMethods
 {
     /// <summary>
     /// Method for adding resources.

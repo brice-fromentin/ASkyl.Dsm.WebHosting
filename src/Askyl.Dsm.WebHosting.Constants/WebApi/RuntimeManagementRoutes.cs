@@ -1,9 +1,9 @@
-namespace Askyl.Dsm.WebHosting.Constants.API;
+namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 
 /// <summary>
-/// Defines Runtime Management API specific parameters and constants.
+/// Defines runtime management API route constants for the application's REST endpoints.
 /// </summary>
-public static class RuntimeManagementDefaults
+public static class RuntimeManagementRoutes
 {
     /// <summary>
     /// Base route prefix for the Runtime Management controller (versioned).
@@ -11,52 +11,52 @@ public static class RuntimeManagementDefaults
     public const string ControllerBaseRoute = "api/v1/runtime";
 
     /// <summary>
-    /// Route to get installed .NET versions.
+    /// Route segment to get installed .NET versions.
     /// </summary>
     public const string VersionsRoute = "versions";
 
     /// <summary>
-    /// Route to check if a channel is installed.
+    /// Route segment to check if a channel is installed.
     /// </summary>
     public const string ChannelInstalledRoute = "channels/installed";
 
     /// <summary>
-    /// Route to check if a version is installed.
+    /// Route segment to check if a version is installed.
     /// </summary>
     public const string VersionInstalledRoute = "versions/installed";
 
     /// <summary>
-    /// Route to get available channels.
+    /// Route segment to get available channels.
     /// </summary>
     public const string ChannelsRoute = "channels";
 
     /// <summary>
-    /// Route to get releases with installation status.
+    /// Route segment to get releases with installation status.
     /// </summary>
     public const string ReleasesWithStatusRoute = "releases/status";
 
     /// <summary>
     /// Full route for the versions endpoint.
     /// </summary>
-    public static String VersionsFullRoute => String.Join("/", ControllerBaseRoute, VersionsRoute);
+    public static string VersionsFullRoute => String.Join("/", ControllerBaseRoute, VersionsRoute);
 
     /// <summary>
     /// Full route for the channel installed endpoint.
     /// </summary>
-    public static String ChannelInstalledFullRoute(string productVersion) => String.Join("/", ControllerBaseRoute, ChannelInstalledRoute, productVersion);
+    public static string ChannelInstalledFullRoute(string productVersion) => String.Join("/", ControllerBaseRoute, ChannelInstalledRoute, productVersion);
 
     /// <summary>
     /// Full route for the version installed endpoint.
     /// </summary>
-    public static String VersionInstalledFullRoute(string version) => String.Join("/", ControllerBaseRoute, VersionInstalledRoute, version);
+    public static string VersionInstalledFullRoute(string version) => String.Join("/", ControllerBaseRoute, VersionInstalledRoute, version);
 
     /// <summary>
     /// Full route for the channels endpoint.
     /// </summary>
-    public static String ChannelsFullRoute => String.Join("/", ControllerBaseRoute, ChannelsRoute);
+    public static string ChannelsFullRoute => String.Join("/", ControllerBaseRoute, ChannelsRoute);
 
     /// <summary>
     /// Full route for the releases with status endpoint.
     /// </summary>
-    public static String ReleasesWithStatusFullRoute(string productVersion) => String.Join("/", ControllerBaseRoute, ReleasesWithStatusRoute, productVersion);
+    public static string ReleasesWithStatusFullRoute(string productVersion) => String.Join("/", ControllerBaseRoute, ReleasesWithStatusRoute, productVersion);
 }

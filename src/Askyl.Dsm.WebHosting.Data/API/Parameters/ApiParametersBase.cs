@@ -3,8 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using Askyl.Dsm.WebHosting.Constants;
-using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
 using Askyl.Dsm.WebHosting.Data.Attributes;
@@ -19,7 +18,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
 
     public ApiParametersBase(ApiInformationCollection informations, T? entry = null)
     {
-        var infos = (Name == DsmApiNames.Info)
+        var infos = (Name == ApiNames.Info)
                         ? CreateDefaultHandshakeInfo()
                         : informations.Get(Name) ?? throw new NullReferenceException("Empty API Information.");
 
@@ -33,7 +32,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
     }
 
     private static ApiInformation CreateDefaultHandshakeInfo()
-        => new() { Path = DsmApiNames.Handshake, MinVersion = DsmApiVersions.MinVersion, MaxVersion = DsmApiVersions.MaxVersion };
+        => new() { Path = ApiNames.Handshake, MinVersion = ApiVersions.MinVersion, MaxVersion = ApiVersions.MaxVersion };
 
     #region Reflections Caches
 

@@ -1,5 +1,5 @@
-using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Data.Services;
 using Askyl.Dsm.WebHosting.Tools.Extensions;
@@ -16,13 +16,13 @@ public class FileSystemService(IHttpClientFactory httpClientFactory) : IFileSyst
 
     /// <inheritdoc/>
     public async Task<SharedFoldersResult> GetSharedFoldersAsync()
-        => await _httpClient.GetJsonOrDefaultAsync<SharedFoldersResult>(FileManagementDefaults.SharedFoldersFullRoute, () => SharedFoldersResult.CreateFailure("Failed to load shared folders"));
+        => await _httpClient.GetJsonOrDefaultAsync<SharedFoldersResult>(FileManagementRoutes.SharedFoldersFullRoute, () => SharedFoldersResult.CreateFailure("Failed to load shared folders"));
 
     /// <inheritdoc/>
     public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly)
     {
         var parameters = new[] { ("path", path), ("directoryOnly", directoryOnly.ToLower()) };
-        var url = FileManagementDefaults.DirectoryContentsFullRoute.WithQuery(parameters);
+        var url = FileManagementRoutes.DirectoryContentsFullRoute.WithQuery(parameters);
         return await _httpClient.GetJsonOrDefaultAsync<DirectoryContentsResult>(url, () => DirectoryContentsResult.CreateFailure($"Failed to load directory contents for path: {path}"));
     }
 

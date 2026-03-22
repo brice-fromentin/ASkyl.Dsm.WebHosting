@@ -1,5 +1,4 @@
-using Askyl.Dsm.WebHosting.Constants;
-using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
 
@@ -7,7 +6,7 @@ namespace Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
 
 public class FileStationDirSizeStartParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationDirSize>(informations)
 {
-    public override string Name => DsmApiNames.FileStationDirSize;
+    public override string Name => ApiNames.FileStationDirSize;
 
     public override int Version => 2;
 
@@ -18,7 +17,7 @@ public class FileStationDirSizeStartParameters(ApiInformationCollection informat
 
 public class FileStationDirSizeStatusParameters(ApiInformationCollection informations) : ApiParametersBase<ApiParametersNone>(informations)
 {
-    public override string Name => DsmApiNames.FileStationDirSize;
+    public override string Name => ApiNames.FileStationDirSize;
 
     public override int Version => 2;
 
@@ -29,7 +28,7 @@ public class FileStationDirSizeStatusParameters(ApiInformationCollection informa
 
 public class FileStationDirSizeStopParameters(ApiInformationCollection informations) : ApiParametersBase<ApiParametersNone>(informations)
 {
-    public override string Name => DsmApiNames.FileStationDirSize;
+    public override string Name => ApiNames.FileStationDirSize;
 
     public override int Version => 2;
 

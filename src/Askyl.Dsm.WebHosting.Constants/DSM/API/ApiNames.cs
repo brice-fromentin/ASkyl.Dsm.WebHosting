@@ -1,9 +1,9 @@
-namespace Askyl.Dsm.WebHosting.Constants.API;
+namespace Askyl.Dsm.WebHosting.Constants.DSM.API;
 
 /// <summary>
 /// Contains all Synology DSM API names used throughout the application.
 /// </summary>
-public static class DsmApiNames
+public static class ApiNames
 {
     public const string Handshake = "query.cgi";
 

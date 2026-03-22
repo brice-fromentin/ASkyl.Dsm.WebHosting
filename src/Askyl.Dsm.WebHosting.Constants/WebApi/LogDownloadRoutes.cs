@@ -1,9 +1,9 @@
-namespace Askyl.Dsm.WebHosting.Constants.API;
+namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 
 /// <summary>
-/// Defines Log Download API specific parameters and constants.
+/// Defines log download API route constants for the application's REST endpoints.
 /// </summary>
-public static class LogDownloadDefaults
+public static class LogDownloadRoutes
 {
     /// <summary>
     /// Base route prefix for the Log Download controller (versioned).
@@ -11,12 +11,12 @@ public static class LogDownloadDefaults
     public const string ControllerBaseRoute = "api/v1/logdownload";
 
     /// <summary>
-    /// Log download endpoint route.
+    /// Route segment for log download endpoint.
     /// </summary>
     public const string LogsRoute = "logs";
 
     /// <summary>
     /// Full route for the log download endpoint.
     /// </summary>
-    public static String LogsFullRoute => String.Join("/", ControllerBaseRoute, LogsRoute);
+    public static string LogsFullRoute => String.Join("/", ControllerBaseRoute, LogsRoute);
 }

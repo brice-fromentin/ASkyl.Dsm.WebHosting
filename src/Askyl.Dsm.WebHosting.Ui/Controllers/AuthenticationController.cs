@@ -1,4 +1,4 @@
-using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Data.Security;
 using Askyl.Dsm.WebHosting.Data.Services;
@@ -10,14 +10,14 @@ namespace Askyl.Dsm.WebHosting.Ui.Controllers;
 /// Controller for authentication-related operations.
 /// </summary>
 [ApiController]
-[Route(AuthenticationDefaults.ControllerBaseRoute)]
+[Route(AuthenticationRoutes.ControllerBaseRoute)]
 public class AuthenticationController(IAuthenticationService authService) : ControllerBase
 {
     /// <summary>
     /// Checks if the current session is authenticated.
     /// </summary>
     /// <returns>True if authenticated, false otherwise.</returns>
-    [HttpGet(AuthenticationDefaults.StatusRoute)]
+    [HttpGet(AuthenticationRoutes.StatusRoute)]
     public async Task<ActionResult<bool>> IsAuthenticatedAsync()
         => Ok(await authService.IsAuthenticatedAsync());
 
@@ -27,7 +27,7 @@ public class AuthenticationController(IAuthenticationService authService) : Cont
     /// </summary>
     /// <param name="model">The login model containing login, password, and optional OTP code.</param>
     /// <returns>OK with authentication result (Success=true or Success=false with ErrorMessage).</returns>
-    [HttpPost(AuthenticationDefaults.LoginRoute)]
+    [HttpPost(AuthenticationRoutes.LoginRoute)]
     public async Task<ActionResult<AuthenticationResult>> Login([FromBody] LoginModel model)
         => Ok(await authService.LoginAsync(model.Login, model.Password, model.OtpCode));
 
@@ -35,7 +35,7 @@ public class AuthenticationController(IAuthenticationService authService) : Cont
     /// Logs out the current user and clears server-side session.
     /// </summary>
     /// <returns>OK with ApiResult indicating successful logout.</returns>
-    [HttpPost(AuthenticationDefaults.LogoutRoute)]
+    [HttpPost(AuthenticationRoutes.LogoutRoute)]
     public async Task<ActionResult<ApiResult>> LogoutAsync()
         => Ok(await authService.LogoutAsync());
 }

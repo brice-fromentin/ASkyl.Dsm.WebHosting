@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
@@ -11,10 +11,10 @@ public partial class FileStationVirtualFolder
     public string Type { get; set; } = FileStationDefaults.VirtualFolderTypeAll;
 
     [JsonPropertyName("offset")]
-    public int? Offset { get; set; } = DsmPaginationDefaults.DefaultOffset;
+    public int? Offset { get; set; } = PaginationDefaults.DefaultOffset;
 
     [JsonPropertyName("limit")]
-    public int? Limit { get; set; } = DsmPaginationDefaults.DefaultLimit;
+    public int? Limit { get; set; } = PaginationDefaults.DefaultLimit;
 
     [JsonPropertyName("sort_by")]
     public string? SortBy { get; set; } = FileStationDefaults.SortByName;

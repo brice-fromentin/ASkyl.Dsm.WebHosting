@@ -1,5 +1,4 @@
-using Askyl.Dsm.WebHosting.Constants;
-using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.ReverseProxy;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
 using Askyl.Dsm.WebHosting.Data.Attributes;
@@ -9,11 +8,11 @@ namespace Askyl.Dsm.WebHosting.Data.API.Parameters.ReverseProxyAPI;
 [DsmParameterName("entry")]
 public class ReverseProxyCreateParameters(ApiInformationCollection informations) : ApiParametersBase<ReverseProxy>(informations)
 {
-    public override string Name => DsmApiNames.AppPortalReverseProxy;
+    public override string Name => ApiNames.AppPortalReverseProxy;
 
     public override int Version => 1;
 
-    public override string Method => DsmApiMethods.Create;
+    public override string Method => ApiMethods.Create;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Json;
 }

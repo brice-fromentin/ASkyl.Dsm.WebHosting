@@ -1,9 +1,9 @@
-namespace Askyl.Dsm.WebHosting.Constants.API;
+namespace Askyl.Dsm.WebHosting.Constants.DSM.API;
 
 /// <summary>
 /// Defines API version constraints for Synology DSM APIs.
 /// </summary>
-public static class DsmApiVersions
+public static class ApiVersions
 {
     /// <summary>
     /// Minimum supported API version.

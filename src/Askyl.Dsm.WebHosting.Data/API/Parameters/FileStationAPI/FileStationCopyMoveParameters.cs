@@ -1,5 +1,4 @@
-using Askyl.Dsm.WebHosting.Constants;
-using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
 
@@ -7,44 +6,44 @@ namespace Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
 
 public class FileStationCopyParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationCopyMove>(informations)
 {
-    public override string Name => DsmApiNames.FileStationCopyMove;
+    public override string Name => ApiNames.FileStationCopyMove;
 
     public override int Version => 3;
 
-    public override string Method => DsmApiMethods.Start;
+    public override string Method => ApiMethods.Start;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }
 
 public class FileStationMoveParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationCopyMove>(informations)
 {
-    public override string Name => DsmApiNames.FileStationCopyMove;
+    public override string Name => ApiNames.FileStationCopyMove;
 
     public override int Version => 3;
 
-    public override string Method => DsmApiMethods.Start;
+    public override string Method => ApiMethods.Start;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }
 
 public class FileStationCopyMoveStatusParameters(ApiInformationCollection informations) : ApiParametersBase<ApiParametersNone>(informations)
 {
-    public override string Name => DsmApiNames.FileStationCopyMove;
+    public override string Name => ApiNames.FileStationCopyMove;
 
     public override int Version => 3;
 
-    public override string Method => DsmApiMethods.Status;
+    public override string Method => ApiMethods.Status;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }
 
 public class FileStationCopyMoveStopParameters(ApiInformationCollection informations) : ApiParametersBase<ApiParametersNone>(informations)
 {
-    public override string Name => DsmApiNames.FileStationCopyMove;
+    public override string Name => ApiNames.FileStationCopyMove;
 
     public override int Version => 3;
 
-    public override string Method => DsmApiMethods.Stop;
+    public override string Method => ApiMethods.Stop;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }

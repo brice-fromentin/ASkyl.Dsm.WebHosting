@@ -1,9 +1,9 @@
-namespace Askyl.Dsm.WebHosting.Constants.API;
+namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 
 /// <summary>
-/// Defines File Management API specific parameters and constants.
+/// Defines file management API route constants for the application's REST endpoints.
 /// </summary>
-public static class FileManagementDefaults
+public static class FileManagementRoutes
 {
     /// <summary>
     /// Base route prefix for the File Management controller (versioned).
@@ -13,7 +13,7 @@ public static class FileManagementDefaults
     #region Shared Folders
 
     /// <summary>
-    /// Route to get shared folders.
+    /// Route segment to get shared folders.
     /// </summary>
     public const string SharedFoldersRoute = "shared-folders";
 
@@ -27,7 +27,7 @@ public static class FileManagementDefaults
     #region Directory Contents
 
     /// <summary>
-    /// Route to get directory contents.
+    /// Route segment to get directory contents.
     /// </summary>
     public const string DirectoryContentsRoute = "directory";
 

@@ -1,6 +1,6 @@
-using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
+using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Data.Runtime;
 using Askyl.Dsm.WebHosting.Data.Services;
@@ -18,30 +18,30 @@ public class DotnetVersionService(IHttpClientFactory httpClientFactory) : IDotne
 
     /// <inheritdoc/>
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync()
-        => await _httpClient.GetJsonOrDefaultAsync<InstalledVersionsResult>(RuntimeManagementDefaults.VersionsFullRoute, () => InstalledVersionsResult.CreateFailure("Failed to load installed versions"));
+        => await _httpClient.GetJsonOrDefaultAsync<InstalledVersionsResult>(RuntimeManagementRoutes.VersionsFullRoute, () => InstalledVersionsResult.CreateFailure("Failed to load installed versions"));
 
     /// <inheritdoc/>
     public async Task<ApiResultBool> IsChannelInstalledAsync(string channel, string frameworkType = DotNetFrameworkTypes.AspNetCore)
     {
-        var url = RuntimeManagementDefaults.ChannelInstalledFullRoute(channel);
+        var url = RuntimeManagementRoutes.ChannelInstalledFullRoute(channel);
         return await _httpClient.GetJsonOrDefaultAsync<ApiResultBool>(url, () => ApiResultBool.CreateFailure($"Failed to check if channel '{channel}' is installed"));
     }
 
     /// <inheritdoc/>
     public async Task<ApiResultBool> IsVersionInstalledAsync(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore)
     {
-        var url = RuntimeManagementDefaults.VersionInstalledFullRoute(version);
+        var url = RuntimeManagementRoutes.VersionInstalledFullRoute(version);
         return await _httpClient.GetJsonOrDefaultAsync<ApiResultBool>(url, () => ApiResultBool.CreateFailure($"Failed to check if version '{version}' is installed"));
     }
 
     /// <inheritdoc/>
     public async Task<ChannelsResult> GetChannelsAsync()
-        => await _httpClient.GetJsonOrDefaultAsync<ChannelsResult>(RuntimeManagementDefaults.ChannelsFullRoute, () => ChannelsResult.CreateFailure("Failed to load available channels"));
+        => await _httpClient.GetJsonOrDefaultAsync<ChannelsResult>(RuntimeManagementRoutes.ChannelsFullRoute, () => ChannelsResult.CreateFailure("Failed to load available channels"));
 
     /// <inheritdoc/>
     public async Task<ReleasesResult> GetReleasesWithStatusAsync(string channel)
     {
-        var url = RuntimeManagementDefaults.ReleasesWithStatusFullRoute(channel);
+        var url = RuntimeManagementRoutes.ReleasesWithStatusFullRoute(channel);
         return await _httpClient.GetJsonOrDefaultAsync<ReleasesResult>(url, () => ReleasesResult.CreateFailure($"Failed to load releases for channel '{channel}'"));
     }
 }

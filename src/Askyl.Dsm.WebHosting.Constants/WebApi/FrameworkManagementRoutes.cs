@@ -1,9 +1,9 @@
-namespace Askyl.Dsm.WebHosting.Constants.API;
+namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 
 /// <summary>
-/// Defines Framework Management API specific parameters and constants.
+/// Defines framework management API route constants for the application's REST endpoints.
 /// </summary>
-public static class FrameworkManagementDefaults
+public static class FrameworkManagementRoutes
 {
     /// <summary>
     /// Base route prefix for the Framework Management controller (versioned).
@@ -11,27 +11,27 @@ public static class FrameworkManagementDefaults
     public const string ControllerBaseRoute = "api/v1/frameworks";
 
     /// <summary>
-    /// Route to install a framework version.
+    /// Route segment to install a framework version.
     /// </summary>
     public const string InstallRoute = "install";
 
     /// <summary>
-    /// Route to uninstall a framework version.
+    /// Route segment to uninstall a framework version.
     /// </summary>
     public const string UninstallRoute = "uninstall";
 
     /// <summary>
     /// Full route for the install endpoint.
     /// </summary>
-    public static String InstallFullRoute => String.Join("/", ControllerBaseRoute, InstallRoute);
+    public static string InstallFullRoute => String.Join("/", ControllerBaseRoute, InstallRoute);
 
     /// <summary>
     /// Full route for the uninstall endpoint.
     /// </summary>
-    public static String UninstallFullRoute => String.Join("/", ControllerBaseRoute, UninstallRoute);
+    public static string UninstallFullRoute => String.Join("/", ControllerBaseRoute, UninstallRoute);
 
     /// <summary>
     /// Full route for the uninstall endpoint with version parameter.
     /// </summary>
-    public static String UninstallWithVersionFullRoute(string version) => String.Join("/", ControllerBaseRoute, UninstallRoute, version);
+    public static string UninstallWithVersionFullRoute(string version) => String.Join("/", ControllerBaseRoute, UninstallRoute, version);
 }
