@@ -28,7 +28,7 @@ public static class LicenseRoutes
     /// <summary>
     /// Full route for the licenses endpoint.
     /// </summary>
-    public static string AllFullRoute => String.Join("/", ControllerBaseRoute, AllRoute);
+    public static readonly string AllFullRoute = String.Join("/", ControllerBaseRoute, AllRoute);
 
     #endregion
 }

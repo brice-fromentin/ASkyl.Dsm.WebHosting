@@ -48,7 +48,7 @@ public static class RuntimeManagementRoutes
     /// <summary>
     /// Full route for the versions endpoint.
     /// </summary>
-    public static string VersionsFullRoute => String.Join("/", ControllerBaseRoute, VersionsRoute);
+    public static readonly string VersionsFullRoute = String.Join("/", ControllerBaseRoute, VersionsRoute);
 
     /// <summary>
     /// Full route for the channel installed endpoint.
@@ -63,7 +63,7 @@ public static class RuntimeManagementRoutes
     /// <summary>
     /// Full route for the channels endpoint.
     /// </summary>
-    public static string ChannelsFullRoute => String.Join("/", ControllerBaseRoute, ChannelsRoute);
+    public static readonly string ChannelsFullRoute = String.Join("/", ControllerBaseRoute, ChannelsRoute);
 
     /// <summary>
     /// Full route for the releases with status endpoint.

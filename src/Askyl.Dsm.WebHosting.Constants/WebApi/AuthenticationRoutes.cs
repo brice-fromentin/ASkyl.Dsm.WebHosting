@@ -38,17 +38,17 @@ public static class AuthenticationRoutes
     /// <summary>
     /// Full route for the login endpoint.
     /// </summary>
-    public static string LoginFullRoute => String.Join("/", ControllerBaseRoute, LoginRoute);
+    public static readonly string LoginFullRoute = String.Join("/", ControllerBaseRoute, LoginRoute);
 
     /// <summary>
     /// Full route for the logout endpoint.
     /// </summary>
-    public static string LogoutFullRoute => String.Join("/", ControllerBaseRoute, LogoutRoute);
+    public static readonly string LogoutFullRoute = String.Join("/", ControllerBaseRoute, LogoutRoute);
 
     /// <summary>
     /// Full route for the status endpoint.
     /// </summary>
-    public static string StatusFullRoute => String.Join("/", ControllerBaseRoute, StatusRoute);
+    public static readonly string StatusFullRoute = String.Join("/", ControllerBaseRoute, StatusRoute);
 
     #endregion
 }

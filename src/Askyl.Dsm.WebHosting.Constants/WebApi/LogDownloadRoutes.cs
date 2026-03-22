@@ -28,7 +28,7 @@ public static class LogDownloadRoutes
     /// <summary>
     /// Full route for the log download endpoint.
     /// </summary>
-    public static string LogsFullRoute => String.Join("/", ControllerBaseRoute, LogsRoute);
+    public static readonly string LogsFullRoute = String.Join("/", ControllerBaseRoute, LogsRoute);
 
     #endregion
 }

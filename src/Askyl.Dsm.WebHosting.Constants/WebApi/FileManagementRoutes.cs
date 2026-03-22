@@ -37,7 +37,7 @@ public static class FileManagementRoutes
     /// <summary>
     /// Full route for the shared folders endpoint.
     /// </summary>
-    public static string SharedFoldersFullRoute => String.Join("/", ControllerBaseRoute, SharedFoldersRoute);
+    public static readonly string SharedFoldersFullRoute = String.Join("/", ControllerBaseRoute, SharedFoldersRoute);
 
     #endregion
 
@@ -46,7 +46,7 @@ public static class FileManagementRoutes
     /// <summary>
     /// Full route for the directory contents endpoint.
     /// </summary>
-    public static string DirectoryContentsFullRoute => String.Join("/", ControllerBaseRoute, DirectoryContentsRoute);
+    public static readonly string DirectoryContentsFullRoute = String.Join("/", ControllerBaseRoute, DirectoryContentsRoute);
 
     #endregion
 }

@@ -53,32 +53,32 @@ public static class WebsiteHostingRoutes
     /// <summary>
     /// Full route for the all endpoint.
     /// </summary>
-    public static string AllFullRoute => String.Join("/", ControllerBaseRoute, AllRoute);
+    public static readonly string AllFullRoute = String.Join("/", ControllerBaseRoute, AllRoute);
 
     /// <summary>
     /// Full route for the add endpoint.
     /// </summary>
-    public static string AddFullRoute => String.Join("/", ControllerBaseRoute, AddRoute);
+    public static readonly string AddFullRoute = String.Join("/", ControllerBaseRoute, AddRoute);
 
     /// <summary>
     /// Full route for the update endpoint.
     /// </summary>
-    public static string UpdateFullRoute => String.Join("/", ControllerBaseRoute, UpdateRoute);
+    public static readonly string UpdateFullRoute = String.Join("/", ControllerBaseRoute, UpdateRoute);
 
     /// <summary>
     /// Full route for the remove endpoint.
     /// </summary>
-    public static string RemoveFullRoute => String.Join("/", ControllerBaseRoute, RemoveRoute);
+    public static readonly string RemoveFullRoute = String.Join("/", ControllerBaseRoute, RemoveRoute);
 
     /// <summary>
     /// Full route for the start endpoint.
     /// </summary>
-    public static string StartFullRoute => String.Join("/", ControllerBaseRoute, StartRoute);
+    public static readonly string StartFullRoute = String.Join("/", ControllerBaseRoute, StartRoute);
 
     /// <summary>
     /// Full route for the stop endpoint.
     /// </summary>
-    public static string StopFullRoute => String.Join("/", ControllerBaseRoute, StopRoute);
+    public static readonly string StopFullRoute = String.Join("/", ControllerBaseRoute, StopRoute);
 
     #endregion
 }

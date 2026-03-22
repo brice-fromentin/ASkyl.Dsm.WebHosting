@@ -33,12 +33,12 @@ public static class FrameworkManagementRoutes
     /// <summary>
     /// Full route for the install endpoint.
     /// </summary>
-    public static string InstallFullRoute => String.Join("/", ControllerBaseRoute, InstallRoute);
+    public static readonly string InstallFullRoute = String.Join("/", ControllerBaseRoute, InstallRoute);
 
     /// <summary>
     /// Full route for the uninstall endpoint.
     /// </summary>
-    public static string UninstallFullRoute => String.Join("/", ControllerBaseRoute, UninstallRoute);
+    public static readonly string UninstallFullRoute = String.Join("/", ControllerBaseRoute, UninstallRoute);
 
     /// <summary>
     /// Full route for the uninstall endpoint with version parameter.
