@@ -57,6 +57,12 @@ public static partial class VersionsDetector
     public static bool IsVersionInstalled(string version, string frameworkType = "ASP.NET Core")
         => _cachedFrameworks.Any(x => x.Type == frameworkType && x.Version == version);
 
+    public static Task<bool> IsChannelInstalledAsync(string channel, string frameworkType = "ASP.NET Core")
+        => Task.FromResult(IsChannelInstalled(channel, frameworkType));
+
+    public static Task<bool> IsVersionInstalledAsync(string version, string frameworkType = "ASP.NET Core")
+        => Task.FromResult(IsVersionInstalled(version, frameworkType));
+
     #endregion
 
     #region Process Management

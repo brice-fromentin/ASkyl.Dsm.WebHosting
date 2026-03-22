@@ -11,6 +11,10 @@
     <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Askyl.Dsm.WebHosting.Ui.Client\Askyl.Dsm.WebHosting.Ui.Client.csproj" />
+  </ItemGroup>
+
   <Target Name="MoreClean" AfterTargets="Clean">
     <RemoveDir Directories="$(BaseOutputPath)" />
     <RemoveDir Directories="$(BaseIntermediateOutputPath)" />

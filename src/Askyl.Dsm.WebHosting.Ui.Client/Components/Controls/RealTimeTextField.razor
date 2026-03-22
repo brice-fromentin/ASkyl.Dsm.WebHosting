@@ -1,0 +1,116 @@
+<FluentTextField Value="@BoundValue" 
+                 @oninput="HandleInput" 
+                 @onchange="HandleChange"
+                 Label="@Label" 
+                 Class="@Class" 
+                 Style="@Style" 
+                 Autofocus="@Autofocus" 
+                 TextFieldType="@TextFieldType" 
+                 Name="@Name">
+    @ChildContent
+</FluentTextField>
+
+@code
+{
+    #region Parameters
+
+    /// <summary>
+    /// The bound value for two-way binding.
+    /// </summary>
+    [Parameter]
+    public string? Value { get; set; }
+
+    /// <summary>
+    /// Callback invoked when the value changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    /// <summary>
+    /// Optional callback to execute after value binding completes.
+    /// Useful for post-processing (e.g., converting empty strings to null).
+    /// </summary>
+    [Parameter]
+    public Action? AfterCallback { get; set; }
+
+    /// <summary>
+    /// Label text for the field.
+    /// </summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <summary>
+    /// CSS class for the component.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>
+    /// Inline style for the component.
+    /// </summary>
+    [Parameter]
+    public string? Style { get; set; }
+
+    /// <summary>
+    /// Whether the field should receive focus automatically.
+    /// </summary>
+    [Parameter]
+    public bool Autofocus { get; set; }
+
+    /// <summary>
+    /// Type of text field (e.g., Password).
+    /// </summary>
+    [Parameter]
+    public TextFieldType TextFieldType { get; set; } = TextFieldType.Text;
+
+    /// <summary>
+    /// Name attribute for form submission and browser autofill.
+    /// </summary>
+    [Parameter]
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// Child content for the text field (e.g., placeholder text).
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    #endregion
+
+    #region Properties
+
+    private string? BoundValue => Value;
+
+    #endregion
+
+    #region Event Handlers
+
+    private async Task HandleInput(ChangeEventArgs args)
+    {
+        if (args.Value is string newValue && newValue != Value)
+        {
+            await ValueChanged.InvokeAsync(newValue);
+
+            // Invoke after callback if provided
+            AfterCallback?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Handles the change event (fired when the field loses focus or user confirms input).
+    /// This is a fallback for password managers that may not trigger @oninput reliably.
+    /// </summary>
+    private async Task HandleChange(ChangeEventArgs args)
+    {
+        if (args.Value is string newValue && newValue != Value)
+        {
+            await ValueChanged.InvokeAsync(newValue);
+
+            // Invoke after callback if provided
+            AfterCallback?.Invoke();
+        }
+    }
+
+    #endregion
+
+}

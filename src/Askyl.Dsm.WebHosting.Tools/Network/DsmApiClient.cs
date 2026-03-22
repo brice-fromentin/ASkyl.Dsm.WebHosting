@@ -25,7 +25,45 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
 
     public ApiInformationCollection ApiInformations { get; } = new();
 
+    public string Sid => _sid;
+
     public bool IsConnected => !String.IsNullOrEmpty(_sid);
+
+    /// <summary>
+    /// Sets the session ID directly (for restoring from persisted state).
+    /// </summary>
+    public void SetSid(string sid) => _sid = sid;
+
+    /// <summary>
+    /// Validates the current session by making a lightweight API call.
+    /// </summary>
+    public async Task<bool> ValidateSessionAsync()
+    {
+        if (String.IsNullOrEmpty(_sid))
+        {
+            return false;
+        }
+
+        try
+        {
+            var parameters = new InformationsQueryParameters(ApiInformations);
+            var result = await ExecuteAsync<ApiInformationResponse>(parameters);
+            return result?.Success == true && result.Data is not null && result.Data.Count > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Disconnects and clears the session.
+    /// </summary>
+    public async Task DisconnectAsync()
+    {
+        _sid = String.Empty;
+        _httpClient.DefaultRequestHeaders.Remove(NetworkConstants.CookieHeader);
+    }
 
     public async Task<bool> ConnectAsync(LoginModel model)
     {

@@ -2,7 +2,7 @@
 
 <div class="auto-data-grid-content">
     <div class="auto-data-grid-area">
-        <FluentDataGrid TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@HandleRowClick" OnRowDoubleClick="@HandleRowDoubleClick">
+        <FluentDataGrid TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@HandleRowClick">
             <ChildContent>
                 @ChildContent
             </ChildContent>
@@ -77,7 +77,12 @@
     public EventCallback<TItem> OnRowDoubleClick { get; set; }
 
 
+    // NOTE: Emulating double-click because FluentDataGrid's OnRowDoubleClick is buggy and never fires.
+    // Using a timer-based approach with timestamp comparison (simplest solution).
     private TItem? SelectedItem { get; set; }
+    private TItem? _lastClickedItem { get; set; }
+    private DateTime _lastClickTime { get; set; }
+    private const int DoubleClickTimeoutMs = 400;
 
     public static IQueryable<TItem> Empty() => Enumerable.Empty<TItem>().AsQueryable();
 
@@ -100,19 +105,48 @@
 
         SelectedItem = row.Item;
 
+        // Try to emulate double-click detection - returns true if handled as double-click
+        var isDoubleClick = await TryHandleDoubleClickAsync(row.Item);
+        if (isDoubleClick)
+        {
+            return; // Double-click was handled, skip single-click logic
+        }
+
+        // Handle single-click event
         if (OnRowClick.HasDelegate)
         {
             await OnRowClick.InvokeAsync(row.Item);
         }
+
+        // Update state for potential next double-click only after successful single-click
+        _lastClickedItem = SelectedItem;
+        _lastClickTime = DateTime.UtcNow;
     }
 
-    private async Task HandleRowDoubleClick(FluentDataGridRow<TItem> row)
+    /// <summary>
+    /// Emulates double-click detection by comparing current click with previous one.
+    /// This is a workaround because FluentDataGrid's OnRowDoubleClick event never fires.
+    /// Returns true if this was detected as a double-click and handled.
+    /// </summary>
+    private async Task<bool> TryHandleDoubleClickAsync(TItem item)
     {
-        if (!OnRowDoubleClick.HasDelegate || row.Item is null)
+        var now = DateTime.UtcNow;
+        var timeSinceLastClick = (now - _lastClickTime).TotalMilliseconds;
+
+        if (_lastClickedItem is null || timeSinceLastClick > DoubleClickTimeoutMs || false == SelectedItem?.Equals(_lastClickedItem))
         {
-            return;
+            return false; // Not a double-click
         }
 
-        await OnRowDoubleClick.InvokeAsync(row.Item);
+        // This is a double-click
+        _lastClickedItem = null;
+
+        if (!OnRowDoubleClick.HasDelegate)
+        {
+            return false;
+        }
+
+        await OnRowDoubleClick.InvokeAsync(SelectedItem);
+        return true;
     }
 }
