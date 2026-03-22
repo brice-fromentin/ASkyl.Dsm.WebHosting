@@ -21,7 +21,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
     {
-        var model = new LoginModel(login, password, otpCode);
+        var model = new LoginCredentials(login, password, otpCode);
 
         if (!await apiClient.ConnectAsync(model))
         {

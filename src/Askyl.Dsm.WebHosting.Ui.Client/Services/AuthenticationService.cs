@@ -19,7 +19,7 @@ public class AuthenticationService(IHttpClientFactory httpClientFactory) : IAuth
 
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
-        => await _httpClient.PostJsonOrDefaultAsync<LoginModel, AuthenticationResult>(AuthenticationRoutes.LoginFullRoute, new(login, password, otpCode), () => AuthenticationResult.CreateNotAuthenticated("Failed to login"));
+        => await _httpClient.PostJsonOrDefaultAsync<LoginCredentials, AuthenticationResult>(AuthenticationRoutes.LoginFullRoute, new(login, password, otpCode), () => AuthenticationResult.CreateNotAuthenticated("Failed to login"));
 
     /// <inheritdoc/>
     public async Task<ApiResult> LogoutAsync()

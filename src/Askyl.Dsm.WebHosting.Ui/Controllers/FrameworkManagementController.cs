@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 
 using Askyl.Dsm.WebHosting.Constants.WebApi;
-using Askyl.Dsm.WebHosting.Data.Domain.Framework;
+using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Ui.Authorization;
@@ -23,7 +23,7 @@ public class FrameworkManagementController(IFrameworkManagementService managemen
     /// <param name="model">The installation model containing version and channel.</param>
     /// <returns>An InstallationResult indicating success or failure (always HTTP 200).</returns>
     [HttpPost(FrameworkManagementRoutes.InstallRoute)]
-    public async Task<ActionResult<InstallationResult>> InstallFramework([FromBody] InstallFrameworkModel model)
+    public async Task<ActionResult<InstallationResult>> InstallFramework([FromBody] InstallFramework model)
         => Ok(await managementService.InstallFrameworkAsync(model.Version, model.Channel));
 
     /// <summary>

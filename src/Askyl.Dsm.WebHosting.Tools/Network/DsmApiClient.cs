@@ -66,7 +66,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
         _httpClient.DefaultRequestHeaders.Remove(NetworkConstants.CookieHeader);
     }
 
-    public async Task<bool> ConnectAsync(LoginModel model)
+    public async Task<bool> ConnectAsync(LoginCredentials model)
     {
         if (!ReadSettings())
         {
@@ -125,7 +125,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
         return true;
     }
 
-    private async Task<bool> AuthenticateAsync(LoginModel model)
+    private async Task<bool> AuthenticateAsync(LoginCredentials model)
     {
         var parameters = new AuthenticationLoginParameters(ApiInformations);
 

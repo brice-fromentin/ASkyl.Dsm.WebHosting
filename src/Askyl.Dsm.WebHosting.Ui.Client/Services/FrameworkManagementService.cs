@@ -1,6 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.WebApi;
-using Askyl.Dsm.WebHosting.Data.Domain.Framework;
+using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Tools.Extensions;
@@ -18,8 +18,8 @@ public class FrameworkManagementService(IHttpClientFactory httpClientFactory) : 
     /// <inheritdoc/>
     public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel)
     {
-        var model = new InstallFrameworkModel(version, channel);
-        return await _httpClient.PostJsonOrDefaultAsync<InstallFrameworkModel, InstallationResult>(FrameworkManagementRoutes.InstallFullRoute, model, () => InstallationResult.CreateFailure("Failed to install framework"));
+        var model = new InstallFramework(version, channel);
+        return await _httpClient.PostJsonOrDefaultAsync<InstallFramework, InstallationResult>(FrameworkManagementRoutes.InstallFullRoute, model, () => InstallationResult.CreateFailure("Failed to install framework"));
     }
 
     /// <inheritdoc/>

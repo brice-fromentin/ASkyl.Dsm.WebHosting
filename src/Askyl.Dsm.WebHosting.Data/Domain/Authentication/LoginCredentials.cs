@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 
-public class LoginModel(string login, string password, string? otpCode)
+public class LoginCredentials(string login, string password, string? otpCode)
 {
     [Required(ErrorMessage = "Login is required.")]
     public string Login { get; set; } = login;
@@ -13,5 +13,5 @@ public class LoginModel(string login, string password, string? otpCode)
     public string? OtpCode { get; set; } = otpCode;
 
     // Parameterless constructor for Razor page binding
-    public LoginModel() : this(String.Empty, String.Empty, null) { }
+    public LoginCredentials() : this(String.Empty, String.Empty, null) { }
 }
