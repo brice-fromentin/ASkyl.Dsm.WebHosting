@@ -11,7 +11,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreInformations;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
-using Askyl.Dsm.WebHosting.Data.Security;
+using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
 

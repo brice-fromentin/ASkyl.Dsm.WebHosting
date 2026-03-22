@@ -1,6 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.Runtime;
+using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Results;
-using Askyl.Dsm.WebHosting.Data.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Data.Services;
 

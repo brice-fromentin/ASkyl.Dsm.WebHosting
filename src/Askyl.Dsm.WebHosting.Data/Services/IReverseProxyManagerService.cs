@@ -1,4 +1,4 @@
-using Askyl.Dsm.WebHosting.Data.WebSites;
+using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
 namespace Askyl.Dsm.WebHosting.Data.Services;
 

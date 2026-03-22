@@ -1,5 +1,5 @@
 using Microsoft.Deployment.DotNet.Releases;
-using Askyl.Dsm.WebHosting.Data.Runtime;
+using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 

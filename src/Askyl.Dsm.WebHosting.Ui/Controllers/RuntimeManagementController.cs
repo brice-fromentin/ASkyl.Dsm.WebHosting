@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 
 using Askyl.Dsm.WebHosting.Constants.WebApi;
-using Askyl.Dsm.WebHosting.Data.Runtime;
+using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Services;
 using Askyl.Dsm.WebHosting.Ui.Authorization;
 

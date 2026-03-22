@@ -5,7 +5,7 @@ using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Data.Interfaces;
 using Askyl.Dsm.WebHosting.SourceGenerators;
 
-namespace Askyl.Dsm.WebHosting.Data.WebSites;
+namespace Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
 [GenerateClone]
 public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>

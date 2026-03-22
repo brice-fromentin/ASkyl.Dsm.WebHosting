@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Askyl.Dsm.WebHosting.Data.Runtime;
+namespace Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 
 /// <summary>
 /// Represents the release type of an ASP.NET Core channel. Mirrors exactly the ReleaseType enum from Microsoft.Deployment.DotNet.Releases.

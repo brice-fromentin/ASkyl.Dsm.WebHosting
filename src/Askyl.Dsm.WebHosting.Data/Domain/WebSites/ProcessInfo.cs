@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Askyl.Dsm.WebHosting.Data.WebSites;
+namespace Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
 public record ProcessInfo(Process Process)
 {

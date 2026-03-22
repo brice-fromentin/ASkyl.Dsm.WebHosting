@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Askyl.Dsm.WebHosting.Data.Security;
+namespace Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 
 public class LoginModel(string login, string password, string? otpCode)
 {

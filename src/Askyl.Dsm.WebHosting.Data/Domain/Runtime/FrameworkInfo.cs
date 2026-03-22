@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Askyl.Dsm.WebHosting.Data.Runtime;
+namespace Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 
 public class FrameworkInfo(string type = "", string version = "")
 {

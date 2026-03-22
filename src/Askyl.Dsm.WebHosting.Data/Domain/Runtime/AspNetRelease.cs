@@ -1,4 +1,4 @@
-namespace Askyl.Dsm.WebHosting.Data.Runtime;
+namespace Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 
 public sealed class AspNetRelease
 {
