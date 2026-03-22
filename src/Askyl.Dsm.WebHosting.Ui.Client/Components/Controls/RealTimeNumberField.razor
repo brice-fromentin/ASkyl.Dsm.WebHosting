@@ -1,0 +1,102 @@
+<FluentNumberField Value="@BoundValue" 
+                  @oninput="HandleInput" 
+                  @onchange="HandleChange"
+                  Label="@Label" 
+                  Class="@Class" 
+                  Style="@Style" 
+                  Name="@Name">
+    @ChildContent
+</FluentNumberField>
+
+@code
+{
+    #region Parameters
+
+    /// <summary>
+    /// The bound value for two-way binding.
+    /// </summary>
+    [Parameter]
+    public int Value { get; set; }
+
+    /// <summary>
+    /// Callback invoked when the value changes.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> ValueChanged { get; set; }
+
+    /// <summary>
+    /// Optional callback to execute after value binding completes.
+    /// Useful for post-processing or validation.
+    /// </summary>
+    [Parameter]
+    public Action? AfterCallback { get; set; }
+
+    /// <summary>
+    /// Label text for the field.
+    /// </summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <summary>
+    /// CSS class for the component.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>
+    /// Inline style for the component.
+    /// </summary>
+    [Parameter]
+    public string? Style { get; set; }
+
+    /// <summary>
+    /// Name attribute for form submission and browser autofill.
+    /// </summary>
+    [Parameter]
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// Child content for the number field.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    #endregion
+
+    #region Properties
+
+    private int BoundValue => Value;
+
+    #endregion
+
+    #region Event Handlers
+
+    private async Task HandleInput(ChangeEventArgs args)
+    {
+        if (args.Value is string valueString && int.TryParse(valueString, out int newValue) && newValue != Value)
+        {
+            await ValueChanged.InvokeAsync(newValue);
+
+            // Invoke after callback if provided
+            AfterCallback?.Invoke();
+        }
+    }
+
+    /// <summary>
+    /// Handles the change event (fired when the field loses focus or user confirms input).
+    /// This is a fallback for password managers that may not trigger @oninput reliably.
+    /// </summary>
+    private async Task HandleChange(ChangeEventArgs args)
+    {
+        if (args.Value is string valueString && int.TryParse(valueString, out int newValue) && newValue != Value)
+        {
+            await ValueChanged.InvokeAsync(newValue);
+
+            // Invoke after callback if provided
+            AfterCallback?.Invoke();
+        }
+    }
+
+    #endregion
+
+}

@@ -1,0 +1,92 @@
+@page "/login"
+
+@implements IWorkingState
+
+@using System.Runtime.InteropServices
+@using Askyl.Dsm.WebHosting.Constants.Application
+@using Askyl.Dsm.WebHosting.Data.Security
+@using Askyl.Dsm.WebHosting.Data.Services
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Controls
+
+@inject IAuthenticationService authService
+@inject IDialogService DialogsService
+@inject IToastService ToastService
+@inject NavigationManager navigation
+
+<LoadingOverlay WorkingStateComponent="@this" />
+
+<PageTitle>ADWH - Login</PageTitle>
+
+<FluentDialog Modal="true" TrapFocus="true" PreventScroll="true">
+    <EditForm Model="@Model" OnValidSubmit="Authenticate">
+        <DataAnnotationsValidator />
+
+        <FluentDialogHeader>
+            <h2>Authentication (DSM account)</h2>
+        </FluentDialogHeader>
+
+        <FluentStack Orientation="Orientation.Vertical">
+            <RealTimeTextField @bind-Value="Model.Login" Label="Login:" Class="full-size" Autofocus="true" Name="username" />
+            <FluentValidationMessage For="(() => Model.Login)" />
+            <RealTimeTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Label="Password:" Class="full-size" Name="password" />
+            <FluentValidationMessage For="(() => Model.Password)" />
+            <RealTimeTextField @bind-Value="Model.OtpCode" Label="OTP:" Class="full-size" Name="otp" />
+        </FluentStack>
+
+        <FluentDialogFooter>
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="flex-grow: 1;">OK</FluentButton>
+        </FluentDialogFooter>
+    </EditForm>
+</FluentDialog>
+
+@code
+{
+    #region IWorkingState Implementation
+
+    public bool IsWorking { get; set; }
+
+    public string Message { get; set; } = String.Empty;
+
+    public void NotifyStateChanged() => StateHasChanged();
+
+    #endregion
+
+    private LoginModel Model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            DialogsService.ShowError(ApplicationConstants.PlatformNotSupportedErrorMessage);
+        }
+
+        var isAuthenticatedResult = await authService.IsAuthenticatedAsync();
+        if (isAuthenticatedResult.Success && isAuthenticatedResult.Value == true)
+        {
+            navigation.NavigateTo(ApplicationConstants.HomePagePath);
+        }
+    }
+
+    private async Task Authenticate(EditContext context)
+    {
+        if (IsWorking)
+        {
+            return;
+        }
+
+        using var worker = this.CreateWorkingState("Authenticating...");
+
+        var result = await authService.LoginAsync(Model.Login, Model.Password, Model.OtpCode);
+
+        if (!result.Success || !result.IsAuthenticated)
+        {
+            // failed - either HTTP call failed or credentials invalid
+            var errorMessage = result.Message?.Trim() ?? ApplicationConstants.AuthenticationFailedErrorMessage;
+            ToastService.ShowError(errorMessage);
+            return;
+        }
+
+        ToastService.ShowSuccess(ApplicationConstants.AuthenticationSuccessfulMessage);
+        navigation.NavigateTo(ApplicationConstants.HomePagePath);
+    }
+}

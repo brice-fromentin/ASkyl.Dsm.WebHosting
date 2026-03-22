@@ -12,10 +12,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
-    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.2" />
-    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Emoji" Version="4.13.2" />
-    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.5" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.14.0" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Emoji" Version="4.14.0" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.14.0" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.BrowserConsole" Version="8.0.0" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Constants/Askyl.Dsm.WebHosting.Constants.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Data/Askyl.Dsm.WebHosting.Data.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Tools/Askyl.Dsm.WebHosting.Tools.csproj" />
   </ItemGroup>
 
 </Project>

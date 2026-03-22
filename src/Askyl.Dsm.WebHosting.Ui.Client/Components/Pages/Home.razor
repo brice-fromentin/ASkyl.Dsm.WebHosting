@@ -2,9 +2,22 @@
 
 @implements IWorkingState
 
-@using Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Askyl.Dsm.WebHosting.Constants.API
+@using Askyl.Dsm.WebHosting.Constants.Application
+@using Askyl.Dsm.WebHosting.Constants.UI
+@using Askyl.Dsm.WebHosting.Data.Security
+@using Askyl.Dsm.WebHosting.Data.Services
+@using Askyl.Dsm.WebHosting.Data.WebSites
+@using Askyl.Dsm.WebHosting.Ui.Client.Interfaces
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 
-@inject IHttpClientFactory HttpClientFactory
+@inject IDialogService DialogService
+@inject IAuthenticationService AuthService
+@inject IWebSiteHostingService WebsiteHostingService
+@inject ILogger<Home> Logger
+@inject NavigationManager navigation
+@inject IToastService ToastService
 
 <PageTitle>ADWH - Home</PageTitle>
 
@@ -21,10 +34,10 @@
         Delete
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
-    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null || SelectedInstance.IsRunning)" OnClick="StartSelectedInstance">
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance">
         <FluentIcon Value="@(new IconsRegular20.Play())" Color="Color.Success" />
     </FluentButton>
-    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null || !SelectedInstance.IsRunning)" OnClick="StopSelectedInstance">
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="StopSelectedInstance">
         <FluentIcon Value="@(new IconsRegular20.Stop())" Color="Color.Error" />
     </FluentButton>
     <FluentSpacer />
@@ -34,87 +47,290 @@
     <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="Appearance.Outline">
         ASP.NET Online
     </FluentButton>
-    <FluentButton OnClick="DownloadLogs" Appearance="Appearance.Outline">
-        Download Logs
-    </FluentButton>
     <FluentButton OnClick="ShowLicensesDialog" Appearance="Appearance.Outline">
         Licenses
     </FluentButton>
+    <FluentButton OnClick="DownloadLogs" Appearance="Appearance.Outline">
+        Download Logs
+    </FluentButton>
+    <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
+    <FluentButton OnClick="Logout" Appearance="Appearance.Outline" IconStart="@(new IconsRegular20.SignOut())">
+        Logout
+    </FluentButton>
 </FluentToolbar>
 
-Welcome to your new app = [@apiMessage]
+<AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr">
+    <ChildContent>
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Name" Property="@(i => i.Configuration.Name)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Path" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="Internal Port" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="State" Property="@(i => i.State)" Sortable="true" />
+    </ChildContent>
+</AutoDataGrid>
 
 @code
 {
     #region IWorkingState Implementation
 
     public bool IsWorking { get; set; }
-    public string Message { get; set; } = "";
+    public string Message { get; set; } = String.Empty;
 
     public void NotifyStateChanged() => StateHasChanged();
 
     #endregion
 
-    record WebSiteInstance
-    {
-        public bool IsRunning;
-    }
+    private List<WebSiteInstance> Instances { get; set; } = [];
 
-    private WebSiteInstance? SelectedInstance;
+    private WebSiteInstance? SelectedInstance { get; set; }
 
-    string apiMessage = "";
+    private IQueryable<WebSiteInstance> GridInstances => Instances.AsQueryable();
 
     protected override async Task OnInitializedAsync()
     {
-        var client = HttpClientFactory.CreateClient("John");
+        var authResult = await AuthService.IsAuthenticatedAsync();
+        if (!authResult.Success || authResult.Value != true)
+        {
+            navigation.NavigateTo(ApplicationConstants.LoginPagePath);
+            return;
+        }
 
-        apiMessage = await client.GetFromJsonAsync<string>("api/helloworld/hello") ?? "No message";
-
+        await LoadInstancesAsync();
         await base.OnInitializedAsync();
     }
 
-    private void AddWebSite()
+    private async Task LoadInstancesAsync()
     {
-        // TODO: Implement AddWebSite logic
+        using var worker = this.CreateWorkingState("Loading websites...");
+
+        try
+        {
+            var result = await WebsiteHostingService.GetAllWebsitesAsync();
+            
+            if (!result.Success || result.Value is null)
+            {
+                Logger.LogWarning("Failed to load websites: {Message}", result.Message ?? "Unknown error");
+                Instances = [];
+                ToastService.ShowError($"Failed to load websites: {result.Message}");
+                return;
+            }
+
+            Instances = result.Value;
+            Logger.LogInformation("Loaded {WebsiteCount} website instances", Instances.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading websites");
+            Instances = [];
+            ToastService.ShowError($"Failed to load websites: {ex.Message}");
+        }
     }
 
-    private void EditWebSite()
+    private async Task EditWebSiteInstance(WebSiteInstance instance) => await EditWebSite(instance);
+
+    private void HandleInstanceDoubleClicked(WebSiteInstance instance)
     {
-        // TODO: Implement EditWebSite logic
+        SelectedInstance = instance;
+        _ = ShowWebSiteConfigurationDialogAsync(instance);
     }
 
-    private void DeleteWebSite()
+    private async Task AddWebSite() => await ShowWebSiteConfigurationDialogAsync(WebSiteInstance.New());
+
+    private async Task EditWebSite() => await ShowWebSiteConfigurationDialogAsync(SelectedInstance);
+
+    private async Task EditWebSite(WebSiteInstance instance) => await EditWebSite();
+
+    private void HandleInstanceSelected(WebSiteInstance instance) => SelectedInstance = instance;
+
+    private async Task DeleteWebSite()
     {
-        // TODO: Implement DeleteWebSite logic
+        if (SelectedInstance is null)
+        {
+            return;
+        }
+
+        var selectedId = SelectedInstance.Id;
+        var selectedName = SelectedInstance.Configuration.Name;
+
+        // Show confirmation dialog
+        var confirmationMessage = $"Are you sure you want to delete the website '{selectedName}'? This action cannot be undone.";
+        var confirmation = await DialogService.ShowConfirmationAsync(confirmationMessage);
+        var result = await confirmation.Result;
+
+        if (result == null || result.Cancelled)
+        {
+            return;
+        }
+
+        using var worker = this.CreateWorkingState($"Deleting website '{selectedName}'...");
+
+        try
+        {
+            var deleteResult = await WebsiteHostingService.RemoveWebsiteAsync(selectedId);
+
+            if (!deleteResult.Success)
+            {
+                Logger.LogWarning("Failed to delete website: {ErrorMessage}", deleteResult.Message);
+                ToastService.ShowError(deleteResult.Message ?? "Failed to delete website");
+                return;
+            }
+
+            Logger.LogInformation("Website '{WebsiteName}' deleted successfully", selectedName);
+            Instances.RemoveAll(i => i.Id == selectedId);
+            SelectedInstance = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting website");
+            ToastService.ShowError($"Error deleting website: {ex.Message}");
+        }
     }
 
-    private void StartSelectedInstance()
+    private async Task ShowWebSiteConfigurationDialogAsync(WebSiteInstance? instance)
     {
-        // TODO: Implement StartSelectedInstance logic
+        if (instance is null)
+        {
+            return;
+        }
+
+        var parameters = CreateDialogParameters(DialogConstants.WidthMedium);
+        var dialog = await DialogService.ShowDialogAsync<WebSiteConfigurationDialog>(instance, parameters);
+        var result = await dialog.Result;
+
+        if (result.Cancelled)
+        {
+            return;
+        }
+
+        await LoadInstancesAsync();
     }
 
-    private void StopSelectedInstance()
+    private async Task StartSelectedInstance()
     {
-        // TODO: Implement StopSelectedInstance logic
+        if (SelectedInstance is null)
+        {
+            return;
+        }
+
+        var selectedId = SelectedInstance.Id;
+        var selectedName = SelectedInstance.Configuration.Name;
+
+        using var worker = this.CreateWorkingState($"Starting website '{selectedName}'...");
+
+        try
+        {
+            var result = await WebsiteHostingService.StartWebsiteAsync(selectedId);
+
+            if (!result.Success)
+            {
+                Logger.LogWarning("Failed to start website: {ErrorMessage}", result.Message);
+                ToastService.ShowError(result.Message ?? "Failed to start website");
+                return;
+            }
+
+            Logger.LogInformation("Website '{WebsiteName}' started successfully", selectedName);
+            await LoadInstancesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error starting website");
+            ToastService.ShowError($"Error starting website: {ex.Message}");
+        }
     }
 
-    private void ShowDotnetVersionsDialog()
+    private async Task StopSelectedInstance()
     {
-        // TODO: Implement ShowDotnetVersionsDialog logic
+        if (SelectedInstance is null)
+        {
+            return;
+        }
+
+        var selectedId = SelectedInstance.Id;
+        var selectedName = SelectedInstance.Configuration.Name;
+
+        using var worker = this.CreateWorkingState($"Stopping website '{selectedName}'...");
+
+        try
+        {
+            var result = await WebsiteHostingService.StopWebsiteAsync(selectedId);
+
+            if (!result.Success)
+            {
+                Logger.LogWarning("Failed to stop website: {ErrorMessage}", result.Message);
+                ToastService.ShowError(result.Message ?? "Failed to stop website");
+                return;
+            }
+
+            Logger.LogInformation("Website '{WebsiteName}' stopped successfully", selectedName);
+            await LoadInstancesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error stopping website");
+            ToastService.ShowError($"Error stopping website: {ex.Message}");
+        }
     }
 
-    private void ShowAspNetReleasesDialog()
-    {
-        // TODO: Implement ShowAspNetReleasesDialog logic
-    }
+    private async Task ShowDotnetVersionsDialog() => await ShowDialogAsync<DotnetVersionsDialog>(DialogConstants.WidthAuto);
+
+    private async Task ShowAspNetReleasesDialog() => await ShowDialogAsync<AspNetReleasesDialog>(DialogConstants.WidthAuto);
+
+    private async Task ShowLicensesDialog() => await ShowDialogAsync<LicensesDialog>(DialogConstants.WidthSmall);
 
     private void DownloadLogs()
     {
-        // TODO: Implement DownloadLogs logic
+        // Navigate to log download endpoint defined in LogDownloadDefaults
+        // Session cookie (DsmSid) is automatically sent with the request for authentication
+        navigation.NavigateTo(LogDownloadDefaults.LogsFullRoute, forceLoad: true);
     }
 
-    private void ShowLicensesDialog()
+    private async Task Logout()
     {
-        // TODO: Implement ShowLicensesDialog logic
+        try
+        {
+            var result = await AuthService.LogoutAsync();
+
+            if (!result.Success)
+            {
+                Logger.LogWarning("Logout failed: {ErrorMessage}", result.Message);
+                ToastService.ShowError(result.Message ?? "Failed to logout");
+                return;
+            }
+
+            Logger.LogInformation("User logged out successfully");
+            navigation.NavigateTo(ApplicationConstants.LoginPagePath);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during logout");
+            ToastService.ShowError($"Error during logout: {ex.Message}");
+        }
     }
+
+
+    #region Dialog Helpers
+
+    private async Task ShowDialogAsync<TComponent>(string width) where TComponent : ComponentBase, IDialogContentComponent
+    {
+        var parameters = CreateDialogParameters(width);
+        var dialog = await DialogService.ShowDialogAsync<TComponent>(parameters);
+        _ = await dialog.Result;
+    }
+
+    private async Task ShowDialogAsync<TComponent>(TComponent component, string width) where TComponent : ComponentBase, IDialogContentComponent
+    {
+        var parameters = CreateDialogParameters(width);
+        var dialog = await DialogService.ShowDialogAsync<TComponent>(component, parameters);
+        _ = await dialog.Result;
+    }
+
+    private DialogParameters CreateDialogParameters(string width) => new() 
+        { 
+            Width = width, 
+            Modal = true, 
+            TrapFocus = false, 
+            PreventScroll = true, 
+            PreventDismissOnOverlayClick = true 
+        };
+
+    #endregion
 }

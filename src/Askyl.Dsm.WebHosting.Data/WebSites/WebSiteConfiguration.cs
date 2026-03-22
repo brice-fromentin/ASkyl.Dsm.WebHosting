@@ -10,7 +10,11 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 {
     #region General
 
-    public Guid Id { get; set; }
+    /// <summary>
+    /// Gets or sets the unique identifier for this configuration.
+    /// Defaults to Guid.Empty for new configurations until persisted.
+    /// </summary>
+    public Guid Id { get; set; } = Guid.Empty;
 
     [Required(ErrorMessage = ApplicationConstants.SiteNameRequiredErrorMessage)]
     public string Name { get; set; } = "";
@@ -41,12 +45,11 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 
     #region Reverse Proxy
 
-    public Guid? IdReverseProxy { get; set; }
+    [Required(ErrorMessage = ApplicationConstants.HostNameRequiredErrorMessage)]
+    public string HostName { get; set; } = "";
 
-    public string? HostName { get; set; }
-
-    [Range(ApplicationConstants.MinWebApplicationPort, ApplicationConstants.MaxWebApplicationPort, ErrorMessage = ApplicationConstants.PortRangeErrorMessage)]
-    public int PublicPort { get; set; }
+    [Required(ErrorMessage = ApplicationConstants.PortRequiredErrorMessage)]
+    public int PublicPort { get; set; } = 443;
 
     public ProtocolType Protocol { get; set; } = ProtocolType.HTTPS;
 

@@ -18,7 +18,7 @@ public static class ApplicationConstants
     /// <summary>
     /// HTTP client name identifier.
     /// </summary>
-    public static readonly string HttpClientName = "brad babble diboo - " + Guid.NewGuid().ToString();
+    public const string HttpClientName = "UiClient";
 
     /// <summary>
     /// Default name for the websites configuration file.
@@ -96,11 +96,6 @@ public static class ApplicationConstants
     public const string HostNameRequiredErrorMessage = "Host name is required.";
 
     /// <summary>
-    /// Validation error message for protocol range.
-    /// </summary>
-    public const string ProtocolRangeErrorMessage = "Protocol must be either 0 (HTTP) or 1 (HTTPS).";
-
-    /// <summary>
     /// The sub-path alias for the application
     /// </summary>
     public const string ApplicationSubPath = "adwh";
@@ -121,17 +116,47 @@ public static class ApplicationConstants
     public const string LoginPagePath = "login";
 
     /// <summary>
-    /// A short delay for UI operations in milliseconds.
+    /// HTTP client timeout in seconds.
     /// </summary>
-    public const int ShortUiDelay = 500;
+    public const int HttpClientTimeoutSeconds = 10;
 
     /// <summary>
-    /// The resource path for licenses.
+    /// File extension for DLL files.
     /// </summary>
-    public const string LicensesResourcePath = ".Licenses.";
+    public const string DllFileExtension = ".dll";
 
     /// <summary>
-    /// The file extension for license files.
+    /// Session key for DSM authentication SID.
     /// </summary>
-    public const string LicenseFileExtension = ".txt";
+    public const string DsmSessionKey = "DsmSid";
+
+    /// <summary>
+    /// Error message when platform is not supported.
+    /// </summary>
+    public const string PlatformNotSupportedErrorMessage = "The application can only run on Linux or MacOS";
+
+    /// <summary>
+    /// Error message for failed authentication.
+    /// </summary>
+    public const string AuthenticationFailedErrorMessage = "Authentication failed";
+
+    /// <summary>
+    /// Success message for successful authentication.
+    /// </summary>
+    public const string AuthenticationSuccessfulMessage = "Authentication successful";
+
+    /// <summary>
+    /// Error message when failing to load directory contents.
+    /// </summary>
+    public const string FailedToLoadDirectoryContentsErrorMessage = "Failed to load directory contents";
+
+    /// <summary>
+    /// Loading message for shared folders.
+    /// </summary>
+    public const string LoadingSharedFoldersMessage = "Loading shared folders...";
+
+    /// <summary>
+    /// Loading message for directory contents.
+    /// </summary>
+    public const string LoadingDirectoryContentsMessage = "Loading directory contents...";
 }

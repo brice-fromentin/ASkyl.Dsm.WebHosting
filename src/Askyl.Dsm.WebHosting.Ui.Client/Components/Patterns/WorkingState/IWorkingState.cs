@@ -1,4 +1,4 @@
-namespace Askyl.Dsm.WebHosting.Ui.Components.Patterns.WorkingState;
+namespace Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState;
 
 public interface IWorkingState
 {

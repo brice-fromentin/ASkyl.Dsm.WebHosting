@@ -1,0 +1,191 @@
+@using Microsoft.FluentUI.AspNetCore.Components
+@using Askyl.Dsm.WebHosting.Constants.UI
+@using Askyl.Dsm.WebHosting.Data
+@using Askyl.Dsm.WebHosting.Data.Services
+@using Askyl.Dsm.WebHosting.Data.WebSites
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Controls
+
+@implements IDialogContentComponent
+@implements IWorkingState
+
+@inject IDialogService DialogService
+@inject IWebSiteHostingService HostingService
+
+<LoadingOverlay WorkingStateComponent="@this" />
+
+<FluentDialogHeader ShowDismiss="true">
+    <FluentLabel Typo="Typography.H2">@(IsEditMode ? "Edit Website" : "Add Website")</FluentLabel>
+</FluentDialogHeader>
+
+<FluentDialogBody @onkeydown:Enter="OnEnterKeyAsync">
+    <EditForm Model="@Configuration" OnValidSubmit="ConfirmAsync">
+        <DataAnnotationsValidator />
+        <FluentStack Orientation="Orientation.Vertical">
+            <RealTimeTextField @bind-Value="Configuration.Name" Label="Name" Class="full-size" Autofocus="true" />
+            <FluentValidationMessage For="@(() => Configuration.Name)" />
+
+            <FluentDivider />
+            <FluentLabel Typo="Typography.H3">Application Settings</FluentLabel>
+
+            <FluentStack Orientation="Orientation.Vertical">
+                <FluentLabel>Application Path</FluentLabel>
+                <FluentStack Orientation="Orientation.Horizontal">
+                    <RealTimeTextField @bind-Value="Configuration.ApplicationPath" Class="flex-full-width" />
+                    <FluentButton IconStart="@(new IconsRegular20.FolderOpen())" Appearance="Appearance.Outline" OnClick="SelectApplicationPath" Type="ButtonType.Button" />
+                </FluentStack>
+            </FluentStack>
+            <FluentValidationMessage For="@(() => Configuration.ApplicationPath)" />
+            <FluentStack Orientation="Orientation.Horizontal">
+                <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
+                    <RealTimeTextField @bind-Value="Configuration.Environment" Label="Environment" Class="full-size" />
+                    <FluentValidationMessage For="@(() => Configuration.Environment)" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
+                    <RealTimeNumberField @bind-Value="Configuration.InternalPort" Label="Internal Port" Class="full-size" />
+                    <FluentValidationMessage For="@(() => Configuration.InternalPort)" />
+                </FluentStack>
+            </FluentStack>
+            <FluentCheckbox @bind-Value="Configuration.IsEnabled" Label="Enabled" />
+            <FluentCheckbox @bind-Value="Configuration.AutoStart" Label="Auto Start" />
+
+            <FluentDivider />
+            <FluentLabel Typo="Typography.H3">Reverse Proxy</FluentLabel>
+
+            <RealTimeTextField @bind-Value="Configuration.HostName" Label="Hostname" Class="full-size" />
+            <FluentValidationMessage For="@(() => Configuration.HostName)" />
+            <FluentStack Orientation="Orientation.Horizontal">
+                <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
+                    <FluentSelect TOption="string" @bind-Value="ProtocolProxy" Label="Protocol" Class="full-size">
+                        @foreach (var protocol in Enum.GetValues<ProtocolType>())
+                        {
+                            <FluentOption Value="@(((int)protocol).ToString())">@protocol.ToString()</FluentOption>
+                        }
+                    </FluentSelect>
+                    <FluentValidationMessage For="@(() => Configuration.Protocol)" />
+                </FluentStack>
+                <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
+                    <RealTimeNumberField @bind-Value="Configuration.PublicPort" Label="Public Port" Class="full-size" />
+                    <FluentValidationMessage For="@(() => Configuration.PublicPort)" />
+                </FluentStack>
+            </FluentStack>
+            <FluentCheckbox @bind-Value="Configuration.EnableHSTS" Label="Enable HSTS" />
+        </FluentStack>
+        <div class="fluent-dialog-footer">
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
+                <FluentButton OnClick="CancelAsync" Appearance="Appearance.Neutral" Type="ButtonType.Button">
+                    Cancel
+                </FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">
+                    @(IsEditMode ? "Update" : "Create")
+                </FluentButton>
+            </FluentStack>
+        </div>
+    </EditForm>
+</FluentDialogBody>
+
+<FluentDialogFooter Style="display: none;">
+    Workaround
+</FluentDialogFooter>
+
+@code
+{
+    #region Parameters
+
+    [CascadingParameter]
+    public FluentDialog Dialog { get; set; } = default!;
+
+    [Parameter]
+    public WebSiteInstance Content { get; set; } = default!;
+
+    #endregion
+
+    #region Properties and Fields
+
+    private WebSiteConfiguration Configuration { get; set; } = default!;
+    
+    private bool IsEditMode => Content?.Configuration?.Id != Guid.Empty;
+
+    private string ProtocolProxy
+    {
+        get => ((int)Configuration.Protocol).ToString();
+        set => Configuration.Protocol = Enum.Parse<ProtocolType>(value);
+    }
+
+    #endregion
+
+    #region IWorkingState Implementation
+
+    public bool IsWorking { get; set; }
+
+    public string Message { get; set; } = String.Empty;
+
+    public void NotifyStateChanged() => StateHasChanged();
+
+    #endregion
+
+    #region Lifecycle
+
+    protected override void OnInitialized()
+    {
+        Configuration = Content?.Configuration ?? new();
+    }
+
+    #endregion
+
+    #region Dialog Actions
+
+    private async Task SelectApplicationPath()
+    {
+        var parameters = new DialogParameters { Width = "80%", Modal = true, TrapFocus = false, PreventScroll = true, PreventDismissOnOverlayClick = true };
+        var dialog = await DialogService.ShowDialogAsync<FileSelectionDialog>(parameters);
+        var result = await dialog.Result;
+
+        if (result.Cancelled || result.Data is not FsEntry selectedFile)
+        {
+            return;
+        }
+
+        Configuration.ApplicationPath = selectedFile.Path;
+        Configuration.ApplicationRealPath = selectedFile.RealPath;
+    }
+
+    /// <summary>
+    /// Handles Enter key press to trigger form submission.
+    /// </summary>
+    private async Task OnEnterKeyAsync() => await ConfirmAsync(new EditContext(Configuration));
+
+    private async Task ConfirmAsync(EditContext context)
+    {
+        try
+        {
+            if (String.IsNullOrEmpty(Configuration.ApplicationRealPath))
+            {
+                await DialogService.ShowErrorAsync("Application path is required. Please select a valid application path.");
+                return;
+            }
+
+            using var worker = this.CreateWorkingState(
+                IsEditMode ? $"Updating '{Configuration.Name}'..." : $"Creating '{Configuration.Name}'...");
+
+            var result = IsEditMode 
+                ? await HostingService.UpdateWebsiteAsync(Configuration)
+                : await HostingService.AddWebsiteAsync(Configuration);
+
+            if (!result.Success)
+            {
+                await DialogService.ShowErrorAsync($"Failed: {result.Message}");
+                return;
+            }
+
+            await Dialog.CloseAsync();
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowErrorAsync($"Error {(IsEditMode ? "updating" : "creating")} website: {ex.Message}");
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+
+    #endregion
+}

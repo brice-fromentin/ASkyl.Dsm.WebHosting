@@ -1,5 +1,5 @@
-using Askyl.Dsm.WebHosting.Data.Runtime;
 using Microsoft.Deployment.DotNet.Releases;
+using Askyl.Dsm.WebHosting.Data.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
@@ -75,7 +75,7 @@ public static class Downloader
         {
             if (TryGetProductByVersion(products, desiredChannelVersion, strictWhenConfigured, $"Product Version {desiredChannelVersion} not found.", out var result))
             {
-                return result;
+                return result!;
             }
         }
 
@@ -86,7 +86,7 @@ public static class Downloader
         {
             if (TryGetProductByVersion(products, configured, strictWhenConfigured, $"Configured product Version {configured} not found.", out var result))
             {
-                return result;
+                return result!;
             }
         }
 
@@ -154,7 +154,7 @@ public static class Downloader
     /// <param name="errorMessage">The error message to use in the exception</param>
     /// <param name="result">The found product if successful</param>
     /// <returns>True if the product was found, false otherwise (unless strict mode throws an exception)</returns>
-    private static bool TryGetProductByVersion(IReadOnlyList<Product> products, string version, bool strictMode, string errorMessage, out Product result)
+    private static bool TryGetProductByVersion(IReadOnlyList<Product> products, string version, bool strictMode, string errorMessage, out Product? result)
     {
         var product = products.FirstOrDefault(p => String.Equals(p.ProductVersion, version, StringComparison.OrdinalIgnoreCase));
 
@@ -169,7 +169,7 @@ public static class Downloader
             throw new InvalidOperationException(errorMessage);
         }
 
-        result = null!;
+        result = null;
         return false;
     }
 }

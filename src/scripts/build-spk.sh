@@ -332,7 +332,7 @@ fi
 # Compile and publish UI project
 echo "🏗️  Building and publishing UI project..."
 cd "$UI_PROJECT_DIR"
-dotnet publish -c Release -o "$UI_PUBLISH_DIR" --self-contained false
+dotnet publish -c Release -o "$UI_PUBLISH_DIR" --self-contained false /nr:false
 
 # Remove debug files to reduce package size
 echo "🧹 Cleaning debug files..."

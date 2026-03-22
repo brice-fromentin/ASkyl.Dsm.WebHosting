@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
 using Askyl.Dsm.WebHosting.Data.Attributes;
 using Askyl.Dsm.WebHosting.SourceGenerators;
@@ -54,20 +55,6 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
 
     #endregion
 
-    private static JsonSerializerOptions JsonOptions { get; } = new()
-    {
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        IndentCharacter = '\t',
-        IndentSize = 1,
-        WriteIndented = true
-    };
-
-    private static JsonSerializerOptions JsonOptionsCompact { get; } = new()
-    {
-        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
-        WriteIndented = false
-    };
-
     public abstract string Name { get; }
 
     public string Path { get; }
@@ -99,7 +86,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
         }
 
         var builder = BuildForm(true);
-        var serialized = JsonSerializer.Serialize(Parameters, JsonOptions);
+        var serialized = JsonSerializer.Serialize(Parameters, JsonOptionsCache.Options);
         var encoded = Uri.EscapeDataString(serialized);
 
         builder.Append('&');
@@ -151,7 +138,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
     {
         if (value is System.Collections.IEnumerable and not string)
         {
-            return JsonSerializer.Serialize(value, JsonOptionsCompact);
+            return JsonSerializer.Serialize(value, JsonOptionsCache.Options);
         }
 
         if (value is bool boolValue)

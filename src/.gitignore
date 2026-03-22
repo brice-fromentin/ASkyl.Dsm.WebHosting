@@ -22,6 +22,9 @@ artifacts/
 # except build/, which is used as an MSBuild target.
 !**/packages/build/
 
+# Benchmark Artifacts
+Askyl.Dsm.WebHosting.Benchmarks/BenchmarkDotNet.Artifacts
+
 # Custom configuration
 Askyl.Dsm.WebHosting.Ui/websites.json
 

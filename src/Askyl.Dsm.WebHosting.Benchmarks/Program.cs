@@ -2,4 +2,4 @@
 using Askyl.Dsm.WebHosting.Benchmarks;
 using BenchmarkDotNet.Running;
 
-BenchmarkRunner.Run<StringBuilderBenchmark>();
+BenchmarkRunner.Run<UriBuilderBenchmark>();
