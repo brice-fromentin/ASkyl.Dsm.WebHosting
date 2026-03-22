@@ -7,7 +7,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Server-side implementation of ILogDownloadService for creating log archive streams.
 /// Gathers logs from package logs directory, debug log file, and application logs directory.
 /// </summary>
-public class LogDownloadService(ILogger<LogDownloadService> logger) : Data.Services.ILogDownloadService
+public class LogDownloadService(ILogger<LogDownloadService> logger) : Data.Contracts.ILogDownloadService
 {
     private readonly ILogger<LogDownloadService> _logger = logger;
 

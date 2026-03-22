@@ -2,7 +2,7 @@ using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Results;
 
-namespace Askyl.Dsm.WebHosting.Data.Services;
+namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 /// <summary>
 /// Facade service for .NET version management operations.

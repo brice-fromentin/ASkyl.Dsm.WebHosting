@@ -1,7 +1,7 @@
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 
-namespace Askyl.Dsm.WebHosting.Data.Services;
+namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 /// <summary>
 /// Service for managing website instances and their lifecycle.

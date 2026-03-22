@@ -1,6 +1,6 @@
 using Askyl.Dsm.WebHosting.Data.Results;
 
-namespace Askyl.Dsm.WebHosting.Data.Services;
+namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 /// <summary>
 /// Facade service for authentication operations.

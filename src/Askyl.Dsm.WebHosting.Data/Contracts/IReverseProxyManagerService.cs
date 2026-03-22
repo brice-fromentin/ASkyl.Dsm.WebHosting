@@ -1,6 +1,6 @@
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
-namespace Askyl.Dsm.WebHosting.Data.Services;
+namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 public interface IReverseProxyManagerService
 {

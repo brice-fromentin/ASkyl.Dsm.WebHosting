@@ -1,4 +1,4 @@
-namespace Askyl.Dsm.WebHosting.Data.Interfaces;
+namespace Askyl.Dsm.WebHosting.Data.Patterns;
 
 public interface IGenericCloneable<T> where T : class, new()
 {

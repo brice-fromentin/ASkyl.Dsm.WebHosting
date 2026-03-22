@@ -1,4 +1,4 @@
-namespace Askyl.Dsm.WebHosting.Data.Services;
+namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 /// <summary>
 /// Service for creating log archive streams.
