@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 
-namespace Askyl.Dsm.WebHosting.Tools.Runtime;
+namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
-public static class FileSystem
+public static class FileManager
 {
     private static readonly string _baseDir = AppContext.BaseDirectory;
     private static string _dotnetRoot = String.Empty;
@@ -15,8 +15,8 @@ public static class FileSystem
     {
         _dotnetRoot = root;
 
-        GetDirectory(FileSystem.Downloads);
-        GetDirectory(FileSystem.Temp);
+        GetDirectory(FileManager.Downloads);
+        GetDirectory(FileManager.Temp);
     }
 
     public static void DeleteDirectory(string name)

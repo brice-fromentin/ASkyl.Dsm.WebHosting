@@ -1,13 +1,13 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 
-namespace Askyl.Dsm.WebHosting.Tools.Runtime;
+namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
-public static class GzUnTar
+public static class ArchiveExtractor
 {
     public static void Decompress(string inputFile, string? exclude = null)
     {
-        var targetDirectory = FileSystem.GetDirectory(String.Empty);
+        var targetDirectory = FileManager.GetDirectory(String.Empty);
         var doExclusion = !String.IsNullOrWhiteSpace(exclude);
 
         using var archiveStream = File.OpenRead(inputFile);

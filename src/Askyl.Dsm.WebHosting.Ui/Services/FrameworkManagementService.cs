@@ -5,6 +5,7 @@ using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -23,13 +24,13 @@ public class FrameworkManagementService(IDotnetVersionService dotnetVersionServi
 
         try
         {
-            FileSystem.Initialize(ApplicationConstants.RuntimesRootPath);
+            FileManager.Initialize(ApplicationConstants.RuntimesRootPath);
 
             // Download the specific framework version
             var fileName = await Downloader.DownloadVersionToAsync(version, channel, true);
 
             // Extract and install
-            GzUnTar.Decompress(fileName);
+            ArchiveExtractor.Decompress(fileName);
 
             // Refresh the cache to detect the new installation
             await _dotnetVersionService.GetInstalledVersionsAsync();
@@ -59,10 +60,10 @@ public class FrameworkManagementService(IDotnetVersionService dotnetVersionServi
             await EnsureUninstallAllowedForChannelAsync(version);
 
             // Delete the directories related to the specified version
-            FileSystem.Initialize(ApplicationConstants.RuntimesRootPath);
-            FileSystem.DeleteDirectory($"host/fxr/{version}");
-            FileSystem.DeleteDirectory($"shared/Microsoft.AspNetCore.App/{version}");
-            FileSystem.DeleteDirectory($"shared/Microsoft.NETCore.App/{version}");
+            FileManager.Initialize(ApplicationConstants.RuntimesRootPath);
+            FileManager.DeleteDirectory($"host/fxr/{version}");
+            FileManager.DeleteDirectory($"shared/Microsoft.AspNetCore.App/{version}");
+            FileManager.DeleteDirectory($"shared/Microsoft.NETCore.App/{version}");
 
             // Refresh the cache to detect the removal
             await _dotnetVersionService.GetInstalledVersionsAsync();
@@ -89,7 +90,7 @@ public class FrameworkManagementService(IDotnetVersionService dotnetVersionServi
 
     private async Task EnsureUninstallAllowedForChannelAsync(string version)
     {
-        var configuredChannel = Configuration.ChannelVersion;
+        var configuredChannel = PlatformInfo.ChannelVersion;
 
         if (String.IsNullOrWhiteSpace(configuredChannel))
         {

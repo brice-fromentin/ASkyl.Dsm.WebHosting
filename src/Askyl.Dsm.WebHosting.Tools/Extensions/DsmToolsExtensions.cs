@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Tools.Network;
 
-namespace Askyl.Dsm.WebHosting.Tools;
+namespace Askyl.Dsm.WebHosting.Tools.Extensions;
 
 public static class DsmToolsExtensions
 {

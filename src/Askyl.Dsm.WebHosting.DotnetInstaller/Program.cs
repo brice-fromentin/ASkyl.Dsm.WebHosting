@@ -1,10 +1,11 @@
-﻿using Askyl.Dsm.WebHosting.Tools.Runtime;
+﻿using Askyl.Dsm.WebHosting.Tools.Infrastructure;
+using Askyl.Dsm.WebHosting.Tools.Runtime;
 
 Console.WriteLine("Starting");
 
-FileSystem.Initialize();
+FileManager.Initialize();
 
 var fileName = await Downloader.DownloadToAsync(true);
-GzUnTar.Decompress(fileName);
+ArchiveExtractor.Decompress(fileName);
 
 Console.WriteLine("Done");

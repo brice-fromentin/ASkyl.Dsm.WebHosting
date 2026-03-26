@@ -1,10 +1,11 @@
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Configuration;
+
 using Askyl.Dsm.WebHosting.Constants.Application;
 
-namespace Askyl.Dsm.WebHosting.Tools.Runtime;
+namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
-public static class Configuration
+public static class PlatformInfo
 {
     private enum Platform
     {
@@ -33,7 +34,7 @@ public static class Configuration
         throw new NotSupportedException("Operating System is not supported");
     }
 
-    static Configuration()
+    static PlatformInfo()
     {
         var basePath = AppContext.BaseDirectory;
         var configFilePath = Path.Combine(basePath, ApplicationConstants.SettingsFileName);
@@ -75,12 +76,12 @@ public static class Configuration
             _ => throw new NotSupportedException("Operating System is not supported in debug mode.")
         };
 #else
-    var platform = DetectPlatform();
-    CurrentOS = platform switch
-    {
-        Platform.Linux => "linux",
-        _ => throw new NotSupportedException("Operating System is not supported")
-    };
+        var platform = DetectPlatform();
+        CurrentOS = platform switch
+        {
+            Platform.Linux => "linux",
+            _ => throw new NotSupportedException("Operating System is not supported")
+        };
 #endif
 
         Console.WriteLine($"Detected OS = {CurrentOS}");
