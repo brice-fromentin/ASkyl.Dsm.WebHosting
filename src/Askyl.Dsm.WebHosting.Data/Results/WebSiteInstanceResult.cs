@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.Data.WebSites;
+using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
 namespace Askyl.Dsm.WebHosting.Data.Results;
 

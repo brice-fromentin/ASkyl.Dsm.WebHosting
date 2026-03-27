@@ -3,12 +3,13 @@
 @implements IWorkingState
 
 @using Microsoft.FluentUI.AspNetCore.Components
-@using Askyl.Dsm.WebHosting.Constants.API
 @using Askyl.Dsm.WebHosting.Constants.Application
+@using Askyl.Dsm.WebHosting.Constants.Network
 @using Askyl.Dsm.WebHosting.Constants.UI
-@using Askyl.Dsm.WebHosting.Data.Security
-@using Askyl.Dsm.WebHosting.Data.Services
-@using Askyl.Dsm.WebHosting.Data.WebSites
+@using Askyl.Dsm.WebHosting.Constants.WebApi
+@using Askyl.Dsm.WebHosting.Data.Domain.Authentication
+@using Askyl.Dsm.WebHosting.Data.Domain.WebSites
+@using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Ui.Client.Interfaces
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 
@@ -278,9 +279,9 @@
 
     private void DownloadLogs()
     {
-        // Navigate to log download endpoint defined in LogDownloadDefaults
+        // Navigate to log download endpoint defined in LogDownloadRoutes
         // Session cookie (DsmSid) is automatically sent with the request for authentication
-        navigation.NavigateTo(LogDownloadDefaults.LogsFullRoute, forceLoad: true);
+        navigation.NavigateTo(LogDownloadRoutes.LogsFullRoute, forceLoad: true);
     }
 
     private async Task Logout()

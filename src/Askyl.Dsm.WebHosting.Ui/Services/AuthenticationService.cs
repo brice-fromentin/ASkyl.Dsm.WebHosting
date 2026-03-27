@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http;
 
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Data.Services;
+using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
-using Askyl.Dsm.WebHosting.Data.Security;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Tools.Network;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -21,7 +21,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
     {
-        var model = new LoginModel(login, password, otpCode);
+        var model = new LoginCredentials(login, password, otpCode);
 
         if (!await apiClient.ConnectAsync(model))
         {

@@ -7,10 +7,11 @@
 Currently, the project is a Blazor Server app for security reasons and cold start performances, will re-evaluate when migrating to .NET 10.
 
 This project has also the following goals :
- - Test IA for coding assistant.
 
+- Test IA for coding assistant.
 
-# TODO
+## TODO
+
     Macro
         - Certificates management for the reverse proxy configurations.
         - Check required .NET version when configuraring an application.

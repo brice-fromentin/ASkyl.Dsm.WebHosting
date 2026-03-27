@@ -1,5 +1,6 @@
+using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Microsoft.Deployment.DotNet.Releases;
-using Askyl.Dsm.WebHosting.Data.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
@@ -7,9 +8,9 @@ public static class Downloader
 {
     public static async Task<string> DownloadToAsync(bool skipDownloadIfExists = false)
     {
-        var product = await GetProductAsync(Configuration.ChannelVersion, true).ConfigureAwait(false);
+        var product = await GetProductAsync(PlatformInfo.ChannelVersion, true).ConfigureAwait(false);
         var release = await GetLatestReleaseAsync(product).ConfigureAwait(false);
-        var fileName = await DownloadReleaseToAsync(release, FileSystem.Downloads, skipDownloadIfExists).ConfigureAwait(false);
+        var fileName = await DownloadReleaseToAsync(release, FileManager.Downloads, skipDownloadIfExists).ConfigureAwait(false);
 
         return fileName;
     }
@@ -21,7 +22,7 @@ public static class Downloader
     {
         var product = await GetProductAsync(channelVersion, false).ConfigureAwait(false);
         var release = await GetReleaseByVersionAsync(product, version).ConfigureAwait(false);
-        var fileName = await DownloadReleaseToAsync(release, FileSystem.Downloads, skipDownloadIfExists).ConfigureAwait(false);
+        var fileName = await DownloadReleaseToAsync(release, FileManager.Downloads, skipDownloadIfExists).ConfigureAwait(false);
 
         return fileName;
     }
@@ -80,7 +81,7 @@ public static class Downloader
         }
 
         // 2. Configured channel (if not already tried and not empty)
-        var configured = Configuration.ChannelVersion;
+        var configured = PlatformInfo.ChannelVersion;
 
         if (!String.IsNullOrWhiteSpace(configured) && !String.Equals(configured, desiredChannelVersion, StringComparison.OrdinalIgnoreCase))
         {
@@ -104,8 +105,8 @@ public static class Downloader
             throw new InvalidOperationException("No releases for product");
         }
 
-        var latest = releases.FirstOrDefault(r => r.Version == product.LatestReleaseVersion)
-                     ?? releases.OrderByDescending(r => r.ReleaseDate).First();
+        var latest = releases.FirstOrDefault(r => r.Version == product.LatestReleaseVersion) ?? releases.OrderByDescending(r => r.ReleaseDate).First();
+        
         return latest;
     }
 
@@ -126,10 +127,10 @@ public static class Downloader
 
     private static async Task<string> DownloadReleaseToAsync(ProductRelease release, string destinationPath, bool skipDownloadIfExists)
     {
-        var rid = $"{Configuration.CurrentOS}-{Configuration.CurrentArchitecture}";
+        var rid = $"{PlatformInfo.CurrentOS}-{PlatformInfo.CurrentArchitecture}";
         var file = release.AspNetCoreRuntime.Files.FirstOrDefault(f => String.Equals(f.Rid, rid, StringComparison.OrdinalIgnoreCase)) ?? throw new FileNotFoundException($"No release file found for runtime identifier {rid}.");
 
-        var fullDestinationPath = FileSystem.GetFullName(destinationPath, file.FileName);
+        var fullDestinationPath = FileManager.GetFullName(destinationPath, file.FileName);
 
         if (skipDownloadIfExists && File.Exists(fullDestinationPath))
         {

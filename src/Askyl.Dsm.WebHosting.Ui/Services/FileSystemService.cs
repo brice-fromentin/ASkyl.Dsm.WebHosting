@@ -1,9 +1,9 @@
-using Askyl.Dsm.WebHosting.Constants.API;
-using Askyl.Dsm.WebHosting.Data;
-using Askyl.Dsm.WebHosting.Data.API.Definitions.FileStation;
-using Askyl.Dsm.WebHosting.Data.API.Parameters.CoreAclAPI;
-using Askyl.Dsm.WebHosting.Data.API.Parameters.FileStationAPI;
-using Askyl.Dsm.WebHosting.Data.API.Responses;
+using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
+using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreAcl;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.FileStation;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Tools.Network;
@@ -14,7 +14,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Server-side implementation of IFileSystemService for Synology DSM FileStation API operations.
 /// Returns simple FileSystemItem data objects; UI-specific rendering is handled by the client layer.
 /// </summary>
-public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService> logger) : Data.Services.IFileSystemService
+public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService> logger) : Data.Contracts.IFileSystemService
 {
     private readonly DsmApiClient _apiClient = apiClient;
     private readonly ILogger<FileSystemService> _logger = logger;

@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 
-using Askyl.Dsm.WebHosting.Constants.API;
+using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Results;
-using Askyl.Dsm.WebHosting.Data.Services;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 
 namespace Askyl.Dsm.WebHosting.Ui.Controllers;
 
@@ -10,14 +10,14 @@ namespace Askyl.Dsm.WebHosting.Ui.Controllers;
 /// Controller for file system operations via Synology FileStation API.
 /// </summary>
 [ApiController]
-[Route(FileManagementDefaults.ControllerBaseRoute)]
+[Route(FileManagementRoutes.ControllerBaseRoute)]
 public class FileManagementController(IFileSystemService fileSystemService) : ControllerBase
 {
     /// <summary>
     /// Gets the list of shared folders from DSM.
     /// </summary>
     /// <returns>A SharedFoldersResult containing a list of file system items.</returns>
-    [HttpGet(FileManagementDefaults.SharedFoldersRoute)]
+    [HttpGet(FileManagementRoutes.SharedFoldersRoute)]
     public async Task<ActionResult<SharedFoldersResult>> GetSharedFoldersAsync()
         => Ok(await fileSystemService.GetSharedFoldersAsync());
 
@@ -27,7 +27,7 @@ public class FileManagementController(IFileSystemService fileSystemService) : Co
     /// <param name="path">The path to the directory.</param>
     /// <param name="directoryOnly">If true, returns only directories (no files). Default is false.</param>
     /// <returns>A DirectoryContentsResult containing a list of file system items.</returns>
-    [HttpGet(FileManagementDefaults.DirectoryContentsRoute)]
+    [HttpGet(FileManagementRoutes.DirectoryContentsRoute)]
     public async Task<ActionResult<DirectoryContentsResult>> GetDirectoryContentsAsync(string path, [FromQuery] bool directoryOnly)
         => Ok(await fileSystemService.GetDirectoryContentsAsync(path, directoryOnly));
 }

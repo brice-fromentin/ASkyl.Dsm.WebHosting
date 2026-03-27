@@ -2,15 +2,16 @@ using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 
-using Askyl.Dsm.WebHosting.Constants;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
+using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.Network;
-using Askyl.Dsm.WebHosting.Data.API.Definitions.Core;
-using Askyl.Dsm.WebHosting.Data.API.Parameters;
-using Askyl.Dsm.WebHosting.Data.API.Parameters.AuthenticationAPI;
-using Askyl.Dsm.WebHosting.Data.API.Parameters.InformationsAPI;
-using Askyl.Dsm.WebHosting.Data.API.Responses;
-using Askyl.Dsm.WebHosting.Data.Security;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreInformations;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
+using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
 
@@ -20,7 +21,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
     private readonly ILogger<DsmApiClient> _log = log;
 
     private string _server = String.Empty;
-    private int _port = DsmDefaults.DefaultHttpsPort;
+    private int _port = SystemDefaults.DefaultHttpsPort;
     private string _sid = String.Empty;
 
     public ApiInformationCollection ApiInformations { get; } = new();
@@ -65,7 +66,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
         _httpClient.DefaultRequestHeaders.Remove(NetworkConstants.CookieHeader);
     }
 
-    public async Task<bool> ConnectAsync(LoginModel model)
+    public async Task<bool> ConnectAsync(LoginCredentials model)
     {
         if (!ReadSettings())
         {
@@ -87,22 +88,22 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
 
     private bool ReadSettings()
     {
-        if (!File.Exists(DsmDefaults.ConfigurationFileName))
+        if (!File.Exists(SystemDefaults.ConfigurationFileName))
         {
-            _log.LogCritical($"Configuration file \"{DsmDefaults.ConfigurationFileName}\" does not exists.");
+            _log.LogCritical($"Configuration file \"{SystemDefaults.ConfigurationFileName}\" does not exists.");
             return false;
         }
 
-        var settings = File.ReadAllLines(DsmDefaults.ConfigurationFileName)
+        var settings = File.ReadAllLines(SystemDefaults.ConfigurationFileName)
                            .Where(x => x.Contains('='))
                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", String.Empty));
 
         _log.LogDebug("Configuration file loaded with {Count} parameters.", settings.Count);
-        _server = settings[DsmDefaults.KeyExternalHostIp];
+        _server = settings[SystemDefaults.KeyExternalHostIp];
 
-        if (!Int32.TryParse(settings[DsmDefaults.KeyExternalHttpsPort], out _port))
+        if (!Int32.TryParse(settings[SystemDefaults.KeyExternalHttpsPort], out _port))
         {
-            _port = DsmDefaults.DefaultHttpsPort;
+            _port = SystemDefaults.DefaultHttpsPort;
         }
 
         return true;
@@ -124,7 +125,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
         return true;
     }
 
-    private async Task<bool> AuthenticateAsync(LoginModel model)
+    private async Task<bool> AuthenticateAsync(LoginCredentials model)
     {
         var parameters = new AuthenticationLoginParameters(ApiInformations);
 

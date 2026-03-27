@@ -1,6 +1,5 @@
-using Askyl.Dsm.WebHosting.Constants.API;
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Data;
+using Askyl.Dsm.WebHosting.Data.Domain.Licensing;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
@@ -22,7 +21,7 @@ public class LicenseService(IHttpClientFactory httpClientFactory) : ILicenseServ
             return _licenses;
         }
 
-        var tasks = LicenseDefaults.LicenseFileNames.Select(async fileName => await LoadLicenseAsync(fileName));
+        var tasks = LicenseConstants.LicenseFileNames.Select(async fileName => await LoadLicenseAsync(fileName));
         var results = await Task.WhenAll(tasks);
 
         _licenses = results.Where(result => result is not null).Cast<LicenseInfo>().ToList().AsReadOnly();

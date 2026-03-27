@@ -5,6 +5,8 @@ namespace Askyl.Dsm.WebHosting.Constants.UI;
 /// </summary>
 public static class FileSizeConstants
 {
+    #region Byte Calculations
+
     /// <summary>
     /// Number of bytes in a kibibyte (1024 bytes).
     /// </summary>
@@ -19,6 +21,10 @@ public static class FileSizeConstants
     /// Number of bytes in a gibibyte (1024³ bytes).
     /// </summary>
     public const long BytesPerGibibyte = BytesPerMebibyte * 1024L;
+
+    #endregion
+
+    #region Unit Suffixes
 
     /// <summary>
     /// Unit suffix for bytes.
@@ -40,8 +46,14 @@ public static class FileSizeConstants
     /// </summary>
     public const string GibibytesSuffix = "GiB";
 
+    #endregion
+
+    #region Formatting
+
     /// <summary>
     /// Decimal places to display for fractional file sizes.
     /// </summary>
     public const string DecimalFormat = "F2";
+
+    #endregion
 }

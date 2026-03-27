@@ -17,3 +17,6 @@ dist/
 *_old.*
 *-old.*
 
+# PR descriptions (generated for reference)
+PULL_REQUEST.md
+

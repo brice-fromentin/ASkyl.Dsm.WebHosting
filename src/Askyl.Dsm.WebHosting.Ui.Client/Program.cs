@@ -3,7 +3,7 @@ using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Data.Services;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 

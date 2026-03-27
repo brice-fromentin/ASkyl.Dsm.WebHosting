@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
-using Askyl.Dsm.WebHosting.Data.Runtime;
+using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 

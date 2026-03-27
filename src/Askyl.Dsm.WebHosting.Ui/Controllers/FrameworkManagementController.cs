@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 
-using Askyl.Dsm.WebHosting.Constants.API;
-using Askyl.Dsm.WebHosting.Data.API.Parameters;
+using Askyl.Dsm.WebHosting.Constants.WebApi;
+using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Results;
-using Askyl.Dsm.WebHosting.Data.Services;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Ui.Authorization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Controllers;
@@ -13,7 +13,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Controllers;
 /// Requires authentication via server-side session.
 /// </summary>
 [ApiController]
-[Route(FrameworkManagementDefaults.ControllerBaseRoute)]
+[Route(FrameworkManagementRoutes.ControllerBaseRoute)]
 [AuthorizeSession]
 public class FrameworkManagementController(IFrameworkManagementService managementService) : ControllerBase
 {
@@ -22,8 +22,8 @@ public class FrameworkManagementController(IFrameworkManagementService managemen
     /// </summary>
     /// <param name="model">The installation model containing version and channel.</param>
     /// <returns>An InstallationResult indicating success or failure (always HTTP 200).</returns>
-    [HttpPost(FrameworkManagementDefaults.InstallRoute)]
-    public async Task<ActionResult<InstallationResult>> InstallFramework([FromBody] InstallFrameworkModel model)
+    [HttpPost(FrameworkManagementRoutes.InstallRoute)]
+    public async Task<ActionResult<InstallationResult>> InstallFramework([FromBody] InstallFramework model)
         => Ok(await managementService.InstallFrameworkAsync(model.Version, model.Channel));
 
     /// <summary>
@@ -31,7 +31,7 @@ public class FrameworkManagementController(IFrameworkManagementService managemen
     /// </summary>
     /// <param name="version">The version to uninstall.</param>
     /// <returns>An InstallationResult indicating success or failure (always HTTP 200).</returns>
-    [HttpPost(FrameworkManagementDefaults.UninstallRoute + "/{version}")]
+    [HttpPost(FrameworkManagementRoutes.UninstallRoute + "/{version}")]
     public async Task<ActionResult<InstallationResult>> UninstallFramework(string version)
         => Ok(await managementService.UninstallFrameworkAsync(version));
 }

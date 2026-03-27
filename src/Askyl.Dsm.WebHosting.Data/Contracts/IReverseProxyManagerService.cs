@@ -1,0 +1,12 @@
+using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
+
+namespace Askyl.Dsm.WebHosting.Data.Contracts;
+
+public interface IReverseProxyManagerService
+{
+    Task CreateAsync(WebSiteConfiguration site);
+
+    Task UpdateAsync(WebSiteConfiguration site);
+
+    Task DeleteAsync(WebSiteConfiguration site);
+}

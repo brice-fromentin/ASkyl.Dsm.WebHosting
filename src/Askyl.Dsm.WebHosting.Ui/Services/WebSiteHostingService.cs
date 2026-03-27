@@ -3,9 +3,9 @@ using System.Diagnostics;
 
 using Askyl.Dsm.WebHosting.Constants.Application;
 
+using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
-using Askyl.Dsm.WebHosting.Data.Services;
-using Askyl.Dsm.WebHosting.Data.WebSites;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 

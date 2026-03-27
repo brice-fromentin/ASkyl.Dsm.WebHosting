@@ -1,4 +1,4 @@
-using Askyl.Dsm.WebHosting.Data;
+using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Extensions;

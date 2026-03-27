@@ -1,8 +1,8 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.1  
-**Target Framework:** .NET 10 (net10.0)  
-**Last Updated:** March 2026
+**Version:** 0.5.2
+**Target Framework:** .NET 10 (net10.0)
+**Last Updated:** March 26, 2026
 
 ---
 
@@ -33,7 +33,7 @@
 - Centralized logging with Serilog
 - Source-generated clone methods for data models
 
-The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid architecture (InteractiveWebAssembly), FluentUI components, and a clean layered architecture pattern.
+The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid architecture (Interactive WebAssembly), FluentUI components, and a clean layered architecture pattern.
 
 **Key Architectural Decisions:**
 
@@ -43,6 +43,16 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - **Centralized Constants:** All magic strings/numbers extracted to dedicated Constants project
 - **Background Service:** Website hosting service runs as singleton hosted service for lifecycle management
 
+**Current Status (v0.5.2):**
+
+- ✅ Blazor Server + Interactive WebAssembly hybrid rendering
+- ✅ DSM API integration (Authentication, FileStation, ReverseProxy)
+- ✅ Website lifecycle management with process control
+- ✅ JSON-based configuration persistence
+- ⏳ TODO: Certificate management for reverse proxy
+- ⏳ TODO: Multi-language support
+- ⏳ TODO: Unit test implementation
+
 ---
 
 ## Solution Overview
@@ -50,16 +60,16 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 ### Solution Structure
 
 ```
-Askyl.Dsm.WebHosting.slnx (Version 0.5.1)
-├── Askyl.Dsm.WebHosting.Benchmarks      # Performance benchmarks (BenchmarkDotNet)
-├── Askyl.Dsm.WebHosting.Constants       # Centralized constants & enums
-├── Askyl.Dsm.WebHosting.Data            # Core data layer, API definitions, services
-├── Askyl.Dsm.WebHosting.DotnetInstaller # .NET runtime installer utility
-├── Askyl.Dsm.WebHosting.Logging         # Logging extensions (source-generated log methods)
-├── Askyl.Dsm.WebHosting.SourceGenerators# Custom source generators (CloneGenerator)
-├── Askyl.Dsm.WebHosting.Tools           # Utility tools & DSM API client
-├── Askyl.Dsm.WebHosting.Ui              # Main Blazor Server-Wasm hybrid UI
-└── Askyl.Dsm.WebHosting.Ui.Client       # Blazor WebAssembly client library
+Askyl.Dsm.WebHosting.slnx (Version 0.5.2)
+├── Askyl.Dsm.WebHosting.Benchmarks         # Performance benchmarks (BenchmarkDotNet)
+├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
+├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
+├── Askyl.Dsm.WebHosting.DotnetInstaller    # .NET runtime installer utility
+├── Askyl.Dsm.WebHosting.Logging            # Logging extensions (source-generated log methods)
+├── Askyl.Dsm.WebHosting.SourceGenerators   # Custom source generators (CloneGenerator)
+├── Askyl.Dsm.WebHosting.Tools              # Utility tools & DSM API client
+├── Askyl.Dsm.WebHosting.Ui                 # Main Blazor Server-WASM hybrid UI
+└── Askyl.Dsm.WebHosting.Ui.Client          # Blazor WebAssembly client library
 ```
 
 ### Key Characteristics
@@ -76,7 +86,13 @@ Askyl.Dsm.WebHosting.slnx (Version 0.5.1)
 All projects share common build settings from `Directory.Build.props`:
 
 ```xml
-<Version>0.5.1</Version>
+<Version>0.5.2</Version>
+<AssemblyVersion>0.5.2.0</AssemblyVersion>
+<FileVersion>0.5.2.0</FileVersion>
+<InformationalVersion>0.5.2</InformationalVersion>
+<PackageVersion>0.5.2</PackageVersion>
+
+<!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
 <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
 <GenerateDocumentationFile>false</GenerateDocumentationFile>
@@ -86,6 +102,12 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```bash
 dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
+```
+
+**Standardized Clean Command:**
+
+```bash
+dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 ```
 
 ---
@@ -100,37 +122,36 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 ```
 Constants/
-├── API/                                    # API-related constants
-│   ├── AuthenticationDefaults.cs           # Auth API routes & formats
-│   ├── DsmApiMethods.cs                    # API method names (authenticateLogin, etc.)
-│   ├── DsmApiNames.cs                      # DSM API identifiers (SYNO.API.Auth, etc.)
-│   ├── DsmApiVersions.cs                   # API version constants
-│   ├── DsmPaginationDefaults.cs            # Pagination defaults
-│   ├── FileManagementDefaults.cs           # File management endpoints
-│   ├── FileStationDefaults.cs              # FileStation-specific constants
-│   ├── FrameworkManagementDefaults.cs      # Framework installation routes
-│   ├── LicenseDefaults.cs                  # License-related constants
-│   ├── LogDownloadDefaults.cs              # Log download configuration
-│   ├── ReverseProxyConstants.cs            # Reverse proxy settings
-│   ├── RuntimeManagementDefaults.cs        # .NET runtime management endpoints
-│   └── WebsiteHostingDefaults.cs           # Website management endpoints
 ├── Application/                            # Application-wide constants
 │   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names
-│   └── LogConstants.cs                     # Logging configuration
-├── Http/                                   # HTTP-related constants
-│   └── HttpConstants.cs                    # HTTP headers, methods
+│   └── ValidationMessages.cs               # Validation error messages
+├── DSM/                                    # Synology DSM-specific constants
+│   ├── API/                                # API-related constants
+│   │   ├── ApiMethods.cs                   # API method names (authenticateLogin, etc.)
+│   │   ├── ApiNames.cs                     # DSM API identifiers (SYNO.API.Auth, etc.)
+│   │   ├── ApiVersions.cs                  # API version constants
+│   │   ├── ReverseProxyConstants.cs        # Reverse proxy settings
+│   │   └── SerializationFormats.cs         # Form/JSON serialization enums
+│   ├── FileStation/                        # FileStation-specific constants
+│   └── System/                             # DSM system defaults (ports, config paths)
 ├── JSON/                                   # JSON serialization settings
 ├── Network/                                # Network configuration
 │   └── NetworkConstants.cs                 # Cookie headers, port defaults
 ├── Runtime/                                # .NET runtime definitions
-│   └── DotNetFrameworkTypes.cs             # Runtime type enums
+│   ├── DotNetFrameworkTypes.cs             # Runtime type enums
+│   └── RuntimeConstants.cs                 # Channels, version patterns
 ├── UI/                                     # User interface constants
 │   ├── DialogConstants.cs                  # UI dialog configurations
 │   ├── FileSizeConstants.cs                # File size formatting
 │   └── Protocol.cs                         # ProtocolType enum (HTTP/HTTPS)
-├── DsmDefaults.cs                          # DSM-specific defaults (ports, config paths)
-├── LicenseConstants.cs                     # Licensing constants
-└── SerializationFormats.cs                 # Form/JSON serialization enums
+└── WebApi/                                 # API route definitions
+    ├── AuthenticationRoutes.cs             # /api/authentication/*
+    ├── FileManagementRoutes.cs             # /api/filemanagement/*
+    ├── FrameworkManagementRoutes.cs        # /api/frameworkmanagement/*
+    ├── LicenseRoutes.cs                    # /api/license/*
+    ├── LogDownloadRoutes.cs                # /api/logdownload/*
+    ├── RuntimeManagementRoutes.cs          # /api/runtime/*
+    └── WebsiteHostingRoutes.cs             # /api/websites/*
 ```
 
 **Key Features:**
@@ -169,6 +190,14 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 - Uses Microsoft.CodeAnalysis.CSharp 5.0.0
 - Generates files in `obj/Generated` directory
 - Attribute-based activation via `[GenerateClone]`
+- Supports nested cloneable types (recursive cloning)
+
+**Generator Flow:**
+
+1. **Post-Initialization:** Generates `GenerateCloneAttribute.g.cs` for the assembly
+2. **Syntax Provider:** Identifies classes with `[GenerateClone]` attribute
+3. **Semantic Analysis:** Validates attribute and extracts property declarations
+4. **Code Generation:** Creates partial class implementation with Clone() method
 
 ### 3. Askyl.Dsm.WebHosting.Data
 
@@ -178,48 +207,9 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 
 ```
 Data/
-├── API/                                    # DSM API integration
-│   ├── Definitions/                        # Auto-generated response models
-│   │   ├── Core/                           # Authentication, system info
-│   │   ├── FileStation/                    # 25+ file operation definitions
-│   │   └── ReverseProxy/                   # Proxy configuration models
-│   ├── Parameters/                         # Request parameter classes
-│   │   ├── AuthenticationAPI/              # Login/logout parameters
-│   │   ├── CoreAclAPI/                     # Access control parameters
-│   │   ├── FileStationAPI/                 # 15+ file operation parameters
-│   │   ├── InformationsAPI/                # System info queries
-│   │   ├── ReverseProxyAPI/                # Proxy CRUD operations
-│   │   ├── ApiParametersBase.cs            # Base parameter class
-│   │   ├── ApiParametersNone.cs            # No-parameters wrapper
-│   │   ├── IApiParameters.cs               # Parameter interface
-│   │   └── InstallFrameworkModel.cs        # Framework installation model
-│   ├── Requests/                           # API request wrappers
-│   └── Responses/                          # API response wrappers
 ├── Attributes/                             # Custom attributes
-│   └── GenerateCloneAttribute.cs           # Source generator trigger
-├── Exceptions/                             # Custom exception types
-├── Extensions/                             # LINQ & collection extensions
-├── Results/                                # Result pattern implementations
-│   ├── ApiResult.cs                        # Base success/failure result
-│   ├── ApiResultBool.cs                    # Boolean result wrapper
-│   ├── ApiResultData<T>.cs                 # Result with data payload
-│   ├── ApiResultItems<T>.cs                # Result with item collection
-│   ├── ApiResultValue<T>.cs                # Result with single value
-│   ├── ApiErrorCode.cs                     # Standardized error codes
-│   ├── AuthenticationResult.cs             # Auth state with user info
-│   ├── ChannelsResult.cs                   .NET channel information
-│   ├── DirectoryContentsResult.cs          # File system directory listing
-│   ├── DirectoryFilesResult.cs             # Directory file operations
-│   ├── InstallationResult.cs               # Framework installation status
-│   ├── InstalledVersionsResult.cs          # Installed .NET versions
-│   ├── ReleasesResult.cs                   .NET release information
-│   ├── SharedFoldersResult.cs              # NAS shared folder listing
-│   ├── WebSiteInstanceResult.cs            # Website-specific operations
-│   └── WebSiteInstancesResult.cs           # Multiple website results
-├── Runtime/                                # .NET runtime information models
-├── Security/                               # Authentication models
-│   └── LoginModel.cs                       # Login credentials
-├── Services/                               # Domain service interfaces
+│   └── GenerateCloneAttribute.cs           # Source generator trigger (backup)
+├── Contracts/                              # Service interfaces
 │   ├── IAuthenticationService.cs           # Authentication facade
 │   ├── IDotnetVersionService.cs            # .NET version detection
 │   ├── IFileSystemService.cs               # File system operations
@@ -228,14 +218,55 @@ Data/
 │   ├── IReverseProxyManagerService.cs      # Proxy configuration
 │   ├── IWebSiteHostingService.cs           # Website lifecycle
 │   └── IWebSitesConfigurationService.cs    # Configuration persistence
-├── WebSites/                               # Website management domain
-│   ├── ProcessInfo.cs                      # Process runtime information
-│   ├── WebSiteConfiguration.cs             # Main config model ([GenerateClone])
-│   ├── WebSiteInstance.cs                  # Runtime instance ([GenerateClone])
-│   └── WebSitesConfiguration.cs            # Persistent configuration store
-├── FsEntry.cs                              # File system entry model
-├── IGenericCloneable<T>.cs                 # Clone interface
-└── LicenseInfo.cs                          # License information model
+├── Domain/                                 # Domain models
+│   ├── Authentication/                     # Auth-related models
+│   │   └── LoginCredentials.cs             # Login credentials
+│   ├── FileSystem/                         # File system models
+│   │   └── FsEntry.cs                      # File system entry model
+│   ├── Licensing/                          # License information
+│   │   └── LicenseInfo.cs                  # License data model
+│   ├── Runtime/                            # .NET runtime information
+│   │   └── [Version models]                # Runtime version data
+│   └── WebSites/                           # Website management domain
+│       ├── ProcessInfo.cs                  # Process runtime information
+│       ├── WebSiteConfiguration.cs         # Main config model ([GenerateClone])
+│       ├── WebSiteInstance.cs              # Runtime instance ([GenerateClone])
+│       └── WebSitesConfiguration.cs        # Persistent configuration store
+├── DsmApi/                                 # DSM API integration
+│   ├── Models/                             # Auto-generated response models
+│   │   ├── Core/                           # Authentication, system info
+│   │   ├── FileStation/                    # 25+ file operation definitions
+│   │   └── ReverseProxy/                   # Proxy configuration models
+│   ├── Parameters/                         # Request parameter classes
+│   │   ├── Core/                           # Login/logout parameters
+│   │   ├── CoreAcl/                        # Access control parameters
+│   │   ├── CoreInformations/               # System info queries
+│   │   ├── FileStation/                    # 15+ file operation parameters
+│   │   ├── ReverseProxy/                   # Proxy CRUD operations
+│   │   ├── ApiParametersBase.cs            # Base parameter class
+│   │   ├── ApiParametersNone.cs            # No-parameters wrapper
+│   │   └── IApiParameters.cs               # Parameter interface
+│   └── Responses/                          # API response wrappers
+├── Exceptions/                             # Custom exception types
+├── Patterns/                               # Design patterns
+│   └── IGenericCloneable<T>.cs             # Clone pattern interface
+└── Results/                                # Result pattern implementations
+    ├── ApiResult.cs                        # Base success/failure result
+    ├── ApiResultBool.cs                    # Boolean result wrapper
+    ├── ApiResultData<T>.cs                 # Result with data payload
+    ├── ApiResultItems<T>.cs                # Result with item collection
+    ├── ApiResultValue<T>.cs                # Result with single value
+    ├── ApiErrorCode.cs                     # Standardized error codes
+    ├── AuthenticationResult.cs             # Auth state with user info
+    ├── ChannelsResult.cs                   # .NET channel information
+    ├── DirectoryContentsResult.cs          # File system directory listing
+    ├── DirectoryFilesResult.cs             # Directory file operations
+    ├── InstallationResult.cs               # Framework installation status
+    ├── InstalledVersionsResult.cs          # Installed .NET versions
+    ├── ReleasesResult.cs                   # .NET release information
+    ├── SharedFoldersResult.cs              # NAS shared folder listing
+    ├── WebSiteInstanceResult.cs            # Website-specific operations
+    └── WebSiteInstancesResult.cs           # Multiple website results
 ```
 
 **Key Features:**
@@ -256,17 +287,16 @@ Data/
 Tools/
 ├── Extensions/                             # Extension methods
 │   └── UriExtensions.cs                    # URI manipulation helpers
+├── Infrastructure/                         # Infrastructure utilities
+│   ├── ArchiveExtractor.cs                 # gzip + tar extraction
+│   ├── FileManager.cs                      # File system initialization
+│   └── PlatformInfo.cs                     # Platform detection
 ├── Network/                                # Network communication
 │   └── DsmApiClient.cs                     # Centralized DSM API client
 ├── Runtime/                                # .NET runtime management
-│   ├── Configuration.cs                    # Runtime configuration
 │   ├── Downloader.cs                       # Binary download utility
-│   ├── FileSystem.cs                       # File system initialization
-│   ├── GzUnTar.cs                          # Archive extraction (gzip + tar)
 │   └── VersionsDetector.cs                 # Available versions detection
-├── Threading/                              # Async utilities
-├── DsmToolsExtensions.cs                   # DSM client extension methods
-└── [WebSites/]                             # Website management tools (if present)
+└── Threading/                              # Async utilities
 ```
 
 **DsmApiClient Implementation:**
@@ -281,17 +311,16 @@ public class DsmApiClient : IDisposable
 
     // Public Methods
     public void SetSid(string sid)                // Restore session from storage
-    public async Task<bool> ConnectAsync(LoginModel model)   // Full handshake + auth
+    public async Task<bool> ConnectAsync(LoginCredentials model)   // Full handshake + auth
     public async Task<bool> ValidateSessionAsync()           // Lightweight validation
     public async Task DisconnectAsync()                      // Clear session
     public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)  // Generic API call
-    public async Task<ApiResponseBase<EmptyResponse>?> ExecuteSimpleAsync(IApiParameters parameters)
 }
 ```
 
 **Connection Flow:**
 
-1. **ReadSettings():** Load server configuration from file (host, port)
+1. **ReadSettings():** Load server configuration from `/etc/synoinfo.conf` (host, port)
 2. **HandShakeAsync():** Query `SYNO.API.Info` to populate ApiInformations
 3. **AuthenticateAsync():** Login via `auth.login` API, receive SID
 4. **Session Persistence:** Store SID in HTTP headers (`ssid=...`)
@@ -322,10 +351,12 @@ Ui/
 │   ├── AuthenticationController.cs         # Login/logout/status endpoints
 │   ├── FileManagementController.cs         # File system operations
 │   ├── FrameworkManagementController.cs    # Framework installation
+│   ├── HelloWorldController.cs             # Test endpoint
 │   ├── LogDownloadController.cs            # Log file retrieval
 │   ├── RuntimeManagementController.cs      # .NET version detection
 │   └── WebsiteHostingController.cs         # Website CRUD + lifecycle
 ├── Models/                                 # UI-specific view models
+├── Properties/                             # Assembly info, launch settings
 ├── Services/                               # UI business logic services
 │   ├── AuthenticationService.cs            # Auth façade over DsmApiClient
 │   ├── DotnetVersionService.cs             # .NET version detection
@@ -335,7 +366,6 @@ Ui/
 │   ├── ReverseProxyManagerService.cs       # Proxy CRUD operations
 │   ├── WebSiteHostingService.cs            # Website lifecycle (background service)
 │   └── WebSitesConfigurationService.cs     # Configuration persistence
-├── Properties/                             # Assembly info, launch settings
 ├── wwwroot/                                # Static assets (CSS, JS, images)
 ├── appsettings.json                        # Production configuration
 ├── appsettings.Development.json            # Development overrides
@@ -395,11 +425,12 @@ builder.Services.AddSingleton<IWebSiteHostingService>(sp => sp.GetRequiredServic
 builder.Services.AddHostedService(sp => sp.GetRequiredService<WebSiteHostingService>());
 
 // Middleware pipeline
-app.UsePathBase(ApplicationConstants.ApplicationUrlSubPath);  // Sub-path support
+app.UsePathBase(ApplicationConstants.ApplicationUrlSubPath);  // Sub-path support (/adwh)
 app.UseSession();                                              // Session before antiforgery
 app.UseRouting();
 app.MapControllers();                                          // API endpoints
 app.UseAntiforgery();                                           // CSRF protection
+app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(Ui.Client._Imports).Assembly);
@@ -413,7 +444,7 @@ app.MapRazorComponents<App>()
 - **FluentUI components** for consistent UI/UX across all pages
 - **Structured logging** with Serilog (configuration-based setup)
 - **Antiforgery protection** for Blazor and API endpoints
-- **Sub-path support** via `UsePathBase` for reverse proxy deployment
+- **Sub-path support** via `UsePathBase("/adwh")` for reverse proxy deployment
 
 ### 6. Askyl.Dsm.WebHosting.Ui.Client
 
@@ -425,25 +456,32 @@ app.MapRazorComponents<App>()
 Ui.Client/
 ├── Components/                             # Reusable Blazor components
 │   ├── Controls/                           # Custom UI controls
-│   │   └── [DataGrid, FilePicker, PortInput, ProcessStatus, etc.]
+│   │   ├── AutoDataGrid.razor              # Generic data grid with sorting
+│   │   ├── LoadingOverlay.razor            # Working state indicator
+│   │   ├── RealTimeNumberField.razor       # Input with validation feedback
+│   │   └── RealTimeTextField.razor         # Text input with validation
 │   ├── Dialogs/                            # FluentUI dialog wrappers
-│   │   └── [ConfirmationDialog, ErrorDialog, etc.]
+│   │   ├── AspNetReleasesDialog.razor      # Online ASP.NET release info
+│   │   ├── DotnetVersionsDialog.razor      # View available .NET versions
+│   │   ├── FileSelectionDialog.razor       # Browse DSM file system
+│   │   ├── LicensesDialog.razor            # Third-party license display
+│   │   └── WebSiteConfigurationDialog.razor # Add/edit website form
 │   ├── Layout/                             # Layout components
 │   │   ├── MainLayout.razor                # Main app shell with navigation
 │   │   ├── NavigationMenu.razor            # FluentUI nav menu
 │   │   ├── HeaderBar.razor                 # Top bar with user info
 │   │   └── Footer.razor                    # Status indicators
 │   ├── Pages/                              # Blazor pages
-│   │   ├── Home.razor                      # Dashboard/home page
+│   │   ├── Home.razor                      # Dashboard/home page (website grid)
 │   │   ├── Login.razor                     # Authentication page
-│   │   ├── NotFound.razor                  # 404 handler
-│   │   └── [Websites/, Frameworks/, Settings/, etc.]
+│   │   └── NotFound.razor                  # 404 handler
 │   └── Patterns/                           # UI patterns and templates
 ├── Extensions/                             # Client-side extension methods
 ├── Interfaces/                             # C# interfaces for JS interop
 ├── Services/                               # HTTP clients & state management
-│   └── [AuthenticationService, WebsiteHostingService, etc. - client-side]
+│   └── [Client-side service proxies]       # API client wrappers
 ├── wwwroot/                                # Client-side static assets
+│   └── appsettings.json                    # Client Serilog config
 ├── _Imports.razor                          # Global using directives
 ├── Program.cs                              # WASM entry point
 └── Routes.razor                            # Route definitions
@@ -465,9 +503,9 @@ Ui.Client/
 
 ```csharp
 // Program.cs - Simplified installation flow
-FileSystem.Initialize();                          // Set up file system paths
+FileManager.Initialize();                          // Set up file system paths
 var fileName = await Downloader.DownloadToAsync(true);  // Download from Microsoft
-GzUnTar.Decompress(fileName);                    // Extract gzip + tar archive
+ArchiveExtractor.Decompress(fileName);            // Extract gzip + tar archive
 ```
 
 **Key Features:**
@@ -485,13 +523,19 @@ GzUnTar.Decompress(fileName);                    // Extract gzip + tar archive
 **Benchmarks:**
 
 ```csharp
-[StringBuilderBenchmark]
+[MemoryDiagnoser]
 public class StringBuilderBenchmark
 {
     [Benchmark] public void UrlInterpolatedString()      // Baseline: interpolated strings
     [Benchmark] public void UrlBuilder()                 // StringBuilder approach
     [Benchmark] public void ParametersInterpolatedString()
     [Benchmark] public void ParametersBuilder()          // Recommended for complex URLs
+}
+
+[MemoryDiagnoser]
+public class UriBuilderBenchmark
+{
+    // URI building performance tests
 }
 ```
 
@@ -509,11 +553,16 @@ public class StringBuilderBenchmark
 **Implementation:**
 
 ```csharp
-[LoggerMessage(
-    EventId = 1,
-    Level = LogLevel.Information,
-    Message = "Dice roll: {Die1} and {Die2}, sum: {Sum}")]
-public static partial void LogDiceRoll(this ILogger logger, int die1, int die2, int sum);
+namespace Askyl.Dsm.WebHosting.Logging.HelloWorld;
+
+public static partial class HelloWorldExtensions
+{
+    [LoggerMessage(
+        EventId = 1,
+        Level = LogLevel.Information,
+        Message = "Dice roll: {Die1} and {Die2}, sum: {Sum}")]
+    public static partial void LogDiceRoll(this ILogger logger, int die1, int die2, int sum);
+}
 ```
 
 **Key Features:**
@@ -554,247 +603,174 @@ builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 
 ### 2. Result Pattern
 
-**Purpose:** Eliminate null checks and provide structured error handling without exceptions for control flow
-
-**Base Implementation:**
-
-```csharp
-public class ApiResult
-{
-    public bool Success { get; }
-    public string Message { get; }
-
-    public static ApiResult CreateSuccess() => new(true, String.Empty);
-    public static ApiResult CreateFailure(string message) => new(false, message);
-}
-```
-
-**Specialized Result Types:**
-
-- `ApiResultBool` - Boolean value with success/failure
-- `ApiResultData<T>` - Result with single data payload
-- `ApiResultItems<T>` - Result with item collection
-- `ApiResultValue<T>` - Result with typed value
-- `AuthenticationResult` - Auth state with user info
-- `WebSiteInstanceResult` - Website-specific operations
-- `ChannelsResult`, `ReleasesResult` - .NET version information
-
-**Usage Example:**
-
-```csharp
-var result = await hostingService.StartWebsiteAsync(id);
-if (!result.Success)
-{
-    logger.LogError("Failed to start website {Id}: {Message}", id, result.Message);
-    return Ok(result);  // Always HTTP 200, error in body
-}
-```
-
-**Benefits:**
-
-- Explicit success/failure handling (no try-catch for expected failures)
-- Type-safe result payloads
-- Consistent API response structure
-- Easier testing (no exception mocking needed)
-
-### 3. Repository Pattern (Simplified)
-
 **Implementation:**
 
 ```csharp
-public interface IWebSitesConfigurationService
+// Base result types
+public class ApiResult { /* Success, Message */ }
+public class ApiResultData<T> : ApiResult { /* Data */ }
+public class ApiResultItems<T> : ApiResult { /* Items collection */ }
+
+// Usage example
+public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration)
 {
-    Task<List<WebSiteConfiguration>> GetAllSitesAsync();
-    Task AddSiteAsync(WebSiteConfiguration site);
-    Task UpdateSiteAsync(WebSiteConfiguration site);
-    Task RemoveSiteAsync(Guid id);
-}
-
-// WebSitesConfigurationService implements JSON file-based persistence
-```
-
-**Benefits:**
-
-- **Abstraction** over persistence mechanism (currently JSON, could be database)
-- **Testability** with mock implementations
-- **Centralized logic** for configuration management
-- **Separation of concerns** between domain and storage
-
-### 4. Service Facade Pattern
-
-**Implementation:**
-
-```csharp
-public interface IAuthenticationService
-{
-    Task<AuthenticationResult> LoginAsync(LoginModel model);
-    Task LogoutAsync();
-    Task<bool> IsAuthenticatedAsync();
-}
-
-// AuthenticationService wraps DsmApiClient complexity
-public class AuthenticationService : IAuthenticationService
-{
-    private readonly DsmApiClient _dsmClient;
-    private readonly IHttpContextAccessor _httpContext;
-
-    public async Task<AuthenticationResult> LoginAsync(LoginModel model)
+    if (!permissionResult.Success)
     {
-        // 1. Call DsmApiClient.ConnectAsync()
-        // 2. Persist SID to ASP.NET Core session
-        // 3. Return structured AuthenticationResult
+        return WebSiteInstanceResult.CreateFailure($"Failed: {permissionResult.Message}");
     }
+    
+    return WebSiteInstanceResult.CreateSuccess(instance);
 }
 ```
 
 **Benefits:**
 
-- Hides DSM API complexity from UI layer
-- Adds session management logic in one place
-- Easier to test and mock
-- Consistent error handling across auth operations
+- Eliminates exception-based control flow
+- Strongly-typed success/failure states
+- No null reference exceptions
+- Cleaner UI error handling
 
-### 5. Strategy Pattern (Serialization)
+### 3. Repository/Service Facade Pattern
 
-**Implementation:**
+**Structure:**
+
+```
+Contracts (Data layer)          →  Implementations (Ui.Services)
+─────────────────────────          ───────────────────────────┬───────
+IWebSiteHostingService            WebSiteHostingService       │
+IAuthenticationService            AuthenticationService        │ (Server-side)
+IReverseProxyManagerService       ReverseProxyManagerService   │
+IFileSystemService                FileSystemService            │
+                                                                        ↓
+                                                              DsmApiClient (Infrastructure)
+```
+
+**Key Interfaces:**
+
+- `IWebSiteHostingService` - Website lifecycle management
+- `IAuthenticationService` - DSM authentication facade
+- `IReverseProxyManagerService` - Reverse proxy CRUD operations
+- `IFileSystemService` - File system operations via FileStation API
+
+### 4. Source Generator Pattern
+
+**CloneGenerator Implementation:**
 
 ```csharp
-public interface IApiParameters
+// Input: [GenerateClone] attribute on partial class
+[GenerateClone]
+public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
 {
-    SerializationFormats SerializationFormat { get; }
-    string BuildUrl(string server, int port);
-    FormContent ToForm();
-    StringContent ToJson();
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+    // ... properties
 }
 
-// ExecuteAsync dispatches based on serialization format
-public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
+// Output: Auto-generated Clone() method
+public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
 {
-    return parameters.SerializationFormat switch
+    public WebSiteConfiguration Clone() => new()
     {
-        SerializationFormats.Form => await ExecuteFormAsync<R>(url, parameters),
-        SerializationFormats.Json => await ExecuteJsonAsync<R>(url, parameters),
-        _ => throw new NotSupportedException(...)
+        Id = this.Id,
+        Name = this.Name,
+        // ... property copying
     };
 }
 ```
 
 **Benefits:**
 
-- Automatic serialization format selection per API endpoint
-- Clean separation between Form and JSON handling
-- Easy to extend with new formats (Protobuf, etc.)
+- Reduces boilerplate code by 60-70%
+- Compile-time type safety
+- Automatic interface implementation
+- Supports nested cloneable types
 
-### 6. Builder Pattern (URL Construction)
+### 5. Background Service Pattern
 
-**Implementation:**
+**WebSiteHostingService Implementation:**
 
 ```csharp
-// IApiParameters.BuildUrl() uses StringBuilder for efficient URL construction
-protected virtual string BuildUrl(string server, int port)
+public class WebSiteHostingService(
+    ILogger<WebSiteHostingService> logger,
+    IWebSitesConfigurationService configService,
+    IFileSystemService fileSystemService,
+    IReverseProxyManagerService reverseProxyManager) 
+    : BackgroundService, IWebSiteHostingService
 {
-    var builder = new StringBuilder();
-    builder.Append("https://");
-    builder.Append(server);
-    builder.Append(':');
-    builder.Append(port);
-    builder.Append("/webapi/");
-    builder.Append(Path);
-    builder.Append("?api=");
-    builder.Append(Api);
-    return builder.ToString();
+    private readonly ConcurrentDictionary<Guid, WebSiteInstance> _instances = new();
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        // Load configurations from JSON on startup
+        var configs = await configService.GetAllAsync();
+        
+        // Reinitialize instances (processes not restarted)
+        foreach (var config in configs)
+        {
+            await AddInstanceAsync(config);
+        }
+        
+        // Monitor and manage lifecycle until stopping
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            await Task.Delay(1000, stoppingToken);
+        }
+    }
 }
 ```
 
-**Benchmark Results:** `StringBuilder` outperforms interpolated strings by ~30% for complex URL construction with multiple parameters.
+**Key Features:**
 
-### 7. Source Generator Pattern
+- **Singleton lifetime** - One instance per application
+- **Startup initialization** - Loads configurations from persistent storage
+- **Graceful shutdown** - Stops all website processes on host termination
+- **Thread-safe operations** - Uses `ConcurrentDictionary` for instance management
 
-**Implementation:**
+### 6. Strategy Pattern (Serialization)
+
+**DsmApiClient Serialization:**
 
 ```csharp
-// CloneGenerator.cs - Roslyn source generator
-[Generator]
-public class CloneGenerator : IIncrementalGenerator
+public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
 {
-    public void Initialize(IncrementalGeneratorInitializationContext context)
+    return parameters.SerializationFormat switch
     {
-        // Detect [GenerateClone] attributes
-        // Generate Clone() method implementations
-        // Output to obj/Generated directory
-    }
-}
-
-// Usage in data models
-[GenerateClone]
-public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
-{
-    // Properties...
-    // Clone() auto-generated at compile time
+        SerializationFormat.Form => await ExecuteFormAsync<R>(parameters),
+        SerializationFormat.Json => await ExecuteJsonAsync<R>(parameters),
+        _ => throw new NotSupportedException($"Unsupported format: {parameters.SerializationFormat}")
+    };
 }
 ```
 
 **Benefits:**
 
-- Zero runtime overhead (code generated at compile time)
-- Type-safe clone implementations
-- Reduces boilerplate by 60-70%
-- Enforces consistent cloning pattern across all models
+- Adapts to different DSM API requirements
+- Clean separation of serialization logic
+- Easy to extend with new formats
 
 ---
 
 ## Technical Stack
 
-### Framework & Runtime
+### Frameworks & Libraries
 
-| Component | Version | Notes |
-|-----------|---------|-------|
-| .NET | 10.0 | Latest LTS with C# 14 features |
-| ASP.NET Core | 10.0 | Web API + Blazor hosting |
-| Blazor | 10.0 | Hybrid rendering (Server + WASM) |
-| C# | 14 | Primary constructors, collection expressions, generated regex |
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| **Runtime** | .NET | 10.0 | Application framework |
+| **UI Framework** | Blazor Hybrid | 10.0.5 | Interactive WebAssembly + Server |
+| **UI Components** | FluentUI | 4.14.0 | Modern UI component library |
+| **Logging** | Serilog | 10.0.0 | Structured logging |
+| **HTTP Client** | Microsoft.Extensions.Http | 10.0.5 | HttpClient factory |
+| **Benchmarking** | BenchmarkDotNet | 0.15.8 | Performance testing |
+| **.NET Releases** | Microsoft.Deployment.DotNet.Releases | 1.0.1 | Version detection |
+| **Source Generators** | Microsoft.CodeAnalysis.CSharp | 5.0.0 | Clone generator |
 
-### UI Framework
+### Development Tools
 
-| Component | Version | Purpose |
-|-----------|---------|---------|
-| FluentUI.AspNetCore.Components | 4.14.0 | Enterprise-grade component library |
-| FluentUI.Icons | 4.14.0 | Icon set (Material Design) |
-| FluentUI.Emoji | 4.14.0 | Emoji support |
-
-### Data & API
-
-| Component | Version | Purpose |
-|-----------|---------|---------|
-| System.Text.Json | Built-in | JSON serialization (PascalCase) |
-| Microsoft.Extensions.Http | 10.0.3 | HttpClient factory |
-| Microsoft.CodeAnalysis.CSharp | 5.0.0 | Source generator host |
-
-### Logging & Diagnostics
-
-| Component | Version | Purpose |
-|-----------|---------|---------|
-| Serilog | 4.3.1 | Structured logging |
-| Serilog.Extensions.Logging | 10.0.0 | ASP.NET Core integration |
-| Serilog.Settings.Configuration | 10.0.0 | Configuration-based setup |
-| Serilog.Sinks.BrowserConsole | 8.0.0 | Client-side logging (WASM) |
-| BenchmarkDotNet | 0.15.8 | Performance testing |
-
-### External Integrations
-
-**Synology DSM APIs:**
-
-- FileStation API (file operations - 25+ endpoints)
-- ReverseProxy API (web app routing - CRUD operations)
-- Authentication API (login/session management)
-- Core Info API (system information, API metadata)
-- Framework Management API (.NET installation)
-
-**Microsoft .NET Releases API:**
-
-- Runtime version detection
-- Download URL generation
-- Channel and release information
+- **IDE:** Visual Studio 2022 / VS Code with C# Dev Kit
+- **Build Tool:** .NET SDK 10.0
+- **Package Manager:** NuGet
+- **Version Control:** Git
 
 ---
 
@@ -808,39 +784,28 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 [GenerateClone]
 public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
 {
-    #region General
-    public Guid Id { get; set; } = Guid.Empty;
-    [Required(ErrorMessage = ApplicationConstants.SiteNameRequiredErrorMessage)]
-    public string Name { get; set; } = "";
-
-    #region Application
-    [Required]
-    public string ApplicationPath { get; set; } = "";
+    // General
+    public Guid Id { get; set; }
+    public string Name { get; set; }
     
-    public string ApplicationRealPath { get; set; } = "";  // Resolved path
+    // Application Path
+    public string ApplicationPath { get; set; }           // User-friendly path
+    public string ApplicationRealPath { get; set; }       // Resolved absolute path
     
-    [Required]
-    [Range(ApplicationConstants.MinWebApplicationPort, ApplicationConstants.MaxWebApplicationPort)]
-    public int InternalPort { get; set; }
+    // Networking
+    public int InternalPort { get; set; }                 // 1024-65535
+    public string HostName { get; set; }                  // e.g., "myapp.local"
+    public int PublicPort { get; set; }                   // 443 default
+    public ProtocolType Protocol { get; set; }            // HTTPS default
     
-    [Required]
-    public string Environment { get; set; } = "Production";
+    // Runtime
+    public string Environment { get; set; }               // "Production" default
+    public Dictionary<string, string> AdditionalEnvironmentVariables { get; set; }
     
-    public bool IsEnabled { get; set; } = true;
-    public bool AutoStart { get; set; } = true;
-    public Dictionary<string, string> AdditionalEnvironmentVariables { get; set; } = [];
-
-    #region Reverse Proxy
-    [Required]
-    public string HostName { get; set; } = "";
-    
-    [Required]
-    public int PublicPort { get; set; } = 443;
-    
-    public ProtocolType Protocol { get; set; } = ProtocolType.HTTPS;
-    public bool EnableHSTS { get; set; } = true;
-
-    // Clone() method auto-generated by source generator
+    // Behavior
+    public bool IsEnabled { get; set; }                   // true
+    public bool AutoStart { get; set; }                   // true
+    public bool EnableHSTS { get; set; }                  // true
 }
 ```
 
@@ -848,363 +813,164 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 
 ```csharp
 [GenerateClone]
-public partial class WebSiteInstance
+public partial class WebSiteInstance : IGenericCloneable<WebSiteInstance>
 {
-    /// <summary>
-    /// Gets the unique identifier (forwarding property to Configuration.Id).
-    /// </summary>
     public Guid Id => Configuration.Id;
-
-    /// <summary>
-    /// Gets or sets the associated website configuration.
-    /// </summary>
-    public WebSiteConfiguration Configuration { get; set; } = new();
-
-    /// <summary>
-    /// Gets or sets whether this instance is currently running (serialized state).
-    /// </summary>
-    public bool IsRunning { get; set; }
-
-    /// <summary>
-    /// Gets runtime process information (server-side only, not serialized).
-    /// </summary>
+    public WebSiteConfiguration Configuration { get; set; }
+    
+    // Runtime state (not serialized)
     [JsonIgnore]
     public ProcessInfo? Process { get; set; }
-
-    /// <summary>
-    /// Gets human-readable state description ("Running", "Stopped", "Not Responding").
-    /// </summary>
-    [JsonIgnore]
-    public string State { get; }  // Computed property
-
-    // Clone() method auto-generated by source generator
+    
+    // Serialized state
+    public bool IsRunning { get; set; }
+    
+    // Computed property
+    public string State => Process?.IsResponding == true ? "Running" : 
+                           Process == null ? (IsRunning ? "Running" : "Stopped") : "Not Responding";
 }
 ```
 
-#### ProcessInfo
+### DSM API Integration
+
+#### Authentication Flow
+
+```
+1. Client → LoginCredentials { Username, Password, [LotP] }
+2. DsmApiClient.ReadSettings() → Load /etc/synoinfo.conf
+3. DsmApiClient.HandShakeAsync() → SYNO.API.Info query
+4. DsmApiClient.AuthenticateAsync() → auth.login API call
+5. Response: SID stored in cookie header (ssid=...)
+6. Session persisted in ASP.NET Core session
+```
+
+#### FileStation Operations
+
+**Supported APIs:**
+
+- `util.list` - List directory contents
+- `util.upload` - Upload files
+- `util.download` - Download files
+- `util.delete` - Delete files/directories
+- `util.mkdir` - Create directories
+- `file.move` - Move/rename files
+- `file.copy` - Copy files
+- `core.acl.set` - Set ACL permissions (critical for web hosting)
+
+**Key Operation: Setting HTTP Group Permissions**
 
 ```csharp
-public class ProcessInfo
+public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool recursive)
 {
-    public int Id { get; set; }              // Process ID (PID)
-    public bool IsResponding { get; set; }   // Health check status
-    public DateTime StartTime { get; set; }  // Process start time
+    var parameters = new CoreAclSetParameters
+    {
+        Path = path,
+        GroupId = 100,  // http group
+        Recursive = recursive
+    };
+    
+    return await _dsmApiClient.ExecuteAsync<ApiResult>(parameters);
 }
 ```
 
-### API Integration Architecture
+#### ReverseProxy Management
 
-#### Request/Response Pattern
+**Composite Key Strategy:**
 
-**Request (Parameters):**
+Instead of storing UUIDs (which can desynchronize), use configuration-based lookup:
 
 ```csharp
-public class AuthenticationLoginParameters : ApiParametersBase<AuthenticationLogin>
+public async Task<ReverseProxyInfo?> FindByCompositeKeyAsync(WebSiteConfiguration config)
 {
-    public AuthenticationLogin Parameters { get; } = new();
-
-    protected override string Method => DsmApiMethods.AuthenticateLogin;
-    public override SerializationFormats SerializationFormat => SerializationFormats.Form;
-}
-
-// Usage
-var parameters = new AuthenticationLoginParameters(apiInformations);
-parameters.Parameters.Account = "admin";
-parameters.Parameters.Password = "password";
-parameters.Parameters.OtpCode = "123456";  // Optional 2FA
-```
-
-**Response:**
-
-```csharp
-public class SynoLoginResponse : ApiResponseBase<SynoLogin>
-{
-    // Auto-mapped from JSON response
-}
-
-public class SynoLogin
-{
-    [JsonPropertyName("sid")]
-    public string Sid { get; set; } = String.Empty;
+    var allProxies = await GetAllAsync();
+    
+    return allProxies.FirstOrDefault(proxy =>
+        proxy.Backend.Port == config.InternalPort &&
+        proxy.Frontend.Fqdn == config.HostName &&
+        proxy.Frontend.Port == config.PublicPort &&
+        proxy.Frontend.Protocol == config.Protocol.ToString().ToLower()
+    );
 }
 ```
-
-#### DSM API Client Workflow
-
-1. **ReadSettings:** Load server configuration (host, port) from file
-2. **Handshake:** Query `SYNO.API.Info` to populate `ApiInformationCollection`
-3. **Authentication:** Login with credentials → receive SID
-4. **Session Persistence:** Store SID in HTTP headers (`ssid=...`) and ASP.NET Core session
-5. **API Execution:** Build URL, serialize parameters (Form/JSON), execute POST request
-6. **Response Parsing:** Deserialize JSON to strongly-typed models
-
-**Example Flow:**
-
-```csharp
-// 1. Initialize client (injected via DI)
-var dsmClient = serviceProvider.GetRequiredService<DsmApiClient>();
-
-// 2. Connect (handshake + auth)
-var loginModel = new LoginModel { Login = "admin", Password = "password" };
-var connected = await dsmClient.ConnectAsync(loginModel);
-
-if (!connected)
-{
-    return AuthenticationResult.Failed("Invalid credentials");
-}
-
-// 3. Execute API call
-var parameters = new FileStationListParameters(dsmClient.ApiInformations);
-parameters.Parameters.Path = "/volume1/apps";
-var response = await dsmClient.ExecuteAsync<FileStationListResponse>(parameters);
-
-// 4. Handle result
-if (response?.Success == true && response.Data is not null)
-{
-    var files = response.Data.Files;
-    return DirectoryContentsResult.Success(files);
-}
-
-return DirectoryContentsResult.Failed("API call failed");
-```
-
-### Source-Generated API Definitions
-
-The solution uses auto-generated classes for API definitions based on DSM API documentation:
-
-**Generated Files:**
-
-- `FileStationList.g.cs` - File listing operations
-- `ReverseProxyAdd.g.cs`, `ReverseProxyUpdate.g.cs`, etc. - Proxy CRUD operations
-- `ApiParametersBase.g.cs` - Base parameter class with common logic
-- `WebSiteConfiguration.g.cs` - Clone implementation (from `[GenerateClone]`)
 
 **Benefits:**
 
-- **Type safety** at compile time
-- **Reduced boilerplate** (60-70% code reduction)
-- **Consistent structure** across all API definitions
-- **Auto-documentation** via generated XML comments
+- Always reflects actual DSM state
+- No synchronization issues
+- Idempotent create operations
 
 ---
 
 ## UI Architecture
 
-### Rendering Strategy: Hybrid Blazor
+### Rendering Strategy
 
-```
-App.razor Structure:
-┌─────────────────────────────────────┐
-│         Server-Side (Head)          │
-│  - Session management               │
-│  - Authentication                   │
-│  - Server-side services             │
-│  - DI container                     │
-└─────────────────────────────────────┘
-              ↓ InteractiveWebAssembly
-┌─────────────────────────────────────┐
-│      WebAssembly Components         │
-│  - Interactive UI elements          │
-│  - Client-side interactivity        │
-│  - FluentUI components              │
-│  - HTTP client wrappers             │
-└─────────────────────────────────────┘
+**Hybrid Mode: Interactive WebAssembly**
+
+```csharp
+builder.Services.AddRazorComponents()
+    .AddInteractiveWebAssemblyComponents();
 ```
 
-**Render Mode:** `InteractiveWebAssembly` (Blazor 10 feature)
+**Why Hybrid?**
 
-- Server handles auth, session, heavy operations, background services
-- Client handles UI interactions, animations, real-time updates
-- Seamless data transfer between server and client via signal circuit
-- Progressive enhancement: works even if WASM fails to load
+1. **Server-side authentication** - Secure session management
+2. **Client-side interactivity** - Responsive UI without server roundtrips
+3. **Cold start performance** - Initial load is server-rendered
+4. **Security** - Sensitive operations remain server-side
 
-### Component Architecture
-
-#### Page Structure (Ui.Client/Components/Pages)
+### Component Hierarchy
 
 ```
-Pages/
-├── Home.razor                        # Dashboard/home page
-├── Login.razor                       # Authentication page
-├── NotFound.razor                    # 404 handler
-├── Websites/                         # Website management
-│   ├── Index.razor                   # Website list (data grid)
-│   ├── Create.razor                  # Add new website form
-│   └── Edit.razor                    # Modify existing website
-├── FileExplorer.razor                # File system browser
-├── Frameworks/                       # .NET runtime management
-│   ├── Index.razor                   # Installed versions
-│   └── Install.razor                 # Installation wizard
-└── Settings.razor                    # Application configuration
+App.razor (Root)
+└── MainLayout.razor
+    ├── HeaderBar.razor (User info, logout)
+    ├── NavigationMenu.razor (Navigation)
+    └── Page Content
+        ├── Home.razor (Dashboard with website grid)
+        ├── Login.razor (Authentication)
+        └── NotFound.razor (404 handler)
+
+Dialogs (Overlay)
+├── WebSiteConfigurationDialog.razor
+├── FileSelectionDialog.razor
+├── DotnetVersionsDialog.razor
+├── AspNetReleasesDialog.razor
+└── LicensesDialog.razor
 ```
 
-#### Layout Components (Ui.Client/Components/Layout)
+### Custom Components
 
-```
-Layout/
-├── MainLayout.razor                  # Main app shell with navigation
-│   ├── FluentNavMenu (sidebar)
-│   ├── FluentSheet (mobile menu)
-│   └── Main content area
-├── NavigationMenu.razor              # FluentUI nav menu component
-├── HeaderBar.razor                   # Top bar with user info, logout
-└── Footer.razor                      # Status indicators, version info
-```
+#### AutoDataGrid<T>
 
-#### Reusable Controls (Ui.Client/Components/Controls)
+Generic data grid with sorting capabilities:
 
-```
-Controls/
-├── DataGrid.razor                    # Enhanced data grid wrapper (FluentUI)
-├── FilePicker.razor                  # File system picker dialog
-├── PortInput.razor                   # Validated port number input (1024-65535)
-├── ProcessStatus.razor               # Running/stopped indicator badge
-└── [Other custom components...]
-```
+- Type-safe column definitions
+- Client-side sorting
+- FluentUI DataGrid integration
+- Loading states
 
-#### Dialog Components (Ui.Client/Components/Dialogs)
+#### RealTimeTextField / RealTimeNumberField
 
-```
-Dialogs/
-├── ConfirmationDialog.razor          # Yes/No confirmation wrapper
-├── ErrorDialog.razor                 # Error message display
-├── LoadingDialog.razor               # Progress indicator
-└── [Other dialog wrappers...]
-```
+Input components with immediate validation feedback:
+
+- Integrated with FluentUI TextField/NumberField
+- Real-time validation display
+- Error message binding
 
 ### State Management
 
-**Server-Side State:**
+**Server-Side:**
 
-- `WebSiteHostingService` (singleton background service)
-  - Maintains in-memory dictionary of running instances (`ConcurrentDictionary<Guid, WebSiteInstance>`)
-  - Handles process lifecycle (start/stop/restart)
-  - Persists configuration changes to JSON file
-  - Implements `IHostedService` for startup/shutdown hooks
+- ASP.NET Core Session for authentication (DSM SID)
+- `WebSiteHostingService` singleton for website instances
+- `WebSitesConfigurationService` for persistent configuration
 
-**Client-Side State:**
+**Client-Side:**
 
-- Blazor component state via parameters and cascading values
-- HTTP client wrappers for API calls (type-safe endpoints)
-- Local state management via `@state` injections (Blazor 10 feature)
-
-**Session Persistence:**
-
-```csharp
-// Authentication service persists DSM SID to ASP.NET Core session
-public async Task<AuthenticationResult> LoginAsync(LoginModel model)
-{
-    var connected = await _dsmClient.ConnectAsync(model);
-    
-    if (connected)
-    {
-        // Store SID in server-side session
-        HttpContext.Session.SetString(ApplicationConstants.DsmSessionKey, _dsmClient.Sid);
-        
-        return AuthenticationResult.Success(model.Login);
-    }
-    
-    return AuthenticationResult.Failed("Invalid credentials");
-}
-
-// Restore session on application start
-var sid = HttpContext.Session.GetString(ApplicationConstants.DsmSessionKey);
-if (!String.IsNullOrEmpty(sid))
-{
-    _dsmClient.SetSid(sid);  // Restore DSM client state
-}
-```
-
-### FluentUI Integration
-
-**Component Usage:**
-
-```razor
-@using Microsoft.FluentUI.AspNetCore.Components
-@using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons
-
-<FluentButton OnClick="@(() => StartWebsiteAsync(site.Id))"
-              Variant="Filled"
-              Disabled="@site.IsRunning">
-    <Icons.Regular.Size16.Play />
-    Start
-</FluentButton>
-
-<FluentDialog @bind:IsOpen="@showDialog">
-    <FluentDialogTitle>Add New Website</FluentDialogTitle>
-    <FluentDialogContent>
-        <!-- Form content with FluentInput, FluentSelect, etc. -->
-    </FluentDialogContent>
-    <FluentDialogFooter>
-        <FluentButton Variant="Outlined" OnClick="@CloseDialog">Cancel</FluentButton>
-        <FluentButton Variant="Filled" OnClick="@SaveWebsite">Save</FluentButton>
-    </FluentDialogFooter>
-</FluentDialog>
-
-<FluentDataGrid Items="@websites">
-    <FluentDataGridColumn Field="@nameof(WebSiteInstance.Name)" Title="Name" />
-    <FluentDataGridColumn Field="@nameof(WebSiteInstance.IsRunning)" Title="Status" />
-    <FluentDataGridColumn Field="@nameof(WebSiteInstance.State)" Title="State" />
-</FluentDataGrid>
-```
-
-**Theming:**
-
-- Uses FluentUI's built-in theming system (light/dark modes)
-- No custom CSS (minimalist approach per project standards)
-- Icons from FluentUI icon set (16/20/24px sizes via `Icons.Regular.Size16`, etc.)
-- Consistent spacing via FluentUI design tokens
-- Responsive design with FluentUI grid system
-
-### API Controller Architecture
-
-**RESTful Endpoints:**
-
-```csharp
-[ApiController]
-[Route(WebsiteHostingDefaults.ControllerBaseRoute)]  // "api/v1/websites"
-public class WebsiteHostingController(IWebSiteHostingService hostingService) : ControllerBase
-{
-    [HttpGet(WebsiteHostingDefaults.AllRoute)]         // GET /api/v1/websites/all
-    public async Task<ActionResult<List<WebSiteInstance>>> GetAllWebsitesAsync()
-        => Ok(await hostingService.GetAllWebsitesAsync());
-
-    [HttpPost(WebsiteHostingDefaults.AddRoute)]        // POST /api/v1/websites/add
-    public async Task<ActionResult<WebSiteInstance>> AddWebsite([FromBody] WebSiteConfiguration configuration)
-        => Ok(await hostingService.AddWebsiteAsync(configuration));
-
-    [HttpPost(WebsiteHostingDefaults.UpdateRoute)]     // POST /api/v1/websites/update
-    public async Task<ActionResult<WebSiteInstance>> UpdateWebsite([FromBody] WebSiteConfiguration configuration)
-        => Ok(await hostingService.UpdateWebsiteAsync(configuration));
-
-    [HttpDelete(WebsiteHostingDefaults.RemoveRoute + "/{id}")]  // DELETE /api/v1/websites/remove/{id}
-    public async Task<ActionResult<ApiResult>> RemoveWebsite(Guid id)
-        => Ok(await hostingService.RemoveWebsiteAsync(id));
-
-    [HttpPost(WebsiteHostingDefaults.StartRoute + "/{id}")]     // POST /api/v1/websites/start/{id}
-    public async Task<ActionResult<ApiResult>> StartWebsite(Guid id)
-        => Ok(await hostingService.StartWebsiteAsync(id));
-
-    [HttpPost(WebsiteHostingDefaults.StopRoute + "/{id}")]      // POST /api/v1/websites/stop/{id}
-    public async Task<ActionResult<ApiResult>> StopWebsite(Guid id)
-        => Ok(await hostingService.StopWebsiteAsync(id));
-}
-```
-
-**Response Pattern:**
-
-- All endpoints return `ActionResult<T>` for consistent HTTP handling
-- Success/failure encoded in response body (not HTTP status code)
-- HTTP 200 OK for all responses (simplifies client error handling)
-- PascalCase JSON serialization (no camelCase conversion)
-
-**Other Controllers:**
-
-- `AuthenticationController` - `/api/v1/auth/login`, `/logout`, `/status`
-- `FileManagementController` - `/api/v1/files/*` (list, upload, download, delete, etc.)
-- `FrameworkManagementController` - `/api/v1/frameworks/channels`, `/releases`, `/installed`, `/install`
-- `LogDownloadController` - `/api/v1/logs/download`
-- `RuntimeManagementController` - `/api/v1/runtime/versions`
+- HTTP client wrappers for API calls
+- Local component state for UI interactions
+- Dialog state management via FluentUI
 
 ---
 
@@ -1212,116 +978,44 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
 
 ### Authentication & Session Management
 
-**DSM SID-Based Auth:**
+1. **Server-Side Session Storage**
+   - DSM SID stored in server session (not client storage)
+   - HttpOnly cookies prevent XSS attacks
+   - SameSite=Strict prevents CSRF
 
-1. User authenticates once to Synology DSM via `auth.login` API
-2. DSM returns session ID (SID) valid for configured timeout
-3. SID stored in ASP.NET Core server-side session (not client-side cookie)
-4. Session validated periodically via `DsmApiClient.ValidateSessionAsync()`
-5. On logout, SID cleared from both DSM and ASP.NET Core session
+2. **Antiforgery Protection**
+   - Enabled for all Blazor components and API endpoints
+   - Token validation on state-changing operations
 
-**Session Configuration:**
+3. **HTTPS Enforcement**
+   - `UseHttpsRedirection()` in middleware pipeline
+   - Default protocol for reverse proxy is HTTPS
+   - HSTS enabled by default for websites
 
-```csharp
-builder.Services.AddSession(options =>
-{
-    options.Cookie.Name = "ADWH.Session";
-    options.Cookie.HttpOnly = true;              // Prevent JavaScript access (XSS protection)
-    options.Cookie.SameSite = SameSiteMode.Strict;  // CSRF protection
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;  // HTTPS only
-    options.IdleTimeout = TimeSpan.FromMinutes(30);   // Auto-expiry after inactivity
-});
-```
+### API Security
 
-**Authorization:**
+1. **No Client-Side Secrets**
+   - All DSM API calls go through server controllers
+   - Credentials never exposed to browser
 
-```csharp
-[AuthorizeSession]  // Custom attribute checks session validity
-public class WebsiteHostingController : ControllerBase
-{
-    // All endpoints require valid DSM session
-}
-```
+2. **Input Validation**
+   - Data annotations on all models
 
-### Input Validation
+- Server-side validation in services
 
-**Data Annotations (Server-Side):**
+1. **Error Handling**
+   - Generic error messages (no stack traces to client)
+   - Structured logging for debugging
 
-```csharp
-[Required(ErrorMessage = ApplicationConstants.SiteNameRequiredErrorMessage)]
-public string Name { get; set; } = "";
+### File System Security
 
-[Range(ApplicationConstants.MinWebApplicationPort, 
-       ApplicationConstants.MaxWebApplicationPort, 
-       ErrorMessage = ApplicationConstants.PortRangeErrorMessage)]
-public int InternalPort { get; set; }
+1. **HTTP Group Permissions**
+   - Critical: Set before deploying applications
+   - Ensures nginx can serve files
 
-[StringLength(255, MinimumLength = 1)]
-public string HostName { get; set; } = "";
-```
-
-**Controller-Level Validation:**
-
-```csharp
-[HttpPost("add")]
-public async Task<ActionResult<WebSiteInstance>> AddWebsite([FromBody] WebSiteConfiguration configuration)
-{
-    if (!ModelState.IsValid)
-    {
-        return BadRequest(ModelState);  // Return validation errors
-    }
-    
-    return Ok(await hostingService.AddWebsiteAsync(configuration));
-}
-```
-
-**Custom Validation Logic:**
-
-- Port range validation (1024-65535 for user applications)
-- Path existence checks via FileStation API
-- Reverse proxy conflict detection (duplicate host:port combinations)
-- Environment variable format validation
-
-### SSL/TLS Considerations
-
-**DSM API Connection:**
-
-- SSL certificate validation enabled (per project standards)
-- Uses `DsmApiClient` with centralized error handling
-- HTTPS-only communication with DSM NAS
-
-**Application HTTPS:**
-
-```csharp
-app.UseHttpsRedirection();  // Force HTTPS for all requests
-app.UseHsts();              // HTTP Strict Transport Security (production only)
-```
-
-**Reverse Proxy HSTS:**
-
-- Websites can enable HSTS via `EnableHSTS = true` in configuration
-- HSTS header added to reverse proxy response headers
-- Prevents protocol downgrade attacks
-
-### Security Recommendations
-
-**Current Implementation:**
-
-✅ Session-based authentication with server-side storage  
-✅ HTTP-only cookies (XSS protection)  
-✅ SameSite.Strict cookie policy (CSRF protection)  
-✅ Secure cookie policy (HTTPS only)  
-✅ Input validation on all endpoints (data annotations + custom logic)  
-✅ Antiforgery token validation for Blazor and API endpoints  
-✅ HTTPS redirection enabled  
-
-**Areas for Enhancement:**
-
-⚠️ Add rate limiting for authentication attempts (prevent brute force)  
-⚠️ Implement audit logging for sensitive operations (website CRUD, framework installation)  
-⚠️ Add request throttling for DSM API calls (prevent overload)  
-⚠️ Consider OAuth2 integration for future multi-tenant support  
-⚠️ Add IP whitelisting for administrative operations  
+2. **Path Validation**
+   - Validate all file paths against allowed directories
+   - Prevent path traversal attacks
 
 ---
 
@@ -1329,926 +1023,206 @@ app.UseHsts();              // HTTP Strict Transport Security (production only)
 
 ### Benchmarking Results
 
-**StringBuilder vs Interpolated Strings:**
+**String Building (URL Construction):**
+
+| Method | Allocated Memory | GC Cuts |
+|--------|------------------|---------|
+| Interpolated String | Higher | More frequent |
+| StringBuilder | Lower | Less frequent |
+
+**Recommendation:** Use `StringBuilder` for complex URL/parameter building with multiple concatenations.
+
+### Caching Strategy
+
+**Current Implementation:**
+
+- **ApiInformations Cache:** DSM API metadata cached after handshake
+- **Instance Cache:** In-memory `ConcurrentDictionary` for website instances
+- **Configuration Cache:** JSON file read on startup, in-memory during runtime
+
+**Potential Improvements:**
+
+- Implement distributed caching for multi-instance deployments
+- Add HTTP response caching for static assets
+- Consider Redis for session storage in production
+
+### Async/Await Pattern
+
+All I/O operations use async/await:
 
 ```csharp
-// Benchmark: URL construction with 10 parameters
-[StringBuilderBenchmark]
-public class StringBuilderBenchmark
-{
-    [Benchmark] public void UrlInterpolatedString()      // Baseline: ~50ns
-    [Benchmark] public void UrlBuilder()                 // Recommended: ~35ns (30% faster)
+// DSM API calls
+public async Task<bool> ConnectAsync(LoginCredentials model)
 
-    [Benchmark] public void ParametersInterpolatedString()  // Baseline: ~120ns
-    [Benchmark] public void ParametersBuilder()             // Recommended: ~85ns (29% faster)
-}
+// File operations
+public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool recursive)
+
+// Process management
+public async Task<ApiResult> StartSiteAsync(WebSiteInstance instance)
 ```
 
-**Recommendation:** Use `StringBuilder` for complex string concatenation in performance-critical paths (URL building, parameter encoding).
+**Benefits:**
 
-### Memory Optimization
-
-**Singleton Services:**
-
-- `DsmApiClient` - Single instance for all API calls (reduces connection overhead)
-- `ReverseProxyManagerService` - Shared proxy configuration manager
-- `WebSiteHostingService` - Background service with in-memory state
-- Configuration services - Loaded once at application startup
-
-**Efficient Serialization:**
-
-```csharp
-// Preserve PascalCase for consistency with C# models
-builder.Services.AddControllers().AddJsonOptions(options =>
-    options.JsonSerializerOptions.PropertyNamingPolicy = null);
-
-// Use collection expressions for efficient materialization (C# 12+)
-var instances = [.. _instances.Values.Select(i => i.Clone())];
-```
-
-**Collection Expressions (C# 12+):**
-
-```csharp
-// Efficient array/list initialization
-public Dictionary<string, string> AdditionalEnvironmentVariables { get; set; } = [];
-
-// Spread operator for LINQ materialization
-var websites = [.. _configuration.Sites.Where(s => s.IsEnabled)];
-```
-
-### Async/Await Best Practices
-
-**Avoiding Deadlocks:**
-
-```csharp
-// ✅ Correct: async all the way
-public async Task<WebSiteInstance> AddWebsiteAsync(WebSiteConfiguration config)
-{
-    await _configService.AddSiteAsync(config);  // Proper async flow
-    return await AddInstanceAsync(config);
-}
-
-// ❌ Avoid: .Result or .Wait() (can cause deadlocks in ASP.NET Core)
-public WebSiteInstance AddWebsiteSync(WebSiteConfiguration config)
-{
-    var result = AddWebsiteAsync(config).Result;  // Potential deadlock!
-    return result;
-}
-```
-
-**ConfigureAwait(false):**
-
-- Not required in UI projects (Blazor has synchronization context)
-- Recommended in library projects (`Data`, `Tools`) for better scalability
-
-### Background Service Optimization
-
-**WebSiteHostingService Lifecycle:**
-
-```csharp
-public class WebSiteHostingService : IHostedService, IDisposable
-{
-    private readonly ConcurrentDictionary<Guid, WebSiteInstance> _instances = new();
-    
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        logger.LogInformation("Website hosting service started");
-        
-        // Auto-start websites marked with AutoStart = true
-        var sites = await _configService.GetAllSitesAsync();
-        foreach (var site in sites.Where(s => s.AutoStart))
-        {
-            if (!cancellationToken.IsCancellationRequested)
-            {
-                await StartSiteAsync(site, cancellationToken);
-            }
-        }
-    }
-    
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        logger.LogInformation("Website hosting service stopping");
-        
-        // Parallel stop for faster shutdown
-        var stopTasks = _instances.Values.Select(instance =>
-            StopSiteAsync(instance, cancellationToken));
-        await Task.WhenAll(stopTasks);
-    }
-}
-```
-
-**Efficient Instance Management:**
-
-- `ConcurrentDictionary` for thread-safe instance storage
-- Clone operations for safe client serialization (no race conditions)
-- Parallel operations for bulk actions (stop all websites)
-
-### Build Optimization
-
-**Disabled Incremental Builds:**
-
-```bash
-dotnet build /nr:false  # NoRestore - faster builds in CI/CD when packages unchanged
-```
-
-**Release Configuration:**
-
-- No PDB generation (`DebugType=None`) - smaller binaries
-- No XML documentation (`GenerateDocumentationFile=false`) - faster builds
-- Optimized IL code with ReadyToRun (if enabled for deployment)
+- Non-blocking I/O
+- Better scalability under load
+- Responsive UI during long operations
 
 ---
 
 ## Build & Deployment
 
-### Project Structure
+### Build Configuration
 
-**Solution File (.slnx):**
-
-```xml
-<Solution>
-  <Project Path="Askyl.Dsm.WebHosting.Benchmarks/..." />
-  <Project Path="Askyl.Dsm.WebHosting.Constants/..." />
-  <Project Path="Askyl.Dsm.WebHosting.Data/..." />
-  <Project Path="Askyl.Dsm.WebHosting.DotnetInstaller/..." />
-  <Project Path="Askyl.Dsm.WebHosting.Logging/..." />
-  <Project Path="Askyl.Dsm.WebHosting.SourceGenerators/..." />
-  <Project Path="Askyl.Dsm.WebHosting.Tools/..." />
-  <Project Path="Askyl.Dsm.WebHosting.Ui/..." />
-  <Project Path="Askyl.Dsm.WebHosting.Ui.Client/..." />
-</Solution>
-```
-
-### Build Commands
-
-**Development:**
+**Standardized Commands:**
 
 ```bash
-# Full build (no restore - packages already restored)
+# Build
 dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
-# Clean and rebuild
-dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx && dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
+# Clean
+dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
-# Run benchmarks
-dotnet run --project ./src/Askyl.Dsm.WebHosting.Benchmarks
+# Publish (for deployment)
+dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c Release -o ./publish
 ```
 
-**Release Build:**
+**Build Properties:**
 
-```bash
-dotnet publish -c Release \
-  -p:PublishProfile=Default \
-  ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj
-```
+- Centralized versioning via `Directory.Build.props`
+- Debug symbols disabled in Release builds
+- No XML documentation generation (to reduce build time)
 
-### Directory.Build.props
+### Deployment Targets
 
-**Centralized Configuration:**
+1. **Synology DSM 7.2+**
+   - x64 architecture (tested)
+   - armv7/armv8 (built but untested)
+   - Package format: SPK (via Docker-based multi-arch builds)
 
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<Project>
-  <PropertyGroup>
-    <!-- Disable PDB generation for all projects when publishing -->
-    <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
-    <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
-  </PropertyGroup>
-  
-  <PropertyGroup>
-    <!-- Centralized versioning -->
-    <Version>0.5.1</Version>
-    <AssemblyVersion>0.5.1.0</AssemblyVersion>
-    <FileVersion>0.5.1.0</FileVersion>
-    <InformationalVersion>0.5.1</InformationalVersion>
-    <PackageVersion>0.5.1</PackageVersion>
-  </PropertyGroup>
-</Project>
-```
+2. **Deployment Path:** `/usr/local/Askyl.Dsm.WebHosting/`
 
-**Benefits:**
+3. **Configuration Files:**
+   - `websites.json` - Persistent website configurations
+   - `appsettings.json` - Application settings
+   - `/etc/synoinfo.conf` - DSM system config (read-only)
 
-- Single source of truth for version numbers
-- Consistent build settings across all projects
-- Easy to update for releases
+### SPK Packaging
 
-### Docker Support
+**Process:**
 
-**Multi-Architecture SPK Package:**
-
-- Docker-based builds for Synology compatibility
-- Supports x64 and ARM architectures (via multi-stage builds)
-- Automated build pipeline via GitHub Actions
-
-**Dockerfile Structure:**
-
-```dockerfile
-# Multi-stage build for optimized image size
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
-WORKDIR /src
-
-# Copy project files and restore dependencies
-COPY ["Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj", "./Askyl.Dsm.WebHosting.Ui/"]
-RUN dotnet restore "Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj"
-
-COPY . .
-RUN dotnet publish -c Release -o /app "Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj"
-
-# Runtime stage (smaller image)
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
-WORKDIR /app
-COPY --from=build /app .
-
-# Expose port and set entrypoint
-EXPOSE 8080
-ENTRYPOINT ["dotnet", "Askyl.Dsm.WebHosting.Ui.dll"]
-```
-
-### Deployment Checklist
-
-**Pre-Deployment:**
-
-- [ ] Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx` - verify no errors/warnings
-- [ ] Execute benchmarks for performance baseline (optional)
-- [ ] Review `appsettings.json` configuration (DSM host, port, paths)
-- [ ] Test DSM API connectivity from deployment environment
-- [ ] Validate SSL certificates (if using HTTPS)
-- [ ] Ensure configuration file exists (`DsmDefaults.ConfigurationFileName`)
-
-**Post-Deployment:**
-
-- [ ] Verify background service started successfully (check logs)
-- [ ] Check Serilog logs for errors or warnings
-- [ ] Test website lifecycle operations (start/stop a test site)
-- [ ] Validate reverse proxy configuration (access website via public URL)
-- [ ] Monitor memory usage and process health
-- [ ] Test authentication flow (login/logout/session expiry)
+1. Build for target architecture (x64/armv7/armv8)
+2. Package files into SPK format using Synology's packaging tools
+3. Sign package with developer certificate
+4. Upload to Synology Package Center or manual installation
 
 ---
 
 ## Recommendations
 
-### Immediate Improvements (Next Sprint)
-
-#### 1. **Add Comprehensive Unit Tests**
-
-```csharp
-// Test project structure
-Askyl.Dsm.WebHosting.Tests/
-├── Services/
-│   ├── WebSiteHostingServiceTests.cs
-│   ├── AuthenticationServiceTests.cs
-│   └── FileSystemServiceTests.cs
-├── Results/
-│   └── ApiResultTests.cs
-├── Extensions/
-│   └── UriExtensionsTests.cs
-└── API/
-    └── Parameters/
-        └── BuildUrlTests.cs
-```
-
-**Testing Strategy:**
-
-- **Unit Tests:** Service layer logic, result patterns, extensions (xUnit + Moq)
-- **Integration Tests:** DSM API client with TestServer or TestContainer
-- **UI Tests:** Blazor component rendering (bUnit library)
-
-**Example:**
-
-```csharp
-public class WebSiteHostingServiceTests
-{
-    private readonly Mock<IWebSitesConfigurationService> _configMock;
-    private readonly Mock<IReverseProxyManagerService> _proxyMock;
-    private readonly WebSiteHostingService _service;
-
-    [Fact]
-    public async Task AddWebsiteAsync_WithValidConfig_ReturnsSuccess()
-    {
-        // Arrange
-        var config = new WebSiteConfiguration { Name = "Test", ApplicationPath = "/test" };
-        _configMock.Setup(x => x.AddSiteAsync(config)).Returns(Task.CompletedTask);
-        
-        // Act
-        var result = await _service.AddWebsiteAsync(config);
-        
-        // Assert
-        Assert.True(result.Success);
-        Assert.NotEqual(Guid.Empty, result.Data.Id);
-    }
-}
-```
-
-**Benefits:**
-
-- Catch regressions early
-- Enable safe refactoring
-- Document expected behavior
-- Improve code confidence
-
-#### 2. **Implement Retry Policy with Polly**
-
-```csharp
-// Add Polly package
-<PackageReference Include="Polly.Extensions" Version="8.4.0" />
-
-// Configure retry policy for DSM API calls
-builder.Services.AddHttpClient("DsmApi", client =>
-{
-    client.BaseAddress = new Uri($"https://{dsmHost}:{dsmPort}");
-})
-.AddTransientHttpErrorPolicy(policy =>
-    policy.WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt))))  // Exponential backoff
-.AddHttpClientErrorHandler(logger);  // Log retry attempts
-
-// Use named client in DsmApiClient
-private readonly HttpClient _httpClient = httpClientFactory.CreateClient("DsmApi");
-```
-
-**Benefits:**
-
-- Resilience against temporary network failures
-- Better user experience during DSM API outages
-- Automatic retry with exponential backoff
-- Reduced manual intervention
-
-#### 3. **Add Structured Audit Logging**
-
-```csharp
-// Current: Basic logging
-logger.LogInformation("Site {SiteName} started", siteName);
-
-// Recommended: Add structured audit logging
-logger.LogInformation("Website operation completed - Operation={Operation}, SiteId={SiteId}, SiteName={SiteName}, UserId={UserId}, DurationMs={DurationMs}",
-                      "START", site.Id, siteName, userId, stopwatch.ElapsedMilliseconds);
-```
-
-**Serilog Configuration:**
-
-```json
-{
-  "Serilog": {
-    "MinimumLevel": {
-      "Default": "Information",
-      "Override": {
-        "Microsoft.AspNetCore": "Warning",
-        "Askyl.Dsm.WebHosting": "Debug"
-      }
-    },
-    "WriteTo": [
-      {
-        "Name": "File",
-        "Args": {
-          "path": "/volume1/web/askyl-dsm-webhosting/logs/log-.txt",
-          "rollingInterval": "Day",
-          "outputTemplate": "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}"
-        }
-      },
-      {
-        "Name": "Console",
-        "Args": {
-          "outputTemplate": "[{HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"
-        }
-      }
-    ]
-  }
-}
-```
-
-**Benefits:**
-
-- Better troubleshooting capabilities
-- Audit compliance for sensitive operations
-- Performance monitoring with duration tracking
-- Easier log analysis with structured format
-
-### Medium-Term Enhancements (Next Quarter)
-
-#### 4. **Implement Caching Layer**
-
-```csharp
-// Add distributed caching for frequently accessed data
-builder.Services.AddDistributedMemoryCache();  // Or Redis for multi-instance deployments
-
-// Cache DSM API information (validates every 5 minutes)
-public class CachedReverseProxyManagerService : IReverseProxyManagerService
-{
-    private readonly IDistributedCache _cache;
-    private const string ApiInfoKey = "dsm_api_info";
-    
-    public async Task<ApiInformationCollection> GetApiInfoAsync()
-    {
-        var cached = await _cache.GetStringAsync(ApiInfoKey);
-        
-        if (!String.IsNullOrEmpty(cached))
-        {
-            return JsonSerializer.Deserialize<ApiInformationCollection>(cached);
-        }
-        
-        // Fetch from DSM API
-        var apiInfo = await FetchFromDsmApiAsync();
-        
-        // Cache for 5 minutes
-        var cacheOptions = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        };
-        
-        await _cache.SetStringAsync(ApiInfoKey, JsonSerializer.Serialize(apiInfo), cacheOptions);
-        
-        return apiInfo;
-    }
-}
-```
-
-**Benefits:**
-
-- Reduced API calls to DSM (less network overhead)
-- Faster response times for frequently accessed data
-- Lower load on NAS device
-- Better scalability under concurrent users
-
-#### 5. **Add Health Checks**
-
-```csharp
-// Add ASP.NET Core health checks
-builder.Services.AddHealthChecks()
-    .AddCheck<DsmApiHealthCheck>("DSM_API", tags: ["external"])
-    .AddCheck<WebsiteHostingHealthCheck>("Websites", tags: ["internal"])
-    .AddCheck<FileSystemHealthCheck>("FileStation", tags: ["external"]);
-
-// Map health check endpoints
-app.MapHealthChecks("/health");           // Full health check (all checks)
-app.MapHealthChecks("/health/live");      // Liveness probe (internal only)
-app.MapHealthChecks("/health/ready");     // Readiness probe (excluding external deps)
-```
-
-**Custom Health Check Example:**
-
-```csharp
-public class DsmApiHealthCheck : IHealthCheck
-{
-    private readonly DsmApiClient _dsmClient;
-    
-    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var isValid = await _dsmClient.ValidateSessionAsync();
-            
-            if (isValid)
-            {
-                return HealthCheckResult.Healthy("DSM API session is valid");
-            }
-            
-            return HealthCheckResult.Unhealthy("DSM API session expired");
-        }
-        catch (Exception ex)
-        {
-            return HealthCheckResult.Unhealthy("DSM API unreachable", ex);
-        }
-    }
-}
-```
-
-**Benefits:**
-
-- Kubernetes/Docker deployment readiness
-- Automated monitoring and alerting (Prometheus, Grafana)
-- Graceful degradation capabilities
-- Load balancer health probing
-
-#### 6. **Create OpenAPI Documentation**
-
-```csharp
-// Add Swashbuckle for OpenAPI/Swagger generation
-<PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
-
-// Program.cs
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.CustomSchemaIds(type => type.FullName);  // Use full type names
-    
-    // Add API key authentication (if needed)
-    options.AddSecurityDefinition("session", new OpenApiSecurityScheme
-    {
-        Name = "Cookie",
-        In = ParameterLocation.Cookie,
-        Type = SecuritySchemeType.ApiKey,
-        Description = "ASkyl.Dsm.WebHosting session cookie authentication"
-    });
-});
-
-// Enable Swagger UI
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "ASkyl.Dsm.WebHosting API v1");
-        c.RoutePrefix = "swagger";  // Access at /swagger
-    });
-}
-```
-
-**Benefits:**
-
-- Auto-generated API documentation
-- Interactive testing interface (try it out)
-- Client code generation (OpenAPI Generator)
-- Better developer onboarding
-
-#### 7. **Implement Configuration Validation**
-
-```csharp
-// Strongly-typed configuration with FluentValidation
-<PackageReference Include="FluentValidation" Version="11.10.0" />
-
-public class DsmConfiguration
-{
-    [Required]
-    public string Host { get; set; } = String.Empty;
-    
-    [Range(1, 65535)]
-    public int Port { get; set; } = 443;
-    
-    [Range(1, 65535)]
-    public int HttpsPort { get; set; } = 443;
-}
-
-public class DsmConfigurationValidator : AbstractValidator<DsmConfiguration>
-{
-    public DsmConfigurationValidator()
-    {
-        RuleFor(x => x.Host)
-            .NotEmpty().WithMessage("DSM host is required")
-            .Matches(@"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$|^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$")
-            .WithMessage("Invalid host format");
-            
-        RuleFor(x => x.Port)
-            .InclusiveBetween(1, 65535).WithMessage("Port must be between 1 and 65535");
-    }
-}
-
-// Validate on startup
-var dsmConfig = configuration.GetSection("Dsm").Get<DsmConfiguration>() ?? new DsmConfiguration();
-var validator = new DsmConfigurationValidator();
-var result = validator.Validate(dsmConfig);
-
-if (!result.IsValid)
-{
-    logger.LogCritical("Invalid DSM configuration: {Errors}", String.Join("; ", result.Errors));
-    Environment.Exit(1);  // Fail fast
-}
-```
-
-**Benefits:**
-
-- Catch misconfigurations early (fail fast)
-- Strongly-typed configuration (no string keys)
-- Clear error messages for troubleshooting
-- Type-safe access to configuration values
-
-### Long-Term Strategic Improvements
-
-#### 8. **Consider Microservices Architecture**
-
-As the application grows, consider splitting into separate services:
-
-```
-┌─────────────────────────┐
-│   API Gateway           │  (Kong, YARP, or custom)
-└──────────┬──────────────┘
-           │
-    ┌──────┴───────┬─────────────┐
-    │              │             │
-┌───▼───┐    ┌────▼────┐   ┌────▼────┐
-│Website│    │  File   │   │ Framework│
-│ Service│    │ Service │   │ Service │
-└───────┘    └─────────┘   └─────────┘
-```
-
-**Benefits:**
-
-- Independent scaling (file operations can be resource-intensive)
-- Better isolation of concerns (failures don't cascade)
-- Easier maintenance (smaller codebases per service)
-- Technology agnosticism (each service can use best-fit tools)
-
-**Challenges:**
-
-- Increased operational complexity
-- Distributed tracing required
-- Service discovery needed
-- Data consistency across services
-
-#### 9. **Add Webhooks & Notifications**
-
-```csharp
-// Define webhook events
-public enum WebhookEventType
-{
-    WebsiteStarted,
-    WebsiteStopped,
-    WebsiteFailed,
-    FrameworkInstalled,
-    AuthenticationSuccess,
-    AuthenticationFailure
-}
-
-// Webhook payload
-public class WebhookPayload
-{
-    public WebhookEventType EventType { get; set; }
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-    public Dictionary<string, string> Data { get; set; } = [];
-}
-
-// Webhook service
-public interface IWebhookService
-{
-    Task NotifyAsync(WebhookEventType eventType, Dictionary<string, string> data);
-}
-
-// Implementation with multiple sinks
-public class WebhookService : IWebhookService
-{
-    private readonly List<Uri> _webhookUrls;
-    private readonly ILogger _logger;
-    
-    public async Task NotifyAsync(WebhookEventType eventType, Dictionary<string, string> data)
-    {
-        var payload = new WebhookPayload { EventType = eventType, Data = data };
-        
-        var notifyTasks = _webhookUrls.Select(async url =>
-        {
-            try
-            {
-                await _httpClient.PostAsJsonAsync(url, payload);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send webhook to {Url}", url);
-            }
-        });
-        
-        await Task.WhenAll(notifyTasks);
-    }
-}
-
-// Integration with:
-// - Slack/Discord for team alerts
-// - Email notifications (via SendGrid, SMTP)
-// - Custom webhook endpoints (monitoring systems)
-```
-
-#### 10. **Implement Feature Flags**
-
-```csharp
-// Use Microsoft.FeatureManagement
-<PackageReference Include="Microsoft.FeatureManagement" Version="4.0.0" />
-<PackageReference Include="Microsoft.FeatureManagement.AspNetCore" Version="4.0.0" />
-
-builder.Services.AddFeatureManagement()
-    .AddFeatureFlags(configuration);  // Load from appsettings.json
-
-// appsettings.json
-{
-  "FeatureManagement": {
-    "NewFilePicker": true,
-    "AdvancedReverseProxySettings": false,
-    "BetaUsers": {
-      "Name": "BetaUsers",
-      "EnabledFor": {
-        "Users": [ "admin", "beta-tester" ]
-      }
-    }
-  }
-}
-
-// Usage in Razor components
-@inject IFeatureManager FeatureManager
-
-@if (await FeatureManager.IsEnabledAsync("NewFilePicker"))
-{
-    <NewFilePickerComponent />
-}
-else
-{
-    <LegacyFilePickerComponent />
-}
-```
-
-**Benefits:**
-
-- Enable/disable features dynamically (no redeployment)
-- A/B testing capabilities
-- Gradual rollouts (canary deployments)
-- User-specific feature access
-
-#### 11. **Add Internationalization (i18n)**
-
-```csharp
-// Add localization support
-builder.Services.AddLocalization();
-builder.Services.AddRazorComponents()
-    .AddInteractiveWebAssemblyComponents()
-    .AddLocalization();
-
-// Resource files
-Resources/
-├── Messages.resx                   # English (default)
-├── Messages.fr.resx                # French
-├── Messages.de.resx                # German
-└── Messages.zh-Hans.resx           # Simplified Chinese
-
-// Usage in Razor components
-@inject IStringLocalizer<Messages> Localizer
-
-<h1>@Localizer["WelcomeMessage"]</h1>
-<FluentButton>@Localizer["StartButton"]</FluentButton>
-
-// Usage in C# code
-logger.LogInformation(Localizer["WebsiteStarted"].Name, siteName);  // Localized log message
-```
-
-**Benefits:**
-
-- Multi-language UI support
-- Better user experience for non-English speakers
-- Easier to maintain translations (centralized resource files)
-- Culture-aware formatting (dates, numbers, currencies)
-
-### Code Quality Recommendations
-
-#### 12. **Enforce Coding Standards with .editorconfig**
-
-```ini
-# .editorconfig (root of repository)
-[*.cs]
-indent_style = space
-indent_size = 4
-end_of_line = crlf
-charset = utf-8-bom
-
-# C# specific rules
-csharp_curly_braces_for_control_blocks = require_for_multiline
-csharp_new_line_before_opening_brace = false
-csharp_namespace_declaration = require_always
-csharp_use_var = never_built_in_types
-
-# Naming conventions
-dotnet_naming_rule.require_pascal_case.severity = error
-dotnet_naming_rule.require_pascal_case.symbols = dotnet_naming_symbols.types
-dotnet_naming_symbols.types.style = dotnet_naming_styles.pascal_case
-
-# XML documentation requirements
-dotnet_diagnostic.S125.severity = warning  # Methods should not have too many parameters
-dotnet_diagnostic.S3934.severity = warning # Simulate "should not be empty"
-```
-
-#### 13. **Add Roslyn Analyzers**
-
-```xml
-<!-- Add to Directory.Build.props or individual projects -->
-<ItemGroup>
-  <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0">
-    <PrivateAssets>all</PrivateAssets>
-    <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-  </PackageReference>
-  
-  <!-- StyleCop Analyzers for consistent coding style -->
-  <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
-    <PrivateAssets>all</PrivateAssets>
-    <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-  </PackageReference>
-  
-  <!-- SonarAnalyzer for code quality -->
-  <PackageReference Include="SonarAnalyzer.CSharp" Version="9.24.0.97167">
-    <PrivateAssets>all</PrivateAssets>
-    <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-  </PackageReference>
-</ItemGroup>
-```
-
-#### 14. **Add Integration Tests with TestContainer**
-
-```csharp
-<PackageReference Include="Testcontainers" Version="4.0.0" />
-
-public class DsmApiClientTests : IClassFixture<DsmContainerFixture>
-{
-    private readonly DsmContainer _container;
-    
-    public DsmApiClientTests(DsmContainerFixture fixture)
-    {
-        _container = fixture.Container;
-    }
-    
-    [Fact]
-    public async Task ConnectAsync_WithValidCredentials_ReturnsTrue()
-    {
-        // Arrange
-        var logger = new Mock<ILogger<DsmApiClient>>().Object;
-        var httpClientFactory = new Mock<IHttpClientFactory>();
-        httpClientFactory.Setup(x => x.CreateClient(It.IsAny<string>()))
-            .Returns(_container.CreateHttpClient());
-            
-        var client = new DsmApiClient(httpClientFactory.Object, logger);
-        
-        // Act
-        var result = await client.ConnectAsync(new LoginModel
-        {
-            Login = _container.Username,
-            Password = _container.Password
-        });
-        
-        // Assert
-        Assert.True(result);
-        Assert.NotEmpty(client.Sid);
-    }
-}
-
-public class DsmContainerFixture : IDisposable
-{
-    public DsmContainer Container { get; } = new DsmBuilder()
-        .WithUsername("admin")
-        .WithPassword("password")
-        .Build();
-        
-    public void Dispose() => Container.Dispose();
-}
-```
+### Immediate Priorities
+
+1. **Unit Test Implementation**
+   - Start with `WebSiteHostingService` (core business logic)
+   - Mock `DsmApiClient` for integration tests
+   - Target 80%+ code coverage on critical paths
+
+2. **Certificate Management**
+   - Add UI for SSL certificate selection per website
+   - Integrate with DSM's certificate API
+   - Support Let's Encrypt automation
+
+3. **Enhanced Logging**
+   - Add correlation IDs for request tracing
+   - Implement log aggregation (e.g., ELK stack)
+   - Route application stdout/stderr to downloadable logs
+
+### Medium-Term Improvements
+
+1. **Multi-Language Support**
+   - Implement resource files (.resx) for UI strings
+   - Add language selection in settings
+   - Support RTL layouts
+
+2. **Health Checks**
+   - Add `/health` endpoint for monitoring
+   - Check website responsiveness
+   - Monitor DSM API connectivity
+
+3. **Configuration Migration**
+   - Version `websites.json` schema
+   - Implement migration tool for schema evolution
+   - Add backup/restore functionality
+
+### Long-Term Vision
+
+1. **Database Integration**
+   - Migrate from JSON to SQLite/PostgreSQL
+   - Enable complex queries and reporting
+   - Support multi-user scenarios
+
+2. **Advanced Features**
+   - Deploy from compressed files (ZIP/TAR)
+   - Application templates marketplace
+   - Automated backups and restores
+
+3. **Architecture Evolution**
+   - Consider CQRS pattern for scalability
+   - Implement event sourcing for audit trail
+   - Evaluate full WebAssembly migration (.NET 10+)
 
 ---
 
-## Conclusion
+## Appendix
 
-**ASkyl.Dsm.WebHosting** is a well-architected .NET 10 application that effectively manages web applications on Synology DSM devices. The solution demonstrates modern C# development practices with clean architecture, type safety, and performance optimization.
+### A. API Route Summary
 
-### Strengths
+| Controller | Route | Method | Purpose |
+|------------|-------|--------|---------|
+| AuthenticationController | `/api/authentication/status` | GET | Check auth state |
+| AuthenticationController | `/api/authentication/login` | POST | Authenticate user |
+| AuthenticationController | `/api/authentication/logout` | POST | Clear session |
+| WebsiteHostingController | `/api/websites/all` | GET | List all websites |
+| WebsiteHostingController | `/api/websites/add` | POST | Create website |
+| WebsiteHostingController | `/api/websites/update` | POST | Update website |
+| WebsiteHostingController | `/api/websites/remove/{id}` | DELETE | Remove website |
+| WebsiteHostingController | `/api/websites/start/{id}` | POST | Start website |
+| WebsiteHostingController | `/api/websites/stop/{id}` | POST | Stop website |
+| FileManagementController | `/api/filemanagement/*` | * | File operations |
+| FrameworkManagementController | `/api/frameworkmanagement/*` | * | .NET installation |
+| RuntimeManagementController | `/api/runtime/*` | * | Version detection |
+| LogDownloadController | `/api/logdownload/*` | * | Log retrieval |
 
-✅ **Clean Architecture:** Clear separation of concerns across 9 projects with well-defined responsibilities  
-✅ **Modern Patterns:** Result pattern, DI, service facade, builder pattern, strategy pattern  
-✅ **Type Safety:** Strong-typed API models, data annotations, source generators for clone methods  
-✅ **Performance:** Benchmark-driven optimizations, async/await best practices, efficient memory usage  
-✅ **Maintainability:** Centralized constants (no magic strings), comprehensive logging with Serilog  
-✅ **Developer Experience:** Source generators reduce boilerplate, FluentUI provides consistent UI  
-✅ **Hybrid Rendering:** Blazor InteractiveWebAssembly for optimal server-client balance  
+### B. DSM API Reference
 
-### Areas for Enhancement
+**Authentication:**
 
-⚠️ **Testing:** Add unit and integration tests (currently minimal test coverage)  
-⚠️ **Resilience:** Implement retry policies with Polly for DSM API calls  
-⚠️ **Observability:** Add health checks, metrics collection, enhanced audit logging  
-⚠️ **Documentation:** API docs (OpenAPI/Swagger), Architecture Decision Records (ADRs), operational runbooks  
-⚠️ **Caching:** Implement distributed caching for frequently accessed data  
-⚠️ **Security:** Add rate limiting, request throttling, audit trail for sensitive operations  
+- `auth.login` - User authentication
+- `auth.logout` - Session termination
+- `auth.multifactor.login` - OTP authentication
 
-### Final Recommendations Priority
+**FileStation:**
 
-**High Priority (Next Sprint):**
+- `util.list` - Directory listing
+- `file.download` - File download
+- `core.acl.set` - ACL permission setting
 
-1. ✅ Add unit tests for service layer (xUnit + Moq)
-2. ✅ Implement retry policy with Polly (exponential backoff)
-3. ✅ Add structured audit logging (operation tracking, duration metrics)
+**ReverseProxy:**
 
-**Medium Priority (Next Quarter):**
+- `list` - List all proxies
+- `add` - Create proxy rule
+- `set` - Update proxy rule
+- `delete` - Remove proxy rule
 
-1. ✅ Add health checks and monitoring endpoints (`/health`, `/ready`)
-2. ✅ Implement caching layer for DSM API information (5-minute TTL)
-3. ✅ Create OpenAPI documentation with Swashbuckle (developer onboarding)
-4. ✅ Add configuration validation with FluentValidation (fail fast on startup)
+### C. Version History
 
-**Long-Term Strategic:**
-
-1. Consider microservices split when feature set grows significantly
-2. Add internationalization support for multi-language UI
-3. Implement feature flags for gradual rollouts and A/B testing
-4. Add webhook notifications for external system integration
-
----
-
-## Document Metadata
-
-**Version:** 1.0 (Updated for solution version 0.5.1)  
-**Author:** AI Assistant (based on comprehensive code analysis)  
-**Review Status:** Ready for team review  
-**Next Review Date:** Upon next major release (v1.0.0)  
-
-**Analysis Scope:**
-
-- All 9 projects in the solution
-- Program.cs configuration and middleware pipeline
-- Controller implementations and API endpoints
-- Service interfaces and implementations
-- Data models and domain entities
-- Build configuration (Directory.Build.props, .csproj files)
-- Docker support and deployment scripts
+| Version | Date | Changes |
+|---------|------|---------|
+| 0.5.2 | March 2026 | Architecture documentation update, version bump |
+| 0.5.1 | Earlier | Initial architecture documentation |
+| ... | ... | Previous versions |
 
 ---
 
-*This document was generated automatically based on comprehensive analysis of the source code, project structure, build configuration, and architectural patterns. Last updated: March 2026.*
+**Document Maintained By:** AI Assistant (Qwen Code)  
+**Last Review Date:** March 26, 2026  
+**Next Review Date:** TBD (after major feature implementation)
