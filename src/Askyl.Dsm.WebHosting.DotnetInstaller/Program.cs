@@ -1,11 +1,19 @@
-﻿using Askyl.Dsm.WebHosting.Tools.Infrastructure;
+﻿using Microsoft.Extensions.Logging;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 
 Console.WriteLine("Starting");
 
 FileManager.Initialize();
 
-var fileName = await Downloader.DownloadToAsync(true);
+// Create a simple console logger for the standalone application
+var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var logger = loggerFactory.CreateLogger<PlatformInfoService>();
+
+var platformInfo = new PlatformInfoService(logger);
+var downloader = new Downloader(platformInfo);
+
+var fileName = await downloader.DownloadToAsync(true);
 ArchiveExtractor.Decompress(fileName);
 
 Console.WriteLine("Done");

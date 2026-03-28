@@ -11,7 +11,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// This service is registered in Ui only (server-side) since it requires access to
 /// the file system for .NET installation detection.
 /// </summary>
-public class DotnetVersionService : IDotnetVersionService
+public class DotnetVersionService(Downloader downloader) : IDotnetVersionService
 {
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync()
     {
@@ -58,7 +58,7 @@ public class DotnetVersionService : IDotnetVersionService
         {
             await GetInstalledVersionsAsync();
 
-            var channels = await Downloader.GetAspNetCoreChannelsAsync();
+            var channels = await downloader.GetAspNetCoreChannelsAsync();
 
             var channelList = channels.Select(channel => AspNetChannel.FromReleaseInfo(channel)).ToList();
             return ChannelsResult.CreateSuccess(channelList);
@@ -73,7 +73,7 @@ public class DotnetVersionService : IDotnetVersionService
     {
         try
         {
-            var releases = await Downloader.GetAspNetCoreReleasesAsync(channel);
+            var releases = await downloader.GetAspNetCoreReleasesAsync(channel);
 
             var releaseList = releases.Select(release =>
             {

@@ -2,15 +2,19 @@ using Microsoft.Extensions.Logging;
 
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
-using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
-public class FrameworkManagementService(IDotnetVersionService dotnetVersionService, ILogger<FrameworkManagementService> logger) : IFrameworkManagementService
+public class FrameworkManagementService(
+    IDotnetVersionService dotnetVersionService,
+    IPlatformInfo platformInfo,
+    Downloader downloader,
+    ILogger<FrameworkManagementService> logger) : IFrameworkManagementService
 {
     private readonly IDotnetVersionService _dotnetVersionService = dotnetVersionService;
 
@@ -27,7 +31,7 @@ public class FrameworkManagementService(IDotnetVersionService dotnetVersionServi
             FileManager.Initialize(ApplicationConstants.RuntimesRootPath);
 
             // Download the specific framework version
-            var fileName = await Downloader.DownloadVersionToAsync(version, channel, true);
+            var fileName = await downloader.DownloadVersionToAsync(version, channel, true);
 
             // Extract and install
             ArchiveExtractor.Decompress(fileName);
@@ -90,7 +94,7 @@ public class FrameworkManagementService(IDotnetVersionService dotnetVersionServi
 
     private async Task EnsureUninstallAllowedForChannelAsync(string version)
     {
-        var configuredChannel = PlatformInfo.ChannelVersion;
+        var configuredChannel = platformInfo.ChannelVersion;
 
         if (String.IsNullOrWhiteSpace(configuredChannel))
         {

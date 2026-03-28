@@ -3,7 +3,9 @@ using Serilog;
 
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
+using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -39,6 +41,12 @@ builder.Services.AddRazorComponents()
 // Register DSM API client and authentication facade
 builder.Services.AddSingleton<DsmApiClient>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+
+// Register platform info service (singleton - platform detection happens once at startup)
+builder.Services.AddSingleton<IPlatformInfo, PlatformInfoService>();
+
+// Register downloader service (depends on IPlatformInfo)
+builder.Services.AddSingleton<Downloader>();
 
 // Register services for runtime/framework management
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
