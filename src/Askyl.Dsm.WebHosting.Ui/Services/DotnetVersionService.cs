@@ -11,13 +11,13 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// This service is registered in Ui only (server-side) since it requires access to
 /// the file system for .NET installation detection.
 /// </summary>
-public class DotnetVersionService(IDownloaderService downloader) : IDotnetVersionService
+public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
 {
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var versions = await VersionsDetector.GetInstalledVersionsAsync();
+            var versions = await versionsDetector.GetInstalledVersionsAsync();
             return InstalledVersionsResult.CreateSuccess(versions);
         }
         catch (Exception ex)
@@ -30,7 +30,7 @@ public class DotnetVersionService(IDownloaderService downloader) : IDotnetVersio
     {
         try
         {
-            var isInstalled = await VersionsDetector.IsChannelInstalledAsync(channel, frameworkType);
+            var isInstalled = versionsDetector.IsChannelInstalled(channel, frameworkType);
             return ApiResultBool.CreateSuccess(isInstalled);
         }
         catch (Exception ex)
@@ -43,13 +43,22 @@ public class DotnetVersionService(IDownloaderService downloader) : IDotnetVersio
     {
         try
         {
-            var isInstalled = await VersionsDetector.IsVersionInstalledAsync(version, frameworkType);
+            var isInstalled = versionsDetector.IsVersionInstalled(version, frameworkType);
             return ApiResultBool.CreateSuccess(isInstalled);
         }
         catch (Exception ex)
         {
             return ApiResultBool.CreateFailure($"Failed to check if version '{version}' is installed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Forces a cache refresh by re-executing dotnet --info.
+    /// Call this after install/uninstall operations.
+    /// </summary>
+    public async Task RefreshCacheAsync()
+    {
+        await versionsDetector.RefreshCacheAsync();
     }
 
     public async Task<ChannelsResult> GetChannelsAsync(CancellationToken cancellationToken = default)

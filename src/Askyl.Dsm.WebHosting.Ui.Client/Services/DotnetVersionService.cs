@@ -44,4 +44,11 @@ public class DotnetVersionService(IHttpClientFactory httpClientFactory) : IDotne
         var url = RuntimeManagementRoutes.ReleasesWithStatusFullRoute(channel);
         return await _httpClient.GetJsonOrDefaultAsync<ReleasesResult>(url, () => ReleasesResult.CreateFailure($"Failed to load releases for channel '{channel}'"), cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task RefreshCacheAsync()
+    {
+        // Client-side: Just reload versions which will get fresh data from server
+        await GetInstalledVersionsAsync(CancellationToken.None);
+    }
 }

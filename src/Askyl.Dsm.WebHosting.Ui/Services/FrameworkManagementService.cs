@@ -32,8 +32,8 @@ public class FrameworkManagementService(
             // Extract and install
             archiveExtractor.Decompress(fileName);
 
-            // Refresh the cache to detect the new installation
-            await _dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);
+            // Force cache refresh to detect the new installation
+            await _dotnetVersionService.RefreshCacheAsync();
 
             logger.LogInformation("ASP.NET Core {Version} installed successfully", version);
             return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been installed successfully.");
@@ -64,8 +64,8 @@ public class FrameworkManagementService(
             fileManager.DeleteDirectory($"shared/Microsoft.AspNetCore.App/{version}");
             fileManager.DeleteDirectory($"shared/Microsoft.NETCore.App/{version}");
 
-            // Refresh the cache to detect the removal
-            await _dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);
+            // Force cache refresh to detect the removal
+            await _dotnetVersionService.RefreshCacheAsync();
 
             logger.LogInformation("ASP.NET Core {Version} uninstalled successfully", version);
             return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been uninstalled successfully.");

@@ -54,6 +54,9 @@ builder.Services.AddScoped<IArchiveExtractorService, ArchiveExtractorService>();
 // Register downloader service (Scoped - depends on Scoped IFileManagerService)
 builder.Services.AddScoped<IDownloaderService, DownloaderService>();
 
+// Register versions detector service (Singleton - caches expensive dotnet --info output)
+builder.Services.AddSingleton<IVersionsDetectorService, VersionsDetectorService>();
+
 // Register services for runtime/framework management
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
 builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();

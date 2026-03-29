@@ -1,5 +1,4 @@
 using Askyl.Dsm.WebHosting.Constants.Runtime;
-using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Results;
 
 namespace Askyl.Dsm.WebHosting.Data.Contracts;
@@ -48,4 +47,10 @@ public interface IDotnetVersionService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A ReleasesResult containing a list of AspNetRelease objects with installation status.</returns>
     Task<ReleasesResult> GetReleasesWithStatusAsync(string channel, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Forces a cache refresh by re-executing dotnet --info.
+    /// Call this after install/uninstall operations to update cached data.
+    /// </summary>
+    Task RefreshCacheAsync();
 }
