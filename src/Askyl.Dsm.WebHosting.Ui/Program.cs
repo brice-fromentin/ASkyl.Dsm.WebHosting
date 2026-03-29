@@ -3,7 +3,9 @@ using Serilog;
 
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
+using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -39,6 +41,21 @@ builder.Services.AddRazorComponents()
 // Register DSM API client and authentication facade
 builder.Services.AddSingleton<DsmApiClient>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+
+// Register platform info service (singleton - platform detection happens once at startup)
+builder.Services.AddSingleton<IPlatformInfoService, PlatformInfoService>();
+
+// Register file manager service with configured root path for runtimes
+builder.Services.AddScoped<IFileManagerService>(sp => new FileManagerService(sp.GetRequiredService<ILogger<FileManagerService>>(), ApplicationConstants.RuntimesRootPath));
+
+// Register archive extractor service (Scoped - depends on Scoped IFileManagerService)
+builder.Services.AddScoped<IArchiveExtractorService, ArchiveExtractorService>();
+
+// Register downloader service (Scoped - depends on Scoped IFileManagerService)
+builder.Services.AddScoped<IDownloaderService, DownloaderService>();
+
+// Register versions detector service (Singleton - caches expensive dotnet --info output)
+builder.Services.AddSingleton<IVersionsDetectorService, VersionsDetectorService>();
 
 // Register services for runtime/framework management
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();

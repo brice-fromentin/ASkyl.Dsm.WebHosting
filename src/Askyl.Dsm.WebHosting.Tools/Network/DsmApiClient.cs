@@ -36,28 +36,6 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
     public void SetSid(string sid) => _sid = sid;
 
     /// <summary>
-    /// Validates the current session by making a lightweight API call.
-    /// </summary>
-    public async Task<bool> ValidateSessionAsync()
-    {
-        if (String.IsNullOrEmpty(_sid))
-        {
-            return false;
-        }
-
-        try
-        {
-            var parameters = new InformationsQueryParameters(ApiInformations);
-            var result = await ExecuteAsync<ApiInformationResponse>(parameters);
-            return result?.Success == true && result.Data is not null && result.Data.Count > 0;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
     /// Disconnects and clears the session.
     /// </summary>
     public async Task DisconnectAsync()

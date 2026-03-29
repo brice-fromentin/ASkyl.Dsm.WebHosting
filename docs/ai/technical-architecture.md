@@ -1,8 +1,8 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.2
+**Version:** 0.5.3
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** March 26, 2026
+**Last Updated:** March 29, 2026
 
 ---
 
@@ -43,12 +43,16 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - **Centralized Constants:** All magic strings/numbers extracted to dedicated Constants project
 - **Background Service:** Website hosting service runs as singleton hosted service for lifecycle management
 
-**Current Status (v0.5.2):**
+**Current Status (v0.5.3):**
 
 - ✅ Blazor Server + Interactive WebAssembly hybrid rendering
 - ✅ DSM API integration (Authentication, FileStation, ReverseProxy)
 - ✅ Website lifecycle management with process control
 - ✅ JSON-based configuration persistence
+- ✅ **Infrastructure services refactored to DI-based architecture** (PlatformInfoService, FileManagerService, ArchiveExtractorService, DownloaderService, VersionsDetectorService)
+- ✅ **Smart caching strategy** for expensive operations (VersionsDetectorService with lazy initialization)
+- ✅ **Full CancellationToken support** across all async operations
+- ✅ **All static classes converted** to injectable services for testability
 - ⏳ TODO: Certificate management for reverse proxy
 - ⏳ TODO: Multi-language support
 - ⏳ TODO: Unit test implementation
@@ -60,7 +64,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 ### Solution Structure
 
 ```
-Askyl.Dsm.WebHosting.slnx (Version 0.5.2)
+Askyl.Dsm.WebHosting.slnx (Version 0.5.3)
 ├── Askyl.Dsm.WebHosting.Benchmarks         # Performance benchmarks (BenchmarkDotNet)
 ├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
 ├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
@@ -86,11 +90,11 @@ Askyl.Dsm.WebHosting.slnx (Version 0.5.2)
 All projects share common build settings from `Directory.Build.props`:
 
 ```xml
-<Version>0.5.2</Version>
-<AssemblyVersion>0.5.2.0</AssemblyVersion>
-<FileVersion>0.5.2.0</FileVersion>
-<InformationalVersion>0.5.2</InformationalVersion>
-<PackageVersion>0.5.2</PackageVersion>
+<Version>0.5.3</Version>
+<AssemblyVersion>0.5.3.0</AssemblyVersion>
+<FileVersion>0.5.3.0</FileVersion>
+<InformationalVersion>0.5.3</InformationalVersion>
+<PackageVersion>0.5.3</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -211,13 +215,18 @@ Data/
 │   └── GenerateCloneAttribute.cs           # Source generator trigger (backup)
 ├── Contracts/                              # Service interfaces
 │   ├── IAuthenticationService.cs           # Authentication facade
-│   ├── IDotnetVersionService.cs            # .NET version detection
+│   ├── IDotnetVersionService.cs            # .NET version detection (with RefreshCacheAsync)
 │   ├── IFileSystemService.cs               # File system operations
 │   ├── IFrameworkManagementService.cs      # Framework installation
 │   ├── ILogDownloadService.cs              # Log file retrieval
 │   ├── IReverseProxyManagerService.cs      # Proxy configuration
 │   ├── IWebSiteHostingService.cs           # Website lifecycle
-│   └── IWebSitesConfigurationService.cs    # Configuration persistence
+│   ├── IWebSitesConfigurationService.cs    # Configuration persistence
+│   ├── IPlatformInfoService.cs             # Platform detection (Singleton)
+│   ├── IFileManagerService.cs              # File management (Scoped, configurable root)
+│   ├── IArchiveExtractorService.cs         # Archive extraction (Scoped)
+│   ├── IDownloaderService.cs               # .NET downloads with cancellation (Scoped)
+│   └── IVersionsDetectorService.cs         # Version detection with smart caching (Singleton)
 ├── Domain/                                 # Domain models
 │   ├── Authentication/                     # Auth-related models
 │   │   └── LoginCredentials.cs             # Login credentials
@@ -287,52 +296,50 @@ Data/
 Tools/
 ├── Extensions/                             # Extension methods
 │   └── UriExtensions.cs                    # URI manipulation helpers
-├── Infrastructure/                         # Infrastructure utilities
-│   ├── ArchiveExtractor.cs                 # gzip + tar extraction
-│   ├── FileManager.cs                      # File system initialization
-│   └── PlatformInfo.cs                     # Platform detection
+├── Infrastructure/                         # Infrastructure utilities (DI-based)
+│   ├── ArchiveExtractorService.cs          # gzip + tar extraction (implements IArchiveExtractorService)
+│   └── FileManagerService.cs               # File system initialization (implements IFileManagerService)
+│   └── PlatformInfoService.cs              # Platform detection (implements IPlatformInfoService)
 ├── Network/                                # Network communication
 │   └── DsmApiClient.cs                     # Centralized DSM API client
-├── Runtime/                                # .NET runtime management
-│   ├── Downloader.cs                       # Binary download utility
-│   └── VersionsDetector.cs                 # Available versions detection
-└── Threading/                              # Async utilities
+└── Runtime/                                # .NET runtime management (DI-based)
+    ├── DownloaderService.cs                # Binary download utility (implements IDownloaderService)
+    └── VersionsDetectorService.cs          # Version detection with smart caching (implements IVersionsDetectorService)
 ```
+
+**Infrastructure Services Architecture:**
+
+The Tools project contains DI-based infrastructure services for platform detection, file management, archive extraction, and .NET runtime operations.
+
+| Service | Interface | Lifetime | Key Features | Dependencies | Source File |
+|---------|-----------|----------|--------------|--------------|-------------|
+| **PlatformInfoService** | `IPlatformInfoService` | Singleton | Platform detection, config loading | ILogger | `Tools/Infrastructure/PlatformInfoService.cs` |
+| **FileManagerService** | `IFileManagerService` | Scoped | Directory management, configurable root path | ILogger, string rootPath | `Tools/Infrastructure/FileManagerService.cs` |
+| **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz extraction | IFileManagerService | `Tools/Infrastructure/ArchiveExtractorService.cs` |
+| **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | IPlatformInfoService, IFileManagerService | `Tools/Runtime/DownloaderService.cs` |
+| **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | None (stateful singleton) | `Tools/Runtime/VersionsDetectorService.cs` |
+
+**Key Design Decisions:**
+
+1. **Singleton Services (Stateful):** Platform info loaded once at startup; VersionsDetector caches expensive process output
+2. **Scoped Services (Request-bound):** FileManager configured per-request via factory lambda; ArchiveExtractor and Downloader depend on Scoped FileManager
+3. **Smart Caching Strategy:** VersionsDetectorService uses lazy initialization with explicit cache refresh (`RefreshCacheAsync()` called after install/uninstall operations) - see `VersionsDetectorService.cs` lines 28-50
+4. **CancellationToken Support:** All DownloaderService public methods accept optional CancellationToken for cooperative cancellation flow from UI to infrastructure layer
 
 **DsmApiClient Implementation:**
 
-```csharp
-public class DsmApiClient : IDisposable
-{
-    // Properties
-    public string Sid { get; }                    // Session ID
-    public bool IsConnected { get; }              // Connection status
-    public ApiInformationCollection ApiInformations { get; }  // API metadata
-
-    // Public Methods
-    public void SetSid(string sid)                // Restore session from storage
-    public async Task<bool> ConnectAsync(LoginCredentials model)   // Full handshake + auth
-    public async Task<bool> ValidateSessionAsync()           // Lightweight validation
-    public async Task DisconnectAsync()                      // Clear session
-    public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)  // Generic API call
-}
-```
-
-**Connection Flow:**
-
-1. **ReadSettings():** Load server configuration from `/etc/synoinfo.conf` (host, port)
-2. **HandShakeAsync():** Query `SYNO.API.Info` to populate ApiInformations
-3. **AuthenticateAsync():** Login via `auth.login` API, receive SID
-4. **Session Persistence:** Store SID in HTTP headers (`ssid=...`)
+See `Tools/Network/DsmApiClient.cs` for full implementation.
 
 **Key Features:**
+- Singleton pattern (registered in DI container)
+- Session management with SID validation and restoration
+- Automatic serialization based on `IApiParameters.SerializationFormat`
+- Strategy pattern for Form vs JSON serialization
+- Error handling with structured logging via Serilog
+- HttpClient factory integration for proper lifecycle management
+- All infrastructure services testable via interface abstractions
 
-- **Singleton pattern** for DSM client (registered in DI container)
-- **Session management** with SID validation and restoration
-- **Automatic serialization** based on `IApiParameters.SerializationFormat`
-- **Strategy pattern** for Form vs JSON serialization
-- **Error handling** with structured logging via Serilog
-- **HttpClient factory** integration for proper lifecycle management
+**Connection Flow:** See `DsmApiClient.cs` lines 85-120
 
 ### 5. Askyl.Dsm.WebHosting.Ui
 
@@ -374,77 +381,38 @@ Ui/
 
 **Program.cs Configuration:**
 
-```csharp
-// Logging setup
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .CreateLogger();
-builder.Host.UseSerilog();
+See `Ui/Program.cs` for full implementation. Key registration patterns:
 
-// Session services (authentication persistence)
-builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSession(options =>
-{
-    options.Cookie.Name = "ADWH.Session";
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.Strict;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
-});
+**Service Registration Summary:**
 
-// HTTP client factory
-builder.Services.AddHttpClient();
+| Lifetime | Services | Notes |
+|----------|----------|-------|
+| **Singleton** | DsmApiClient, IPlatformInfoService, IVersionsDetectorService, WebSiteHostingService | Stateful services, caching, background service |
+| **Scoped (Factory)** | IFileManagerService | Factory lambda injects ILogger + configures root path |
+| **Scoped** | IArchiveExtractorService, IDownloaderService, IAuthenticationService, IDotnetVersionService, IFrameworkManagementService, ILogDownloadService | Request-bound services |
 
-// FluentUI components
-builder.Services.AddFluentUIComponents();
+**Key Configuration Points:**
+- Session middleware configured with 30-minute timeout (see `Program.cs` lines 25-33)
+- FileManagerService uses factory pattern: `sp => new FileManagerService(sp.GetRequiredService<ILogger<FileManagerService>>(), ApplicationConstants.RuntimesRootPath)`
+- VersionsDetectorService registered as Singleton for effective caching across requests
+- All infrastructure services follow dependency hierarchy (Scoped can depend on Singleton, not vice versa)
 
-// HttpContext accessor (required for Blazor server-side)
-builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+**Middleware Pipeline:** See `Program.cs` lines 85-95
+1. UsePathBase("/adwh") - Sub-path support
+2. UseSession() - Session before antiforgery
+3. UseRouting() + MapControllers() - API endpoints
+4. UseAntiforgery() - CSRF protection
+5. MapRazorComponents with InteractiveWebAssembly render mode
 
-// Controllers (no API versioning, PascalCase JSON)
-builder.Services.AddControllers()
-    .AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
-
-// Razor components with hybrid rendering
-builder.Services.AddRazorComponents()
-                .AddInteractiveWebAssemblyComponents();
-
-// DSM integration services
-builder.Services.AddSingleton<DsmApiClient>();
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
-builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
-builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();
-builder.Services.AddSingleton<IFileSystemService, FileSystemService>();
-builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
-
-// Website hosting services (singleton background service)
-builder.Services.AddSingleton<IReverseProxyManagerService, ReverseProxyManagerService>();
-builder.Services.AddSingleton<IWebSitesConfigurationService, WebSitesConfigurationService>();
-builder.Services.AddSingleton<WebSiteHostingService>();
-builder.Services.AddSingleton<IWebSiteHostingService>(sp => sp.GetRequiredService<WebSiteHostingService>());
-builder.Services.AddHostedService(sp => sp.GetRequiredService<WebSiteHostingService>());
-
-// Middleware pipeline
-app.UsePathBase(ApplicationConstants.ApplicationUrlSubPath);  // Sub-path support (/adwh)
-app.UseSession();                                              // Session before antiforgery
-app.UseRouting();
-app.MapControllers();                                          // API endpoints
-app.UseAntiforgery();                                           // CSRF protection
-app.MapStaticAssets();
-app.MapRazorComponents<App>()
-    .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(Ui.Client._Imports).Assembly);
-```
-
-**Key Features:**
-
-- **Hybrid rendering:** Server-side auth + client-side interactivity (InteractiveWebAssembly)
-- **Session-based authentication** with DSM SID persistence in ASP.NET Core session
-- **Background service** for website lifecycle management (starts/stops on host lifecycle)
-- **FluentUI components** for consistent UI/UX across all pages
-- **Structured logging** with Serilog (configuration-based setup)
-- **Antiforgery protection** for Blazor and API endpoints
-- **Sub-path support** via `UsePathBase("/adwh")` for reverse proxy deployment
+**Key Features:** See `Ui/Program.cs` comments for detailed explanations
+- Hybrid rendering: Server-side auth + client-side interactivity (InteractiveWebAssembly)
+- Session-based authentication with DSM SID persistence in ASP.NET Core session
+- Background service for website lifecycle management (starts/stops on host lifecycle)
+- FluentUI components for consistent UI/UX across all pages
+- Structured logging with Serilog (configuration-based setup)
+- Antiforgery protection for Blazor and API endpoints
+- Sub-path support via `UsePathBase("/adwh")` for reverse proxy deployment
+- DI-based infrastructure services with optimized lifetimes (Singleton/Scoped hierarchy)
 
 ### 6. Askyl.Dsm.WebHosting.Ui.Client
 
@@ -499,22 +467,21 @@ Ui.Client/
 
 **Purpose:** Standalone console utility for .NET runtime installation on Synology NAS
 
-**Implementation:**
-
-```csharp
-// Program.cs - Simplified installation flow
-FileManager.Initialize();                          // Set up file system paths
-var fileName = await Downloader.DownloadToAsync(true);  // Download from Microsoft
-ArchiveExtractor.Decompress(fileName);            // Extract gzip + tar archive
-```
+**Implementation:** See `DotnetInstaller/Program.cs` - manually instantiates infrastructure services without full DI container:
+- Creates ILogger instances via LoggerFactory with console provider
+- Instantiates PlatformInfoService, FileManagerService (with root path = "")
+- Initializes FileManager to create default directories
+- Creates DownloaderService and ArchiveExtractorService with dependencies
+- Calls `downloader.DownloadToAsync(true, CancellationToken.None)` then `archiveExtractor.Decompress(fileName)`
 
 **Key Features:**
-
-- **Standalone executable** (no UI dependencies)
-- **Automatic download** from Microsoft .NET release repositories
-- **Architecture detection** for correct binary selection (x64, ARM, etc.)
-- **Extraction utilities** for gzip + tar.gz archives
-- **File system initialization** for Synology-specific paths
+- Standalone executable (no UI dependencies)
+- Manual DI instantiation for console application scenario
+- Automatic download from Microsoft .NET release repositories
+- Architecture detection via PlatformInfoService for correct binary selection
+- Extraction utilities for gzip + tar.gz archives via ArchiveExtractorService
+- File system initialization with configurable root path
+- CancellationToken support for cooperative cancellation
 
 ### 8. Askyl.Dsm.WebHosting.Benchmarks
 
@@ -578,28 +545,40 @@ public static partial class HelloWorldExtensions
 
 ### 1. Dependency Injection (DI)
 
-**Implementation:**
-
-```csharp
-// Program.cs - Service registration with explicit lifecycles
-
-// Singleton: Shared across entire application lifetime
-builder.Services.AddSingleton<DsmApiClient>();
-builder.Services.AddSingleton<IReverseProxyManagerService, ReverseProxyManagerService>();
-builder.Services.AddSingleton<WebSiteHostingService>();  // Background service
-
-// Scoped: New instance per HTTP request
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
-builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
-builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();
-builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
-```
+**Service Registration:** See `Ui/Program.cs` lines 45-78 for full implementation.
 
 **Patterns Used:**
 
-- **Singleton:** `DsmApiClient`, `ReverseProxyManagerService`, configuration services, background services
-- **Scoped:** UI services (auth, file system, framework management) - one per request
-- **Background Service:** `WebSiteHostingService` implements `IHostedService` for lifecycle management
+- **Singleton:** DsmApiClient, platform info, versions detector (with caching), configuration services, background services
+- **Scoped:** File manager (with factory lambda for root path), archive extractor, downloader, UI services - one per request
+- **Background Service:** WebSiteHostingService implements IHostedService for lifecycle management
+
+**Service Lifetime Hierarchy:**
+
+```
+Singleton (Application-wide)
+├── DsmApiClient
+├── PlatformInfoService (platform detection, config loading)
+├── VersionsDetectorService (smart caching for dotnet --info)
+└── WebSiteHostingService (background service)
+
+Scoped (Per HTTP request)
+├── FileManagerService (configured via factory with root path)
+│   └── ArchiveExtractorService (depends on FileManagerService)
+│   └── DownloaderService (depends on PlatformInfoService + FileManagerService)
+│       └── DotnetVersionService (depends on VersionsDetectorService + DownloaderService)
+│       └── FrameworkManagementService (depends on all above services)
+├── AuthenticationService
+└── LogDownloadService
+```
+
+**Key Design Principles:**
+
+1. **Singleton for Stateful Services:** Services that maintain state (caching, configuration) are Singletons
+2. **Scoped for Request-bound Operations:** Services that perform per-request operations are Scoped
+3. **Factory Lambda for Configuration:** FileManagerService uses factory pattern to inject logger + configure root path
+4. **Dependency Hierarchy Respected:** Scoped services can depend on Singletons, but not vice versa
+5. **All Infrastructure Services Testable:** No static classes - everything injectable via interfaces
 
 ### 2. Result Pattern
 
@@ -1066,6 +1045,74 @@ public async Task<ApiResult> StartSiteAsync(WebSiteInstance instance)
 - Non-blocking I/O
 - Better scalability under load
 - Responsive UI during long operations
+
+---
+
+## Infrastructure Services Architecture
+
+### Overview
+
+The solution uses DI-based infrastructure services for platform detection, file management, archive extraction, .NET runtime downloads, and version detection. All services follow clean interface contracts with optimized lifetimes for performance and testability.
+
+### Infrastructure Services Summary
+
+| Service | Interface | Lifetime | Key Features | Dependencies | Source File |
+|---------|-----------|----------|--------------|--------------|-------------|
+| **PlatformInfoService** | `IPlatformInfoService` | Singleton | Platform detection, configuration loading | ILogger | `Tools/Infrastructure/PlatformInfoService.cs` |
+| **FileManagerService** | `IFileManagerService` | Scoped | Directory management, configurable root path | ILogger, string rootPath | `Tools/Infrastructure/FileManagerService.cs` |
+| **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz archive extraction | IFileManagerService | `Tools/Infrastructure/ArchiveExtractorService.cs` |
+| **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation support | IPlatformInfoService, IFileManagerService | `Tools/Runtime/DownloaderService.cs` |
+| **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Version detection with smart caching | None (stateful singleton) | `Tools/Runtime/VersionsDetectorService.cs` |
+
+### Service Lifetime Strategy
+
+**Singleton Services (Stateful):**
+- PlatformInfoService: Platform information loaded once at application startup
+- VersionsDetectorService: Maintains cache of expensive `dotnet --info` output across requests for optimal performance
+
+**Scoped Services (Request-bound):**
+- FileManagerService: Configured per-request with root path via factory lambda pattern (see `Ui/Program.cs` line 52)
+- ArchiveExtractorService: Depends on Scoped FileManagerService for directory operations
+- DownloaderService: Supports per-request cancellation tokens, depends on Scoped FileManagerService
+
+### Smart Caching Implementation
+
+VersionsDetectorService implements lazy initialization with explicit cache refresh. See `Tools/Runtime/VersionsDetectorService.cs`:
+- **Lines 28-40:** GetInstalledVersionsAsync() - returns cached data after first call
+- **Lines 42-55:** RefreshCacheAsync() - re-executes dotnet --info process to update cache
+
+**Benefits:**
+- Fast subsequent calls after initial cache population (no process spawning)
+- Explicit cache control via `RefreshCacheAsync()` called after install/uninstall operations (see `Ui/Services/FrameworkManagementService.cs` lines 35, 67)
+- Thread-safe singleton with single writer during initialization, multiple readers afterward
+
+### CancellationToken Support
+
+DownloaderService supports cooperative cancellation throughout all async operations. See `Tools/Runtime/DownloaderService.cs`:
+- All public methods accept optional `CancellationToken cancellationToken = default` parameter
+- Cooperative cancellation checks via `cancellationToken.ThrowIfCancellationRequested()` before expensive external API calls
+- End-to-end cancellation flow: UI → Controller → Service layer → DownloaderService
+
+### Factory Pattern for Configuration
+
+FileManagerService uses factory lambda to inject logger and configure root path. See `Ui/Program.cs` line 52:
+
+**Benefits:**
+- Dependency injection of ILogger for structured logging
+- Configuration of root path at registration time (ApplicationConstants.RuntimesRootPath)
+- Different instances can manage different directory trees if needed
+
+### Testability
+
+All infrastructure services are fully testable via interface abstractions. Example mock setup pattern:
+
+```csharp
+var mockVersionsDetector = new Mock<IVersionsDetectorService>();
+mockVersionsDetector.Setup(v => v.GetInstalledVersionsAsync())
+    .ReturnsAsync(Task.FromResult(new List<FrameworkInfo> { /* test data */ }));
+```
+
+See interface definitions in `Data/Contracts/` folder for full contract specifications.
 
 ---
 

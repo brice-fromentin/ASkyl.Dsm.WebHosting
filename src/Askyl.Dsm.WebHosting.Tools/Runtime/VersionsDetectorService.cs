@@ -1,12 +1,20 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
+using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
-public static partial class VersionsDetector
+/// <summary>
+/// Service that detects installed .NET framework versions by executing dotnet --info.
+/// </summary>
+public sealed partial class VersionsDetectorService : IVersionsDetectorService
 {
+    private List<FrameworkInfo> _cachedFrameworks = [];
+    private bool _cacheInitialized = false;
+
     #region Regex Patterns
 
     [GeneratedRegex(@"^\s*(\d+\.\d+\.\d+(?:-[\w\.-]+)?)")]
@@ -23,85 +31,78 @@ public static partial class VersionsDetector
 
     #endregion
 
-    #region Fields
-
-    private static List<FrameworkInfo> _cachedFrameworks = [];
-
-    #endregion
-
-    #region Public API
-
-    public static async Task<List<FrameworkInfo>> GetInstalledVersionsAsync()
+    /// <inheritdoc/>
+    public async Task<List<FrameworkInfo>> GetInstalledVersionsAsync()
     {
+        // Return cached data if already initialized (BLAZING FAST!) ⚡
+        if (_cacheInitialized)
+        {
+            return [.. _cachedFrameworks];  // Return copy to prevent external modification
+        }
+
+        await RefreshCacheAsync();  // Just call the public method!
+        _cacheInitialized = true;  // Mark as initialized for fast subsequent calls
+
+        return [.. _cachedFrameworks];
+    }
+
+    /// <inheritdoc/>
+    public bool IsChannelInstalled(string channel, string frameworkType = "ASP.NET Core")
+        => _cachedFrameworks.Any(x => x.Type == frameworkType && x.Version.StartsWith(channel + "."));
+
+    /// <inheritdoc/>
+    public bool IsVersionInstalled(string version, string frameworkType = "ASP.NET Core")
+        => _cachedFrameworks.Any(x => x.Type == frameworkType && x.Version == version);
+
+    /// <inheritdoc/>
+    public async Task RefreshCacheAsync()
+    {
+        // Re-execute process to get fresh data
         List<FrameworkInfo> frameworks = [];
 
         try
         {
-            // Use only the global dotnet version
-            frameworks = await GetDotnetFrameworksAsync("../runtimes/dotnet");
-        }
-        catch
-        {
-            // Ignore errors - no .NET installation found
-        }
+            var dotnetPath = Path.Combine(ApplicationConstants.RuntimesRootPath, "dotnet");
+            var output = await ExecuteProcessAndGetOutputAsync(dotnetPath, "--info");
 
-        // Update cache
-        _cachedFrameworks = frameworks;
-
-        return frameworks;
-    }
-
-    public static bool IsChannelInstalled(string channel, string _ = "ASP.NET Core")
-        => _cachedFrameworks.Any(x => x.Type == "ASP.NET Core" && x.Version.StartsWith(channel + "."));
-
-    public static bool IsVersionInstalled(string version, string frameworkType = "ASP.NET Core")
-        => _cachedFrameworks.Any(x => x.Type == frameworkType && x.Version == version);
-
-    public static Task<bool> IsChannelInstalledAsync(string channel, string frameworkType = "ASP.NET Core")
-        => Task.FromResult(IsChannelInstalled(channel, frameworkType));
-
-    public static Task<bool> IsVersionInstalledAsync(string version, string frameworkType = "ASP.NET Core")
-        => Task.FromResult(IsVersionInstalled(version, frameworkType));
-
-    #endregion
-
-    #region Process Management
-
-    private static async Task<List<FrameworkInfo>> GetDotnetFrameworksAsync(string dotnetPath)
-    {
-        try
-        {
-            using var process = new Process();
-
-            process.StartInfo.FileName = dotnetPath;
-            process.StartInfo.Arguments = "--info";
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
-            process.StartInfo.CreateNoWindow = true;
-
-            process.Start();
-            var output = await process.StandardOutput.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode == 0 && !String.IsNullOrEmpty(output))
+            if (!String.IsNullOrEmpty(output))
             {
-                return ParseDotnetInfo(output);
+                frameworks = ParseDotnetInfo(output);
             }
         }
         catch
         {
-            // Ignore errors
+            // Ignore errors - keep existing cache if refresh fails
         }
 
-        return [];
+        _cachedFrameworks = frameworks;  // Update cache with fresh data
+    }
+
+    #region Process Management
+
+    private async Task<string> ExecuteProcessAndGetOutputAsync(string fileName, string arguments)
+    {
+        using var process = new Process();
+
+        process.StartInfo.FileName = fileName;
+        process.StartInfo.Arguments = arguments;
+        process.StartInfo.UseShellExecute = false;
+        process.StartInfo.RedirectStandardOutput = true;
+        process.StartInfo.RedirectStandardError = true;
+        process.StartInfo.CreateNoWindow = true;
+
+        process.Start();
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        return process.ExitCode == 0 ? output : String.Empty;
     }
 
     #endregion
 
     #region Output Parsing
 
-    private static List<FrameworkInfo> ParseDotnetInfo(string output)
+    private List<FrameworkInfo> ParseDotnetInfo(string output)
     {
         List<FrameworkInfo> frameworks = [];
         var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -137,7 +138,7 @@ public static partial class VersionsDetector
         return [.. frameworks.OrderBy(f => GetFrameworkOrder(f.Type)).ThenBy(f => f.Version)];
     }
 
-    private static string? DetectCurrentSection(string trimmedLine)
+    private string? DetectCurrentSection(string trimmedLine)
     {
         // Detect main sections
         if (trimmedLine.StartsWith(".NET SDKs installed:"))
@@ -157,7 +158,7 @@ public static partial class VersionsDetector
         return null;
     }
 
-    private static void ParseVersionsInSection(List<FrameworkInfo> frameworks, string currentSection, string trimmedLine)
+    private void ParseVersionsInSection(List<FrameworkInfo> frameworks, string currentSection, string trimmedLine)
     {
         // Parse versions in each section
         if (currentSection == "SDK")
@@ -191,7 +192,7 @@ public static partial class VersionsDetector
 
     #region Framework Management
 
-    private static void TryAddFrameworkFromRegex(List<FrameworkInfo> frameworks, Regex regex, string trimmedLine, string frameworkType)
+    private void TryAddFrameworkFromRegex(List<FrameworkInfo> frameworks, Regex regex, string trimmedLine, string frameworkType)
     {
         var match = regex.Match(trimmedLine);
 
@@ -202,7 +203,7 @@ public static partial class VersionsDetector
         }
     }
 
-    private static void AddFrameworkIfNotExists(List<FrameworkInfo> frameworks, string type, string version)
+    private void AddFrameworkIfNotExists(List<FrameworkInfo> frameworks, string type, string version)
     {
         if (!frameworks.Any(f => f.Type == type && f.Version == version))
         {
@@ -218,7 +219,7 @@ public static partial class VersionsDetector
 
     #region Utilities
 
-    private static int GetFrameworkOrder(string frameworkType)
+    private int GetFrameworkOrder(string frameworkType)
     {
         return frameworkType switch
         {

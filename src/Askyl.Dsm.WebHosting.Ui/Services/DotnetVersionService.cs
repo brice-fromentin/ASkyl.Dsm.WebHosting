@@ -11,13 +11,13 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// This service is registered in Ui only (server-side) since it requires access to
 /// the file system for .NET installation detection.
 /// </summary>
-public class DotnetVersionService : IDotnetVersionService
+public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
 {
-    public async Task<InstalledVersionsResult> GetInstalledVersionsAsync()
+    public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            var versions = await VersionsDetector.GetInstalledVersionsAsync();
+            var versions = await versionsDetector.GetInstalledVersionsAsync();
             return InstalledVersionsResult.CreateSuccess(versions);
         }
         catch (Exception ex)
@@ -26,11 +26,11 @@ public class DotnetVersionService : IDotnetVersionService
         }
     }
 
-    public async Task<ApiResultBool> IsChannelInstalledAsync(string channel, string frameworkType = DotNetFrameworkTypes.AspNetCore)
+    public async Task<ApiResultBool> IsChannelInstalledAsync(string channel, string frameworkType = DotNetFrameworkTypes.AspNetCore, CancellationToken cancellationToken = default)
     {
         try
         {
-            var isInstalled = await VersionsDetector.IsChannelInstalledAsync(channel, frameworkType);
+            var isInstalled = versionsDetector.IsChannelInstalled(channel, frameworkType);
             return ApiResultBool.CreateSuccess(isInstalled);
         }
         catch (Exception ex)
@@ -39,11 +39,11 @@ public class DotnetVersionService : IDotnetVersionService
         }
     }
 
-    public async Task<ApiResultBool> IsVersionInstalledAsync(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore)
+    public async Task<ApiResultBool> IsVersionInstalledAsync(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore, CancellationToken cancellationToken = default)
     {
         try
         {
-            var isInstalled = await VersionsDetector.IsVersionInstalledAsync(version, frameworkType);
+            var isInstalled = versionsDetector.IsVersionInstalled(version, frameworkType);
             return ApiResultBool.CreateSuccess(isInstalled);
         }
         catch (Exception ex)
@@ -52,13 +52,22 @@ public class DotnetVersionService : IDotnetVersionService
         }
     }
 
-    public async Task<ChannelsResult> GetChannelsAsync()
+    /// <summary>
+    /// Forces a cache refresh by re-executing dotnet --info.
+    /// Call this after install/uninstall operations.
+    /// </summary>
+    public async Task RefreshCacheAsync()
+    {
+        await versionsDetector.RefreshCacheAsync();
+    }
+
+    public async Task<ChannelsResult> GetChannelsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            await GetInstalledVersionsAsync();
+            await GetInstalledVersionsAsync(cancellationToken);
 
-            var channels = await Downloader.GetAspNetCoreChannelsAsync();
+            var channels = await downloader.GetAspNetCoreChannelsAsync(cancellationToken);
 
             var channelList = channels.Select(channel => AspNetChannel.FromReleaseInfo(channel)).ToList();
             return ChannelsResult.CreateSuccess(channelList);
@@ -69,11 +78,11 @@ public class DotnetVersionService : IDotnetVersionService
         }
     }
 
-    public async Task<ReleasesResult> GetReleasesWithStatusAsync(string channel)
+    public async Task<ReleasesResult> GetReleasesWithStatusAsync(string channel, CancellationToken cancellationToken = default)
     {
         try
         {
-            var releases = await Downloader.GetAspNetCoreReleasesAsync(channel);
+            var releases = await downloader.GetAspNetCoreReleasesAsync(channel, cancellationToken);
 
             var releaseList = releases.Select(release =>
             {

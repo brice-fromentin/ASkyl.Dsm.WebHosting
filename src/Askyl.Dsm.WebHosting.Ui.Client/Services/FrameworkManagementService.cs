@@ -16,13 +16,13 @@ public class FrameworkManagementService(IHttpClientFactory httpClientFactory) : 
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     /// <inheritdoc/>
-    public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel)
+    public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel, CancellationToken cancellationToken = default)
     {
         var model = new InstallFramework(version, channel);
-        return await _httpClient.PostJsonOrDefaultAsync<InstallFramework, InstallationResult>(FrameworkManagementRoutes.InstallFullRoute, model, () => InstallationResult.CreateFailure("Failed to install framework"));
+        return await _httpClient.PostJsonOrDefaultAsync<InstallFramework, InstallationResult>(FrameworkManagementRoutes.InstallFullRoute, model, () => InstallationResult.CreateFailure("Failed to install framework"), cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<InstallationResult> UninstallFrameworkAsync(string version)
-        => await _httpClient.PostJsonOrDefaultAsync<object, InstallationResult>(FrameworkManagementRoutes.UninstallWithVersionFullRoute(version), new(), () => InstallationResult.CreateFailure($"Failed to uninstall framework version: {version}"));
+    public async Task<InstallationResult> UninstallFrameworkAsync(string version, CancellationToken cancellationToken = default)
+        => await _httpClient.PostJsonOrDefaultAsync<object, InstallationResult>(FrameworkManagementRoutes.UninstallWithVersionFullRoute(version), new(), () => InstallationResult.CreateFailure($"Failed to uninstall framework version: {version}"), cancellationToken);
 }
