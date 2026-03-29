@@ -13,7 +13,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// </summary>
 public class DotnetVersionService(Downloader downloader) : IDotnetVersionService
 {
-    public async Task<InstalledVersionsResult> GetInstalledVersionsAsync()
+    public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -26,7 +26,7 @@ public class DotnetVersionService(Downloader downloader) : IDotnetVersionService
         }
     }
 
-    public async Task<ApiResultBool> IsChannelInstalledAsync(string channel, string frameworkType = DotNetFrameworkTypes.AspNetCore)
+    public async Task<ApiResultBool> IsChannelInstalledAsync(string channel, string frameworkType = DotNetFrameworkTypes.AspNetCore, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -39,7 +39,7 @@ public class DotnetVersionService(Downloader downloader) : IDotnetVersionService
         }
     }
 
-    public async Task<ApiResultBool> IsVersionInstalledAsync(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore)
+    public async Task<ApiResultBool> IsVersionInstalledAsync(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -52,13 +52,13 @@ public class DotnetVersionService(Downloader downloader) : IDotnetVersionService
         }
     }
 
-    public async Task<ChannelsResult> GetChannelsAsync()
+    public async Task<ChannelsResult> GetChannelsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            await GetInstalledVersionsAsync();
+            await GetInstalledVersionsAsync(cancellationToken);
 
-            var channels = await downloader.GetAspNetCoreChannelsAsync();
+            var channels = await downloader.GetAspNetCoreChannelsAsync(cancellationToken);
 
             var channelList = channels.Select(channel => AspNetChannel.FromReleaseInfo(channel)).ToList();
             return ChannelsResult.CreateSuccess(channelList);
@@ -69,11 +69,11 @@ public class DotnetVersionService(Downloader downloader) : IDotnetVersionService
         }
     }
 
-    public async Task<ReleasesResult> GetReleasesWithStatusAsync(string channel)
+    public async Task<ReleasesResult> GetReleasesWithStatusAsync(string channel, CancellationToken cancellationToken = default)
     {
         try
         {
-            var releases = await downloader.GetAspNetCoreReleasesAsync(channel);
+            var releases = await downloader.GetAspNetCoreReleasesAsync(channel, cancellationToken);
 
             var releaseList = releases.Select(release =>
             {

@@ -18,7 +18,7 @@ public class FrameworkManagementService(
 {
     private readonly IDotnetVersionService _dotnetVersionService = dotnetVersionService;
 
-    public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel)
+    public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel, CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrEmpty(version))
         {
@@ -31,13 +31,13 @@ public class FrameworkManagementService(
             FileManager.Initialize(ApplicationConstants.RuntimesRootPath);
 
             // Download the specific framework version
-            var fileName = await downloader.DownloadVersionToAsync(version, channel, true);
+            var fileName = await downloader.DownloadVersionToAsync(version, channel, true, cancellationToken);
 
             // Extract and install
             ArchiveExtractor.Decompress(fileName);
 
             // Refresh the cache to detect the new installation
-            await _dotnetVersionService.GetInstalledVersionsAsync();
+            await _dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);
 
             logger.LogInformation("ASP.NET Core {Version} installed successfully", version);
             return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been installed successfully.");
@@ -49,7 +49,7 @@ public class FrameworkManagementService(
         }
     }
 
-    public async Task<InstallationResult> UninstallFrameworkAsync(string version)
+    public async Task<InstallationResult> UninstallFrameworkAsync(string version, CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrEmpty(version))
         {
@@ -61,7 +61,7 @@ public class FrameworkManagementService(
         {
             // Prevent uninstall if this is the only release for the configured channel
             // Ensure uninstall allowed according to configured channel (if any)
-            await EnsureUninstallAllowedForChannelAsync(version);
+            await EnsureUninstallAllowedForChannelAsync(version, cancellationToken);
 
             // Delete the directories related to the specified version
             FileManager.Initialize(ApplicationConstants.RuntimesRootPath);
@@ -70,7 +70,7 @@ public class FrameworkManagementService(
             FileManager.DeleteDirectory($"shared/Microsoft.NETCore.App/{version}");
 
             // Refresh the cache to detect the removal
-            await _dotnetVersionService.GetInstalledVersionsAsync();
+            await _dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);
 
             logger.LogInformation("ASP.NET Core {Version} uninstalled successfully", version);
             return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been uninstalled successfully.");
@@ -92,7 +92,7 @@ public class FrameworkManagementService(
         }
     }
 
-    private async Task EnsureUninstallAllowedForChannelAsync(string version)
+    private async Task EnsureUninstallAllowedForChannelAsync(string version, CancellationToken cancellationToken)
     {
         var configuredChannel = platformInfo.ChannelVersion;
 
@@ -101,7 +101,7 @@ public class FrameworkManagementService(
             throw new MissingChannelConfigurationException();
         }
 
-        var installedResult = await _dotnetVersionService.GetInstalledVersionsAsync();
+        var installedResult = await _dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);
         var installed = installedResult.Value ?? [];
 
         var channelPrefix = configuredChannel + ".";

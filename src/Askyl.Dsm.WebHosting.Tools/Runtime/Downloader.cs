@@ -1,7 +1,9 @@
+using Microsoft.Deployment.DotNet.Releases;
+
+using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
-using Microsoft.Deployment.DotNet.Releases;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
@@ -10,11 +12,11 @@ namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 /// </summary>
 public sealed class Downloader(IPlatformInfo platformInfo)
 {
-    public async Task<string> DownloadToAsync(bool skipDownloadIfExists = false)
+    public async Task<string> DownloadToAsync(bool skipDownloadIfExists = false, CancellationToken cancellationToken = default)
     {
-        var product = await GetProductAsync(platformInfo.ChannelVersion, true).ConfigureAwait(false);
-        var release = await GetLatestReleaseAsync(product).ConfigureAwait(false);
-        var fileName = await DownloadReleaseToAsync(release, FileManager.Downloads, skipDownloadIfExists).ConfigureAwait(false);
+        var product = await GetProductAsync(platformInfo.ChannelVersion, true, cancellationToken).ConfigureAwait(false);
+        var release = await GetLatestReleaseAsync(product, cancellationToken).ConfigureAwait(false);
+        var fileName = await DownloadReleaseToAsync(release, FileManager.Downloads, skipDownloadIfExists, cancellationToken).ConfigureAwait(false);
 
         return fileName;
     }
@@ -22,11 +24,11 @@ public sealed class Downloader(IPlatformInfo platformInfo)
     /// <summary>
     /// Downloads a specific version of ASP.NET Core runtime.
     /// </summary>
-    public async Task<string> DownloadVersionToAsync(string version, string? channelVersion = null, bool skipDownloadIfExists = false)
+    public async Task<string> DownloadVersionToAsync(string version, string? channelVersion = null, bool skipDownloadIfExists = false, CancellationToken cancellationToken = default)
     {
-        var product = await GetProductAsync(channelVersion, false).ConfigureAwait(false);
-        var release = await GetReleaseByVersionAsync(product, version).ConfigureAwait(false);
-        var fileName = await DownloadReleaseToAsync(release, FileManager.Downloads, skipDownloadIfExists).ConfigureAwait(false);
+        var product = await GetProductAsync(channelVersion, false, cancellationToken).ConfigureAwait(false);
+        var release = await GetReleaseByVersionAsync(product, version, cancellationToken).ConfigureAwait(false);
+        var fileName = await DownloadReleaseToAsync(release, FileManager.Downloads, skipDownloadIfExists, cancellationToken).ConfigureAwait(false);
 
         return fileName;
     }
@@ -34,9 +36,11 @@ public sealed class Downloader(IPlatformInfo platformInfo)
     /// <summary>
     /// Returns ASP.NET Core runtime releases for a channel (explicit, configured, or latest fallback).
     /// </summary>
-    public async Task<IReadOnlyList<AspNetCoreReleaseInfo>> GetAspNetCoreReleasesAsync(string? channelVersion = null)
+    public async Task<IReadOnlyList<AspNetCoreReleaseInfo>> GetAspNetCoreReleasesAsync(string? channelVersion = null, CancellationToken cancellationToken = default)
     {
-        var product = await GetProductAsync(channelVersion, false).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var product = await GetProductAsync(channelVersion, false, cancellationToken).ConfigureAwait(false);
         var releases = await product.GetReleasesAsync().ConfigureAwait(false);
         var isProductLts = product.ReleaseType == ReleaseType.LTS;
 
@@ -54,12 +58,15 @@ public sealed class Downloader(IPlatformInfo platformInfo)
     /// <summary>
     /// Returns available ASP.NET Core channels (products) ordered by descending semantic Version.
     /// </summary>
-    public async Task<IReadOnlyList<AspNetCoreReleaseInfo>> GetAspNetCoreChannelsAsync()
+    public async Task<IReadOnlyList<AspNetCoreReleaseInfo>> GetAspNetCoreChannelsAsync(CancellationToken cancellationToken = default)
     {
-        var products = await ProductCollection.GetAsync().ConfigureAwait(false) ?? throw new InvalidOperationException("Unable to retrieve products");
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var products = await ProductCollection.GetAsync().ConfigureAwait(false) ?? throw new InvalidOperationException(RuntimeConstants.UnableToRetrieveProductsErrorMessage);
+
         if (products.Count == 0)
         {
-            throw new InvalidOperationException("No products returned by ProductCollection");
+            throw new InvalidOperationException(RuntimeConstants.NoProductsReturnedErrorMessage);
         }
 
         return [.. products.Select(p => (Product: p, Parsed: Version.TryParse(p.ProductVersion, out var v) ? v : new Version(0, 0)))
@@ -67,18 +74,21 @@ public sealed class Downloader(IPlatformInfo platformInfo)
                            .Select(t => AspNetCoreReleaseInfo.CreateChannel(t.Product.ProductVersion, t.Product.ReleaseType == ReleaseType.LTS, ConvertReleaseType(t.Product.ReleaseType)))];
     }
 
-    private async Task<Product> GetProductAsync(string? desiredChannelVersion, bool strictWhenConfigured)
+    private async Task<Product> GetProductAsync(string? desiredChannelVersion, bool strictWhenConfigured, CancellationToken cancellationToken)
     {
-        var products = await ProductCollection.GetAsync().ConfigureAwait(false) ?? throw new InvalidOperationException("Unable to retrieve products");
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var products = await ProductCollection.GetAsync().ConfigureAwait(false) ?? throw new InvalidOperationException(RuntimeConstants.UnableToRetrieveProductsErrorMessage);
+
         if (products.Count == 0)
         {
-            throw new InvalidOperationException("No products returned by ProductCollection");
+            throw new InvalidOperationException(RuntimeConstants.NoProductsReturnedErrorMessage);
         }
 
         // 1. Explicit requested channel
         if (!String.IsNullOrWhiteSpace(desiredChannelVersion))
         {
-            if (TryGetProductByVersion(products, desiredChannelVersion, strictWhenConfigured, $"Product Version {desiredChannelVersion} not found.", out var result))
+            if (TryGetProductByVersion(products, desiredChannelVersion, strictWhenConfigured, String.Format(RuntimeConstants.ProductVersionNotFoundErrorMessage, desiredChannelVersion), out var result))
             {
                 return result!;
             }
@@ -89,7 +99,7 @@ public sealed class Downloader(IPlatformInfo platformInfo)
 
         if (!String.IsNullOrWhiteSpace(configured) && !String.Equals(configured, desiredChannelVersion, StringComparison.OrdinalIgnoreCase))
         {
-            if (TryGetProductByVersion(products, configured, strictWhenConfigured, $"Configured product Version {configured} not found.", out var result))
+            if (TryGetProductByVersion(products, configured, strictWhenConfigured, String.Format(RuntimeConstants.ConfiguredProductVersionNotFoundErrorMessage, configured), out var result))
             {
                 return result!;
             }
@@ -101,12 +111,15 @@ public sealed class Downloader(IPlatformInfo platformInfo)
                        .First().Product;
     }
 
-    private async Task<ProductRelease> GetLatestReleaseAsync(Product product)
+    private async Task<ProductRelease> GetLatestReleaseAsync(Product product, CancellationToken cancellationToken)
     {
-        var releases = await product.GetReleasesAsync().ConfigureAwait(false) ?? throw new InvalidOperationException("Unable to retrieve releases");
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var releases = await product.GetReleasesAsync().ConfigureAwait(false) ?? throw new InvalidOperationException(RuntimeConstants.UnableToRetrieveReleasesErrorMessage);
+
         if (releases.Count == 0)
         {
-            throw new InvalidOperationException("No releases for product");
+            throw new InvalidOperationException(RuntimeConstants.NoReleasesForProductErrorMessage);
         }
 
         var latest = releases.FirstOrDefault(r => r.Version == product.LatestReleaseVersion) ?? releases.OrderByDescending(r => r.ReleaseDate).First();
@@ -114,25 +127,29 @@ public sealed class Downloader(IPlatformInfo platformInfo)
         return latest;
     }
 
-    private async Task<ProductRelease> GetReleaseByVersionAsync(Product product, string version)
+    private async Task<ProductRelease> GetReleaseByVersionAsync(Product product, string version, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var releases = await product.GetReleasesAsync().ConfigureAwait(false);
 
         if (releases is null || releases.Count == 0)
         {
-            throw new InvalidOperationException("Unable to retrieve releases");
+            throw new InvalidOperationException(RuntimeConstants.UnableToRetrieveReleasesErrorMessage);
         }
 
         var release = releases.FirstOrDefault(r => r.AspNetCoreRuntime is not null &&
-                                                   String.Equals(r.AspNetCoreRuntime.Version.ToString(), version, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"ASP.NET Core runtime version {version} not found.");
+                                                   String.Equals(r.AspNetCoreRuntime.Version.ToString(), version, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException(String.Format(RuntimeConstants.AspNetCoreRuntimeVersionNotFoundErrorMessage, version));
 
         return release;
     }
 
-    private async Task<string> DownloadReleaseToAsync(ProductRelease release, string destinationPath, bool skipDownloadIfExists)
+    private async Task<string> DownloadReleaseToAsync(ProductRelease release, string destinationPath, bool skipDownloadIfExists, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var rid = $"{platformInfo.CurrentOS}-{platformInfo.CurrentArchitecture}";
-        var file = release.AspNetCoreRuntime.Files.FirstOrDefault(f => String.Equals(f.Rid, rid, StringComparison.OrdinalIgnoreCase)) ?? throw new FileNotFoundException($"No release file found for runtime identifier {rid}.");
+        var file = release.AspNetCoreRuntime.Files.FirstOrDefault(f => String.Equals(f.Rid, rid, StringComparison.OrdinalIgnoreCase)) ?? throw new FileNotFoundException(String.Format(RuntimeConstants.NoReleaseFileForRuntimeIdentifierErrorMessage, rid));
 
         var fullDestinationPath = FileManager.GetFullName(destinationPath, file.FileName);
 
