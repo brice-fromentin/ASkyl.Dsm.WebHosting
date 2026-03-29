@@ -1,19 +1,17 @@
-using Microsoft.Extensions.Logging;
-
-using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
-using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
 public class FrameworkManagementService(
     IDotnetVersionService dotnetVersionService,
-    IPlatformInfo platformInfo,
-    Downloader downloader,
+    IPlatformInfoService platformInfo,
+    IDownloaderService downloader,
+    IFileManagerService fileManager,
+    IArchiveExtractorService archiveExtractor,
     ILogger<FrameworkManagementService> logger) : IFrameworkManagementService
 {
     private readonly IDotnetVersionService _dotnetVersionService = dotnetVersionService;
@@ -28,13 +26,11 @@ public class FrameworkManagementService(
 
         try
         {
-            FileManager.Initialize(ApplicationConstants.RuntimesRootPath);
-
             // Download the specific framework version
             var fileName = await downloader.DownloadVersionToAsync(version, channel, true, cancellationToken);
 
             // Extract and install
-            ArchiveExtractor.Decompress(fileName);
+            archiveExtractor.Decompress(fileName);
 
             // Refresh the cache to detect the new installation
             await _dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);
@@ -64,10 +60,9 @@ public class FrameworkManagementService(
             await EnsureUninstallAllowedForChannelAsync(version, cancellationToken);
 
             // Delete the directories related to the specified version
-            FileManager.Initialize(ApplicationConstants.RuntimesRootPath);
-            FileManager.DeleteDirectory($"host/fxr/{version}");
-            FileManager.DeleteDirectory($"shared/Microsoft.AspNetCore.App/{version}");
-            FileManager.DeleteDirectory($"shared/Microsoft.NETCore.App/{version}");
+            fileManager.DeleteDirectory($"host/fxr/{version}");
+            fileManager.DeleteDirectory($"shared/Microsoft.AspNetCore.App/{version}");
+            fileManager.DeleteDirectory($"shared/Microsoft.NETCore.App/{version}");
 
             // Refresh the cache to detect the removal
             await _dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);

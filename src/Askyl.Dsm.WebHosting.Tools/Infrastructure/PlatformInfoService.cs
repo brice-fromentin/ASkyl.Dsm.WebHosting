@@ -12,7 +12,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// <summary>
 /// Service that provides platform information including operating system, architecture, and configured channel version.
 /// </summary>
-public sealed class PlatformInfoService : IPlatformInfo
+public sealed class PlatformInfoService : IPlatformInfoService
 {
     private enum Platform
     {

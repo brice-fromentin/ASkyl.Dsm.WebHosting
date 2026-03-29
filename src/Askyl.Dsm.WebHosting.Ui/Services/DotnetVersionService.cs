@@ -11,7 +11,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// This service is registered in Ui only (server-side) since it requires access to
 /// the file system for .NET installation detection.
 /// </summary>
-public class DotnetVersionService(Downloader downloader) : IDotnetVersionService
+public class DotnetVersionService(IDownloaderService downloader) : IDotnetVersionService
 {
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
     {

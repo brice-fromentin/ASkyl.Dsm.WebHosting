@@ -5,16 +5,19 @@ using Askyl.Dsm.WebHosting.Tools.Runtime;
 
 Console.WriteLine("Starting");
 
-FileManager.Initialize();
-
 // Create a simple console logger for the standalone application
 var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-var logger = loggerFactory.CreateLogger<PlatformInfoService>();
+var platformLogger = loggerFactory.CreateLogger<PlatformInfoService>();
+var fileManagerLogger = loggerFactory.CreateLogger<FileManagerService>();
 
-var platformInfo = new PlatformInfoService(logger);
-var downloader = new Downloader(platformInfo);
+var platformInfo = new PlatformInfoService(platformLogger);
+var fileManager = new FileManagerService(fileManagerLogger, String.Empty);
+fileManager.Initialize();
+
+var downloader = new DownloaderService(platformInfo, fileManager);
+var archiveExtractor = new ArchiveExtractorService(fileManager);
 
 var fileName = await downloader.DownloadToAsync(true, CancellationToken.None);
-ArchiveExtractor.Decompress(fileName);
+archiveExtractor.Decompress(fileName);
 
 Console.WriteLine("Done");

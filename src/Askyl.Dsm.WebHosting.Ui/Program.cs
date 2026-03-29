@@ -43,10 +43,16 @@ builder.Services.AddSingleton<DsmApiClient>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 // Register platform info service (singleton - platform detection happens once at startup)
-builder.Services.AddSingleton<IPlatformInfo, PlatformInfoService>();
+builder.Services.AddSingleton<IPlatformInfoService, PlatformInfoService>();
 
-// Register downloader service (depends on IPlatformInfo)
-builder.Services.AddSingleton<Downloader>();
+// Register file manager service with configured root path for runtimes
+builder.Services.AddScoped<IFileManagerService>(sp => new FileManagerService(sp.GetRequiredService<ILogger<FileManagerService>>(), ApplicationConstants.RuntimesRootPath));
+
+// Register archive extractor service (Scoped - depends on Scoped IFileManagerService)
+builder.Services.AddScoped<IArchiveExtractorService, ArchiveExtractorService>();
+
+// Register downloader service (Scoped - depends on Scoped IFileManagerService)
+builder.Services.AddScoped<IDownloaderService, DownloaderService>();
 
 // Register services for runtime/framework management
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();

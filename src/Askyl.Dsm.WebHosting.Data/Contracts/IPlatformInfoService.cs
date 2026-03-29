@@ -3,7 +3,7 @@ namespace Askyl.Dsm.WebHosting.Data.Contracts;
 /// <summary>
 /// Provides platform information including operating system, architecture, and configured channel version.
 /// </summary>
-public interface IPlatformInfo
+public interface IPlatformInfoService
 {
     /// <summary>
     /// Gets the configured .NET channel version from application settings.

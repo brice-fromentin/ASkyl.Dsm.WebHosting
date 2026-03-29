@@ -1,22 +1,22 @@
 using Microsoft.Deployment.DotNet.Releases;
 
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
-using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
 /// <summary>
 /// Service for downloading and managing .NET runtime releases.
 /// </summary>
-public sealed class Downloader(IPlatformInfo platformInfo)
+public sealed class DownloaderService(IPlatformInfoService platformInfo, IFileManagerService fileManager) : IDownloaderService
 {
     public async Task<string> DownloadToAsync(bool skipDownloadIfExists = false, CancellationToken cancellationToken = default)
     {
         var product = await GetProductAsync(platformInfo.ChannelVersion, true, cancellationToken).ConfigureAwait(false);
         var release = await GetLatestReleaseAsync(product, cancellationToken).ConfigureAwait(false);
-        var fileName = await DownloadReleaseToAsync(release, FileManager.Downloads, skipDownloadIfExists, cancellationToken).ConfigureAwait(false);
+        var fileName = await DownloadReleaseToAsync(release, InfrastructureConstants.Downloads, skipDownloadIfExists, cancellationToken).ConfigureAwait(false);
 
         return fileName;
     }
@@ -28,7 +28,7 @@ public sealed class Downloader(IPlatformInfo platformInfo)
     {
         var product = await GetProductAsync(channelVersion, false, cancellationToken).ConfigureAwait(false);
         var release = await GetReleaseByVersionAsync(product, version, cancellationToken).ConfigureAwait(false);
-        var fileName = await DownloadReleaseToAsync(release, FileManager.Downloads, skipDownloadIfExists, cancellationToken).ConfigureAwait(false);
+        var fileName = await DownloadReleaseToAsync(release, InfrastructureConstants.Downloads, skipDownloadIfExists, cancellationToken).ConfigureAwait(false);
 
         return fileName;
     }
@@ -151,7 +151,7 @@ public sealed class Downloader(IPlatformInfo platformInfo)
         var rid = $"{platformInfo.CurrentOS}-{platformInfo.CurrentArchitecture}";
         var file = release.AspNetCoreRuntime.Files.FirstOrDefault(f => String.Equals(f.Rid, rid, StringComparison.OrdinalIgnoreCase)) ?? throw new FileNotFoundException(String.Format(RuntimeConstants.NoReleaseFileForRuntimeIdentifierErrorMessage, rid));
 
-        var fullDestinationPath = FileManager.GetFullName(destinationPath, file.FileName);
+        var fullDestinationPath = fileManager.GetFullName(destinationPath, file.FileName);
 
         if (skipDownloadIfExists && File.Exists(fullDestinationPath))
         {

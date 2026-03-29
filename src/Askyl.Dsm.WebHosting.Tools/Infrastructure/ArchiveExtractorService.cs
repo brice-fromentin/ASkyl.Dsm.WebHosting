@@ -1,13 +1,19 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 
+using Askyl.Dsm.WebHosting.Data.Contracts;
+
 namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
-public static class ArchiveExtractor
+/// <summary>
+/// Service that extracts compressed archive files (tar.gz format).
+/// </summary>
+public sealed class ArchiveExtractorService(IFileManagerService fileManager) : IArchiveExtractorService
 {
-    public static void Decompress(string inputFile, string? exclude = null)
+    /// <inheritdoc/>
+    public void Decompress(string inputFile, string? exclude = null)
     {
-        var targetDirectory = FileManager.GetDirectory(String.Empty);
+        var targetDirectory = fileManager.GetDirectory(String.Empty);
         var doExclusion = !String.IsNullOrWhiteSpace(exclude);
 
         using var archiveStream = File.OpenRead(inputFile);

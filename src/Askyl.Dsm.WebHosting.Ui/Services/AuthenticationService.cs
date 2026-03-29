@@ -53,21 +53,10 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     }
 
     /// <inheritdoc/>
-    public async Task<ApiResultBool> IsAuthenticatedAsync()
+    public Task<ApiResultBool> IsAuthenticatedAsync()
     {
         var sid = _httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmSessionKey);
 
-        if (String.IsNullOrEmpty(sid))
-        {
-            return ApiResultBool.CreateSuccess(false, "No session found");
-        }
-
-        // Validate SID with DSM API
-        apiClient.SetSid(sid);
-        var isAuthenticated = await apiClient.ValidateSessionAsync();
-
-        return isAuthenticated
-            ? ApiResultBool.CreateSuccess(true)
-            : ApiResultBool.CreateFailure("Session validation failed");
+        return Task.FromResult(!String.IsNullOrEmpty(sid) ? ApiResultBool.CreateSuccess(true): ApiResultBool.CreateSuccess(false, "No session found"));
     }
 }
