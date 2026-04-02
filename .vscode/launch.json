@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": ".NET Launch Program",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "🔧",
+            "program": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0/Askyl.Dsm.WebHosting.Ui.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        },
+        {
             "name": "Blazor WASM",
             "type": "blazorwasm",
             "request": "launch",
@@ -14,8 +25,14 @@
             "program": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0/Askyl.Dsm.WebHosting.Ui.dll",
             "cwd": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0",
             "webRoot": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/wwwroot",
-            "preLaunchTask": "🔧",
             "timeout": 123456
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Build + Blazor WASM",
+            "configurations": ["Blazor WASM"],
+            "preLaunchTask": "🔧"
         }
     ]
 }
