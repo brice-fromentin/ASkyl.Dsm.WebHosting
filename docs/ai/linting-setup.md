@@ -48,6 +48,11 @@ Location: `/Users/brice/Documents/Dev/github/ASkyl.Dsm.WebHosting/src/Directory.
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
 </PropertyGroup>
+<ItemGroup>
+    <!-- Roslynator Analyzers for enhanced code style enforcement -->
+    <PackageReference Include="Roslynator.Analyzers" Version="4.12.7" />
+    <PackageReference Include="Roslynator.Formatting.Analyzers" Version="4.12.7" />
+</ItemGroup>
 ```
 
 **What This Enables:**
@@ -56,6 +61,8 @@ Location: `/Users/brice/Documents/Dev/github/ASkyl.Dsm.WebHosting/src/Directory.
 - `EnforceCodeStyleInBuild`: Fails build on code style violations
 - `RunAnalyzersDuringBuild`: Analyzes code during compilation
 - `RunAnalyzersDuringLiveAnalysis`: Real-time feedback in VS Code while typing
+- **Roslynator.Analyzers**: 500+ additional rules including proper using directive ordering
+- **Roslynator.Formatting.Analyzers**: Enhanced formatting rules and fixes
 
 ---
 
@@ -63,14 +70,15 @@ Location: `/Users/brice/Documents/Dev/github/ASkyl.Dsm.WebHosting/src/Directory.
 
 | Rule | Enforcement Level | Tool | Status |
 |------|------------------|------|--------|
-| **String/String pattern** | Error | EditorConfig | ✅ Enforced |
-| **Using directive order** | Warning | EditorConfig | ✅ Enforced |
+| **String/String pattern** | Error | EditorConfig + Roslynator | ✅ Enforced |
+| **Using directive order** | Error | Roslynator | ✅ Enforced (System → Microsoft → Third-party → Project) |
 | **Blank lines before/after control flow** | None | Custom needed | ⚠️ Not enforced (requires custom analyzer) |
-| **No magic strings/numbers** | Suggestion | CA1861, CA1303 | ✅ Partially enforced |
+| **No magic strings/numbers** | Suggestion | CA1861, CA1303 + Roslynator | ✅ Partially enforced |
 | **Single-line logging** | None | Custom needed | ⚠️ Not enforced (requires custom analyzer) |
 | **Braces for control flow** | Warning | EditorConfig | ✅ Enforced |
-| **Naming conventions** | Warning | EditorConfig | ✅ Enforced |
+| **Naming conventions** | Warning | EditorConfig + Roslynator | ✅ Enforced |
 | **Nullable reference types** | Error | EditorConfig | ✅ Enforced |
+| **Remove unused usings** | Warning | Roslynator | ✅ Enforced |
 
 ---
 
@@ -129,21 +137,19 @@ Most violations can be auto-fixed in VS Code:
 
 ### Recommended Next Steps
 
-#### Option 1: Add Roslynator Analyzer
+#### Option 1: Add Roslynator Analyzer ✅ **COMPLETED**
 
 Roslynator provides 500+ additional rules including:
-- Better using directive sorting
+- Better using directive sorting (System → Microsoft → Third-party → Project) ✅
 - Blank line enforcement
 - Magic number/string detection
 - More comprehensive code style rules
 
 **Setup:**
 ```xml
-<!-- Add to each .csproj or create central package reference -->
-<PackageReference Include="Roslynator.Analyzers" Version="4.12.0">
-    <PrivateAssets>all</PrivateAssets>
-    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-</PackageReference>
+<!-- Already added to Directory.Build.props -->
+<PackageReference Include="Roslynator.Analyzers" Version="4.12.7" />
+<PackageReference Include="Roslynator.Formatting.Analyzers" Version="4.12.7" />
 ```
 
 #### Option 2: Custom Analyzers
@@ -200,8 +206,15 @@ dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verify-no-changes
 
 ## Changelog
 
-### April 2, 2026
+### April 2, 2026 (Updated)
 - ✅ Created `.editorconfig` with comprehensive C# style rules
 - ✅ Updated `Directory.Build.props` to enable .NET analyzers
+- ✅ **Added Roslynator.Analyzers and Roslynator.Formatting.Analyzers** for enhanced enforcement
+  * Proper using directive ordering (System → Microsoft → Third-party → Project)
+  * 500+ additional code quality rules
+  * Better formatting enforcement
 - ✅ Verified build succeeds with 0 warnings
-- ⚠️ Documented limitations for future enhancement (Roslynator/custom analyzers)
+- ⚠️ Documented limitations for future enhancement (custom analyzers for blank lines, logging)
+
+### April 2, 2026 (Initial)
+- Initial setup of .NET analyzers and EditorConfig

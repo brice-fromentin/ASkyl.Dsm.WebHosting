@@ -95,6 +95,12 @@ CA1826 = warning # Do not use Enumerable methods on indexable collections
 dotnet_sort_system_directives_first = true:warning
 dotnet_sort_using_statements = true:warning
 
+# Roslynator using directive ordering (System → Microsoft → Third-party → Project)
+roslynator_order_using_directives_severity = error
+roslynator_group_using_directives_severity = error
+roslynator_remove_unnecessary_using_directives_severity = warning
+roslynator_add_missing_using_directives_severity = info
+
 # Blank line rules (limited support in editorconfig)
 # Note: Full blank line enforcement requires custom analyzer or dotnet-format
 

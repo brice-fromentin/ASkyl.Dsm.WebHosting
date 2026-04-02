@@ -22,4 +22,9 @@
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Roslynator Analyzers for enhanced code style enforcement -->
+    <PackageReference Include="Roslynator.Analyzers" Version="4.12.7" />
+    <PackageReference Include="Roslynator.Formatting.Analyzers" Version="4.12.7" />
+  </ItemGroup>
 </Project>
