@@ -48,8 +48,8 @@ namespace Askyl.Dsm.WebHosting.SourceGenerators
             .Select(attr => context.SemanticModel.GetSymbolInfo(attr).Symbol)
             .OfType<IMethodSymbol>()
             .Where(symbol => symbol.ContainingType.Name == "GenerateCloneAttribute")
-            .Any() 
-            ? classDeclaration 
+            .Any()
+            ? classDeclaration
             : null;
     }
 

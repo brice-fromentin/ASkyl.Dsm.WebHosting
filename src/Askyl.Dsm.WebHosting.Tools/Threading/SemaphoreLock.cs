@@ -53,7 +53,7 @@ public sealed class SemaphoreLock : IDisposable
             {
                 await onAcquired();
             }
-            
+
             return lockInstance;
         }
         catch

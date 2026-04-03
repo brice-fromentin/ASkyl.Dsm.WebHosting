@@ -50,26 +50,26 @@ All references to "build" or "clean" in this document assume these EXACT command
 
 ### How It Works
 
-1. At session start, read `QWEN.md` to extract current standards and rules
-2. Dynamically generate a session summary based on the actual content of QWEN.md
+1. At session start, read `AGENTS.md` to extract current standards and rules
+2. Dynamically generate a session summary based on the actual content of AGENTS.md
 3. Apply all extracted rules throughout the session
-4. If QWEN.md is updated in the future, the AI will automatically adapt without manual template maintenance
+4. If AGENTS.md is updated in the future, the AI will automatically adapt without manual template maintenance
 
 ### Session Start Requirements
 
 - **FIRST ACTION:** Say Hello briefly.
-- **ACKNOWLEDGE:** List standards by extracting them from QWEN.md (not hardcoded)
+- **ACKNOWLEDGE:** List standards by extracting them from AGENTS.md (not hardcoded)
 - **APPLY:** Use all extracted directives throughout the session
 - **TRAINING DATA:** State your training data cutoff date at session start: **"My training data cutoff is early 2025"** (this is FIXED, do not vary this statement)
 - **DOCUMENTATION CHECK:** Before creating any docs, verify if they belong in `docs/ai/`
 
 ### Benefits of Inference-Based Approach
 
-- No maintenance required when updating rules in QWEN.md
+- No maintenance required when updating rules in AGENTS.md
 - Always reflects current project standards automatically
 - More flexible and adaptable to changes
 
-**⚠️ CRITICAL: Training Data Date Consistency** - You MUST state the exact same training data cutoff date ("early 2025") every session. Do NOT provide different dates or estimate. This is a fixed fact, not dynamic information. Inconsistent dates indicate context compression issues and require re-reading QWEN.md immediately.
+**⚠️ CRITICAL: Training Data Date Consistency** - You MUST state the exact same training data cutoff date ("early 2025") every session. Do NOT provide different dates or estimate. This is a fixed fact, not dynamic information. Inconsistent dates indicate context compression issues and require re-reading AGENTS.md immediately.
 
 ## MANDATORY PRE-RESPONSE CODE CHECKLIST
 
@@ -85,7 +85,7 @@ All references to "build" or "clean" in this document assume these EXACT command
 
 - **BEFORE responding** with any code changes, verify ALL formatting rules are met:
   - ✅ Blank lines before/after control flow statements (NOT inside blocks)
-  - ✅ Using directives sorted correctly (System → Microsoft → Third-party → Project namespaces)
+  - ✅ Using directives sorted correctly (System first, then alphabetical)
   - ✅ Single-line logging format (no multi-line logger calls)
   - ✅ String/String pattern applied (`String.` for static, `string` for types)
   - ✅ No magic strings/numbers (use constants from Askyl.Dsm.WebHosting.Constants)
@@ -104,11 +104,9 @@ All references to "build" or "clean" in this document assume these EXACT command
 
 ### 3. VERIFY using DIRECTIVES ⚠️ **ENFORCED**
 
-- Are using directives sorted in this EXACT order?
-    1. System.*
-    2. Microsoft.*
-    3. Third-party libraries (e.g., Serilog)
-    4. Project namespaces (Askyl.*)
+- Are using directives sorted correctly?
+    1. System.* namespaces first (always)
+    2. All other usings alphabetically sorted (Microsoft, third-party, project namespaces mixed together)
 - Have ALL unused using directives been removed?
 - Have ALL implicit using directives been removed?
 
@@ -163,7 +161,7 @@ After EVERY code modification, you MUST:
 2. **Review formatting** - Use `read_file` to verify all rules are met before responding
 3. **Fix any issues** - Do NOT respond until both build and formatting pass
 
-**FAILURE TO VERIFY IS UNACCEPTABLE.** Context compression does not excuse non-compliance. Always re-read QWEN.md rules when in doubt.
+**FAILURE TO VERIFY IS UNACCEPTABLE.** Context compression does not excuse non-compliance. Always re-read AGENTS.md rules when in doubt.
 
 ## Development Guidelines
 
@@ -292,7 +290,62 @@ if (condition)  // Don't separate comment from code!
 - CSS Minimalism: Verify FluentUI components provide desired behavior before adding custom CSS.
 - Documentation: <https://www.fluentui-blazor.net>
 
-### Application Launch (Temporary Restriction)
+### GIT SAFETY RULES (CRITICAL) ⚠️
+
+**THE AI ASSISTANT MUST NEVER EXECUTE DANGEROUS GIT COMMANDS WITHOUT EXPLICIT USER CONFIRMATION.**
+
+### 🚫 FORBIDDEN GIT OPERATIONS
+
+The following git commands are **STRICTLY PROHIBITED** unless the user explicitly requests them in the current conversation:
+
+- ❌ `git reset --hard` (destroys working directory changes)
+- ❌ `git reset --soft HEAD` (discards commits)
+- ❌ `git clean -fd` or `git clean -ffdx` (deletes untracked files)
+- ❌ `git checkout -- .` (discards all local changes)
+- ❌ `git rebase --abort` without user confirmation
+- ❌ `git reflog expire` or `git gc --prune=now`
+
+### ✅ REQUIRED SAFETY PROTOCOL
+
+**BEFORE executing ANY git command that modifies state:**
+
+1. **SHOW THE COMMAND** - Display the exact command to the user
+2. **EXPLAIN IMPACT** - Describe what will be affected (files, commits, branches)
+3. **GET EXPLICIT CONFIRMATION** - Wait for user approval before executing
+4. **RUN `git status` FIRST** - Always show current state before modifications
+
+### EXAMPLE SAFETY FLOW
+
+```
+❌ WRONG: Just running the command
+git reset --hard HEAD~1
+
+✅ CORRECT: Show, explain, confirm
+"The following command will discard your last commit and all working changes:
+
+  git reset --hard HEAD~1
+
+Current status: [show git status output]
+
+Do you want to proceed? (yes/no)"
+```
+
+### ALLOWED SAFE OPERATIONS
+
+These operations are generally safe and don't require explicit confirmation:
+
+- ✅ `git status`
+- ✅ `git diff`
+- ✅ `git log`
+- ✅ `git add <specific-file>` (not wildcards)
+- ✅ `git commit -m "..."` (after showing the commit message)
+- ✅ `git branch` (listing branches)
+
+### CRITICAL REMINDER
+
+**NEVER assume user wants to discard changes.** If a task can be completed without destructive git operations, choose that path. When in doubt, ask the user for clarification before proceeding.
+
+## Application Launch (Temporary Restriction)
 
 - NEVER use `dotnet run`, `run_in_terminal`, or `open_simple_browser` to launch the application.
 - NEVER use `create_and_run_task` for run tasks.
@@ -387,6 +440,7 @@ if (condition)  // Don't separate comment from code!
     - Read "MANDATORY PRE-RESPONSE CODE CHECKLIST" and "CORE REMINDERS".
     - Identify required constants (no magic strings/numbers).
     - Plan `String` vs `string` usage.
+    - Review "GIT SAFETY RULES" if git operations are needed.
 
   DURING writing:
     - Use `String.` for static methods (`String.IsNullOrEmpty()`, `String.Join()`).
@@ -418,6 +472,7 @@ Before responding to any code-related request, verify:
 - [ ] Application launch restrictions respected
 - [ ] Web searches performed for .NET updates when needed
 - [ ] Documentation files placed in `docs/ai/` if AI-generated
+- [ ] Git safety rules followed (if git operations involved)
 
 Mark each item as verified after completion.
 
@@ -485,24 +540,26 @@ logger.LogInformation(
 logger.LogInformation("Message with {Param}", param);
 ```
 
-### ❌ WRONG: Using directives not sorted
+### ❌ WRONG: Using directives not sorted (System not first)
 
 ```csharp
-using Askyl.Dsm.WebHosting.Core;  // Project namespace first - WRONG!
-using System;                      // System should be first
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;  // ❌ System should be first!
+using System;
+using Serilog;
 ```
 
-### ✅ CORRECT: Using directives properly sorted with blank lines between groups
+### ✅ CORRECT: System first, then alphabetical
 
 ```csharp
-using System;                      // 1. System.*
-using Microsoft.Extensions.Logging; // 2. Microsoft.*
+using System;                         // ✅ System always first
+using System.Collections.Generic;     // ✅ All System.* together
 
-using Serilog;                   // 3. Third-party
-
-using Askyl.Dsm.WebHosting.Core; // 4. Project namespaces (grouped by sub-namespace)
+using Askyl.Dsm.WebHosting.Core;      // ✅ Then ALL other usings alphabetically (A < M)
+using Microsoft.Extensions.Logging;   // ✅ Alphabetical continues regardless of type (M < S)
+using Serilog;                        // ✅ Third-party mixed with others
 ```
+
+**Note:** After System namespaces, all other usings are sorted alphabetically regardless of whether they're Microsoft, third-party, or project namespaces. This is the standard supported by `dotnet format` tooling.
 
 ### 🚀 SESSION START TEMPLATE (Inference-Based)
 
@@ -513,28 +570,28 @@ Hello! 👋
 
 I'm ready to help you with the project.
 
-**Acknowledged Standards:** [Extracted from QWEN.md]
+**Acknowledged Standards:** [Extracted from AGENTS.md]
 1. [Standard 1 - e.g., String/String pattern]
 2. [Standard 2 - e.g., Using directives order]
-3. ... [Continue based on actual QWEN.md content]
+3. ... [Continue based on actual AGENTS.md content]
 
 **Training Data Cutoff:** My training data cutoff is early 2025 (FIXED, do not vary)
 
 What would you like me to work on?
 ```
 
-> Note: The specific standards listed above are dynamically extracted from `QWEN.md` at session start, not hardcoded.
+> Note: The specific standards listed above are dynamically extracted from `AGENTS.md` at session start, not hardcoded.
 
 ### ⚠️ CONTEXT COMPRESSION WARNING (CRITICAL)
 
 **If you detect that context has been compressed or session state reset:**
 
-1. **Re-read QWEN.md immediately** - Extract current standards and rules dynamically
+1. **Re-read AGENTS.md immediately** - Extract current standards and rules dynamically
 2. **Acknowledge ALL critical rules explicitly** - List them in your response
 3. **Apply enforcement language strictly** - Treat "CRITICAL" and "MANDATORY" rules as absolute requirements
 4. **Verify before responding** - Build + formatting compliance check is mandatory
 
-**DO NOT rely on memory from previous tasks.** Context compression causes rule emphasis to fade. Always re-read QWEN.md when in doubt or after any indication of context reset.
+**DO NOT rely on memory from previous tasks.** Context compression causes rule emphasis to fade. Always re-read AGENTS.md when in doubt or after any indication of context reset.
 
 ### NON-COMPLIANCE CONSEQUENCES
 

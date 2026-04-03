@@ -1,6 +1,5 @@
 using System.Formats.Tar;
 using System.IO.Compression;
-
 using Askyl.Dsm.WebHosting.Data.Contracts;
 
 namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;

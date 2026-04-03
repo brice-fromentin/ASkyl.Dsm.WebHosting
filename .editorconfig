@@ -34,9 +34,9 @@ dot_naming_rule.type_parameter_style = PascalCase
 dotnet_style_braces_for_control_flow_statements = true
 dotnet_style_braces_for_if_else_when_single_line = false:warning
 
-# Use var when type is obvious
-dotnet_style_var_for_built_in_types = false:suggestion
-dotnet_style_var_when_type_is_apparent = true:info
+# Use var when type is obvious (AGENTS.md: explicit types for built-in types)
+dotnet_style_var_for_built_in_types = false:error
+dotnet_style_var_when_type_is_apparent = true:warning
 
 # Language keywords over type keywords (string vs String for types)
 dotnet_style_predefined_type_for_locals_parameters_members = true:error
@@ -49,10 +49,10 @@ dotnet_style_require_accessibility_modifiers = forNonInterfaceMembers:warning
 dotnet_style_coalesce_expression = true:suggestion
 dotnet_style_null_propagation = true:suggestion
 
-# Parentheses preferences
+# Parentheses preferences (relational operators need parentheses for readability)
 dotnet_style_parenthesized_condition_in_conditional_operator = false:none
 dotnet_style_parentheses_in_arithmetic_binary_operators = alwaysForClarity:info
-dotnet_style_parentheses_in_relational_binary_operators = alwaysForClarity:info
+dotnet_style_parentheses_in_relational_binary_operators = alwaysForClarity:warning
 
 # Expression-level preferences
 dotnet_style_object_initializer = true:suggestion
@@ -68,9 +68,9 @@ dotnet_style_prefer_null_check_over_type_check = true:suggestion
 dotnet_style_pattern_matching_over_is_with_cast_check = true:suggestion
 dotnet_style_pattern_matching_over_as_with_null_check = true:suggestion
 
-# LINQ preferences
+# LINQ preferences (AGENTS.md: prefer collection expressions over .ToList()/.ToArray())
 dotnet_style_prefer_query_syntax = false:none
-dotnet_style_prefer_collection_expression = true:info
+dotnet_style_prefer_collection_expression = true:error
 
 # Simplification preferences
 dotnet_simplify_interpolated_string = true:suggestion
@@ -79,11 +79,22 @@ dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggesti
 # File header template (optional)
 # dotnet_diagnostic.S125.severity = warning
 
-# IDE00xx - Code style rules
-IDE0005 = warning # Remove unnecessary whitespace
-IDE0016 = warning # Use 'var' instead of explicit type (when appropriate)
-IDE0045 = warning # Unnecessary semicolon at end of statement
-IDE0055 = warning # Fix formatting
+# IDE00xx - Code style rules (verified from Microsoft documentation)
+# Source: https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/
+
+IDE0005 = warning # Remove unnecessary import (using directives)
+IDE0007 = warning # Use var instead of explicit type (AGENTS.md prefers var when type is obvious)
+IDE0016 = warning # Use throw expression instead of throw statement
+IDE0045 = warning # Use conditional expression for assignment
+IDE0055 = warning # Fix formatting (indentation, spaces, newlines)
+
+# Additional IDE rules aligned with AGENTS.md standards
+IDE0029 = suggestion # Null check can be simplified (prefer pattern matching)
+IDE0031 = suggestion # Use null propagation (?. operator)
+IDE0049 = error # Use language keywords instead of framework type names (string vs String for types)
+IDE0063 = suggestion # Use simple 'using' statement (using declaration)
+IDE0280 = warning # Use nameof instead of string literals
+IDE0290 = warning # Use primary constructor (AGENTS.md: MANDATORY for classes with parameters)
 
 # CA rules - .NET Design Guidelines
 CA1000 = none # Do not declare static members on general types (we use static for constants/extensions)
@@ -91,17 +102,17 @@ CA1051 = none # Do not declare visible instance fields (we have some legitimate 
 CA1309 = warning # Use ordinal string comparison
 CA1826 = warning # Do not use Enumerable methods on indexable collections
 
-# Using directive organization
+# Using directive organization (System first, then alphabetical)
 dotnet_sort_system_directives_first = true:warning
 dotnet_sort_using_statements = true:warning
 
-# Roslynator using directive ordering (System → Microsoft → Third-party → Project)
-roslynator_order_using_directives_severity = error
-roslynator_group_using_directives_severity = error
-roslynator_remove_unnecessary_using_directives_severity = warning
-roslynator_add_missing_using_directives_severity = info
+# Note: dotnet-format provides System-first + alphabetical ordering
+# No blank line separator between groups (tooling limitation)
 
-# Blank line rules (limited support in editorconfig)
+# Remove unnecessary usings (IDE0005 already covers this above)
+roslynator_remove_unnecessary_using_directives_severity = warning
+RCS0038 = warning # Roslynator remove unnecessary using directive
+roslynator_add_missing_using_directives_severity = info
 # Note: Full blank line enforcement requires custom analyzer or dotnet-format
 
 # Magic numbers/strings detection
@@ -114,6 +125,6 @@ CA1861 = suggestion # Prefer 'static' members over repeated string allocation
 # Nullable reference types
 dotnet_style_nullable_reference_types = enable:error
 
-# Additional C# 14 / .NET 10 specific settings
-dotnet_style_prefer_collection_expression = true:suggestion
-dotnet_style_primary_constructors = true:info
+# Additional C# 14 / .NET 10 specific settings (AGENTS.md: MANDATORY primary constructors)
+dotnet_style_prefer_collection_expression = true:error
+dotnet_style_primary_constructors = true:warning

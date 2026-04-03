@@ -1,7 +1,5 @@
 using System.Text;
-
 using Askyl.Dsm.WebHosting.Tools.Extensions;
-
 using BenchmarkDotNet.Attributes;
 
 namespace Askyl.Dsm.WebHosting.Benchmarks;

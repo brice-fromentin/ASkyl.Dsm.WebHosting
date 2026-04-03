@@ -1,6 +1,6 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Askyl.Dsm.WebHosting.Constants.Application;
 
 namespace Askyl.Dsm.WebHosting.Ui.Authorization;
 

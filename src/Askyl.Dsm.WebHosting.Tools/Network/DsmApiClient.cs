@@ -1,17 +1,15 @@
 using System.Text.Json;
-
-using Microsoft.Extensions.Logging;
-
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.Network;
+using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreInformations;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
-using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
+using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
 

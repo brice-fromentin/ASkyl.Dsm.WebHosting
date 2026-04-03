@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Data.Patterns;

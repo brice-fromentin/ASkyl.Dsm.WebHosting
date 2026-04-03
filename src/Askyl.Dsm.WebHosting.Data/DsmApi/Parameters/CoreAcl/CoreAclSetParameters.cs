@@ -1,7 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
-// Removed - using same namespace
-using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreAcl;
 

@@ -1,10 +1,9 @@
-using Microsoft.AspNetCore.Http;
-
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
-using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Tools.Network;
+using Microsoft.AspNetCore.Http;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -57,6 +56,6 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     {
         var sid = _httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmSessionKey);
 
-        return Task.FromResult(!String.IsNullOrEmpty(sid) ? ApiResultBool.CreateSuccess(true): ApiResultBool.CreateSuccess(false, "No session found"));
+        return Task.FromResult(!String.IsNullOrEmpty(sid) ? ApiResultBool.CreateSuccess(true) : ApiResultBool.CreateSuccess(false, "No session found"));
     }
 }

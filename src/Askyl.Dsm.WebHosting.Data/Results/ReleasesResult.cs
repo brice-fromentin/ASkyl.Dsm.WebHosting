@@ -35,5 +35,3 @@ public sealed class ReleasesResult(bool success, string? message, List<AspNetRel
     public static ReleasesResult CreateFailure(ApiErrorCode errorCode, string message)
         => new(false, message, null, errorCode);
 }
-
-    

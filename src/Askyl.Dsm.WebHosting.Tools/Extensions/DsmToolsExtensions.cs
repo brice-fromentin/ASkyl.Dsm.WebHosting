@@ -1,7 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
-
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Tools.Network;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Askyl.Dsm.WebHosting.Tools.Extensions;
 

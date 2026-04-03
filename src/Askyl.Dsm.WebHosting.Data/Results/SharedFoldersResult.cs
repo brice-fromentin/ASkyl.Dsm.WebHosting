@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-
 using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 
 namespace Askyl.Dsm.WebHosting.Data.Results;
@@ -37,4 +36,3 @@ public sealed class SharedFoldersResult(bool success, string? message, List<FsEn
         => new(false, message, null, errorCode);
 }
 
-    
