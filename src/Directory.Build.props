@@ -6,6 +6,7 @@
     <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
+
   <PropertyGroup>
     <!-- Centralized versioning -->
     <Version>0.5.3</Version>
@@ -14,6 +15,7 @@
     <InformationalVersion>0.5.3</InformationalVersion>
     <PackageVersion>0.5.3</PackageVersion>
   </PropertyGroup>
+  
   <PropertyGroup>
     <!-- Enable .NET Analyzers for code quality and style enforcement -->
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
@@ -22,9 +24,4 @@
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
   </PropertyGroup>
-  <ItemGroup>
-    <!-- Roslynator Analyzers for enhanced code style enforcement -->
-    <PackageReference Include="Roslynator.Analyzers" Version="4.12.7" />
-    <PackageReference Include="Roslynator.Formatting.Analyzers" Version="4.12.7" />
-  </ItemGroup>
 </Project>
