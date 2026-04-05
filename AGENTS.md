@@ -1,17 +1,36 @@
 # .NET WebHosting Standards
 
-## Overview
+## 1. PROJECT OVERVIEW
 
-  This rule set defines the coding standards and practices for the Askyl.Dsm.WebHosting solution, tailored for use with the Continue AI assistant in VS Code.
+Askyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. The solution consists of multiple projects that work together to provide a web‑based UI for managing .NET web applications on Synology NAS devices.
 
-  **Project Structure:**
+**Project Structure:**
 
 - Source code: `src/`
 - Agent documentation: `docs/ai/` (MUST place all AI-generated docs here)
 
-  Askyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. The solution consists of multiple projects that work together to provide a web‑based UI for managing .NET web applications on Synology NAS devices.
+---
 
-## DOCUMENTATION PLACEMENT RULE (CRITICAL)
+## 2. ARCHITECTURE REFERENCE
+
+**ALL architectural details are maintained in `docs/ai/technical-architecture.md`.** Before working on any feature or making changes, consult this document for:
+
+- **Solution Structure**: Complete project inventory with purposes and file organization
+- **Service Contracts**: All interface definitions (IAuthenticationService, IWebSiteHostingService, etc.)
+- **Infrastructure Services**: PlatformInfoService, FileManagerService, ArchiveExtractorService, DownloaderService, VersionsDetectorService
+- **Design Patterns**: DI lifetimes, Result Pattern, Background Service, Source Generators, Strategy Pattern
+- **UI Architecture**: Component hierarchy, rendering strategy (Interactive WebAssembly), state management
+- **Data Models**: Domain models, DSM API integration, authentication flow
+- **Security Considerations**: Session management, antiforgery, file system security
+- **Performance Optimization**: Caching strategies, async/await patterns, benchmarking results
+
+**When in doubt about architecture, ALWAYS check `docs/ai/technical-architecture.md` first.**
+
+---
+
+## 3. DOCUMENTATION RULES
+
+### AI-Generated Documentation Placement (CRITICAL)
 
 **ALL AI-generated documentation MUST be placed in `docs/ai/`**, NOT in the generic `docs/` folder. This includes:
 
@@ -22,18 +41,28 @@
 
 Before creating any file in `docs/`, ALWAYS verify whether it should go in `docs/ai/` instead. When in doubt, use `docs/ai/`.
 
-## BUILD COMMAND (STANDARDIZED)
+---
 
-**The ONLY valid build command for this project is:**
+## 4. BUILD & FORMAT WORKFLOW
+
+### Standardized Commands
+
+**The ONLY valid build command:**
 
 ```bash
 dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 ```
 
-**The ONLY valid clean command for this project is:**
+**The ONLY valid clean command:**
 
 ```bash
 dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
+```
+
+**The ONLY valid format command:**
+
+```bash
+dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
 ```
 
 **NEVER use alternatives like:**
@@ -42,19 +71,19 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 - ❌ `dotnet run` (forbidden for launch)
 - ❌ Any other variant without the exact flags and solution path
 
-All references to "build" or "clean" in this document assume these EXACT commands.
+### Mandatory Sequence: Format → Build → Verify
 
-## FORMAT COMMAND (MANDATORY PRE-BUILD STEP) ⚠️ **CRITICAL**
+**THE REQUIRED WORKFLOW:**
 
-**Before EVERY build, you MUST format the code:**
+1. **Format** - Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet`
+2. **Build** - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
+3. **Verify** - Ensure no errors or warnings
 
-```bash
-dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
-```
+**NEVER skip the format step.** This ensures deterministic, tooling-enforced compliance before manual checks.
 
-### What This Enforces Automatically
+### What `dotnet format` Enforces Automatically
 
-The `dotnet format` command enforces ALL rules configured in `.editorconfig`:
+The format command enforces ALL rules configured in `.editorconfig`:
 
 - ✅ **Using directives**: System first, then alphabetical; removes unused usings
 - ✅ **String/String pattern**: `string` for types/variables, `String.` for static members
@@ -68,184 +97,131 @@ The `dotnet format` command enforces ALL rules configured in `.editorconfig`:
 - ✅ **All RCS0xxx rules**: Roslynator formatting rules
 - ✅ **All CAxxxx rules**: .NET design guidelines
 
-### Workflow: Format → Build → Verify
+---
 
-**THE MANDATORY SEQUENCE:**
+## 5. SESSION START PROTOCOL
 
-1. **Format** - Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet`
-2. **Build** - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
-3. **Verify** - Ensure no errors or warnings
+### Inference-Based Approach (IMPORTANT)
 
-**NEVER skip the format step.** This ensures deterministic, tooling-enforced compliance before manual checks.
+The AI assistant MUST use an **inference-based approach** rather than hardcoded templates.
 
-## SESSION START APPROACH
-
-**IMPORTANT:** The AI assistant MUST use an **inference-based approach** rather than hardcoded templates.
-
-### How It Works
+**How It Works:**
 
 1. At session start, read `AGENTS.md` to extract current standards and rules
-2. Dynamically generate a session summary based on the actual content of AGENTS.md
+2. Dynamically generate a session summary based on the actual content
 3. Apply all extracted rules throughout the session
-4. If AGENTS.md is updated in the future, the AI will automatically adapt without manual template maintenance
+4. If AGENTS.md is updated in the future, automatically adapt without manual maintenance
 
-### Session Start Requirements
+**Session Start Requirements (EXACT ORDER):**
 
-- **FIRST ACTION:** Say Hello briefly.
-- **ACKNOWLEDGE:** List standards by extracting them from AGENTS.md (not hardcoded)
-- **APPLY:** Use all extracted directives throughout the session
-- **DOCUMENTATION CHECK:** Before creating any docs, verify if they belong in `docs/ai/`
+1. **FIRST ACTION:** Say Hello briefly
+2. **ACKNOWLEDGE:** List standards by extracting them from AGENTS.md (not hardcoded)
+3. **APPLY:** Use all extracted directives throughout the session
+4. **DOCUMENTATION CHECK:** Before creating any docs, verify if they belong in `docs/ai/`
 
-### Benefits of Inference-Based Approach
+**Benefits:**
 
 - No maintenance required when updating rules in AGENTS.md
 - Always reflects current project standards automatically
 - More flexible and adaptable to changes
 
-## MANDATORY PRE-RESPONSE CODE CHECKLIST
+---
 
-  THE AI ASSISTANT MUST IMPERATIVELY FOLLOW THIS CHECKLIST BEFORE GENERATING OR MODIFYING CODE. ANY FAILURE IS A CRITICAL ERROR.
+## 6. CODE STANDARDS
 
-### 0. FORMAT → BUILD SEQUENCE ⚠️ **CRITICAL**
+### 6.1 Language Rules
 
-- **IMMEDIATELY after any code modification**, run BOTH commands in order:
+- **Chat Language:** ALWAYS use English
+- **Comments Language:** ALWAYS in English, never in another language (even if user communicates differently)
+- **Messages in Code:** ALWAYS in English, never in another language
+- **Commit Messages:** ALWAYS in English, never in another language
+- NEVER add to a message that the AI assistant has generated
 
-  ```bash
-  dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
-  dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
-  ```
+### 6.2 C# Language Features (.NET 10 & C# 14)
 
-- **NEVER respond** with code changes until the build succeeds with no errors or warnings
-- This rule takes precedence over all other checklist items - if format or build fails, fix it first
+**Native Types Usage (enforced by dotnet format):**
 
-### 1. MANUAL FORMAT COMPLIANCE CHECK ⚠️ **MANDATORY**
+- Use PascalCase class names (`String`, `Int32`, `Boolean`, `Double`, etc.) for:
+  - Static method calls
+  - Static properties/fields
+  - Explicit type references in reflection
+- Use lowercase keywords (`string`, `int`, `bool`, `double`, etc.) for:
+  - Variable declarations
+  - Parameter types
+  - Return types
+  - Instance method calls
 
-- **BEFORE responding**, verify rules NOT covered by `dotnet format`:
-  - ✅ Blank lines before/after control flow statements (project-specific pattern)
-  - ✅ Single-line logging format (no multi-line logger calls)
-  - ✅ No magic strings/numbers (use constants from Askyl.Dsm.WebHosting.Constants)
+**Other Requirements:**
 
-- **NEVER respond** until manual compliance is verified
-- Use `read_file` to review your changes if needed before responding
-- This rule takes precedence over all other checklist items except format/build verification
+- Use `GeneratedRegexAttribute` for regex patterns
+- **MANDATORY:** Use primary constructors for ALL classes with constructor parameters (except abstract classes and when inheritance requires it) - enforced by dotnet format
+- For simple emptiness checks on collections, prefer `IsEmpty` property if available, or `Count == 0` instead of `!collection.Any()`
+- Prefer `IsEmpty` over `Count` for both clarity and performance
+- Use null-forgiving operator (`!`) for injected services and post-null-check contexts
+- Use conditional null operator (`?`) for truly optional scenarios
+- Fix all compiler warnings after build completion
 
-### 2. VERIFY MAGIC STRINGS AND NUMBERS ⚠️ **ENFORCED**
+### 6.3 Code Structure and Style
 
-- Have ALL hardcoded strings (e.g., "X-Location-Path") and numbers been replaced by constants from `Askyl.Dsm.WebHosting.Constants`?
-- If a constant does not exist, add it to the appropriate constants file first?
+**General Principles:**
 
-**VERIFICATION REQUIRED:** Search for all string literals and numeric literals in modified code. Non-compliance is a critical error.
+- Apply DRY and SOLID principles
+- Use early returns to avoid deep nesting
 
-### 3. VERIFY SINGLE-LINE LOGGING ⚠️ **ENFORCED**
+**Control Flow Statements (enforced by dotnet format):**
+Always use `{}` braces, even for single-line bodies:
 
-- Are ALL logging statements on a single line?
-- Example: `logger.LogInformation("Message with {Param}", param);`
-- Multi-line logging is NOT allowed (even if it compiles)
+```csharp
+// ✅ Correct - multi-line with braces
+if (condition)
+{
+    DoSomething();
+}
 
-**VERIFICATION REQUIRED:** Scan all logger calls in modified files before responding. Non-compliance is a critical error.
+// ❌ Wrong - single line without braces
+if (condition) DoSomething();
+```
 
-### 4. VERIFY CONTROL FLOW BLANK LINES ⚠️ **ENFORCED**
+**Method Calls:**
+Can be single or multi-line based on readability:
 
-- Is there a blank line BEFORE control flow statements (unless first in scope or after comment)?
-- Is there a blank line AFTER control flow statements (unless last in scope)?
-- Are there NO blank lines BETWEEN statements inside blocks?
+```csharp
+// ✅ Single-line for short calls
+var result = CalculateTotal(items, rate);
 
-**VERIFICATION REQUIRED:** Review all control structures in modified files before responding. Non-compliance is a critical error.
+// ✅ Multi-line for complex expressions with multiple parameters
+var configuration = CreateConfiguration(
+    name: "MyApp",
+    version: "1.0.0",
+    environment: Environment.Production,
+    settings: new Settings { DebugMode = false }
+);
+```
 
-## READ THIS FIRST – MANDATORY FOR THE AI ASSISTANT
+**Logging Statements (MANUAL CHECK REQUIRED):**
+ALWAYS use single-line format for consistency and easier log scanning:
 
-  When reading this file, notify it to the user.
+```csharp
+// ✅ Correct - always single line
+logger.LogInformation("Reverse proxy created successfully for site {SiteName} with UUID {Uuid}", site.Name, proxy.UUID);
 
-  Before ANY code modification, the AI assistant MUST:
-    0. **FORMAT → BUILD SEQUENCE** - Run format then build immediately after every code change
-    1. Read the whole "MANDATORY PRE-RESPONSE CODE CHECKLIST" section and all of "CORE REMINDERS"; then verify each rule before coding.
-    2. Apply ALL rules systematically
-    3. Verify compliance before responding
+// ❌ Wrong - multi-line logging not allowed
+logger.LogInformation(
+    "Reverse proxy created successfully for site {SiteName} with UUID {Uuid}",
+    site.Name, proxy.UUID
+);
+```
 
-  **CRITICAL:** Rule #0 (Format → Build) takes precedence - if format or build fails, fix it first regardless of other checklist items.
+**Blank Line Rules (MANUAL CHECK REQUIRED):**
 
-  FAILURE TO FOLLOW THESE INSTRUCTIONS IS UNACCEPTABLE
-
-## CORE REMINDERS
-
-### Language Rules
-
-- **Chat Language:** ALWAYS use english.
-- **Comments Language:** ALWAYS in English, never in another language; even if user communicates in another language.
-- **Messages in code Language:** ALWAYS in English, never in another language; even if user communicates in another language.
-- **Commit messages:** ALWAYS in English, never in another language; even if user communicates in another language.
-- NEVER add to a message that the AI assistant has generated.
-
-### Constants Management
-
-- Store magic numbers and strings in `Askyl.Dsm.WebHosting.Constants`.
-- Use named constants or enums instead of hard‑coded values.
-
-## COMPLIANCE ENFORCEMENT (NON-NEGOTIABLE)
-
-After EVERY code modification, you MUST:
-
-1. **Format immediately** - Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet`
-2. **Review manual checks** - Verify magic strings, logging style, control flow blank lines
-3. **Build immediately** - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
-4. **Fix any issues** - Do NOT respond until format, build, and manual checks pass
-
-**FAILURE TO VERIFY IS UNACCEPTABLE.** Context compression does not excuse non-compliance. Always re-read AGENTS.md rules when in doubt.
-
-## Development Guidelines
-
-### Code Structure and Style
-
-- Apply DRY and SOLID principles.
-- Use early returns to avoid deep nesting.
-- **Control Flow Statements:** Always use `{}` braces, even for single-line bodies. Use multi-line format:
-
-  ```csharp
-  // ✅ Correct - multi-line with braces (enforced by dotnet format)
-  if (condition)
-  {
-      DoSomething();
-  }
-
-  // ❌ Wrong - single line without braces
-  if (condition) DoSomething();
-  ```
-
-- **Method Calls:** Can be single or multi-line based on readability:
-
-  ```csharp
-  // ✅ Single-line for short calls
-  var result = CalculateTotal(items, rate);
-
-  // ✅ Multi-line for complex expressions with multiple parameters
-  var configuration = CreateConfiguration(
-      name: "MyApp",
-      version: "1.0.0",
-      environment: Environment.Production,
-      settings: new Settings { DebugMode = false }
-  );
-  ```
-
-- **Logging Statements:** ALWAYS use single-line format for consistency and easier log scanning:
-
-  ```csharp
-  // ✅ Correct - always single line (MANUAL CHECK REQUIRED)
-  logger.LogInformation("Reverse proxy created successfully for site {SiteName} with UUID {Uuid}", site.Name, proxy.UUID);
-
-  // ❌ Wrong - multi-line logging not allowed
-  logger.LogInformation(
-      "Reverse proxy created successfully for site {SiteName} with UUID {Uuid}",
-      site.Name, proxy.UUID
-  );
-  ```
-
-- Add blank lines before control flow statements, except when they are the first statement in a scope or immediately preceded by a comment.
-- Add blank lines after control flow statements, except when they are the last statement in a scope.
+- Add blank lines BEFORE control flow statements, except when they are the first statement in a scope or immediately preceded by a comment
+- Add blank lines AFTER control flow statements, except when they are the last statement in a scope
+- NO blank lines BETWEEN statements inside blocks
 
 **CRITICAL:** Blank lines go BEFORE/AFTER complete control structures, NOT between individual statements inside them:
 
 ```csharp
-// ✅ CORRECT - comments stay with their code, no blank line needed (MANUAL CHECK)
+// ✅ CORRECT - comments stay with their code
 // This is an important check
 if (condition)
 {
@@ -262,7 +238,7 @@ if (condition)
 // Blank line AFTER complete control structure (not first in parent scope)
 DoNextThing();
 
-// ❌ WRONG - blank line inside if block (not first or last statement)
+// ❌ WRONG - blank line inside if block
 if (condition)
 {
     DoSomething();  // Not first in scope
@@ -279,32 +255,21 @@ if (condition)  // Don't separate comment from code!
 }
 ```
 
-- Use expression‑bodied members for single expressions without method chaining or multiple statements.
-- Conditional (ternary) operators are acceptable in expression‑bodied members.
-- When a property has both get and set accessors, always use multi‑line format.
-- Always put blank line after `#region` and before `#endregion` (enforced by dotnet format).
+**Additional Rules:**
 
-### C# Language Features (.NET 10 & C# 14)
+- Use expression-bodied members for single expressions without method chaining or multiple statements
+- Conditional (ternary) operators are acceptable in expression-bodied members
+- When a property has both get and set accessors, always use multi-line format
+- Always put blank line after `#region` and before `#endregion` (enforced by dotnet format)
 
-- **Native types usage** (enforced by dotnet format):
-  - Use PascalCase class names (`String`, `Int32`, `Boolean`, `Double`, etc.) for static method calls, static properties/fields, explicit type references in reflection.
-  - Use lowercase keywords (`string`, `int`, `bool`, `double`, etc.) for variable declarations, parameter types, return types, instance method calls.
-- Use `GeneratedRegexAttribute` for regex patterns.
-- MANDATORY: Use primary constructors for ALL classes with constructor parameters (except abstract classes and when inheritance requires it) - **enforced by dotnet format**.
-- For simple emptiness checks on a collection, prefer using an `IsEmpty` property if available, or a `Count == 0` check, instead of using `!collection.Any()`.
-- Prefer `IsEmpty` check rather than using `Count`, both for clarity and for performance.
-- Use null‑forgiving operator (`!`) for injected services and post‑null‑check contexts.
-- Use conditional null operator (`?`) for truly optional scenarios.
-- Fix all compiler warnings after build completion.
+### 6.4 Collections and Type Inference
 
-### Collections and Type Inference
+- Use `var` with `[]` initializers when type is obvious from immediate context
+- Use explicit type declarations with `[]` when type clarity is needed
+- Always use `new()` when type can be inferred and constructor parameters are provided
+- Prefer collection expressions `[..]` over `.ToList()`, `.ToArray()` for materializing LINQ queries or spreading existing collections - enforced by dotnet format
 
-- Use `var` with `[]` initializers when type is obvious from immediate context.
-- Use explicit type declarations with `[]` when type clarity is needed.
-- Always use `new()` when type can be inferred and constructor parameters are provided.
-- Prefer collection expressions `[..]` over `.ToList()`, `.ToArray()` for materializing LINQ queries or spreading existing collections - **enforced by dotnet format**.
-
-### Using Directives (Enforced by dotnet format)
+### 6.5 Using Directives (Enforced by dotnet format)
 
 The following rules are automatically enforced by `dotnet format`:
 
@@ -315,94 +280,205 @@ The following rules are automatically enforced by `dotnet format`:
 
 **No manual verification needed** - these are handled by the format step.
 
-### FluentUI Requirements
+### 6.6 Constants Management
 
-- Always prefer FluentUI components over HTML elements.
-- Always prefer FluentUI icons, colors, spacing, and typography over alternatives.
-- Never use inline styles – always use FluentUI theming and styling (minor positioning adjustments excepted).
-- CSS Minimalism: Verify FluentUI components provide desired behavior before adding custom CSS.
-- Documentation: <https://www.fluentui-blazor.net>
+- Store magic numbers and strings in `Askyl.Dsm.WebHosting.Constants`
+- Use named constants or enums instead of hard‑coded values
+- If a constant does not exist, add it to the appropriate constants file first
 
-### GIT SAFETY RULES (CRITICAL) ⚠️
+---
 
-**THE AI ASSISTANT MUST NEVER EXECUTE DANGEROUS GIT COMMANDS WITHOUT EXPLICIT USER CONFIRMATION.**
+## 7. COMPLIANCE ENFORCEMENT
 
-### 🚫 FORBIDDEN GIT OPERATIONS
+### Tooling-Enforced Patterns (No Manual Check Required)
 
-The following git commands are **STRICTLY PROHIBITED** unless the user explicitly requests them in the current conversation:
+These patterns are automatically enforced by `dotnet format`. Trust the tooling:
 
-- ❌ `git reset --hard` (destroys working directory changes)
-- ❌ `git reset --soft HEAD` (discards commits)
-- ❌ `git clean -fd` or `git clean -ffdx` (deletes untracked files)
-- ❌ `git checkout -- .` (discards all local changes)
-- ❌ `git rebase --abort` without user confirmation
-- ❌ `git reflog expire` or `git gc --prune=now`
+- **String/String pattern**: `string` for types, `String.` for static members
+- **Using directives**: System first, then alphabetical; unused usings removed
+- **Primary constructors**: Mandatory for classes with constructor parameters
+- **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()`
 
-### ✅ REQUIRED SAFETY PROTOCOL
+### Manual Checks Required (NOT Enforced by Tooling)
 
-**BEFORE executing ANY git command that modifies state:**
+These require manual verification BEFORE responding:
 
-1. **SHOW THE COMMAND** - Display the exact command to the user
-2. **EXPLAIN IMPACT** - Describe what will be affected (files, commits, branches)
-3. **GET EXPLICIT CONFIRMATION** - Wait for user approval before executing
-4. **RUN `git status` FIRST** - Always show current state before modifications
+1. **Magic Strings and Numbers**
+   - Have ALL hardcoded strings (e.g., "X-Location-Path") been replaced by constants?
+   - Have ALL hardcoded numbers been replaced by constants?
+   - Search for all string literals and numeric literals in modified code
 
-### EXAMPLE SAFETY FLOW
+2. **Single-Line Logging Format**
+   - Are ALL logging statements on a single line?
+   - Example: `logger.LogInformation("Message with {Param}", param);`
+   - Multi-line logging is NOT allowed (even if it compiles)
 
+3. **Control Flow Blank Lines**
+   - Is there a blank line BEFORE control flow statements (unless first in scope or after comment)?
+   - Is there a blank line AFTER control flow statements (unless last in scope)?
+   - Are there NO blank lines BETWEEN statements inside blocks?
+
+4. **Target-Typed `new` Expressions** (MANUAL CHECK)
+   - Use target-typed `new` when type can be inferred: `new(1, 1)` instead of `new SemaphoreSlim(1, 1)`
+   - Applies to: local variables, fields, auto-properties, explicit interface implementations
+   - Note: Analyzers (IDE0295/RCS1187) don't catch all cases (e.g., explicit interface properties), so manual verification is required
+
+5. **Markdown Documentation Validation** (when creating/modifying .md files)
+   - Run `markdownlint <file-path>` to validate markdown syntax and style
+   - Fix ALL errors before responding (target: zero errors)
+   - Common fixes: add language tags to code blocks, fix line lengths (>200 chars), add blank lines around headings/lists
+   - Example: `markdownlint docs/ai/technical-architecture.md`
+
+### Common Manual Check Mistakes to Avoid
+
+**❌ WRONG: Blank lines inside control flow blocks**
+
+```csharp
+if (condition)
+{
+    DoSomething();
+    
+    DoOtherThing();  // Blank line before this is WRONG!
+}
 ```
-❌ WRONG: Just running the command
-git reset --hard HEAD~1
 
-✅ CORRECT: Show, explain, confirm
-"The following command will discard your last commit and all working changes:
+**✅ CORRECT: No blank lines between statements inside blocks**
 
-  git reset --hard HEAD~1
+```csharp
+if (condition)
+{
+    DoSomething();
+    DoOtherThing();
+}
 
-Current status: [show git status output]
-
-Do you want to proceed? (yes/no)"
+// Blank line AFTER complete control structure
+DoNextThing();
 ```
 
-### ALLOWED SAFE OPERATIONS
+**❌ WRONG: Multi-line logging**
 
-These operations are generally safe and don't require explicit confirmation:
+```csharp
+logger.LogInformation(
+    "Message with {Param}", param  // NOT ALLOWED!
+);
+```
 
-- ✅ `git status`
-- ✅ `git diff`
-- ✅ `git log`
-- ✅ `git add <specific-file>` (not wildcards)
-- ✅ `git commit -m "..."` (after showing the commit message)
-- ✅ `git branch` (listing branches)
+**✅ CORRECT: Single-line logging always**
 
-### CRITICAL REMINDER
+```csharp
+logger.LogInformation("Message with {Param}", param);
+```
 
-**NEVER assume user wants to discard changes.** If a task can be completed without destructive git operations, choose that path. When in doubt, ask the user for clarification before proceeding.
+**❌ WRONG: Magic strings/numbers**
 
-## Application Launch (Temporary Restriction)
+```csharp
+if (header.Key == "X-Location-Path")  // Magic string!
+{
+    if (timeout > 30000)  // Magic number!
+}
+```
 
-- NEVER use `dotnet run`, `run_in_terminal`, or `open_simple_browser` to launch the application.
-- NEVER use `create_and_run_task` for run tasks.
-- NEVER suggest launching the application manually.
-- Use only the standardized build command to validate compilation and the standardized clean command to clean artifacts.
-- This restriction will be removed when VS Code debugger invocation capability becomes available.
+**✅ CORRECT: Use constants**
 
-## External Integration
+```csharp
+if (header.Key == HttpHeaderNames.LocationPath)
+{
+    if (timeout > Timeouts.DefaultRequestTimeout)
+}
+```
+
+### Non-Negotiable Enforcement
+
+After EVERY code modification, you MUST:
+
+1. **Format immediately** - Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet`
+2. **Review manual checks** - Verify magic strings, logging style, control flow blank lines
+3. **Build immediately** - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
+4. **Fix any issues** - Do NOT respond until format, build, and manual checks pass
+
+**FAILURE TO VERIFY IS UNACCEPTABLE.** Context compression does not excuse non-compliance. Always re-read AGENTS.md rules when in doubt.
+
+---
+
+## 8. PRE-RESPONSE CHECKLIST
+
+### Before Writing Code
+
+- [ ] Read "Compliance Enforcement" section
+- [ ] Identify required constants (no magic strings/numbers)
+- [ ] Plan single-line logging format
+- [ ] Review control flow blank line requirements
+- [ ] Review Git Safety Rules if git operations are needed
+
+### During Writing
+
+- [ ] Use constants from `Askyl.Dsm.WebHosting.Constants` (create if needed)
+- [ ] Write all logger calls on a single line
+- [ ] Add blank lines before/after control flow (not inside blocks)
+- [ ] Comments ONLY in English
+- [ ] Messages ONLY in English
+- [ ] Apply all architectural guidelines from `docs/ai/technical-architecture.md`
+- [ ] Trust `dotnet format` for: String/String pattern, using directives, primary constructors, collection expressions
+
+### After Writing
+
+- [ ] Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet` (for C# changes)
+- [ ] Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx` (for C# changes)
+- [ ] Verify no magic strings remain (MANUAL CHECK)
+- [ ] Verify single-line logging (MANUAL CHECK)
+- [ ] Verify control flow blank lines (MANUAL CHECK)
+- [ ] Validate English-only comments
+- [ ] Ensure successful build with no errors or warnings
+- [ ] Run `markdownlint <file-path>` and fix ALL errors (for .md file changes)
+
+### Final Verification Checklist
+
+- [ ] Format command executed (`dotnet format`) - for C# code
+- [ ] Build command executed with `/nr:false` flag - for C# code
+- [ ] No magic strings/numbers in code (MANUAL)
+- [ ] Single-line logging format (MANUAL)
+- [ ] Control flow blank lines correct (MANUAL)
+- [ ] Markdown validation passed (`markdownlint`) - for .md files
+- [ ] All comments/messages in English
+- [ ] FluentUI requirements met (for UI code)
+- [ ] Application launch restrictions respected
+- [ ] Web searches performed for .NET updates when needed
+- [ ] Documentation files placed in `docs/ai/` if AI-generated
+- [ ] Git safety rules followed (if git operations involved)
+
+---
+
+## 9. EXTERNAL INTEGRATIONS
 
 ### Synology DSM APIs
 
-- FileStation API for file system operations.
-- ReverseProxy API for web application routing.
-- Authentication API for DSM login integration.
+- FileStation API for file system operations
+- ReverseProxy API for web application routing
+- Authentication API for DSM login integration
 - Documentation: <https://global.download.synology.com/download/Document/DeveloperGuide/Synology_File_Station_API_Guide.pdf>
+
+**For detailed API integration patterns, see `docs/ai/technical-architecture.md` section "Data Models & API Integration".**
 
 ### Security Configuration
 
-- SSL certificate validation is enabled for DSM API connections.
-- All DSM API interactions go through the centralized `DsmApiClient`.
+- SSL certificate validation is enabled for DSM API connections
+- All DSM API interactions go through the centralized `DsmApiClient`
 
-## Web Search Guidelines
+---
 
-### When to Use Web Searches
+## 10. FRAMEWORK REQUIREMENTS
+
+### FluentUI Requirements
+
+- Always prefer FluentUI components over HTML elements
+- Always prefer FluentUI icons, colors, spacing, and typography over alternatives
+- Never use inline styles – always use FluentUI theming and styling (minor positioning adjustments excepted)
+- CSS Minimalism: Verify FluentUI components provide desired behavior before adding custom CSS
+- Documentation: <https://www.fluentui-blazor.net>
+
+**For component inventory and usage patterns, see `docs/ai/technical-architecture.md` section "UI Architecture".**
+
+### Web Search Guidelines
 
 **MANDATORY:** Perform web searches when dealing with potentially outdated information:
 
@@ -427,7 +503,7 @@ These operations are generally safe and don't require explicit confirmation:
    - Updated security guidelines
    - Performance optimization techniques
 
-### Search Strategy
+**Search Strategy:**
 
 - Use `mcp_searxng_web_search` tool with specific queries like:
   - "C# [LATEST] new features released"
@@ -437,172 +513,86 @@ These operations are generally safe and don't require explicit confirmation:
 - Cross-reference multiple sources when possible
 - Document any version-specific findings
 
-### Training Data Limitations
+---
 
-**Your training data cutoff is early 2025.** Any information beyond this date MUST be verified through web searches, especially:
+## 11. PROJECT-SPECIFIC NOTES
 
-- .NET runtime versions released after the cutoff date (e.g., .NET 10)
-- C# language features beyond documented versions (e.g., C# 14+)
-- Library updates and breaking changes
+- The UI project uses Interactive Server render mode with antiforgery protection
+- Logs are structured using Serilog with configuration‑based setup
+- The solution supports multiple CPU architectures (Debug/Release with Any CPU/x64/x86)
+- SPK packaging includes Docker‑based multi‑architecture builds for Synology compatibility
+- When a build is needed, ALWAYS use the standardized build command (see Section 4)
 
-## Project‑Specific Notes
+**For detailed project-specific architecture, see `docs/ai/technical-architecture.md`.**
 
-- The UI project uses Interactive Server render mode with antiforgery protection.
-- Logs are structured using Serilog with configuration‑based setup.
-- The solution supports multiple CPU architectures (Debug/Release with Any CPU/x64/x86).
-- SPK packaging includes Docker‑based multi‑architecture builds for Synology compatibility.
-- When a build is needed, ALWAYS use the standardized build command (see "BUILD COMMAND" section above)
+---
 
-## Instructions for the AI Assistant
+## 12. GIT SAFETY RULES (CRITICAL)
 
-### ⚠️ IMMEDIATE SESSION START REQUIREMENTS (NON-NEGOTIABLE)
+**THE AI ASSISTANT MUST NEVER EXECUTE DANGEROUS GIT COMMANDS WITHOUT EXPLICIT USER CONFIRMATION.**
 
-  These requirements must be fulfilled in EXACT ORDER as the FIRST actions of any session:
+### Forbidden Git Operations
 
-  1. **FIRST ACTION:** Say Hello briefly.
-  2. **ACKNOWLEDGE:** Confirm understanding of ALL critical reminders by listing them.
-  3. **APPLY:** Use directives throughout entire session immediately.
-  4. **WEB SEARCHES:** Perform web searches for .NET updates, new features, and breaking changes when needed.
+The following git commands are **STRICTLY PROHIBITED** unless the user explicitly requests them in the current conversation:
 
-  ⚠️ FAILURE TO COMPLETE ANY STEP IS A CRITICAL COMPLIANCE VIOLATION.
+- ❌ `git reset --hard` (destroys working directory changes)
+- ❌ `git reset --soft HEAD` (discards commits)
+- ❌ `git clean -fd` or `git clean -ffdx` (deletes untracked files)
+- ❌ `git checkout -- .` (discards all local changes)
+- ❌ `git rebase --abort` without user confirmation
+- ❌ `git reflog expire` or `git gc --prune=now`
 
-### 📋 CODE MODIFICATION CHECKLIST
+### Required Safety Protocol
 
-  BEFORE writing any code:
-    - Read "MANDATORY PRE-RESPONSE CODE CHECKLIST" and "CORE REMINDERS".
-    - Identify required constants (no magic strings/numbers).
-    - Plan single-line logging format.
-    - Review control flow blank line requirements.
-    - Review "GIT SAFETY RULES" if git operations are needed.
+**BEFORE executing ANY git command that modifies state:**
 
-  DURING writing:
-    - Use constants from `Askyl.Dsm.WebHosting.Constants` (create if needed).
-    - Write all logger calls on a single line.
-    - Add blank lines before/after control flow (not inside blocks).
-    - Comments ONLY in English.
-    - Messages ONLY in English.
-    - Apply all architectural guidelines.
-    - Trust `dotnet format` for: String/String pattern, using directives, primary constructors, collection expressions.
+1. **SHOW THE COMMAND** - Display the exact command to the user
+2. **EXPLAIN IMPACT** - Describe what will be affected (files, commits, branches)
+3. **GET EXPLICIT CONFIRMATION** - Wait for user approval before executing
+4. **RUN `git status` FIRST** - Always show current state before modifications
 
-  AFTER writing:
-    - Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet`
-    - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
-    - Verify no magic strings remain (MANUAL CHECK).
-    - Verify single-line logging (MANUAL CHECK).
-    - Verify control flow blank lines (MANUAL CHECK).
-    - Validate English‑only comments.
-    - Ensure a successful build; any build errors or warnings must be resolved before finalizing changes.
-
-### ✅ COMPLIANCE VERIFICATION CHECKLIST
-
-Before responding to any code-related request, verify:
-
-- [ ] Format command executed (`dotnet format`)
-- [ ] Build command executed with `/nr:false` flag
-- [ ] No magic strings/numbers in code (MANUAL)
-- [ ] Single-line logging format (MANUAL)
-- [ ] Control flow blank lines correct (MANUAL)
-- [ ] All comments/messages in English
-- [ ] FluentUI requirements met (for UI code)
-- [ ] Application launch restrictions respected
-- [ ] Web searches performed for .NET updates when needed
-- [ ] Documentation files placed in `docs/ai/` if AI-generated
-- [ ] Git safety rules followed (if git operations involved)
-
-Mark each item as verified after completion.
-
-### 📚 TOOLING-ENFORCED PATTERNS (No Manual Check Required)
-
-These patterns are automatically enforced by `dotnet format`. Trust the tooling:
-
-- **String/String pattern**: `string` for types, `String.` for static members
-- **Using directives**: System first, then alphabetical; unused usings removed
-- **Primary constructors**: Mandatory for classes with constructor parameters
-- **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()`
-
-### 🚫 COMMON MANUAL CHECK MISTAKES (AVOID THESE)
-
-These require manual verification as they are NOT enforced by tooling:
-
-#### ❌ WRONG: Blank lines inside control flow blocks (MANUAL CHECK)
-
-```csharp
-if (condition)
-{
-    DoSomething();  // Not first in scope
-    
-    DoOtherThing();  // Blank line before this is WRONG!
-}
-```
-
-#### ✅ CORRECT: No blank lines between statements inside blocks
-
-```csharp
-if (condition)
-{
-    DoSomething();
-    DoOtherThing();
-}
-
-// Blank line AFTER complete control structure (not first in parent scope)
-DoNextThing();
-```
-
-#### ❌ WRONG: Multi-line logging (MANUAL CHECK)
-
-```csharp
-logger.LogInformation(
-    "Message with {Param}", param  // NOT ALLOWED!
-);
-```
-
-#### ✅ CORRECT: Single-line logging always
-
-```csharp
-logger.LogInformation("Message with {Param}", param);
-```
-
-#### ❌ WRONG: Magic strings/numbers (MANUAL CHECK)
-
-```csharp
-// ❌ Don't do this
-if (header.Key == "X-Location-Path")  // Magic string!
-{
-    if (timeout > 30000)  // Magic number!
-}
-```
-
-#### ✅ CORRECT: Use constants
-
-```csharp
-// ✅ Do this instead
-if (header.Key == HttpHeaderNames.LocationPath)  // From Constants
-{
-    if (timeout > Timeouts.DefaultRequestTimeout)  // From Constants
-}
-```
-
-### 🚀 SESSION START TEMPLATE (Inference-Based)
-
-When beginning a new session, respond with:
+### Example Safety Flow
 
 ```
-Hello! 👋
+❌ WRONG: Just running the command
+git reset --hard HEAD~1
 
-I'm ready to help you with the project.
+✅ CORRECT: Show, explain, confirm
+"The following command will discard your last commit and all working changes:
 
-**Acknowledged Standards:** [Extracted from AGENTS.md]
-1. Format → Build sequence mandatory before every response
-2. Manual checks: Magic strings, single-line logging, control flow blank lines
-3. Tooling-enforced: String/String pattern, using directives, primary constructors, collection expressions
-4. ... [Continue based on actual AGENTS.md content]
+  git reset --hard HEAD~1
 
-What would you like me to work on?
+Current status: [show git status output]
+
+Do you want to proceed? (yes/no)"
 ```
 
-> Note: The specific standards listed above are dynamically extracted from `AGENTS.md` at session start, not hardcoded.
+### Allowed Safe Operations
 
-### ⚠️ CONTEXT COMPRESSION WARNING (CRITICAL)
+These operations are generally safe and don't require explicit confirmation:
+
+- ✅ `git status`
+- ✅ `git diff`
+- ✅ `git log`
+- ✅ `git add <specific-file>` (not wildcards)
+- ✅ `git commit -m "..."` (after showing the commit message)
+- ✅ `git branch` (listing branches)
+
+**CRITICAL REMINDER:** NEVER assume user wants to discard changes. If a task can be completed without destructive git operations, choose that path. When in doubt, ask the user for clarification before proceeding.
+
+---
+
+## 13. APPLICATION LAUNCH RESTRICTIONS (TEMPORARY)
+
+- NEVER use `dotnet run`, `run_in_terminal`, or `open_simple_browser` to launch the application
+- NEVER use `create_and_run_task` for run tasks
+- NEVER suggest launching the application manually
+- Use only the standardized build command to validate compilation and the standardized clean command to clean artifacts
+- This restriction will be removed when VS Code debugger invocation capability becomes available
+
+---
+
+## 14. CONTEXT COMPRESSION WARNING (CRITICAL)
 
 **If you detect that context has been compressed or session state reset:**
 
@@ -613,6 +603,8 @@ What would you like me to work on?
 
 **DO NOT rely on memory from previous tasks.** Context compression causes rule emphasis to fade. Always re-read AGENTS.md when in doubt or after any indication of context reset.
 
-### NON-COMPLIANCE CONSEQUENCES
+---
 
-  Failure to follow these instructions systematically is considered a critical error and must be corrected immediately.
+## 15. NON-COMPLIANCE CONSEQUENCES
+
+Failure to follow these instructions systematically is considered a critical error and must be corrected immediately.

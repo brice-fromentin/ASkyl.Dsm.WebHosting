@@ -1,8 +1,8 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.3
+**Version:** 0.5.4
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** April 4, 2026
+**Last Updated:** April 5, 2026
 
 ---
 
@@ -63,7 +63,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 
 ### Solution Structure
 
-```
+```text
 Askyl.Dsm.WebHosting.slnx (Version 0.5.3)
 ├── Askyl.Dsm.WebHosting.Benchmarks         # Performance benchmarks (BenchmarkDotNet)
 ├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
@@ -91,11 +91,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.3</Version>
-<AssemblyVersion>0.5.3.0</AssemblyVersion>
-<FileVersion>0.5.3.0</FileVersion>
-<InformationalVersion>0.5.3</InformationalVersion>
-<PackageVersion>0.5.3</PackageVersion>
+<Version>0.5.4</Version>
+<AssemblyVersion>0.5.4.0</AssemblyVersion>
+<FileVersion>0.5.4.0</FileVersion>
+<InformationalVersion>0.5.4</InformationalVersion>
+<PackageVersion>0.5.4</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -151,7 +151,8 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 **Complete Inventory:**
 
-```
+```text
+
 Constants/
 ├── Application/                            # Application-wide constants (4 files)
 │   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, validation messages
@@ -181,14 +182,15 @@ Constants/
 ├── UI/                                     # User interface constants (2 files)
 │   ├── DialogConstants.cs                  # Dialog widths (auto, 60%, 75%, 80%)
 │   └── FileSizeConstants.cs                # Byte calculations (KiB/MiB/GiB), formatting
-└── WebApi/                                 # API route definitions (7 files)
+└── WebApi/                                 # API route definitions (6 files)
     ├── AuthenticationRoutes.cs             # /api/v1/authentication/* (login, logout, status)
     ├── FileManagementRoutes.cs             # /api/v1/files/* (shared-folders, directory-contents)
     ├── FrameworkManagementRoutes.cs        # /api/v1/frameworks/* (install, uninstall)
-    ├── LicenseRoutes.cs                    # /api/v1/licenses/* (all)
     ├── LogDownloadRoutes.cs                # /api/v1/logdownload/* (logs)
     ├── RuntimeManagementRoutes.cs          # /api/v1/runtime/* (versions, channels, releases)
     └── WebsiteHostingRoutes.cs             # /api/v1/websites/* (all, add, update, remove, start, stop)
+
+**Note:** License API routes are handled client-side via `ILicenseService` (no server controller).
 ```
 
 **Key Constants by Category:**
@@ -261,18 +263,20 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 | **IFileSystemService** | `Contracts/IFileSystemService.cs` | GetSharedFoldersAsync(), GetDirectoryContentsAsync(), SetHttpGroupPermissionsAsync() | Ui.Services.FileSystemService, Ui.Client.Services.FileSystemService |
 | **IFrameworkManagementService** | `Contracts/IFrameworkManagementService.cs` | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services.FrameworkManagementService, Ui.Client.Services.FrameworkManagementService |
 | **ILogDownloadService** | `Contracts/ILogDownloadService.cs` | GetLogsArchiveAsync() | Ui.Services.LogDownloadService |
-| **IReverseProxyManagerService** | `Contracts/IReverseProxyManagerService.cs` | GetAllAsync(), AddAsync(), UpdateAsync(), DeleteAsync(), FindByCompositeKeyAsync() | Ui.Services.ReverseProxyManagerService |
-| **IWebSiteHostingService** | `Contracts/IWebSiteHostingService.cs` | GetAllWebsitesAsync(), AddWebsiteAsync(), UpdateWebsiteAsync(), RemoveWebsiteAsync(), StartWebsiteAsync(), StopWebsiteAsync() | Ui.Services.WebSiteHostingService, Ui.Client.Services.WebSiteHostingService |
+| **IReverseProxyManagerService** | `Contracts/IReverseProxyManagerService.cs` | CreateAsync(), UpdateAsync(), DeleteAsync() | Ui.Services.ReverseProxyManagerService |
+| **IWebSiteHostingService** | `Contracts/IWebSiteHostingService.cs` | GetAllWebsitesAsync(), AddWebsiteAsync(), UpdateWebsiteAsync() | Ui.Services.WebSiteHostingService, Ui.Client.Services.WebSiteHostingService |
+
+**Note:** `FindByCompositeKeyAsync()` is a private helper method in the implementation, not part of the public interface.
 | **IWebSitesConfigurationService** | `Contracts/IWebSitesConfigurationService.cs` | GetAllAsync(), SaveAsync(), DeleteAsync() | Ui.Services.WebSitesConfigurationService |
 | **IPlatformInfoService** | `Contracts/IPlatformInfoService.cs` | (Properties: ChannelVersion, CurrentArchitecture, CurrentOS) | Tools.Infrastructure.PlatformInfoService |
 | **IFileManagerService** | `Contracts/IFileManagerService.cs` | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName() | Tools.Infrastructure.FileManagerService |
 | **IArchiveExtractorService** | `Contracts/IArchiveExtractorService.cs` | Decompress(inputFile, exclude) | Tools.Infrastructure.ArchiveExtractorService |
-| **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), DownloadVersionToAsync(), GetAspNetCoreReleasesAsync(), GetAspNetCoreChannelsAsync() | Tools.Runtime.DownloaderService |
+| **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), GetReleasesAsync() | Tools.Runtime.DownloaderService |
 | **IVersionsDetectorService** | `Contracts/IVersionsDetectorService.cs` | GetInstalledVersionsAsync(), RefreshCacheAsync() | Tools.Runtime.VersionsDetectorService |
 
 **Structure:**
 
-```
+```text
 Data/
 ├── Attributes/                             # Custom attributes
 │   └── GenerateCloneAttribute.cs           # Source generator trigger (backup)
@@ -332,7 +336,6 @@ Data/
     ├── AuthenticationResult.cs             # Auth state with user info
     ├── ChannelsResult.cs                   # .NET channel information
     ├── DirectoryContentsResult.cs          # File system directory listing
-    ├── DirectoryFilesResult.cs             # Directory file operations
     ├── InstallationResult.cs               # Framework installation status
     ├── InstalledVersionsResult.cs          # Installed .NET versions
     ├── ReleasesResult.cs                   # .NET release information
@@ -355,7 +358,7 @@ Data/
 
 **Structure:**
 
-```
+```text
 Tools/
 ├── Extensions/                             # Extension methods
 │   └── UriExtensions.cs                    # URI manipulation helpers
@@ -365,9 +368,11 @@ Tools/
 │   └── PlatformInfoService.cs              # Platform detection (implements IPlatformInfoService)
 ├── Network/                                # Network communication
 │   └── DsmApiClient.cs                     # Centralized DSM API client
-└── Runtime/                                # .NET runtime management (DI-based)
+├── Runtime/                                # .NET runtime management (DI-based)
     ├── DownloaderService.cs                # Binary download utility (implements IDownloaderService)
     └── VersionsDetectorService.cs          # Version detection with smart caching (implements IVersionsDetectorService)
+└── Threading/                              # Async coordination utilities
+    └── SemaphoreLock.cs                    # Semaphore-based async locking utility
 ```
 
 **Infrastructure Services Architecture:**
@@ -386,7 +391,7 @@ The Tools project contains DI-based infrastructure services for platform detecti
 
 1. **Singleton Services (Stateful):** Platform info loaded once at startup; VersionsDetector caches expensive process output
 2. **Scoped Services (Request-bound):** FileManager configured per-request via factory lambda; ArchiveExtractor and Downloader depend on Scoped FileManager
-3. **Smart Caching Strategy:** VersionsDetectorService uses lazy initialization with explicit cache refresh (`RefreshCacheAsync()` called after install/uninstall operations) - see `VersionsDetectorService.cs` lines 28-50
+3. **Smart Caching Strategy:** VersionsDetectorService uses lazy initialization with explicit cache refresh after install/uninstall operations
 4. **CancellationToken Support:** All DownloaderService public methods accept optional CancellationToken for cooperative cancellation flow from UI to infrastructure layer
 
 **DsmApiClient Implementation:**
@@ -411,18 +416,15 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
 
 **Structure:**
 
-```
+```text
 Ui/
 ├── Authorization/                          # Custom authorization
-│   └── AuthorizeSessionAttribute.cs        # Session-based auth attribute
-├── Components/                             # Razor components
-│   ├── App.razor                           # Root component with WASM render mode
-│   └── _Imports.razor                      # Global using directives
+│   └── AuthorizeSessionAttribute.cs        # Custom session-based authorization attribute
 ├── Controllers/                            # ASP.NET Core API controllers
 │   ├── AuthenticationController.cs         # Login/logout/status endpoints
 │   ├── FileManagementController.cs         # File system operations
 │   ├── FrameworkManagementController.cs    # Framework installation
-│   ├── HelloWorldController.cs             # Test endpoint
+│   ├── HelloWorldController.cs             # Test endpoint controller
 │   ├── LogDownloadController.cs            # Log file retrieval
 │   ├── RuntimeManagementController.cs      # .NET version detection
 │   └── WebsiteHostingController.cs         # Website CRUD + lifecycle
@@ -451,7 +453,7 @@ See `Ui/Program.cs` for full implementation. Key registration patterns:
 
 | Lifetime | Services | Notes |
 |----------|----------|-------|
-| **Singleton** | DsmApiClient, IPlatformInfoService, IVersionsDetectorService, WebSiteHostingService | Stateful services, caching, background service |
+| **Singleton** | DsmApiClient, IPlatformInfoService, IVersionsDetectorService, WebSiteHostingService, IFileSystemService, IReverseProxyManagerService | Stateful services, caching, background service, singleton wrappers |
 | **Scoped (Factory)** | IFileManagerService | Factory lambda injects ILogger + configures root path |
 | **Scoped** | IArchiveExtractorService, IDownloaderService, IAuthenticationService, IDotnetVersionService, IFrameworkManagementService, ILogDownloadService | Request-bound services |
 
@@ -487,7 +489,7 @@ See `Ui/Program.cs` for full implementation. Key registration patterns:
 
 **Complete Component Inventory:**
 
-```
+```text
 Ui.Client/
 ├── Components/                             # Reusable Blazor components
 │   ├── Controls/                           # Custom UI controls (4 components)
@@ -510,12 +512,9 @@ Ui.Client/
 │   │   │   └── Services: ILicenseService.GetLicensesAsync()
 │   │   └── WebSiteConfigurationDialog.razor # Add/edit website form with file picker
 │   │       └── Data Model: WebSiteInstance, Nested FileSelectionDialog for path selection
-│   ├── Layout/                             # Layout components (4 components)
-│   │   ├── MainLayout.razor                # Main app shell with FluentMainLayout, global providers
-│   │   │   └── Providers: FluentToastProvider, FluentDialogProvider, FluentTooltipProvider
-│   │   ├── NavigationMenu.razor            # FluentUI navigation menu
-│   │   ├── HeaderBar.razor                 # Top bar with user info and version
-│   │   └── Footer.razor                    # Status indicators
+│   ├── Layout/                             # Layout components
+│   │   └── MainLayout.razor                # Main app shell with FluentMainLayout, global providers
+│   │       └── Providers: FluentToastProvider, FluentDialogProvider, FluentTooltipProvider
 │   ├── Pages/                              # Blazor pages (3 pages)
 │   │   ├── Home.razor                      # Dashboard with website grid, toolbar actions (add/edit/delete/start/stop)
 │   │   │   └── Services: IWebSiteHostingService, IAuthenticationService, ILogDownloadService
@@ -525,6 +524,7 @@ Ui.Client/
 │   └── Patterns/                           # UI patterns
 │       └── WorkingState/                   # IWorkingState interface and CreateWorkingState extension
 ├── Extensions/                             # Client-side extension methods
+│   └── FsEntryExtensions.cs                # File system entry extension methods
 ├── Interfaces/                             # C# interfaces for JS interop
 ├── Services/                               # HTTP client wrappers (7 services)
 │   ├── AuthenticationService.cs            # Singleton - POST /api/authentication/login, logout, status
@@ -689,7 +689,7 @@ public static partial class HelloWorldExtensions
 
 **Service Lifetime Hierarchy:**
 
-```
+```text
 Singleton (Application-wide)
 ├── DsmApiClient
 ├── PlatformInfoService (platform detection, config loading)
@@ -747,7 +747,7 @@ public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration co
 
 **Structure:**
 
-```
+```text
 Contracts (Data layer)          →  Implementations (Ui.Services)
 ─────────────────────────          ───────────────────────────┬───────
 IWebSiteHostingService            WebSiteHostingService       │
@@ -948,7 +948,7 @@ public partial class WebSiteInstance : IGenericCloneable<WebSiteInstance>
 
 #### Authentication Flow
 
-```
+```text
 1. Client → LoginCredentials { Username, Password, [LotP] }
 2. DsmApiClient.ReadSettings() → Load /etc/synoinfo.conf
 3. DsmApiClient.HandShakeAsync() → SYNO.API.Info query
@@ -970,7 +970,7 @@ public partial class WebSiteInstance : IGenericCloneable<WebSiteInstance>
 - `file.copy` - Copy files
 - `core.acl.set` - Set ACL permissions (critical for web hosting)
 
-**Key Operation: Setting HTTP Group Permissions**
+### Key Operation: Setting HTTP Group Permissions
 
 ```csharp
 public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool recursive)
@@ -1018,7 +1018,7 @@ public async Task<ReverseProxyInfo?> FindByCompositeKeyAsync(WebSiteConfiguratio
 
 ### Rendering Strategy
 
-**Hybrid Mode: Interactive WebAssembly**
+#### Hybrid Mode: Interactive WebAssembly
 
 ```csharp
 builder.Services.AddRazorComponents()
@@ -1034,7 +1034,7 @@ builder.Services.AddRazorComponents()
 
 ### Component Hierarchy
 
-```
+```text
 App.razor (Root)
 └── MainLayout.razor
     ├── HeaderBar.razor (User info, logout)
@@ -1130,6 +1130,20 @@ Input components with immediate validation feedback:
    - Validate all file paths against allowed directories
    - Prevent path traversal attacks
 
+### Custom Authorization
+
+**AuthorizeSessionAttribute:**
+
+Location: `Ui/Authorization/AuthorizeSessionAttribute.cs`
+
+Purpose: Session-based authorization for API controllers
+
+Usage:
+
+- Applied to FrameworkManagementController
+- Applied to RuntimeManagementController
+- Validates active DSM session before allowing access
+
 ---
 
 ## Performance Optimization
@@ -1186,7 +1200,9 @@ public async Task<ApiResult> StartSiteAsync(WebSiteInstance instance)
 
 ### Overview
 
-The solution uses DI-based infrastructure services for platform detection, file management, archive extraction, .NET runtime downloads, and version detection. All services follow clean interface contracts with optimized lifetimes for performance and testability.
+The solution uses DI-based infrastructure services for platform detection, file management, archive extraction, .NET runtime downloads, and version detection. All services follow clean interface contracts.
+
+These services are registered in the dependency injection container with appropriate lifetimes (Singleton or Scoped) to ensure optimal resource usage and thread safety.
 
 ### Infrastructure Services Summary
 
@@ -1253,6 +1269,89 @@ mockVersionsDetector.Setup(v => v.GetInstalledVersionsAsync())
 ```
 
 See interface definitions in `Data/Contracts/` folder for full contract specifications.
+
+### Threading Utilities
+
+**SemaphoreLock Implementation:**
+
+Location: `Tools/Threading/SemaphoreLock.cs`
+
+Purpose: Async semaphore-based locking with interface-based ownership pattern for thread-safe operations
+
+Key Features:
+
+- **ISemaphoreOwner interface** - Forces explicit semaphore ownership declaration (similar to IWorkingState pattern)
+- **Static AcquireAsync method** - Accepts ISemaphoreOwner instead of raw SemaphoreSlim
+- **Optional onAcquired callback** - Executes initialization logic after acquiring lock
+- **Automatic release via using statement** - Ensures lock is always released (even on exceptions)
+- **CancellationToken support** - Cooperative cancellation during wait
+- Prevents race conditions in concurrent scenarios
+- Used in `WebSitesConfigurationService` for lazy-loaded configuration cache
+
+Interface Definition:
+
+```csharp
+/// <summary>
+/// Interface for components that own a semaphore for thread-safe operations.
+/// Similar to IWorkingState pattern - forces explicit ownership declaration.
+/// </summary>
+public interface ISemaphoreOwner
+{
+    /// <summary>
+    /// Gets the semaphore used for synchronization.
+    /// </summary>
+    SemaphoreSlim Semaphore { get; }
+}
+```
+
+Usage Pattern:
+
+```csharp
+// Client implements ISemaphoreOwner interface with dedicated region
+public class WebSitesConfigurationService : IWebSitesConfigurationService, ISemaphoreOwner
+{
+    #region ISemaphoreOwner Implementation
+
+    public SemaphoreSlim Semaphore { get; } = new(1, 1);
+
+    #endregion
+
+    #region Fields
+
+    private readonly string _configurationFilePath = ...;
+    private WebSitesConfiguration? _cachedConfiguration;
+
+    #endregion
+
+    public async Task<WebSiteConfiguration?> GetSiteAsync(Guid siteId)
+    {
+        using (await SemaphoreLock.AcquireAsync(this, EnsureLoadedAsync))
+        {
+            return _cachedConfiguration!.Sites.FirstOrDefault(s => s.Id == siteId);
+        }
+    }
+
+    // Initialization callback (executed after lock acquired, before using block)
+    private async Task EnsureLoadedAsync()
+    {
+        if (_cachedConfiguration != null)
+        {
+            return;
+        }
+
+        _cachedConfiguration = await LoadFromDiskAsync();
+    }
+}
+```
+
+**Benefits of This Pattern:**
+
+1. **Explicit ownership** - Interface forces client to declare semaphore ownership clearly
+2. **Consistent API design** - Matches `IWorkingState`/`WorkingState` pattern in codebase
+3. **Clean syntax** - `using` statement ensures deterministic disposal
+4. **Lazy initialization** - `onAcquired` callback loads data only when first needed
+5. **Thread-safe** - Only one thread can acquire lock and initialize at a time
+6. **Exception-safe** - Lock released automatically even if exception occurs
 
 ---
 
@@ -1404,12 +1503,13 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.5.2 | March 2026 | Architecture documentation update, version bump |
-| 0.5.1 | Earlier | Initial architecture documentation |
+| 0.5.4 | April 5, 2026 | Architecture documentation synchronized with codebase; corrected service lifetimes, added SemaphoreLock and AuthorizeSessionAttribute documentation |
+| 0.5.3 | March 2026 | Architecture documentation update, version bump |
+| 0.5.2 | Earlier | Initial architecture documentation |
 | ... | ... | Previous versions |
 
 ---
 
-**Document Maintained By:** AI Assistant (Qwen Code)  
-**Last Review Date:** March 26, 2026  
+**Document Maintained By:** AI Assistant (Qwen Code)
+**Last Review Date:** April 5, 2026
 **Next Review Date:** TBD (after major feature implementation)

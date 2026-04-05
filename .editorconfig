@@ -76,6 +76,10 @@ dotnet_style_prefer_collection_expression = true:error
 dotnet_simplify_interpolated_string = true:suggestion
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
 
+# Target-typed new expressions (AGENTS.md: prefer concise syntax)
+IDE0295 = error # Use target-typed 'new'
+RCS1187 = warning # Roslynator use target-typed 'new'
+
 # File header template (optional)
 # dotnet_diagnostic.S125.severity = warning
 
