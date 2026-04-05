@@ -8,7 +8,7 @@
 
 - Source code: `src/`
 - Agent documentation: `docs/ai/` (MUST place all AI-generated docs here)
-  
+
   Askyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. The solution consists of multiple projects that work together to provide a web‑based UI for managing .NET web applications on Synology NAS devices.
 
 ## DOCUMENTATION PLACEMENT RULE (CRITICAL)
@@ -44,6 +44,40 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 All references to "build" or "clean" in this document assume these EXACT commands.
 
+## FORMAT COMMAND (MANDATORY PRE-BUILD STEP) ⚠️ **CRITICAL**
+
+**Before EVERY build, you MUST format the code:**
+
+```bash
+dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
+```
+
+### What This Enforces Automatically
+
+The `dotnet format` command enforces ALL rules configured in `.editorconfig`:
+
+- ✅ **Using directives**: System first, then alphabetical; removes unused usings
+- ✅ **String/String pattern**: `string` for types/variables, `String.` for static members
+- ✅ **Primary constructors**: Mandatory for classes with constructor parameters
+- ✅ **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()`
+- ✅ **Braces**: Always use `{}` for control flow statements
+- ✅ **Blank lines**: After `#region`, before `#endregion`
+- ✅ **Naming conventions**: PascalCase for properties/methods, camelCase for parameters/locals
+- ✅ **Nullable reference types**: Enabled and enforced
+- ✅ **All IDE0xxx rules**: Code style diagnostics (IDE0005, IDE0049, IDE0290, etc.)
+- ✅ **All RCS0xxx rules**: Roslynator formatting rules
+- ✅ **All CAxxxx rules**: .NET design guidelines
+
+### Workflow: Format → Build → Verify
+
+**THE MANDATORY SEQUENCE:**
+
+1. **Format** - Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet`
+2. **Build** - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
+3. **Verify** - Ensure no errors or warnings
+
+**NEVER skip the format step.** This ensures deterministic, tooling-enforced compliance before manual checks.
+
 ## SESSION START APPROACH
 
 **IMPORTANT:** The AI assistant MUST use an **inference-based approach** rather than hardcoded templates.
@@ -60,7 +94,6 @@ All references to "build" or "clean" in this document assume these EXACT command
 - **FIRST ACTION:** Say Hello briefly.
 - **ACKNOWLEDGE:** List standards by extracting them from AGENTS.md (not hardcoded)
 - **APPLY:** Use all extracted directives throughout the session
-- **TRAINING DATA:** State your training data cutoff date at session start: **"My training data cutoff is early 2025"** (this is FIXED, do not vary this statement)
 - **DOCUMENTATION CHECK:** Before creating any docs, verify if they belong in `docs/ai/`
 
 ### Benefits of Inference-Based Approach
@@ -69,72 +102,67 @@ All references to "build" or "clean" in this document assume these EXACT command
 - Always reflects current project standards automatically
 - More flexible and adaptable to changes
 
-**⚠️ CRITICAL: Training Data Date Consistency** - You MUST state the exact same training data cutoff date ("early 2025") every session. Do NOT provide different dates or estimate. This is a fixed fact, not dynamic information. Inconsistent dates indicate context compression issues and require re-reading AGENTS.md immediately.
-
 ## MANDATORY PRE-RESPONSE CODE CHECKLIST
 
   THE AI ASSISTANT MUST IMPERATIVELY FOLLOW THIS CHECKLIST BEFORE GENERATING OR MODIFYING CODE. ANY FAILURE IS A CRITICAL ERROR.
 
-### 0. BUILD AFTER EVERY CODE CHANGE ⚠️ **CRITICAL**
+### 0. FORMAT → BUILD SEQUENCE ⚠️ **CRITICAL**
 
-- **IMMEDIATELY after any code modification**, run the build command to verify compilation
+- **IMMEDIATELY after any code modification**, run BOTH commands in order:
+
+  ```bash
+  dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
+  dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
+  ```
+
 - **NEVER respond** with code changes until the build succeeds with no errors or warnings
-- This rule takes precedence over all other checklist items - if build fails, fix it first
+- This rule takes precedence over all other checklist items - if format or build fails, fix it first
 
-### 1. FORMAT COMPLIANCE CHECK ⚠️ **MANDATORY**
+### 1. MANUAL FORMAT COMPLIANCE CHECK ⚠️ **MANDATORY**
 
-- **BEFORE responding** with any code changes, verify ALL formatting rules are met:
-  - ✅ Blank lines before/after control flow statements (NOT inside blocks)
-  - ✅ Using directives sorted correctly (System first, then alphabetical)
+- **BEFORE responding**, verify rules NOT covered by `dotnet format`:
+  - ✅ Blank lines before/after control flow statements (project-specific pattern)
   - ✅ Single-line logging format (no multi-line logger calls)
-  - ✅ String/String pattern applied (`String.` for static, `string` for types)
   - ✅ No magic strings/numbers (use constants from Askyl.Dsm.WebHosting.Constants)
 
-- **NEVER respond** until formatting compliance is verified
+- **NEVER respond** until manual compliance is verified
 - Use `read_file` to review your changes if needed before responding
-- This rule takes precedence over all other checklist items except build verification
+- This rule takes precedence over all other checklist items except format/build verification
 
-### 2. VERIFY String vs string Pattern ⚠️ **ENFORCED**
-
-- Is `String.` (PascalCase) used for ALL static method calls? Examples: `String.IsNullOrEmpty(...)`, `String.Join(...)`
-- Is `string` (lowercase) used for ALL types, variables, and declarations? Examples: `public string MyMethod()`, `string myVar = ...`
-- Use `String.Empty` for empty string constants. Exception: Use `""` only for default parameter values (e.g., `public string DefaultMessage = "";`)
-
-**VERIFICATION REQUIRED:** Scan ALL modified files before responding. Non-compliance is a critical error.
-
-### 3. VERIFY using DIRECTIVES ⚠️ **ENFORCED**
-
-- Are using directives sorted correctly?
-    1. System.* namespaces first (always)
-    2. All other usings alphabetically sorted (Microsoft, third-party, project namespaces mixed together)
-- Have ALL unused using directives been removed?
-- Have ALL implicit using directives been removed?
-
-**VERIFICATION REQUIRED:** Review all using statements in modified files before responding. Non-compliance is a critical error.
-
-### 4. VERIFY MAGIC STRINGS AND NUMBERS ⚠️ **ENFORCED**
+### 2. VERIFY MAGIC STRINGS AND NUMBERS ⚠️ **ENFORCED**
 
 - Have ALL hardcoded strings (e.g., "X-Location-Path") and numbers been replaced by constants from `Askyl.Dsm.WebHosting.Constants`?
 - If a constant does not exist, add it to the appropriate constants file first?
 
 **VERIFICATION REQUIRED:** Search for all string literals and numeric literals in modified code. Non-compliance is a critical error.
 
-### 5. .NET BUILD
+### 3. VERIFY SINGLE-LINE LOGGING ⚠️ **ENFORCED**
 
-- Use the standardized build command exclusively (see "BUILD COMMAND" section above)
-- NEVER use `dotnet build` alone without `/nr:false` flag
+- Are ALL logging statements on a single line?
+- Example: `logger.LogInformation("Message with {Param}", param);`
+- Multi-line logging is NOT allowed (even if it compiles)
+
+**VERIFICATION REQUIRED:** Scan all logger calls in modified files before responding. Non-compliance is a critical error.
+
+### 4. VERIFY CONTROL FLOW BLANK LINES ⚠️ **ENFORCED**
+
+- Is there a blank line BEFORE control flow statements (unless first in scope or after comment)?
+- Is there a blank line AFTER control flow statements (unless last in scope)?
+- Are there NO blank lines BETWEEN statements inside blocks?
+
+**VERIFICATION REQUIRED:** Review all control structures in modified files before responding. Non-compliance is a critical error.
 
 ## READ THIS FIRST – MANDATORY FOR THE AI ASSISTANT
 
   When reading this file, notify it to the user.
 
   Before ANY code modification, the AI assistant MUST:
-    0. **BUILD VERIFICATION** - After every code change, run the build command immediately and verify success before responding
+    0. **FORMAT → BUILD SEQUENCE** - Run format then build immediately after every code change
     1. Read the whole "MANDATORY PRE-RESPONSE CODE CHECKLIST" section and all of "CORE REMINDERS"; then verify each rule before coding.
     2. Apply ALL rules systematically
     3. Verify compliance before responding
 
-  **CRITICAL:** Rule #0 (Build Verification) takes precedence - if build fails, fix it first regardless of other checklist items.
+  **CRITICAL:** Rule #0 (Format → Build) takes precedence - if format or build fails, fix it first regardless of other checklist items.
 
   FAILURE TO FOLLOW THESE INSTRUCTIONS IS UNACCEPTABLE
 
@@ -157,9 +185,10 @@ All references to "build" or "clean" in this document assume these EXACT command
 
 After EVERY code modification, you MUST:
 
-1. **Build immediately** - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
-2. **Review formatting** - Use `read_file` to verify all rules are met before responding
-3. **Fix any issues** - Do NOT respond until both build and formatting pass
+1. **Format immediately** - Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet`
+2. **Review manual checks** - Verify magic strings, logging style, control flow blank lines
+3. **Build immediately** - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
+4. **Fix any issues** - Do NOT respond until format, build, and manual checks pass
 
 **FAILURE TO VERIFY IS UNACCEPTABLE.** Context compression does not excuse non-compliance. Always re-read AGENTS.md rules when in doubt.
 
@@ -172,7 +201,7 @@ After EVERY code modification, you MUST:
 - **Control Flow Statements:** Always use `{}` braces, even for single-line bodies. Use multi-line format:
 
   ```csharp
-  // ✅ Correct - multi-line with braces
+  // ✅ Correct - multi-line with braces (enforced by dotnet format)
   if (condition)
   {
       DoSomething();
@@ -200,7 +229,7 @@ After EVERY code modification, you MUST:
 - **Logging Statements:** ALWAYS use single-line format for consistency and easier log scanning:
 
   ```csharp
-  // ✅ Correct - always single line
+  // ✅ Correct - always single line (MANUAL CHECK REQUIRED)
   logger.LogInformation("Reverse proxy created successfully for site {SiteName} with UUID {Uuid}", site.Name, proxy.UUID);
 
   // ❌ Wrong - multi-line logging not allowed
@@ -216,7 +245,7 @@ After EVERY code modification, you MUST:
 **CRITICAL:** Blank lines go BEFORE/AFTER complete control structures, NOT between individual statements inside them:
 
 ```csharp
-// ✅ CORRECT - comments stay with their code, no blank line needed
+// ✅ CORRECT - comments stay with their code, no blank line needed (MANUAL CHECK)
 // This is an important check
 if (condition)
 {
@@ -253,15 +282,15 @@ if (condition)  // Don't separate comment from code!
 - Use expression‑bodied members for single expressions without method chaining or multiple statements.
 - Conditional (ternary) operators are acceptable in expression‑bodied members.
 - When a property has both get and set accessors, always use multi‑line format.
-- Always put blank line after `#region` and before `#endregion`.
+- Always put blank line after `#region` and before `#endregion` (enforced by dotnet format).
 
 ### C# Language Features (.NET 10 & C# 14)
 
-- **Native types usage:**
+- **Native types usage** (enforced by dotnet format):
   - Use PascalCase class names (`String`, `Int32`, `Boolean`, `Double`, etc.) for static method calls, static properties/fields, explicit type references in reflection.
   - Use lowercase keywords (`string`, `int`, `bool`, `double`, etc.) for variable declarations, parameter types, return types, instance method calls.
 - Use `GeneratedRegexAttribute` for regex patterns.
-- MANDATORY: Use primary constructors for ALL classes with constructor parameters (except abstract classes and when inheritance requires it).
+- MANDATORY: Use primary constructors for ALL classes with constructor parameters (except abstract classes and when inheritance requires it) - **enforced by dotnet format**.
 - For simple emptiness checks on a collection, prefer using an `IsEmpty` property if available, or a `Count == 0` check, instead of using `!collection.Any()`.
 - Prefer `IsEmpty` check rather than using `Count`, both for clarity and for performance.
 - Use null‑forgiving operator (`!`) for injected services and post‑null‑check contexts.
@@ -273,14 +302,18 @@ if (condition)  // Don't separate comment from code!
 - Use `var` with `[]` initializers when type is obvious from immediate context.
 - Use explicit type declarations with `[]` when type clarity is needed.
 - Always use `new()` when type can be inferred and constructor parameters are provided.
-- Prefer collection expressions `[..]` over `.ToList()`, `.ToArray()` for materializing LINQ queries or spreading existing collections.
+- Prefer collection expressions `[..]` over `.ToList()`, `.ToArray()` for materializing LINQ queries or spreading existing collections - **enforced by dotnet format**.
 
-### Using Directives
+### Using Directives (Enforced by dotnet format)
 
-- Never add using directives for types when feature implicit usings is activated (remove if found).
-- Always remove unused usings in Razor and C#.
-- Sort using statements: System, Microsoft, third‑party libraries, project namespaces.
-- Prefer additional usings instead of fully qualified names.
+The following rules are automatically enforced by `dotnet format`:
+
+- ✅ Never add using directives for types when feature implicit usings is activated
+- ✅ Always remove unused usings in Razor and C#
+- ✅ Sort using statements: System first, then ALL others alphabetically
+- ✅ Prefer additional usings instead of fully qualified names
+
+**No manual verification needed** - these are handled by the format step.
 
 ### FluentUI Requirements
 
@@ -429,8 +462,7 @@ These operations are generally safe and don't require explicit confirmation:
   1. **FIRST ACTION:** Say Hello briefly.
   2. **ACKNOWLEDGE:** Confirm understanding of ALL critical reminders by listing them.
   3. **APPLY:** Use directives throughout entire session immediately.
-  4. **TRAINING DATA:** State "My training data cutoff is early 2025" (exact wording, do not vary).
-  5. **WEB SEARCHES:** Perform web searches for .NET updates, new features, and breaking changes when needed.
+  4. **WEB SEARCHES:** Perform web searches for .NET updates, new features, and breaking changes when needed.
 
   ⚠️ FAILURE TO COMPLETE ANY STEP IS A CRITICAL COMPLIANCE VIOLATION.
 
@@ -439,22 +471,25 @@ These operations are generally safe and don't require explicit confirmation:
   BEFORE writing any code:
     - Read "MANDATORY PRE-RESPONSE CODE CHECKLIST" and "CORE REMINDERS".
     - Identify required constants (no magic strings/numbers).
-    - Plan `String` vs `string` usage.
+    - Plan single-line logging format.
+    - Review control flow blank line requirements.
     - Review "GIT SAFETY RULES" if git operations are needed.
 
   DURING writing:
-    - Use `String.` for static methods (`String.IsNullOrEmpty()`, `String.Join()`).
-    - Use `string` for types/variables (`string token`, `public string Method()`).
-    - Use `""` for default parameter values.
     - Use constants from `Askyl.Dsm.WebHosting.Constants` (create if needed).
+    - Write all logger calls on a single line.
+    - Add blank lines before/after control flow (not inside blocks).
     - Comments ONLY in English.
     - Messages ONLY in English.
     - Apply all architectural guidelines.
+    - Trust `dotnet format` for: String/String pattern, using directives, primary constructors, collection expressions.
 
   AFTER writing:
-    - Verify 100% compliance with all directives.
-    - Check no magic strings remain.
-    - Confirm `String`/`string` pattern correctness.
+    - Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet`
+    - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
+    - Verify no magic strings remain (MANUAL CHECK).
+    - Verify single-line logging (MANUAL CHECK).
+    - Verify control flow blank lines (MANUAL CHECK).
     - Validate English‑only comments.
     - Ensure a successful build; any build errors or warnings must be resolved before finalizing changes.
 
@@ -462,11 +497,11 @@ These operations are generally safe and don't require explicit confirmation:
 
 Before responding to any code-related request, verify:
 
-- [ ] Training data date provided (if asked)
-- [ ] String/String pattern applied correctly
-- [ ] Using directives sorted and cleaned
-- [ ] No magic strings/numbers in code
-- [ ] Build command uses `/nr:false` flag
+- [ ] Format command executed (`dotnet format`)
+- [ ] Build command executed with `/nr:false` flag
+- [ ] No magic strings/numbers in code (MANUAL)
+- [ ] Single-line logging format (MANUAL)
+- [ ] Control flow blank lines correct (MANUAL)
 - [ ] All comments/messages in English
 - [ ] FluentUI requirements met (for UI code)
 - [ ] Application launch restrictions respected
@@ -476,33 +511,20 @@ Before responding to any code-related request, verify:
 
 Mark each item as verified after completion.
 
-### 📚 CORRECT PATTERNS EXAMPLES
+### 📚 TOOLING-ENFORCED PATTERNS (No Manual Check Required)
 
-#### String vs string
+These patterns are automatically enforced by `dotnet format`. Trust the tooling:
 
-✅ `String.IsNullOrEmpty(value)` - Static method call  
-✅ `string myVariable` - Type declaration  
-✅ `public string GetName()` - Return type  
-❌ `value.IsNotEmpty()` - Instance call for static member  
+- **String/String pattern**: `string` for types, `String.` for static members
+- **Using directives**: System first, then alphabetical; unused usings removed
+- **Primary constructors**: Mandatory for classes with constructor parameters
+- **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()`
 
-#### Using directives order
+### 🚫 COMMON MANUAL CHECK MISTAKES (AVOID THESE)
 
-```csharp
-using System;                    // 1. System.*
-using Microsoft.Extensions.Logging; // 2. Microsoft.*
-using Serilog;                   // 3. Third-party
-using Askyl.Dsm.WebHosting.Core; // 4. Project namespaces
-```
+These require manual verification as they are NOT enforced by tooling:
 
-#### Build command
-
-✅ Use the standardized build command (see "BUILD COMMAND" section above)  
-❌ `dotnet build` (missing `/nr:false` flag and solution path)  
-❌ `dotnet run` (forbidden for launch)
-
-## 🚫 COMMON FORMATTING MISTAKES (AVOID THESE)
-
-### ❌ WRONG: Blank lines inside control flow blocks
+#### ❌ WRONG: Blank lines inside control flow blocks (MANUAL CHECK)
 
 ```csharp
 if (condition)
@@ -513,7 +535,7 @@ if (condition)
 }
 ```
 
-### ✅ CORRECT: No blank lines between statements inside blocks
+#### ✅ CORRECT: No blank lines between statements inside blocks
 
 ```csharp
 if (condition)
@@ -526,7 +548,7 @@ if (condition)
 DoNextThing();
 ```
 
-### ❌ WRONG: Multi-line logging
+#### ❌ WRONG: Multi-line logging (MANUAL CHECK)
 
 ```csharp
 logger.LogInformation(
@@ -534,32 +556,31 @@ logger.LogInformation(
 );
 ```
 
-### ✅ CORRECT: Single-line logging always
+#### ✅ CORRECT: Single-line logging always
 
 ```csharp
 logger.LogInformation("Message with {Param}", param);
 ```
 
-### ❌ WRONG: Using directives not sorted (System not first)
+#### ❌ WRONG: Magic strings/numbers (MANUAL CHECK)
 
 ```csharp
-using Microsoft.Extensions.Logging;  // ❌ System should be first!
-using System;
-using Serilog;
+// ❌ Don't do this
+if (header.Key == "X-Location-Path")  // Magic string!
+{
+    if (timeout > 30000)  // Magic number!
+}
 ```
 
-### ✅ CORRECT: System first, then alphabetical
+#### ✅ CORRECT: Use constants
 
 ```csharp
-using System;                         // ✅ System always first
-using System.Collections.Generic;     // ✅ All System.* together
-
-using Askyl.Dsm.WebHosting.Core;      // ✅ Then ALL other usings alphabetically (A < M)
-using Microsoft.Extensions.Logging;   // ✅ Alphabetical continues regardless of type (M < S)
-using Serilog;                        // ✅ Third-party mixed with others
+// ✅ Do this instead
+if (header.Key == HttpHeaderNames.LocationPath)  // From Constants
+{
+    if (timeout > Timeouts.DefaultRequestTimeout)  // From Constants
+}
 ```
-
-**Note:** After System namespaces, all other usings are sorted alphabetically regardless of whether they're Microsoft, third-party, or project namespaces. This is the standard supported by `dotnet format` tooling.
 
 ### 🚀 SESSION START TEMPLATE (Inference-Based)
 
@@ -571,11 +592,10 @@ Hello! 👋
 I'm ready to help you with the project.
 
 **Acknowledged Standards:** [Extracted from AGENTS.md]
-1. [Standard 1 - e.g., String/String pattern]
-2. [Standard 2 - e.g., Using directives order]
-3. ... [Continue based on actual AGENTS.md content]
-
-**Training Data Cutoff:** My training data cutoff is early 2025 (FIXED, do not vary)
+1. Format → Build sequence mandatory before every response
+2. Manual checks: Magic strings, single-line logging, control flow blank lines
+3. Tooling-enforced: String/String pattern, using directives, primary constructors, collection expressions
+4. ... [Continue based on actual AGENTS.md content]
 
 What would you like me to work on?
 ```
@@ -589,7 +609,7 @@ What would you like me to work on?
 1. **Re-read AGENTS.md immediately** - Extract current standards and rules dynamically
 2. **Acknowledge ALL critical rules explicitly** - List them in your response
 3. **Apply enforcement language strictly** - Treat "CRITICAL" and "MANDATORY" rules as absolute requirements
-4. **Verify before responding** - Build + formatting compliance check is mandatory
+4. **Verify before responding** - Format → Build + manual checks compliance is mandatory
 
 **DO NOT rely on memory from previous tasks.** Context compression causes rule emphasis to fade. Always re-read AGENTS.md when in doubt or after any indication of context reset.
 
