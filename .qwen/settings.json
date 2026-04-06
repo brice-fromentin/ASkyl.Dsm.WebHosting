@@ -48,7 +48,8 @@
       "command": "npx",
       "env": {
         "MODE": "stdio",
-        "DEFAULT_SEARCH_ENGINE": "duckduckgo",
+        // Bing provides best results for .NET/C# projects: superior Microsoft Learn/devblogs indexing, comprehensive Stack Overflow coverage, and better technical documentation search
+        "DEFAULT_SEARCH_ENGINE": "bing",
         "ALLOWED_SEARCH_ENGINES": "duckduckgo,bing,exa"
       },
       "timeout": 60000,
