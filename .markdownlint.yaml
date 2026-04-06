@@ -32,8 +32,12 @@ MD040:
 MD033: false
 
 # MD036/no-emphasis-as-heading - Emphasis as heading
-# Keep enabled for consistency
-MD036: true
+# Disabled: README badges section uses emphasis for tagline
+MD036: false
+
+# MD042/no-empty-links - No empty links
+# Disabled: Architecture badge uses placeholder link (#)
+MD042: false
 
 # MD032/blanks-around-lists - Blank lines around lists
 # Keep enabled for readability
