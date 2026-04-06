@@ -38,5 +38,22 @@
       "Bash(git reflog expire)",
       "Bash(git gc --prune)"
     ]
+  },
+  "mcpServers": {
+    "web-search": {
+      "args": [
+        "-y",
+        "open-websearch@latest"
+      ],
+      "command": "npx",
+      "env": {
+        "MODE": "stdio",
+        "DEFAULT_SEARCH_ENGINE": "duckduckgo",
+        "ALLOWED_SEARCH_ENGINES": "duckduckgo,bing,exa"
+      },
+      "timeout": 60000,
+      "trust": true,
+      "type": "stdio"
+    }
   }
 }
