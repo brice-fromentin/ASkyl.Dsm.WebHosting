@@ -2,6 +2,7 @@
 
 @implements IWorkingState
 
+@using System.Net
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Constants.Network
@@ -111,7 +112,7 @@
             {
                 Logger.LogWarning("Failed to load websites: {Message}", result.Message ?? "Unknown error");
                 Instances = [];
-                ToastService.ShowError($"Failed to load websites: {result.Message}");
+                ShowSafeErrorToast($"Failed to load websites: {result.Message}");
                 return;
             }
 
@@ -122,7 +123,7 @@
         {
             Logger.LogError(ex, "Error loading websites");
             Instances = [];
-            ToastService.ShowError($"Failed to load websites: {ex.Message}");
+            ShowSafeErrorToast($"Failed to load websites: {ex.Message}");
         }
     }
 
@@ -171,7 +172,7 @@
             if (!deleteResult.Success)
             {
                 Logger.LogWarning("Failed to delete website: {ErrorMessage}", deleteResult.Message);
-                ToastService.ShowError(deleteResult.Message ?? "Failed to delete website");
+                ShowSafeErrorToast(deleteResult.Message ?? "Failed to delete website");
                 return;
             }
 
@@ -182,7 +183,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error deleting website");
-            ToastService.ShowError($"Error deleting website: {ex.Message}");
+            ShowSafeErrorToast($"Error deleting website: {ex.Message}");
         }
     }
 
@@ -224,7 +225,7 @@
             if (!result.Success)
             {
                 Logger.LogWarning("Failed to start website: {ErrorMessage}", result.Message);
-                ToastService.ShowError(result.Message ?? "Failed to start website");
+                ShowSafeErrorToast(result.Message ?? "Failed to start website");
                 return;
             }
 
@@ -234,7 +235,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error starting website");
-            ToastService.ShowError($"Error starting website: {ex.Message}");
+            ShowSafeErrorToast($"Error starting website: {ex.Message}");
         }
     }
 
@@ -257,7 +258,7 @@
             if (!result.Success)
             {
                 Logger.LogWarning("Failed to stop website: {ErrorMessage}", result.Message);
-                ToastService.ShowError(result.Message ?? "Failed to stop website");
+                ShowSafeErrorToast(result.Message ?? "Failed to stop website");
                 return;
             }
 
@@ -267,7 +268,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error stopping website");
-            ToastService.ShowError($"Error stopping website: {ex.Message}");
+            ShowSafeErrorToast($"Error stopping website: {ex.Message}");
         }
     }
 
@@ -293,7 +294,7 @@
             if (!result.Success)
             {
                 Logger.LogWarning("Logout failed: {ErrorMessage}", result.Message);
-                ToastService.ShowError(result.Message ?? "Failed to logout");
+                ShowSafeErrorToast(result.Message ?? "Failed to logout");
                 return;
             }
 
@@ -303,10 +304,23 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error during logout");
-            ToastService.ShowError($"Error during logout: {ex.Message}");
+            ShowSafeErrorToast($"Error during logout: {ex.Message}");
         }
     }
 
+
+    #region Security Helpers
+
+    /// <summary>
+    /// Safely displays an error toast with HTML-encoded message to prevent XSS attacks.
+    /// </summary>
+    private void ShowSafeErrorToast(string message)
+    {
+        var encodedMessage = WebUtility.HtmlEncode(message);
+        ToastService.ShowError(encodedMessage);
+    }
+
+    #endregion
 
     #region Dialog Helpers
 

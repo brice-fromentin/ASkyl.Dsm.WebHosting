@@ -18,6 +18,7 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
     public Guid Id { get; set; } = Guid.Empty;
 
     [Required(ErrorMessage = ApplicationConstants.SiteNameRequiredErrorMessage)]
+    [StringLength(100, MinimumLength = 1, ErrorMessage = "Site name cannot be empty and must be 100 characters or less.")]
     public string Name { get; set; } = "";
 
     #endregion
@@ -31,7 +32,7 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 
     [Required(ErrorMessage = ApplicationConstants.PortRequiredErrorMessage)]
     [Range(ApplicationConstants.MinWebApplicationPort, ApplicationConstants.MaxWebApplicationPort, ErrorMessage = ApplicationConstants.PortRangeErrorMessage)]
-    public int InternalPort { get; set; }
+    public int InternalPort { get; set; } = ApplicationConstants.MinWebApplicationPort;
 
     [Required(ErrorMessage = ApplicationConstants.EnvironmentRequiredErrorMessage)]
     public string Environment { get; set; } = ApplicationConstants.DefaultEnvironment;

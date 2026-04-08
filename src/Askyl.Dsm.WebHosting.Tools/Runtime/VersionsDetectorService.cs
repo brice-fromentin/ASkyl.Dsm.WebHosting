@@ -77,32 +77,35 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
     /// <inheritdoc/>
     public async Task RefreshCacheAsync(CancellationToken cancellationToken = default)
     {
-        // Re-execute process to get fresh data
-        List<FrameworkInfo> frameworks = [];
-
-        try
+        using (await SemaphoreLock.AcquireAsync(this, cancellationToken: cancellationToken))
         {
-            var dotnetPath = Path.Combine(ApplicationConstants.RuntimesRootPath, "dotnet");
-            var output = await ExecuteProcessAndGetOutputAsync(dotnetPath, "--info", cancellationToken);
+            // Re-execute process to get fresh data
+            List<FrameworkInfo> frameworks = [];
 
-            if (!String.IsNullOrEmpty(output))
+            try
             {
-                frameworks = ParseDotnetInfo(output);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            logger.LogWarning("Framework cache refresh cancelled");
-            throw;  // Re-throw to signal cancellation to caller
-        }
-        catch (Exception ex)
-        {
-            // Log but don't throw - keep existing cache if refresh fails
-            logger.LogWarning(ex, "Failed to refresh framework cache");
-            return;  // Preserve existing cached data on failure
-        }
+                var dotnetPath = Path.Combine(ApplicationConstants.RuntimesRootPath, "dotnet");
+                var output = await ExecuteProcessAndGetOutputAsync(dotnetPath, "--info", cancellationToken);
 
-        _cachedFrameworks = frameworks;  // Update cache with fresh data
+                if (!String.IsNullOrEmpty(output))
+                {
+                    frameworks = ParseDotnetInfo(output);
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                logger.LogWarning("Framework cache refresh cancelled");
+                throw;  // Re-throw to signal cancellation to caller
+            }
+            catch (Exception ex)
+            {
+                // Log but don't throw - keep existing cache if refresh fails
+                logger.LogWarning(ex, "Failed to refresh framework cache");
+                return;  // Preserve existing cached data on failure
+            }
+
+            _cachedFrameworks = frameworks;  // Update cache with fresh data
+        }
     }
 
     #region Process Management

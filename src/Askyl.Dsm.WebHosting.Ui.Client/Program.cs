@@ -20,6 +20,7 @@ builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
     // API controllers are hosted at the domain root (without /adwh path base)
     // Reverse proxy handles /adwh/api/... -> /api/... routing in production
     client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
+    client.Timeout = TimeSpan.FromSeconds(ApplicationConstants.HttpClientTimeoutSeconds);
 });
 builder.Services.AddFluentUIComponents();
 
