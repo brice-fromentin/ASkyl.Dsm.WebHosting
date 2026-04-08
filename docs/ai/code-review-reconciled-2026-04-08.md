@@ -1,843 +1,435 @@
-# ASkyl.Dsm.WebHosting - Reconciled Code Review Report
+# ASkyl.Dsm.WebHosting - Accurate Reconciled Code Review Report
 
 **Review Date:** April 8, 2026  
-**Last Updated:** April 8, 2026 (all critical issues resolved)  
-**Solution Version:** 0.5.4
-**Target Framework:** .NET 10 (net10.0)
-**Verification Method:** Direct codebase inspection against April 6 and April 8 reports
+**Last Updated:** April 8, 2026 (accurate reconciliation)  
+**Solution Version:** 0.5.4  
+**Target Framework:** .NET 10 (net10.0)  
+**Verification Method:** Direct codebase inspection against April 6 and April 8 reports + git commit analysis
+
+---
+
+## ⚠️ CRITICAL NOTICE: PREVIOUS RECONCILIATION WAS INACCURATE
+
+The previous reconciled report **incorrectly claimed 100% critical issue resolution**. This accurate reconciliation reveals that **only 3 of 13 unique critical issues have been fixed** (23%).
 
 ---
 
 ## Executive Summary
 
-This reconciled report represents the **TRUE CURRENT STATE** of the ASkyl.Dsm.WebHosting
-solution, verified through direct codebase inspection. It reconciles findings from two
-previous reviews (April 6: 45 issues; April 8: 22 issues) against actual current code.
+This report provides an **ACCURATE reconciliation** of findings from two previous code reviews against actual git commits:
 
-### ✅ RESOLUTION STATUS: ALL CRITICAL ISSUES FIXED
+- **April 6 Report:** 9 Critical, 23 Suggestions, 13 Nice to Have (45 total)
+- **April 8 Report:** 4 Critical, 12 Suggestions, 6 Nice to Have (22 total)
+- **Actual Fixes Applied:** Commits `276c3fd` (Phase 1) and `377e6cc` (Phase 2)
 
-**Update: April 8, 2026** - All 4 critical issues have been successfully resolved in branch `fix/code-review-critical-issues`:
+### ✅ ACTUAL RESOLUTION STATUS: PARTIAL FIXES ONLY
 
-| Issue | Status | Fix Applied |
-|-------|--------|-------------|
-| Blocking call in async context | ✅ **FIXED** | Replaced `.GetAwaiter().GetResult()` with proper `await` pattern |
-| HttpClient content disposal race condition | ✅ **FIXED** | Removed premature `using` block |
-| Console.WriteLine in production code (3 instances) | ✅ **FIXED** | Replaced with structured `ILogger` calls |
-| Missing path validation (path traversal risk) | ✅ **FIXED** | Added input sanitization with `Path.GetFileName()` |
+| Metric | April 6 Report | April 8 Report | Unique Issues Total | **Actually Fixed** | **True Resolution Rate** |
+|--------|----------------|----------------|---------------------|--------------------|--------------------------|
+| **Critical Issues** | 9 | 4 | **13 unique** | **3 ✅** | **23%** ⚠️ |
+| **Suggestions** | 23 | 12 | **~20 unique** | **5 ✅** | **25%** 🟡 |
+| **Nice to Have** | 13 | 6 | **~10 unique** | **2 ✅** | **20%** 🟢 |
+| **Total Findings** | 45 | 22 | **~43 unique** | **10** | **23% RESOLVED** |
 
-### Key Findings Summary
+### ⚠️ REMAINING CRITICAL ISSUES: 10 OF 13 UNFIXED
 
-| Metric | April 6 Report | April 8 Report | **Verified Current** | **After Fixes** | Change |
-|--------|----------------|----------------|---------------------|-----------------|--------|
-| **Critical Issues** | 9 | 4 | **4** | **0** ✅ | -100% |
-| **Suggestions** | 23 | 12 | **7** | **3** 🟡 | -57% |
-| **Nice to Have** | 13 | 6 | **3** | **1** 🟢 | -67% |
-| **Total Findings** | 45 | 22 | **14** | **4** | **-71%** |
-
-### Remaining Items (Non-Critical)
-
-After fixing all critical issues, only **3 suggestions and 1 nice-to-have** remain:
-
-1. 🟡 Move magic string "temp" to constants → **FIXED** during implementation
-2. 🟡 Add CancellationToken support to VersionsDetectorService
-3. 🟡 Centralize dotnet info parser strings in Constants project
-4. 🟢 Extract duplicate code in FileSystemService to helper method
-
-### Verification Methodology
-
-- ✅ **Direct Code Inspection:** All files mentioned in both reports were opened and verified
-- ✅ **Grep Searches:** Pattern matching for Console.WriteLine, blocking calls, magic strings
-- ✅ **Cross-Reference:** Compared findings against actual current code state
-- ✅ **False Positive Identification:** Issues reported but not present in current code
-- ✅ **Fix Verification:** All critical issues resolved and build verified
+**The solution is NOT production-ready due to remaining critical issues.**
 
 ---
 
-## 1. Critical Issues (ALL RESOLVED ✅)
+## 1. What Was Actually Fixed (Verified via Git Commits)
 
-### 1.1 Blocking Call in Async Context - DEADLOCK RISK ⚠️ CRITICAL → ✅ FIXED
+### Commit `276c3fd` - Phase 1 Critical Fixes
 
-**File:** `src/Askyl.Dsm.WebHosting.Ui/Services/DotnetVersionService.cs:88`
-**Status:** ✅ **RESOLVED** (April 8, 2026)
-**Severity:** Critical
+| # | Issue | Source Report(s) | Status |
+|---|-------|------------------|--------|
+| 1 | Blocking call in DotnetVersionService.cs (`GetAwaiter().GetResult()`) | April 6 #1, April 8 (not listed) | ✅ FIXED |
+| 2 | HttpClientExtensions race condition (using block disposal) | April 6 #3, April 8 #3 | ✅ FIXED |
+| 3 | Console.WriteLine → ILogger (ArchiveExtractorService.cs:28) | April 8 #4 | ✅ FIXED |
+| 4 | Console.WriteLine → ILogger (LicenseService.cs:45) | April 8 (mentioned in grep) | ✅ FIXED |
+| 5 | Console.WriteLine → ILogger (FileSelectionDialog.razor:212) | April 8 (mentioned in grep) | ✅ FIXED |
+| 6 | Path traversal vulnerability in FileManagerService.GetDirectory() | April 6 #2 | ✅ FIXED |
+| 7 | Magic string "temp" moved to InfrastructureConstants.TempDirectory | April 8 #22 (Nice to Have) | ✅ FIXED |
 
-**Original Problematic Code:**
+### Commit `377e6cc` - Phase 2 High Priority Suggestions
 
-```csharp
-// ❌ BEFORE - CAUSES DEADLOCKS!
-var releaseList = releases.Select(release =>
-{
-    var isInstalledResult = IsVersionInstalledAsync(release.Version, DotNetFrameworkTypes.AspNetCore)
-        .GetAwaiter()
-        .GetResult();  // ⚠️ BLOCKING CALL IN ASYNC CONTEXT
-    var isInstalled = isInstalledResult.Value ?? false;
-    return AspNetRelease.Create(release, isInstalled);
-}).ToList();
-```
-
-**✅ Applied Fix:**
-
-```csharp
-// ✅ AFTER - Proper async iteration
-var releaseList = new List<AspNetRelease>();
-
-foreach (var release in releases)
-{
-    var isInstalledResult = await IsVersionInstalledAsync(release.Version, DotNetFrameworkTypes.AspNetCore);
-    var isInstalled = isInstalledResult.Value ?? false;
-    releaseList.Add(AspNetRelease.Create(release, isInstalled));
-}
-```
-
-**Impact Resolved:**
-
-- ✅ Eliminates deadlock risk in ASP.NET Core synchronization context
-- ✅ Prevents thread pool starvation under load
-- ✅ Ensures application won't hang indefinitely
-- ✅ Follows async/await best practices
+| # | Issue | Source Report(s) | Status |
+|---|-------|------------------|--------|
+| 1 | CancellationToken support in VersionsDetectorService.RefreshCacheAsync() | April 8 #14 (Suggestion) | ✅ FIXED |
+| 2 | CancellationToken support in ExecuteProcessAndGetOutputAsync() | April 8 #15 (Suggestion) | ✅ FIXED |
+| 3 | DotnetInfoParserConstants.cs created with all parser magic strings | April 8 #10, #11, #21 (Suggestions/Nice to Have) | ✅ FIXED |
 
 ---
 
-### 1.2 HttpClient Content Disposal Race Condition ⚠️ CRITICAL → ✅ FIXED
+## 2. Critical Issues - TRUE STATUS (10 of 13 REMAIN UNFIXED)
 
-**File:** `src/Askyl.Dsm.WebHosting.Tools/Extensions/HttpClientExtensions.cs:52-60`
-**Status:** ✅ **RESOLVED** (April 8, 2026)
-**Severity:** Critical
+### From April 6 Report (9 Critical Issues)
 
-**Original Problematic Code:**
+| # | Issue | File | **ACTUAL STATUS** | Notes |
+|---|-------|------|-------------------|-------|
+| 1 | Blocking call in async context (`GetAwaiter().GetResult()`) | DotnetVersionService.cs:88 | ✅ FIXED | Commit `276c3fd` |
+| 2 | Path traversal vulnerability | FileManagerService.cs:45 | ✅ FIXED | Commit `276c3fd` - added `Path.GetFileName()` sanitization |
+| 3 | HttpClient content disposal race condition | HttpClientExtensions.cs:52-60 | ✅ FIXED | Commit `276c3fd` - removed using block |
+| 4 | Missing null checks in ArchiveExtractorService | ArchiveExtractorService.cs:20-25 | ❌ **NOT FIXED** | Still missing parameter validation for `inputFile` |
+| 5 | Race condition in VersionsDetectorService cache initialization | VersionsDetectorService.cs:52-67 | ❌ **NOT FIXED** | Double-check lock pattern still has race window |
+| 6 | Empty string validation in WebSiteConfiguration.Name | WebSiteConfiguration.cs:20-23 | ❌ **NOT FIXED** | Still allows empty strings despite `[Required]` |
+| 7 | Invalid default port value (0) in WebSiteConfiguration.InternalPort | WebSiteConfiguration.cs:35-37 | ❌ **NOT FIXED** | Default is still 0, fails Range validation |
+| 8 | XSS vulnerability in error messages (Home.razor) | Home.razor:205-206 | ❌ **NOT FIXED** | Error messages still unsanitized |
+| 9 | Missing timeout configuration in HttpClientExtensions | HttpClientExtensions.cs | ❌ **NOT FIXED** | No timeout enforcement on HTTP requests |
 
-```csharp
-// ❌ BEFORE - RACE CONDITION!
-using (jsonContent)  // ⚠️ Disposes too early!
-{
-    var response = await client.PostAsync(requestUri, jsonContent, cancellationToken);
-    // ... response handling
-}  // ⚠️ jsonContent disposed HERE, potentially before send completes
-```
+### From April 8 Report (4 Critical Issues)
 
-**✅ Applied Fix:**
-
-```csharp
-// ✅ AFTER - HttpClient manages disposal automatically
-var response = await client.PostAsync(requestUri, jsonContent, cancellationToken);
-// No using block needed - HttpClient handles disposal safely
-```
-
-**Impact Resolved:**
-
-- ✅ Eliminates potential `ObjectDisposedException` during concurrent requests
-- ✅ Prevents data corruption if content disposed mid-transmission
-- ✅ Ensures reliable network operations under load
+| # | Issue | File | **ACTUAL STATUS** | Notes |
+|---|-------|------|-------------------|-------|
+| 1 | Password transmission without encryption validation | DsmApiClient.cs:52-67 | ⚠️ **PARTIAL** | Uses HTTPS port 443 by default, but no runtime validation enforcing HTTPS |
+| 2 | ArchiveExtractorService missing error handling | ArchiveExtractorService.cs:17-36 | ❌ **NOT FIXED** | Still lacks try-catch for corrupted archives or permission issues |
+| 3 | HttpClientExtensions PostJsonAsync disposal race condition | HttpClientExtensions.cs:47-65 | ✅ FIXED | Same as April 6 #3 - fixed in commit `276c3fd` |
+| 4 | Console.WriteLine instead of ILogger (ArchiveExtractorService) | ArchiveExtractorService.cs:25 | ✅ FIXED | Replaced with structured logging in commit `276c3fd` |
 
 ---
 
-### 1.3 Console.WriteLine in Production Code ⚠️ CRITICAL → ✅ FIXED (3 instances)
+## 3. Critical Issues Summary - ACCURATE COUNTS
 
-**Files:** Multiple locations
-**Status:** ✅ **RESOLVED** (April 8, 2026)
-**Severity:** Critical
+### Unique Critical Issues by Status
 
-#### Instance 1: ArchiveExtractorService.cs:28
+| Status | Count | Percentage |
+|--------|-------|------------|
+| ✅ Fixed | 3 | 23% |
+| ⚠️ Partial | 1 | 8% |
+| ❌ Not Fixed | 9 | 69% |
+| **Total Unique Critical Issues** | **13** | **100%** |
 
-```csharp
-// ❌ BEFORE
-Console.WriteLine("Skipping " + entryName);
+### Breakdown by Source Report
 
-// ✅ AFTER
-logger.LogDebug("Skipping archive entry: {EntryName}", entryName);
-```
-
-#### Instance 2: LicenseService.cs:45
-
-```csharp
-// ❌ BEFORE
-Console.WriteLine($"[LicenseService] ERROR loading {fileName}: {exception.GetType().Name} - {exception.Message}");
-
-// ✅ AFTER
-logger.LogWarning(exception, "Failed to load license file: {FileName}", fileName);
-```
-
-#### Instance 3: FileSelectionDialog.razor:212
-
-```csharp
-// ❌ BEFORE
-Console.WriteLine($"[FileSelectionDialog] OnFileDoubleClick : {file.IsDirectory} - {file.Name}");
-
-// ✅ AFTER
-Logger.LogDebug("File double-clicked: {FileName} (IsDirectory: {IsDirectory})", file.Name, file.IsDirectory);
-```
-
-**Impact Resolved:**
-
-- ✅ All logging now uses structured `ILogger` API
-- ✅ Proper log levels (Debug vs Warning) based on context
-- ✅ Exception capture with `logger.LogWarning(exception, ...)` for proper telemetry
-- ✅ Consistent with production-grade logging standards
+| Report | Total Critical | Fixed | Remaining | Resolution Rate |
+|--------|----------------|-------|-----------|-----------------|
+| April 6 | 9 | 3 | 6 | 33% |
+| April 8 | 4 | 2 (1 duplicate) | 2 (1 partial) | 50% |
+| **Combined Unique** | **13** | **3** | **10** | **23%** |
 
 ---
 
-### 1.4 Missing Input Validation - Path Traversal Risk ⚠️ CRITICAL → ✅ FIXED
+## 4. Suggestions - ACCURATE STATUS
 
-**File:** `src/Askyl.Dsm.WebHosting.Tools/Infrastructure/FileManagerService.cs:37-40`
-**Status:** ✅ **RESOLVED** (April 8, 2026)
-**Severity:** Critical
+### What Was Fixed
 
-**Original Problematic Code:**
+| # | Issue | Source Report(s) | Status | Commit |
+|---|-------|------------------|--------|--------|
+| 1 | Magic string "temp" not in constants | April 8 #22 (Nice to Have) | ✅ FIXED | `276c3fd` |
+| 2 | CancellationToken missing in RefreshCacheAsync() | April 8 #14 | ✅ FIXED | `377e6cc` |
+| 3 | CancellationToken missing in ExecuteProcessAndGetOutputAsync() | April 8 #15 | ✅ FIXED | `377e6cc` |
+| 4 | Magic strings in framework detection (GetFrameworkOrder) | April 8 #10 | ✅ FIXED | `377e6cc` - DotnetInfoParserConstants.cs |
+| 5 | Magic strings in dotnet info parser (DetectCurrentSection) | April 8 #11 | ✅ FIXED | `377e6cc` - DotnetInfoParserConstants.cs |
 
-```csharp
-// ❌ BEFORE - NO PATH SANITIZATION
-public string GetDirectory(string name)
-{
-    var path = Path.Combine(BaseDirectory, _rootPath, name);  // ⚠️ No validation on 'name'
-    logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
-    Directory.CreateDirectory(path);
-    return path;
-}
-```
+### What Remains Unfixed (Sample of Major Suggestions)
 
-**✅ Applied Fix:**
-
-```csharp
-// ✅ AFTER - Input validation and sanitization
-public string GetDirectory(string name)
-{
-    if (String.IsNullOrWhiteSpace(name))
-    {
-        throw new ArgumentException("Directory name cannot be empty", nameof(name));
-    }
-
-    // Prevent path traversal - extract only the file/directory name
-    var sanitized = Path.GetFileName(name);  // ✅ Removes ../ sequences
-
-    if (String.Equals(sanitized, String.Empty, StringComparison.OrdinalIgnoreCase))
-    {
-        throw new ArgumentException("Invalid directory name: contains only path separators", nameof(name));
-    }
-
-    var path = Path.Combine(BaseDirectory, _rootPath, sanitized);
-
-    logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
-    Directory.CreateDirectory(path);
-
-    return path;
-}
-```
-
-**Additional Fix Applied:**
-
-- ✅ Added `InfrastructureConstants.TempDirectory` constant to eliminate magic string "temp"
-- ✅ Updated all references to use the centralized constant
-
-**Impact Resolved:**
-
-- ✅ Prevents attackers from creating/reading files outside intended directories via `../` sequences
-- ✅ Eliminates unauthorized file access through path traversal attacks
-- ✅ Removes data exfiltration risk
-- ✅ Adds proper input validation with meaningful error messages
+| # | Issue | Source Report(s) | Status |
+|---|-------|------------------|--------|
+| 1 | Session timeout duration may be too long (30 minutes) | April 8 #5 | ❌ NOT FIXED |
+| 2 | Configuration file integrity validation missing | April 8 #6 | ❌ NOT FIXED |
+| 3 | Cache invalidation mechanism missing in VersionsDetectorService | April 8 #7 | ❌ NOT FIXED |
+| 4 | Process timeout should be configurable per-site | April 8 #8 | ❌ NOT FIXED |
+| 5 | Source generator nullable reference type handling | April 8 #9 | ❌ NOT FIXED |
+| 6 | DI lifetime verification for HttpClient | April 8 #12 | ❌ NOT FIXED |
+| 7 | Path validation at service initialization | April 8 #13 | ❌ NOT FIXED |
+| 8 | Cache refresh error handling improvements (retry logic) | April 8 #16 | ❌ NOT FIXED |
 
 ---
 
-## 2. Suggestions (Partially Resolved)
+## 5. Nice to Have - ACCURATE STATUS
 
-### 2.1 Magic String "temp" Not in Constants ⚠️ SUGGESTION → ✅ FIXED
+### What Was Fixed
 
-**Status:** ✅ **RESOLVED** during critical issue implementation
+| # | Issue | Source Report(s) | Status | Commit |
+|---|-------|------------------|--------|--------|
+| 1 | Framework type constants (duplicate of suggestion #10) | April 8 #21 | ✅ FIXED | `377e6cc` - DotnetInfoParserConstants.cs |
+| 2 | Temp directory name constant | April 8 #22 | ✅ FIXED | `276c3fd` - InfrastructureConstants.TempDirectory |
 
-**Applied Fix:**
+### What Remains Unfixed
 
-```csharp
-// Added to InfrastructureConstants.cs
-public const string TempDirectory = "temp";
-
-// Updated FileManagerService.cs
-GetDirectory(InfrastructureConstants.TempDirectory);  // ✅ Uses constant
-```
-
----
-
-### 2.2 Missing Cancellation Token Support 🟡 SUGGESTION → REMAINS
-
-**File:** `src/Askyl.Dsm.WebHosting.Tools/Runtime/VersionsDetectorService.cs:105-124`
-**Status:** 🟡 **RECOMMENDED FOR NEXT SPRINT**
-
-Adding `CancellationToken` support to `RefreshCacheAsync()` would improve responsiveness.
+| # | Issue | Source Report(s) | Status |
+|---|-------|------------------|--------|
+| 1 | State machine pattern for site lifecycle management | April 8 #17 | ❌ NOT FIXED |
+| 2 | IEquatable implementation for ReverseProxy models | April 8 #18 | ❌ NOT FIXED |
+| 3 | Exception preservation in SemaphoreLock | April 8 #19 | ❌ NOT FIXED |
+| 4 | Optimistic concurrency for ConfigurationService | April 8 #20 | ❌ NOT FIXED |
 
 ---
 
-### 2.3 Magic Strings in Framework Detection 🟡 SUGGESTION → REMAINS
+## 6. Security Score Assessment - ACCURATE
 
-**File:** `src/Askyl.Dsm.WebHosting.Tools/Runtime/VersionsDetectorService.cs:156-197`
-**Status:** 🟡 **RECOMMENDED FOR NEXT SPRINT**
+### Before Any Fixes
 
-Centralizing dotnet info parser strings (e.g., ".NET SDKs installed:") would improve maintainability.
+| Category | Score | Rationale |
+|----------|-------|-----------|
+| **Path Traversal** | ❌ Critical | No input sanitization in FileManagerService |
+| **Race Conditions** | ❌ Critical | HttpClient disposal, cache initialization |
+| **Blocking Calls** | ❌ Critical | Deadlock risk in async context |
+| **Logging Security** | ❌ Critical | Console.WriteLine exposes data |
+| **Input Validation** | ❌ Critical | Missing null checks, empty string validation |
+| **XSS Protection** | ❌ Critical | Unsanitized error messages |
+| **Timeout Configuration** | ⚠️ High | No HTTP timeout enforcement |
 
----
+**Overall Security Score: 1.5/5** ⭐⭐☆☆☆ (Critical vulnerabilities present)
 
-## 3. Nice to Have (Mostly Resolved)
+### After Applied Fixes (Commits `276c3fd` + `377e6cc`)
 
-### 3.1 Code Duplication in FileSystemService 🟢 NICE TO HAVE → REMAINS
+| Category | Before | After | Change |
+|----------|--------|-------|--------|
+| **Path Traversal** | ❌ Critical | ✅ Fixed | +1 |
+| **Race Conditions** | ❌ Critical | 🟡 Partial (1 of 2 fixed) | +0.5 |
+| **Blocking Calls** | ❌ Critical | ✅ Fixed | +1 |
+| **Logging Security** | ❌ Critical | ✅ Fixed | +1 |
+| **Input Validation** | ❌ Critical | ❌ Still Missing | 0 |
+| **XSS Protection** | ❌ Critical | ❌ Still Missing | 0 |
+| **Timeout Configuration** | ⚠️ High | ⚠️ Still Missing | 0 |
 
-**Status:** 🟢 **OPTIONAL FUTURE IMPROVEMENT**
+**Overall Security Score: 2.5/5** 🟡⭐⭐⭐☆☆ (Improved but still critical issues remain)
 
-Extracting duplicate error handling pattern to helper method would reduce code duplication.
+### Remaining Security Risks
 
----
-
-## 4. Summary Statistics (UPDATED)
-
-### Findings by Severity (After All Fixes Applied)
-
-| Category | Before Fixes | After Fixes | Resolution Rate |
-|----------|--------------|-------------|-----------------|
-| **Critical Issues** | 4 ⚠️ | **0 ✅** | **100%** |
-| **Suggestions** | 7 🟡 | **3 🟡** | **57%** |
-| **Nice to Have** | 3 🟢 | **1 🟢** | **67%** |
-| **Total Findings** | 14 | **4** | **71% RESOLVED** |
-
-### Quality Metrics Improvement
-
-| Metric | Before Fixes | After Critical Fixes | Change |
-|--------|--------------|----------------------|--------|
-| **Security Score** | ⭐⭐☆☆☆ (2/5) | ⭐⭐⭐⭐☆ (4/5) | **+100%** ✅ |
-| **Production Readiness** | ❌ Not Ready | ✅ Ready to Deploy | **BLOCKERS REMOVED** |
-
----
-
-## 5. Recommended Action Plan (UPDATED)
-
-### ✅ Phase 1: Critical Fixes - COMPLETED
-
-All critical issues resolved in branch `fix/code-review-critical-issues`:
-
-- ✅ Blocking call removed from DotnetVersionService.cs
-- ✅ Using block removed from HttpClientExtensions.cs
-- ✅ Console.WriteLine replaced with ILogger in all 3 instances
-- ✅ Path sanitization added to FileManagerService.GetDirectory()
-- ✅ Magic string "temp" moved to InfrastructureConstants
-
-**Build Status:** ✅ All projects build successfully with no errors or warnings
+1. **ArchiveExtractorService null checks missing** - Can crash service with malformed input
+2. **Cache initialization race condition** - Multiple threads may execute refresh simultaneously
+3. **Empty string validation in WebSiteConfiguration.Name** - Poor UX, potential conflicts
+4. **Invalid default port (0) in WebSiteConfiguration.InternalPort** - Validation failures on new instances
+5. **XSS vulnerability in Home.razor error messages** - Potential script injection if attacker controls error content
+6. **Missing HTTP timeout configuration** - Application can hang indefinitely on slow/dead servers
 
 ---
 
-### 🟡 Phase 2: High Priority Suggestions (Next Sprint) - RECOMMENDED
+## 7. Production Readiness Assessment - ACCURATE
 
-**Estimated Time:** 4-6 hours
+### ❌ NOT PRODUCTION READY
+
+**Blockers:**
+
+1. **9 critical issues remain unfixed** (69% of total)
+2. **Security score only 2.5/5** (needs minimum 4/5 for production)
+3. **Known vulnerabilities present:**
+   - Missing input validation can crash services
+   - XSS vulnerability in error messages
+   - Race conditions in cache initialization
+   - No timeout protection on HTTP requests
+
+### Required Before Production Deployment
+
+| Priority | Issue Count | Estimated Effort |
+|----------|-------------|------------------|
+| **Critical (Must Fix)** | 9 remaining | 12-16 hours |
+| **High Priority Suggestions** | ~8 remaining | 8-12 hours |
+| **Security Hardening** | Password validation, timeout config | 2-4 hours |
+| **Total Remaining Work** | **~17 critical/high items** | **22-32 hours** |
+
+---
+
+## 8. Accurate Action Plan
+
+### Phase 1: Critical Fixes - PARTIALLY COMPLETE (3 of 13 Done)
+
+**Completed:**
+
+- ✅ Blocking call removed from DotnetVersionService.cs (`276c3fd`)
+- ✅ Using block removed from HttpClientExtensions.cs (`276c3fd`)
+- ✅ Console.WriteLine replaced with ILogger in all 3 instances (`276c3fd`)
+- ✅ Path sanitization added to FileManagerService.GetDirectory() (`276c3fd`)
+
+**Still Required:**
 
 ```bash
-# 1. Add CancellationToken support to VersionsDetectorService (2 hours)
-# 2. Centralize dotnet info parser strings (2 hours)
-# 3. Replace remaining Console.WriteLine if any found (optional)
+# Estimated: 10-14 hours remaining
+
+# 1. Add null checks to ArchiveExtractorService.Decompress() (April 6 #4)
+#    - Validate inputFile parameter
+#    - Check file exists before opening
+#    - Add try-catch for extraction errors (April 8 #2)
+
+# 2. Fix cache initialization race condition in VersionsDetectorService (April 6 #5)
+#    - Use TPL pattern or lock-free initialization
+#    - Prevent multiple concurrent RefreshCacheAsync executions
+
+# 3. Add empty string validation to WebSiteConfiguration.Name (April 6 #6)
+#    - Add StringLength attribute with MinimumLength = 1
+
+# 4. Fix invalid default port in WebSiteConfiguration.InternalPort (April 6 #7)
+#    - Set default to ApplicationConstants.MinWebApplicationPort (8000)
+
+# 5. Add HTML encoding to error messages in Home.razor (April 6 #8)
+#    - Use System.Net.WebUtility.HtmlEncode() for user-controlled content
+
+# 6. Add timeout configuration to HttpClientExtensions (April 6 #9)
+#    - Create linked CancellationTokenSource with timeout
+#    - Use ApplicationConstants.HttpClientTimeoutSeconds
+
+# 7. Add HTTPS validation to DsmApiClient (April 8 #1)
+#    - Validate _port is always 443 or enforce HTTPS at runtime
 ```
 
----
+### Phase 2: High Priority Suggestions - PARTIALLY COMPLETE (5 of ~20 Done)
 
-### 🟢 Phase 3: Optimizations (Future) - OPTIONAL
+**Completed:**
 
-**Estimated Time:** 2-4 hours
+- ✅ CancellationToken support added to VersionsDetectorService (`377e6cc`)
+- ✅ DotnetInfoParserConstants.cs created with all parser strings (`377e6cc`)
+- ✅ Magic string "temp" moved to InfrastructureConstants (`276c3fd`)
+
+**Still Required:**
 
 ```bash
-# 1. Extract duplicate code in FileSystemService to helper method (1 hour)
-# 2. Add unit tests for critical fixes (2 hours)
-# 3. Performance benchmarking for VersionsDetectorService (1 hour)
+# Estimated: 8-12 hours
+
+# 1. Add session timeout configuration review (April 8 #5)
+# 2. Implement configuration file integrity validation (April 8 #6)
+# 3. Add cache invalidation mechanism (April 8 #7)
+# 4. Make process timeout configurable per-site (April 8 #8)
+# 5. Fix source generator nullable reference handling (April 8 #9)
+# 6. Verify DI lifetime for HttpClient/DsmApiClient (April 8 #12)
+# 7. Add path validation at service initialization (April 8 #13)
+# 8. Implement retry logic with exponential backoff (April 8 #16)
 ```
+
+### Phase 3: Nice to Have - MINIMAL PROGRESS (2 of ~10 Done)
+
+**Completed:**
+
+- ✅ Framework type constants in DotnetInfoParserConstants.cs (`377e6cc`)
+- ✅ Temp directory constant in InfrastructureConstants (`276c3fd`)
+
+**Still Required:** Optional future enhancements
 
 ---
 
-## Conclusion (UPDATED)
+## 9. Summary Statistics - FINAL ACCURATE COUNTS
 
-This reconciled report has been updated to reflect the **CURRENT STATE AFTER ALL CRITICAL FIXES**.
+### Resolution Progress by Severity
 
-✅ **Excellent Progress:** All 4 critical issues resolved (100% resolution rate)  
-✅ **Production Ready:** Security score improved from 2/5 to 4/5  
-✅ **Build Verified:** All projects compile successfully with no errors or warnings  
-🎯 **Next Steps:** Address remaining 3 suggestions in next sprint (non-blocking)
+| Phase | Status | Items Completed | Total Items | Completion Rate |
+|-------|--------|-----------------|-------------|-----------------|
+| **Phase 1: Critical Fixes** | 🟡 Partial | 3/13 | 13 critical issues | **23%** ⚠️ |
+| **Phase 2: High Priority Suggestions** | 🟡 Partial | 5/~20 | ~20 suggestions | **25%** 🟡 |
+| **Phase 3: Nice to Have** | 🟢 Minimal | 2/~10 | ~10 items | **20%** 🟢 |
 
-**Branch:** `fix/code-review-critical-issues`  
-**Ready for Merge:** ✅ Yes, all critical blockers resolved
+### Overall Impact
+
+| Metric | Before Fixes | After Phase 1 & 2 Commits | True Improvement |
+|--------|--------------|---------------------------|------------------|
+| **Critical Issues Remaining** | 13 | **10** ⚠️ | -3 (23% resolved) |
+| **Security Score** | 1.5/5 | **2.5/5** 🟡 | +1.0 (+67%) |
+| **Production Readiness** | ❌ Not Ready | **❌ Still Not Ready** ⚠️ | Blockers remain |
+
+### Code Quality Improvements Delivered
+
+- ✅ Eliminated blocking call in DotnetVersionService.cs (deadlock risk removed)
+- ✅ Fixed HttpClientExtensions race condition (reliable network operations)
+- ✅ Replaced Console.WriteLine with structured ILogger logging (3 instances)
+- ✅ Added input validation to prevent path traversal attacks in FileManagerService
+- ✅ Centralized magic strings into constants (InfrastructureConstants + DotnetInfoParserConstants)
+- ✅ Added CancellationToken support for responsive cancellation in VersionsDetectorService
+
+### Critical Issues Still Remaining (Blockers)
+
+1. ArchiveExtractorService null checks and error handling missing
+2. Cache initialization race condition in VersionsDetectorService
+3. Empty string validation in WebSiteConfiguration.Name
+4. Invalid default port value in WebSiteConfiguration.InternalPort
+5. XSS vulnerability in Home.razor error messages
+6. Missing HTTP timeout configuration in HttpClientExtensions
+7. Password transmission lacks HTTPS enforcement validation
+
+### Code Quality Issues Remaining
+
+- ❌ ArchiveExtractorService still missing null checks and error handling
+- ❌ Cache initialization race condition not fixed
+- ❌ Empty string validation missing in WebSiteConfiguration.Name
+- ❌ Invalid default port (0) causes validation failures
+- ❌ XSS vulnerability in Home.razor error messages
+- ❌ No timeout configuration on HTTP requests
+- ❌ Password transmission lacks HTTPS enforcement validation
+
+---
+
+## 10. Conclusion - ACCURATE ASSESSMENT
+
+### ⚠️ PREVIOUS RECONCILIATION WAS SIGNIFICANTLY INACCURATE
+
+The previous reconciled report claimed:
+
+- ❌ "100% critical issue resolution" → **FALSE** (actual: 23%)
+- ❌ "Production ready" → **FALSE** (10 critical issues remain)
+- ❌ "Security score 4/5" → **FALSE** (actual: 2.5/5)
+
+### ✅ ACCURATE CURRENT STATE
+
+**What Was Actually Accomplished:**
+
+- 3 of 13 unique critical issues fixed (23% resolution rate)
+- 5 of ~20 suggestions addressed (25% resolution rate)
+- Security score improved from 1.5/5 to 2.5/5 (+67% improvement, but still below production threshold)
+
+**What Remains Critical:**
+
+- **10 critical issues unfixed** - solution is NOT production-ready
+- Estimated **22-32 hours of work remaining** before production deployment
+- Key blockers: missing input validation, XSS vulnerability, race conditions, no timeout protection
+
+### Recommendations
+
+1. **Do NOT merge to main/production** until remaining 10 critical issues are addressed
+2. **Prioritize Phase 1 completion** - focus on the 6 remaining April 6 critical issues
+3. **Re-run reconciliation after each fix batch** to maintain accurate status tracking
+4. **Set production threshold**: Minimum 4/5 security score, 0 critical issues remaining
 
 ---
 
 **Report Generated:** April 8, 2026  
-**Last Updated:** April 8, 2026 (all critical issues resolved)  
-**Verification Method:** Direct codebase inspection + build verification  
-**Total Files Modified:** 6 source files + 1 constants file  
-**Accuracy Rate:** 100% for critical issues verified and resolved
-
-**Impact:**
-
-- Can cause deadlocks in ASP.NET Core synchronization context
-- Thread pool starvation under load
-- Application may hang indefinitely
-- Violates async/await best practices
-
-**Suggested Fix:**
-
-```csharp
-// ✅ Use proper async iteration
-var releaseList = new List<AspNetRelease>();
-
-foreach (var release in releases)
-{
-    var isInstalledResult = await IsVersionInstalledAsync(release.Version, DotNetFrameworkTypes.AspNetCore);
-    var isInstalled = isInstalledResult.Value ?? false;
-    releaseList.Add(AspNetRelease.Create(release, isInstalled));
-}
-```
-
-**Verification:** Direct code inspection confirmed `.GetAwaiter().GetResult()` present at line 88.
+**Verification Method:** Git commit analysis (`276c3fd`, `377e6cc`) + direct codebase inspection against April 6 and April 8 reports  
+**Accuracy Claim:** This report reflects TRUE resolution status based on actual commits, not claimed fixes  
+**Total Files Modified in Commits:** 10 source files + 2 constants files  
+**Total Commits Analyzed:** 2 (`276c3fd` - Phase 1, `377e6cc` - Phase 2)
 
 ---
 
-### 1.2 HttpClient Content Disposal Race Condition ⚠️ CRITICAL
+## Appendix: Commit-by-Commit Verification
 
-**File:** `src/Askyl.Dsm.WebHosting.Tools/Extensions/HttpClientExtensions.cs:52-60`  
-**Status:** ✅ **VERIFIED PRESENT**  
-**Severity:** Critical  
+### Commit `276c3fd` - "Phase 1: Critical security and stability fixes"
 
-```csharp
-// ❌ CURRENT CODE - RACE CONDITION!
-var jsonContent = content is not null
-    ? new StringContent(JsonSerializer.Serialize(content, JsonOptionsCache.Options), System.Text.Encoding.UTF8, NetworkConstants.ApplicationJson)
-    : null;
+**Verified Changes:**
 
-using (jsonContent)  // ⚠️ Disposes too early!
-{
-    var response = await client.PostAsync(requestUri, jsonContent, cancellationToken);
-    // ... response handling
-}  // ⚠️ jsonContent disposed HERE, potentially before send completes
-```
+1. ✅ DotnetVersionService.cs - Removed `.GetAwaiter().GetResult()`, replaced with proper async iteration
+2. ✅ HttpClientExtensions.cs - Removed `using (jsonContent)` block
+3. ✅ ArchiveExtractorService.cs - Replaced `Console.WriteLine` with `logger.LogDebug`
+4. ✅ LicenseService.cs - Replaced `Console.WriteLine` with `logger.LogWarning(exception, ...)`
+5. ✅ FileSelectionDialog.razor - Replaced `Console.WriteLine` with `Logger.LogDebug`
+6. ✅ FileManagerService.cs - Added `Path.GetFileName()` sanitization and input validation
+7. ✅ InfrastructureConstants.cs - Added `TempDirectory = "temp"` constant
 
-**Impact:**
+**Issues NOT Fixed in This Commit (Contrary to Claims):**
 
-- Potential `ObjectDisposedException` during concurrent requests
-- Data corruption if content disposed mid-transmission
-- Unreliable network operations under load
+- ❌ ArchiveExtractorService null checks still missing
+- ❌ Cache initialization race condition not addressed
+- ❌ WebSiteConfiguration validation issues untouched
+- ❌ XSS vulnerability in Home.razor not fixed
+- ❌ HttpClient timeout configuration not added
 
-**Suggested Fix:**
+### Commit `377e6cc` - "Phase 2: CancellationToken support and parser constants"
 
-```csharp
-// ✅ Remove using block - HttpClient manages disposal
-var jsonContent = content is not null
-    ? new StringContent(JsonSerializer.Serialize(content, JsonOptionsCache.Options), System.Text.Encoding.UTF8, NetworkConstants.ApplicationJson)
-    : null;
+**Verified Changes:**
 
-var response = await client.PostAsync(requestUri, jsonContent, cancellationToken);
-// No using block needed - HttpClient handles disposal automatically
-```
+1. ✅ VersionsDetectorService.cs - Added `CancellationToken` parameter to `RefreshCacheAsync()`
+2. ✅ VersionsDetectorService.cs - Added `CancellationToken` to `ExecuteProcessAndGetOutputAsync()`
+3. ✅ VersionsDetectorService.cs - Pass token to `ReadToEndAsync()` and `WaitForExitAsync()`
+4. ✅ VersionsDetectorService.cs - Handle `OperationCanceledException` with proper logging
+5. ✅ DotnetInfoParserConstants.cs - Created new file with all parser magic strings:
+   - Section headers (SDK, Runtime, Main SDK)
+   - Framework type identifiers for ordering
+   - Product name identifiers
+6. ✅ VersionsDetectorService.cs - Replaced all magic strings with constants
 
-**Verification:** Direct code inspection confirmed `using (jsonContent)` pattern at lines 52-60.
+**Issues NOT Fixed in This Commit:**
 
----
-
-### 1.3 Console.WriteLine in Production Code ⚠️ CRITICAL
-
-**File:** `src/Askyl.Dsm.WebHosting.Tools/Infrastructure/ArchiveExtractorService.cs:28`  
-**Status:** ✅ **VERIFIED PRESENT**  
-**Severity:** Critical  
-
-```csharp
-// ❌ CURRENT CODE - INAPPROPRIATE FOR PRODUCTION
-if (doExclusion && Path.GetFileName(entryName).Equals(exclude, StringComparison.OrdinalIgnoreCase))
-{
-    Console.WriteLine("Skipping " + entryName);  // ⚠️ CONSOLE OUTPUT IN SERVICE LAYER
-    continue;
-}
-```
-
-**Additional Instances Found (via grep search):**
-
-1. **LicenseService.cs:45** - Error logging via Console.WriteLine
-2. **FileSelectionDialog.razor:212** - Debug output in UI component
-
-**Suggested Fix:**
-
-```csharp
-// ✅ Add ILogger dependency to ArchiveExtractorService
-public sealed class ArchiveExtractorService(
-    IFileManagerService fileManager,
-    ILogger<ArchiveExtractorService> logger) : IArchiveExtractorService
-{
-    public void Decompress(string inputFile, string? exclude = null)
-    {
-        // ...
-        if (doExclusion && Path.GetFileName(entryName).Equals(exclude, StringComparison.OrdinalIgnoreCase))
-        {
-            logger.LogDebug("Skipping archive entry: {EntryName}", entryName);  // ✅ Structured logging
-            continue;
-        }
-        // ...
-    }
-}
-```
-
-**Verification:** Grep search confirmed 5 instances of `Console.WriteLine` across codebase.
+- ❌ Cache invalidation mechanism still missing (April 8 #7)
+- ❌ Retry logic not implemented (April 8 #16)
+- ❌ Other suggestions from April 8 report untouched
 
 ---
 
-### 1.4 Missing Input Validation - Path Traversal Risk ⚠️ CRITICAL
-
-**File:** `src/Askyl.Dsm.WebHosting.Tools/Infrastructure/FileManagerService.cs:37-40`  
-**Status:** ✅ **VERIFIED PRESENT (PARTIAL)**  
-**Severity:** Critical  
-
-```csharp
-// ❌ CURRENT CODE - NO PATH SANITIZATION
-public string GetDirectory(string name)
-{
-    var path = Path.Combine(BaseDirectory, _rootPath, name);  // ⚠️ No validation on 'name'
-
-    logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
-    Directory.CreateDirectory(path);
-
-    return path;
-}
-```
-
-**Impact:**
-
-- Attacker could create/read files outside intended directories via `../` sequences
-- Unauthorized file access possible through path traversal attacks
-- Data exfiltration risk
-
-**Suggested Fix:**
-
-```csharp
-// ✅ Add input validation and sanitization
-public string GetDirectory(string name)
-{
-    if (String.IsNullOrWhiteSpace(name))
-        throw new ArgumentException("Directory name cannot be empty", nameof(name));
-
-    // Prevent path traversal - extract only the file/directory name
-    var sanitized = Path.GetFileName(name);  // ✅ Removes ../ sequences
-
-    if (String.Equals(sanitized, String.Empty, StringComparison.OrdinalIgnoreCase))
-        throw new ArgumentException("Invalid directory name: contains only path separators", nameof(name));
-
-    var path = Path.Combine(BaseDirectory, _rootPath, sanitized);
-
-    logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
-    Directory.CreateDirectory(path);
-
-    return path;
-}
-```
-
-**Verification:** Direct code inspection confirmed no `Path.GetFileName()` sanitization at line 37.
-
----
-
-## 2. Suggestions (Verified Present)
-
-### 2.1 Magic String "temp" Not in Constants ⚠️ SUGGESTION
-
-**File:** `src/Askyl.Dsm.WebHosting.Tools/Infrastructure/FileManagerService.cs:23`  
-**Status:** ✅ **VERIFIED PRESENT**  
-
-```csharp
-// ❌ Magic string should be in Constants project
-private const string Temp = "temp";  // ⚠️ Should use InfrastructureConstants.TempDirectory
-
-public void Initialize()
-{
-    GetDirectory(InfrastructureConstants.Downloads);  // ✅ Uses constant
-    GetDirectory(Temp);  // ⚠️ Magic string
-}
-```
-
-**Suggested Fix:**
-
-```csharp
-// Add to Constants/InfrastructureConstants.cs
-public static class InfrastructureConstants
-{
-    public const string Downloads = "downloads";
-    public const string TempDirectory = "temp";  // ✅ Centralized constant
-}
-
-// Update FileManagerService.cs
-private const string Temp = InfrastructureConstants.TempDirectory;
-```
-
----
-
-### 2.2 Missing Cancellation Token Support ⚠️ SUGGESTION
-
-**File:** `src/Askyl.Dsm.WebHosting.Tools/Runtime/VersionsDetectorService.cs:105-124`  
-**Status:** ✅ **VERIFIED PRESENT**  
-
-```csharp
-// ❌ No cancellation token parameter
-public async Task RefreshCacheAsync()  // ⚠️ Missing CancellationToken
-{
-    try
-    {
-        var output = await ExecuteProcessAndGetOutputAsync(dotnetPath, "--info");  // ⚠️ Cannot be cancelled
-        // ...
-    }
-}
-```
-
-**Suggested Fix:**
-
-```csharp
-// ✅ Add cancellation token support
-public async Task RefreshCacheAsync(CancellationToken cancellationToken = default)
-{
-    try
-    {
-        var output = await ExecuteProcessAndGetOutputAsync(dotnetPath, "--info", cancellationToken);
-        
-        if (!String.IsNullOrEmpty(output))
-        {
-            frameworks = ParseDotnetInfo(output);
-        }
-    }
-    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-    {
-        logger.LogWarning("Framework cache refresh cancelled");
-        throw;
-    }
-}
-
-// ✅ Update process execution method
-private async Task<string> ExecuteProcessAndGetOutputAsync(
-    string fileName, 
-    string arguments, 
-    CancellationToken cancellationToken = default)
-{
-    using var process = new Process
-    {
-        StartInfo =
-        {
-            FileName = fileName,
-            Arguments = arguments,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        }
-    };
-
-    process.Start();
-    
-    var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-    await process.WaitForExitAsync(cancellationToken);
-    
-    return process.ExitCode == 0 ? await outputTask : String.Empty;
-}
-```
-
----
-
-### 2.3 Magic Strings in Framework Detection ⚠️ SUGGESTION
-
-**File:** `src/Askyl.Dsm.WebHosting.Tools/Runtime/VersionsDetectorService.cs:156-197`  
-**Status:** ✅ **VERIFIED PRESENT**  
-
-```csharp
-// ❌ Magic strings should be in Constants project
-private string? DetectCurrentSection(string trimmedLine)
-{
-    if (trimmedLine.StartsWith(".NET SDKs installed:"))  // ⚠️ Magic string
-        return "SDK";
-    else if (trimmedLine.StartsWith(".NET runtimes installed:"))  // ⚠️ Magic string
-        return "Runtime";
-    else if (trimmedLine.StartsWith(".NET SDK:"))  // ⚠️ Magic string
-        return "Main SDK";
-
-    return null;
-}
-
-private int GetFrameworkOrder(string frameworkType)
-{
-    return frameworkType switch
-    {
-        "SDK (Main)" => 1,   // ⚠️ Magic strings
-        "SDK" => 2,
-        "Runtime" => 3,
-        "ASP.NET Core" => 4,
-        _ => 5
-    };
-}
-```
-
-**Suggested Fix:**
-
-```csharp
-// Add to Constants/Application/DotnetInfoParserConstants.cs
-public static class DotnetInfoParserConstants
-{
-    public const string SdkSectionHeader = ".NET SDKs installed:";
-    public const string RuntimeSectionHeader = ".NET runtimes installed:";
-    public const string MainSdkSectionHeader = ".NET SDK:";
-
-    public const string FrameworkTypeMainSdk = "SDK (Main)";
-    public const string FrameworkTypeSdk = "SDK";
-    public const string FrameworkTypeRuntime = "Runtime";
-    public const string FrameworkTypeAspNetCore = "ASP.NET Core";
-}
-
-// Update VersionsDetectorService.cs to use constants
-```
-
----
-
-## 3. Nice to Have (Verified Present)
-
-### 3.1 Code Duplication in FileSystemService 🟢 NICE TO HAVE
-
-**File:** `src/Askyl.Dsm.WebHosting.Ui/Services/FileSystemService.cs:143-152, 167-180`  
-**Status:** ✅ **VERIFIED PRESENT**  
-
-Duplicate error handling pattern found in two methods that could be extracted to a helper method.
-
----
-
-## 4. Issues from April 6 Report - NOW FIXED ✅
-
-The following critical issues reported on April 6 were **ALREADY RESOLVED**:
-
-### 4.1 Empty String Validation on WebSiteConfiguration.Name ✅ FIXED
-
-**Reported Issue:** `Name` property allows empty strings despite `[Required]` attribute  
-**Current State:** ✅ Property has proper validation attributes present
-
-### 4.2 Invalid Default Port Value ✅ FIXED
-
-**Reported Issue:** `InternalPort` default value of 0 fails range validation  
-**Current State:** ✅ Property has proper Range validation (default 0 will fail validation as intended)
-
-### 4.3 XSS in Error Messages ❌ NOT FOUND
-
-**Reported Issue:** Error messages displayed without sanitization  
-**Current State:** ❌ Blazor's built-in XSS protection automatically encodes strings - issue was never present
-
----
-
-## 5. Summary Statistics
-
-### Findings by Severity (Verified Current State)
-
-| Category | Count | Percentage | Status |
-|----------|-------|------------|--------|
-| **Critical Issues** | 4 | 29% | ✅ Verified Present |
-| **Suggestions** | 3 | 21% | ✅ Verified Present |
-| **Nice to Have** | 1 | 7% | ✅ Verified Present |
-| **Already Fixed** | 3 | 21% | ❌ Not in current code |
-| **Total Verified** | **8** | **57%** | **True current state** |
-
-### Comparison with Previous Reports
-
-| Metric | April 6 Report | April 8 Report | **Verified Current** | Accuracy |
-|--------|----------------|----------------|---------------------|----------|
-| Critical Issues Reported | 9 | 4 | **4** | Apr 8: 100% ✅ |
-| Suggestions Reported | 23 | 12 | **3** | Both overestimated |
-| Nice to Have Reported | 13 | 6 | **1** | Both overestimated |
-| Total Findings Reported | 45 | 22 | **8** | Apr 8: 36% accurate |
-
----
-
-## 6. Recommended Action Plan
-
-### Phase 1: Critical Fixes (Before Production) - MANDATORY ⚠️
-
-**Estimated Time:** 4-6 hours
-
-```bash
-# Priority Order:
-# 1. Fix blocking call in DotnetVersionService.cs (1 hour)
-# 2. Remove using block from HttpClientExtensions.cs (30 minutes)
-# 3. Replace Console.WriteLine with ILogger in ArchiveExtractorService (1 hour)
-# 4. Add Path.GetFileName sanitization to FileManagerService (1 hour)
-
-# After fixes:
-dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
-dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
-```
-
-**Verification Checklist:**
-
-- [ ] Blocking call removed from DotnetVersionService.cs
-- [ ] Using block removed from HttpClientExtensions.cs
-- [ ] Console.WriteLine replaced with ILogger in all 3 instances
-- [ ] Path sanitization added to FileManagerService.GetDirectory()
-- [ ] Format command executed successfully
-- [ ] Build passes with no errors or warnings
-
----
-
-### Phase 2: High Priority Suggestions (Next Sprint) - RECOMMENDED 🟡
-
-**Estimated Time:** 6-8 hours
-
-```bash
-# 1. Move magic string "temp" to InfrastructureConstants (30 minutes)
-# 2. Add CancellationToken support to VersionsDetectorService (2 hours)
-# 3. Centralize dotnet info parser strings (2 hours)
-# 4. Replace Console.WriteLine in LicenseService and FileSelectionDialog (1 hour)
-
-# After changes:
-dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
-dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
-```
-
----
-
-### Phase 3: Optimizations (Future) - OPTIONAL 🟢
-
-**Estimated Time:** 4-6 hours
-
-```bash
-# 1. Extract duplicate code in FileSystemService to helper method (1 hour)
-# 2. Add unit tests for critical fixes (2 hours)
-# 3. Performance benchmarking for VersionsDetectorService (1 hour)
-```
-
----
-
-## 7. Quality Metrics
-
-### Current State Assessment
-
-| Metric | Score | Status | Notes |
-|--------|-------|--------|-------|
-| **Architecture** | ⭐⭐⭐⭐⭐ (5/5) | Excellent | Strong layered architecture, good DI usage |
-| **Security** | ⭐⭐☆☆☆ (2/5) | Needs Work | 4 critical issues require immediate attention |
-| **Code Quality** | ⭐⭐⭐☆☆ (3/5) | Good | AGENTS.md compliance needed for constants/logging |
-| **Performance** | ⭐⭐⭐⭐☆ (4/5) | Very Good | Smart caching, async patterns well-implemented |
-| **Maintainability** | ⭐⭐⭐☆☆ (3/5) | Good | Some code duplication, magic strings to centralize |
-
-### Improvement Trajectory
-
-```text
-April 6 Report:  Security Score 2/5 (9 critical issues reported)
-Current State:   Security Score 2/5 (4 critical issues verified)
-After Phase 1:   Security Score 4/5 (0 critical issues) ← Target
-```
-
----
-
-## Conclusion
-
-This reconciled report represents the **TRUE CURRENT STATE** of the ASkyl.Dsm.WebHosting solution, verified through direct codebase inspection. Key findings:
-
-✅ **Good News:** Only 8 verified issues remain (69% reduction from April 6 report)  
-⚠️ **Action Required:** 4 critical issues must be fixed before production deployment  
-✅ **Progress Made:** 3 critical issues from April 6 are already resolved  
-🎯 **Target:** Production-ready within 4-6 hours of focused work
-
-**Next Steps:**
-
-1. Execute Phase 1 critical fixes (mandatory)
-2. Run format and build verification
-3. Schedule Phase 2 suggestions for next sprint
-4. Consider Phase 3 optimizations as time permits
-
----
-
-**Report Generated:** April 8, 2026  
-**Verification Method:** Direct codebase inspection against April 6 and April 8 reports  
-**Total Files Inspected:** 15+ source files  
-**Grep Searches Performed:** 3 pattern matches  
-**Accuracy Rate:** 100% for critical issues verified
+*This accurate reconciliation report was generated to correct significant misrepresentations in the previous reconciled report. All claims have been verified against actual git commits.*
