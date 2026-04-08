@@ -75,7 +75,7 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
         => _cachedFrameworks.Any(x => x.Type == frameworkType && x.Version == version);
 
     /// <inheritdoc/>
-    public async Task RefreshCacheAsync()
+    public async Task RefreshCacheAsync(CancellationToken cancellationToken = default)
     {
         // Re-execute process to get fresh data
         List<FrameworkInfo> frameworks = [];
@@ -83,12 +83,17 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
         try
         {
             var dotnetPath = Path.Combine(ApplicationConstants.RuntimesRootPath, "dotnet");
-            var output = await ExecuteProcessAndGetOutputAsync(dotnetPath, "--info");
+            var output = await ExecuteProcessAndGetOutputAsync(dotnetPath, "--info", cancellationToken);
 
             if (!String.IsNullOrEmpty(output))
             {
                 frameworks = ParseDotnetInfo(output);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning("Framework cache refresh cancelled");
+            throw;  // Re-throw to signal cancellation to caller
         }
         catch (Exception ex)
         {
@@ -102,7 +107,7 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
 
     #region Process Management
 
-    private async Task<string> ExecuteProcessAndGetOutputAsync(string fileName, string arguments)
+    private async Task<string> ExecuteProcessAndGetOutputAsync(string fileName, string arguments, CancellationToken cancellationToken = default)
     {
         using var process = new Process();
 
@@ -114,8 +119,8 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
         process.StartInfo.CreateNoWindow = true;
 
         process.Start();
-        var output = await process.StandardOutput.ReadToEndAsync();
-        await process.WaitForExitAsync();
+        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken);
 
         return process.ExitCode == 0 ? output : String.Empty;
     }
@@ -162,19 +167,19 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
 
     private string? DetectCurrentSection(string trimmedLine)
     {
-        // Detect main sections
-        if (trimmedLine.StartsWith(".NET SDKs installed:"))
+        // Detect main sections using constants
+        if (trimmedLine.StartsWith(DotnetInfoParserConstants.SdkSectionHeader))
         {
-            return "SDK";
+            return DotnetInfoParserConstants.FrameworkTypeSdk;
         }
-        else if (trimmedLine.StartsWith(".NET runtimes installed:"))
+        else if (trimmedLine.StartsWith(DotnetInfoParserConstants.RuntimeSectionHeader))
         {
-            return "Runtime";
+            return DotnetInfoParserConstants.FrameworkTypeRuntime;
         }
-        else if (trimmedLine.StartsWith(".NET SDK:"))
+        else if (trimmedLine.StartsWith(DotnetInfoParserConstants.MainSdkSectionHeader))
         {
             // Main SDK base section
-            return "Main SDK";
+            return DotnetInfoParserConstants.FrameworkTypeMainSdk;
         }
 
         return null;
@@ -182,30 +187,30 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
 
     private void ParseVersionsInSection(List<FrameworkInfo> frameworks, string currentSection, string trimmedLine)
     {
-        // Parse versions in each section
-        if (currentSection == "SDK")
+        // Parse versions in each section using constants
+        if (currentSection == DotnetInfoParserConstants.FrameworkTypeSdk)
         {
             // Format: "  9.0.300 [/usr/local/share/dotnet/sdk]"
-            TryAddFrameworkFromRegex(frameworks, SdkVersionRegex(), trimmedLine, "SDK");
+            TryAddFrameworkFromRegex(frameworks, SdkVersionRegex(), trimmedLine, DotnetInfoParserConstants.FrameworkTypeSdk);
         }
-        else if (currentSection == "Runtime")
+        else if (currentSection == DotnetInfoParserConstants.FrameworkTypeRuntime)
         {
             // Format: "  Microsoft.AspNetCore.App 9.0.5 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]"
-            if (trimmedLine.Contains("Microsoft.AspNetCore.App"))
+            if (trimmedLine.Contains(DotnetInfoParserConstants.AspNetCoreProductName))
             {
-                TryAddFrameworkFromRegex(frameworks, AspNetCoreVersionRegex(), trimmedLine, "ASP.NET Core");
+                TryAddFrameworkFromRegex(frameworks, AspNetCoreVersionRegex(), trimmedLine, DotnetInfoParserConstants.FrameworkTypeAspNetCore);
             }
-            else if (trimmedLine.Contains("Microsoft.NETCore.App"))
+            else if (trimmedLine.Contains(DotnetInfoParserConstants.NetCoreProductName))
             {
-                TryAddFrameworkFromRegex(frameworks, NetCoreVersionRegex(), trimmedLine, "Runtime");
+                TryAddFrameworkFromRegex(frameworks, NetCoreVersionRegex(), trimmedLine, DotnetInfoParserConstants.FrameworkTypeRuntime);
             }
         }
-        else if (currentSection == "Main SDK")
+        else if (currentSection == DotnetInfoParserConstants.FrameworkTypeMainSdk)
         {
             // Format: " Version:           9.0.301"
-            if (trimmedLine.StartsWith("Version:"))
+            if (trimmedLine.StartsWith(DotnetInfoParserConstants.VersionLinePrefix))
             {
-                TryAddFrameworkFromRegex(frameworks, MainSdkVersionRegex(), trimmedLine, "SDK (Main)");
+                TryAddFrameworkFromRegex(frameworks, MainSdkVersionRegex(), trimmedLine, DotnetInfoParserConstants.FrameworkTypeMainSdk);
             }
         }
     }
@@ -245,10 +250,10 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
     {
         return frameworkType switch
         {
-            "SDK (Main)" => 1,
-            "SDK" => 2,
-            "Runtime" => 3,
-            "ASP.NET Core" => 4,
+            DotnetInfoParserConstants.FrameworkTypeMainSdk => 1,
+            DotnetInfoParserConstants.FrameworkTypeSdk => 2,
+            DotnetInfoParserConstants.FrameworkTypeRuntime => 3,
+            DotnetInfoParserConstants.FrameworkTypeAspNetCore => 4,
             _ => 5
         };
     }

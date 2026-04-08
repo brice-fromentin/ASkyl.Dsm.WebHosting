@@ -34,5 +34,6 @@ public interface IVersionsDetectorService
     /// Forces a cache refresh by re-executing dotnet --info.
     /// Call this after install/uninstall operations to update cached data.
     /// </summary>
-    Task RefreshCacheAsync();
+    /// <param name="cancellationToken">Token to cancel the refresh operation.</param>
+    Task RefreshCacheAsync(CancellationToken cancellationToken = default);
 }
