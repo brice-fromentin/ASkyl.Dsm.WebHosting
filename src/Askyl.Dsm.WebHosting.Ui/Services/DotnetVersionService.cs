@@ -83,12 +83,14 @@ public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDo
         {
             var releases = await downloader.GetAspNetCoreReleasesAsync(channel, cancellationToken);
 
-            var releaseList = releases.Select(release =>
+            var releaseList = new List<AspNetRelease>();
+
+            foreach (var release in releases)
             {
-                var isInstalledResult = IsVersionInstalledAsync(release.Version, DotNetFrameworkTypes.AspNetCore).GetAwaiter().GetResult();
+                var isInstalledResult = await IsVersionInstalledAsync(release.Version, DotNetFrameworkTypes.AspNetCore);
                 var isInstalled = isInstalledResult.Value ?? false;
-                return AspNetRelease.Create(release, isInstalled);
-            }).ToList();
+                releaseList.Add(AspNetRelease.Create(release, isInstalled));
+            }
 
             return ReleasesResult.CreateSuccess(releaseList);
         }

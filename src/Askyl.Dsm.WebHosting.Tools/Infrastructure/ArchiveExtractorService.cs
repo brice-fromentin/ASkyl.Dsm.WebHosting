@@ -1,13 +1,14 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 /// <summary>
 /// Service that extracts compressed archive files (tar.gz format).
 /// </summary>
-public sealed class ArchiveExtractorService(IFileManagerService fileManager) : IArchiveExtractorService
+public sealed class ArchiveExtractorService(IFileManagerService fileManager, ILogger<ArchiveExtractorService> logger) : IArchiveExtractorService
 {
     /// <inheritdoc/>
     public void Decompress(string inputFile, string? exclude = null)
@@ -25,7 +26,7 @@ public sealed class ArchiveExtractorService(IFileManagerService fileManager) : I
 
             if (doExclusion && Path.GetFileName(entryName).Equals(exclude, StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine("Skipping " + entryName);
+                logger.LogDebug("Skipping archive entry: {EntryName}", entryName);
                 continue;
             }
 

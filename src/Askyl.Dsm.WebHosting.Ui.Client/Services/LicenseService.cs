@@ -9,7 +9,8 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// Licenses are loaded on-demand via parallel HTTP requests for better performance.
 /// </summary>
 /// <param name="httpClientFactory">HttpClientFactory to create the named client.</param>
-public class LicenseService(IHttpClientFactory httpClientFactory) : ILicenseService
+/// <param name="logger">Logger instance for error reporting.</param>
+public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<LicenseService> logger) : ILicenseService
 {
     private IReadOnlyList<LicenseInfo>? _licenses;
 
@@ -42,7 +43,7 @@ public class LicenseService(IHttpClientFactory httpClientFactory) : ILicenseServ
         catch (Exception exception)
         {
             // Skip licenses that fail to load silently in production
-            Console.WriteLine($"[LicenseService] ERROR loading {fileName}: {exception.GetType().Name} - {exception.Message}");
+            logger.LogWarning(exception, "Failed to load license file: {FileName}", fileName);
         }
 
         return null;

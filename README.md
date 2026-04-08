@@ -1,10 +1,12 @@
 # ASkyl.Dsm.WebHosting
 
-.NET Web sites hosting manager for Synology DSM 7.2+. Currently only tested x64 architecture but also builded for armv7, armv8.
+.NET Web sites hosting manager for Synology DSM 7.2+. Currently only tested x64 architecture but also built for armv7, armv8.
 
 **Author:** Brice FROMENTIN  
+**Framework:** .NET 10 (net10.0)  
+**UI:** Blazor Hybrid (Interactive WebAssembly) with FluentUI components
 
-Currently, the project is a Blazor Server app for security reasons and cold start performances, will re-evaluate when migrating to .NET 10.
+Currently, the project uses a Blazor Hybrid approach (Server-side authentication with Interactive WebAssembly) for security reasons and optimal cold start performance.
 
 This project has also the following goals :
 

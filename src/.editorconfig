@@ -1,0 +1,158 @@
+# C# Code Style Rules for Askyl.Dsm.WebHosting
+# Inherits from root .editorconfig (global settings)
+# See https://docs.microsoft.com/dotnet/fundamentals/code-analysis/style-rules
+
+# All settings in this file apply to C# files only
+[*.cs]
+
+# ============================================================================
+# NAMING CONVENTIONS
+# ============================================================================
+
+dot_naming_rules = true
+dot_naming_rule.property_style = PascalCase
+dot_naming_rule.method_style = PascalCase
+dot_naming_rule.parameter_style = camelCase
+dot_naming_rule.local_variable_style = camelCase
+dot_naming_rule.field_style = camelCase
+dot_naming_rule.type_parameter_style = PascalCase
+
+# ============================================================================
+# BRACES & CONTROL FLOW (AGENTS.md: Always use {})
+# ============================================================================
+
+dotnet_style_braces_for_control_flow_statements = true
+dotnet_style_braces_for_if_else_when_single_line = false:warning
+
+# ============================================================================
+# TYPE KEYWORDS (AGENTS.md: string for types, String. for static members)
+# ============================================================================
+
+# Use var when type is obvious (AGENTS.md: explicit types for built-in types)
+dotnet_style_var_for_built_in_types = false:error
+dotnet_style_var_when_type_is_apparent = true:warning
+
+# Language keywords over type keywords (string vs String for types/variables)
+dotnet_style_predefined_type_for_locals_parameters_members = true:error
+dotnet_style_predefined_type_for_member_access = false:none
+
+# ============================================================================
+# MODIFIERS & ACCESSIBILITY
+# ============================================================================
+
+dotnet_style_require_accessibility_modifiers = forNonInterfaceMembers:warning
+
+# ============================================================================
+# NULL CHECKS & PATTERN MATCHING
+# ============================================================================
+
+dotnet_style_coalesce_expression = true:suggestion
+dotnet_style_null_propagation = true:suggestion
+dotnet_style_pattern_matching_over_is_with_cast_check = true:suggestion
+dotnet_style_pattern_matching_over_as_with_null_check = true:suggestion
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
+
+# Nullable reference types (MANDATORY)
+dotnet_style_nullable_reference_types = enable:error
+
+# ============================================================================
+# PARENTHESES & CLARITY
+# ============================================================================
+
+dotnet_style_parenthesized_condition_in_conditional_operator = false:none
+dotnet_style_parentheses_in_arithmetic_binary_operators = alwaysForClarity:info
+dotnet_style_parentheses_in_relational_binary_operators = alwaysForClarity:warning
+
+# ============================================================================
+# EXPRESSION-LEVEL PREFERENCES
+# ============================================================================
+
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_explicit_tuple_names = true:suggestion
+dotnet_style_prefer_inferred_tuple_names = true:suggestion
+dotnet_style_prefer_auto_properties = true:suggestion
+dotnet_style_prefer_conditional_expression_over_assignment = false:none
+dotnet_style_prefer_conditional_expression_over_return = false:none
+dotnet_style_prefer_null_check_over_type_check = true:suggestion
+
+# ============================================================================
+# LINQ & COLLECTIONS (AGENTS.md: Prefer collection expressions)
+# ============================================================================
+
+dotnet_style_prefer_query_syntax = false:none
+dotnet_style_prefer_collection_expression = true:error
+
+# ============================================================================
+# STRING INTERPOLATION
+# ============================================================================
+
+dotnet_simplify_interpolated_string = true:suggestion
+
+# ============================================================================
+# PRIMARY CONSTRUCTORS (AGENTS.md: MANDATORY for classes with parameters)
+# ============================================================================
+
+dotnet_style_primary_constructors = true:warning
+IDE0290 = warning # Use primary constructor
+
+# ============================================================================
+# TARGET-TYPED NEW (AGENTS.md: Prefer concise syntax)
+# ============================================================================
+
+IDE0295 = error # Use target-typed 'new'
+RCS1187 = warning # Roslynator use target-typed 'new'
+
+# ============================================================================
+# USING DIRECTIVES (AGENTS.md: System first, then alphabetical)
+# ============================================================================
+
+dotnet_sort_system_directives_first = true:warning
+dotnet_sort_using_statements = true:warning
+
+IDE0005 = warning # Remove unnecessary import
+RCS0038 = warning # Roslynator remove unnecessary using directive
+
+# Note: dotnet-format provides System-first + alphabetical ordering automatically
+
+# ============================================================================
+# CODE STYLE RULES (IDE00xx)
+# ============================================================================
+
+IDE0007 = warning # Use var instead of explicit type (when type is obvious)
+IDE0016 = warning # Use throw expression instead of throw statement
+IDE0029 = suggestion # Null check can be simplified (prefer pattern matching)
+IDE0031 = suggestion # Use null propagation (?. operator)
+IDE0045 = warning # Use conditional expression for assignment
+IDE0049 = error # Use language keywords instead of framework type names
+IDE0055 = warning # Fix formatting (indentation, spaces, newlines)
+IDE0063 = suggestion # Use simple 'using' statement (using declaration)
+IDE0280 = warning # Use nameof instead of string literals
+
+# ============================================================================
+# .NET DESIGN GUIDELINES (CAxxxx)
+# ============================================================================
+
+CA1000 = none # Do not declare static members on general types (we use static for constants/extensions)
+CA1051 = none # Do not declare visible instance fields (we have some legitimate uses)
+CA1303 = warning # Do not pass literals as localized parameters
+CA1309 = warning # Use ordinal string comparison
+CA1826 = warning # Do not use Enumerable methods on indexable collections
+CA1861 = suggestion # Prefer 'static' members over repeated string allocation
+
+# ============================================================================
+# ROSLYNATOR RULES (RCSxxxx)
+# ============================================================================
+
+roslynator_remove_unnecessary_using_directives_severity = warning
+roslynator_add_missing_using_directives_severity = info
+
+# ============================================================================
+# NOTES ON MANUAL CHECKS (NOT ENFORCED BY TOOLING)
+# ============================================================================
+
+# The following AGENTS.md rules require manual verification:
+# - Single-line logging format (no multi-line logger calls)
+# - Blank lines BEFORE/AFTER control flow statements (not inside blocks)
+# - Magic strings/numbers should be in Constants project
+# - Target-typed 'new' for explicit interface implementations

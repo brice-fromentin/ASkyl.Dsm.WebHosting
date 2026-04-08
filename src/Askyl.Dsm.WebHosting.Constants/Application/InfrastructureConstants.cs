@@ -9,4 +9,9 @@ public static class InfrastructureConstants
     /// Default directory name for downloads.
     /// </summary>
     public const string Downloads = "downloads";
+
+    /// <summary>
+    /// Default directory name for temporary files.
+    /// </summary>
+    public const string TempDirectory = "temp";
 }

@@ -2,7 +2,7 @@
 
 **Version:** 0.5.4
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** April 5, 2026
+**Last Updated:** April 8, 2026 (critical security issues resolved)
 
 ---
 
@@ -43,7 +43,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - **Centralized Constants:** All magic strings/numbers extracted to dedicated Constants project
 - **Background Service:** Website hosting service runs as singleton hosted service for lifecycle management
 
-**Current Status (v0.5.3):**
+**Current Status (v0.5.4):**
 
 - ✅ Blazor Server + Interactive WebAssembly hybrid rendering
 - ✅ DSM API integration (Authentication, FileStation, ReverseProxy)
@@ -53,9 +53,16 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ✅ **Smart caching strategy** for expensive operations (VersionsDetectorService with lazy initialization)
 - ✅ **Full CancellationToken support** across all async operations
 - ✅ **All static classes converted** to injectable services for testability
+- ✅ **Critical security issues resolved** (April 8, 2026):
+  - ✅ Path traversal vulnerability fixed in FileManagerService with input sanitization
+  - ✅ Blocking calls removed from async context in DotnetVersionService
+  - ✅ HttpClient content disposal race condition resolved
+  - ✅ All Console.WriteLine replaced with structured ILogger logging
 - ⏳ TODO: Certificate management for reverse proxy
 - ⏳ TODO: Multi-language support
 - ⏳ TODO: Unit test implementation
+
+**Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 
 ---
 

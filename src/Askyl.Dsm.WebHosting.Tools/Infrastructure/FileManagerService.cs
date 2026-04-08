@@ -15,11 +15,6 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public string BaseDirectory => AppContext.BaseDirectory;
 
-    /// <summary>
-    /// Default directory name for temporary files.
-    /// </summary>
-    private const string Temp = "temp";
-
     /// <inheritdoc/>
     public void Initialize()
     {
@@ -27,7 +22,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
 
         // Create default directories
         GetDirectory(InfrastructureConstants.Downloads);
-        GetDirectory(Temp);
+        GetDirectory(InfrastructureConstants.TempDirectory);
 
         logger.LogInformation("FileManager initialized successfully");
     }
@@ -35,7 +30,20 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public string GetDirectory(string name)
     {
-        var path = Path.Combine(BaseDirectory, _rootPath, name);
+        if (String.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Directory name cannot be empty", nameof(name));
+        }
+
+        // Prevent path traversal - extract only the file/directory name
+        var sanitized = Path.GetFileName(name);
+
+        if (String.Equals(sanitized, String.Empty, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Invalid directory name: contains only path separators", nameof(name));
+        }
+
+        var path = Path.Combine(BaseDirectory, _rootPath, sanitized);
 
         logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
         Directory.CreateDirectory(path);
