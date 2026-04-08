@@ -1,8 +1,7 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
-// Removed - using same namespace
 using Askyl.Dsm.WebHosting.Data.Attributes;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Models.ReverseProxy;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.ReverseProxy;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.ReverseProxy;
 

@@ -3,6 +3,10 @@
 
 set -e # Exit immediately if a command exits with a non-zero status.
 
+# Get the script's directory and navigate to project root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 echo "Checking for dotnet-outdated-tool..."
 if ! dotnet tool list -g | grep -q 'dotnet-outdated-tool'; then
     echo "Installing dotnet-outdated-tool..."
@@ -12,6 +16,7 @@ else
 fi
 
 echo "Updating NuGet packages for Askyl.Dsm.WebHosting.slnx..."
-dotnet outdated ./src/Askyl.Dsm.WebHosting.slnx -u
+cd "$PROJECT_ROOT"
+dotnet outdated ./Askyl.Dsm.WebHosting.slnx -u
 
 echo "NuGet package update process finished."

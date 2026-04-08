@@ -6,6 +6,7 @@
     <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
+
   <PropertyGroup>
     <!-- Centralized versioning -->
     <Version>0.5.3</Version>
@@ -13,5 +14,14 @@
     <FileVersion>0.5.3.0</FileVersion>
     <InformationalVersion>0.5.3</InformationalVersion>
     <PackageVersion>0.5.3</PackageVersion>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <!-- Enable .NET Analyzers for code quality and style enforcement -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
   </PropertyGroup>
 </Project>

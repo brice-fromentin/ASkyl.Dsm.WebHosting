@@ -1,19 +1,31 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
-
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
+using Askyl.Dsm.WebHosting.Tools.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
 /// <summary>
 /// Service that detects installed .NET framework versions by executing dotnet --info.
+/// Implements ISemaphoreOwner for thread-safe cache initialization.
 /// </summary>
-public sealed partial class VersionsDetectorService : IVersionsDetectorService
+public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorService> logger) : IVersionsDetectorService, ISemaphoreOwner
 {
+    #region ISemaphoreOwner Implementation
+
+    public SemaphoreSlim Semaphore { get; } = new(1, 1);
+
+    #endregion
+
+    #region Fields
+
     private List<FrameworkInfo> _cachedFrameworks = [];
     private bool _cacheInitialized = false;
+
+    #endregion
 
     #region Regex Patterns
 
@@ -35,15 +47,23 @@ public sealed partial class VersionsDetectorService : IVersionsDetectorService
     public async Task<List<FrameworkInfo>> GetInstalledVersionsAsync()
     {
         // Return cached data if already initialized (BLAZING FAST!) ⚡
-        if (_cacheInitialized)
+        if (Volatile.Read(ref _cacheInitialized))
         {
             return [.. _cachedFrameworks];  // Return copy to prevent external modification
         }
 
-        await RefreshCacheAsync();  // Just call the public method!
-        _cacheInitialized = true;  // Mark as initialized for fast subsequent calls
+        using (await SemaphoreLock.AcquireAsync(this))
+        {
+            // Double-check lock pattern - another thread may have initialized while waiting
+            if (Volatile.Read(ref _cacheInitialized))
+            {
+                return [.. _cachedFrameworks];
+            }
 
-        return [.. _cachedFrameworks];
+            await RefreshCacheAsync();
+            Volatile.Write(ref _cacheInitialized, true);  // Mark as initialized for fast subsequent calls
+            return [.. _cachedFrameworks];
+        }
     }
 
     /// <inheritdoc/>
@@ -70,9 +90,11 @@ public sealed partial class VersionsDetectorService : IVersionsDetectorService
                 frameworks = ParseDotnetInfo(output);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore errors - keep existing cache if refresh fails
+            // Log but don't throw - keep existing cache if refresh fails
+            logger.LogWarning(ex, "Failed to refresh framework cache");
+            return;  // Preserve existing cached data on failure
         }
 
         _cachedFrameworks = frameworks;  // Update cache with fresh data

@@ -35,5 +35,3 @@ public sealed class InstalledVersionsResult(bool success, string? message, List<
     public static InstalledVersionsResult CreateFailure(ApiErrorCode errorCode, string message)
         => new(false, message, null, errorCode);
 }
-
-    

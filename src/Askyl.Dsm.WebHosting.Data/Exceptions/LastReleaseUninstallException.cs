@@ -54,4 +54,22 @@ public sealed class LastReleaseUninstallException : InvalidOperationException
         Version = version ?? throw new ArgumentNullException(nameof(version));
         Channel = channel ?? throw new ArgumentNullException(nameof(channel));
     }
+
+    public LastReleaseUninstallException() : base()
+    {
+        Version = String.Empty;
+        Channel = String.Empty;
+    }
+
+    public LastReleaseUninstallException(string? message) : base(message)
+    {
+        Version = String.Empty;
+        Channel = String.Empty;
+    }
+
+    public LastReleaseUninstallException(string? message, Exception? innerException) : base(message, innerException)
+    {
+        Version = String.Empty;
+        Channel = String.Empty;
+    }
 }

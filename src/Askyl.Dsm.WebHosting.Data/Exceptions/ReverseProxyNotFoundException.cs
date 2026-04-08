@@ -21,4 +21,8 @@ public class ReverseProxyNotFoundException : Exception
         : base(message, innerException)
     {
     }
+
+    public ReverseProxyNotFoundException() : base()
+    {
+    }
 }

@@ -1,11 +1,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-
 using Askyl.Dsm.WebHosting.Constants.Application;
-
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
-using Askyl.Dsm.WebHosting.Data.Contracts;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -30,7 +28,7 @@ public class WebSiteHostingService(
     /// Gets all website instances with their current runtime status.
     /// </summary>
     public Task<WebSiteInstancesResult> GetAllWebsitesAsync()
-        => Task.FromResult(WebSiteInstancesResult.CreateSuccess(_instances.Values.Select(i => i.Clone()).ToList()));
+        => Task.FromResult(WebSiteInstancesResult.CreateSuccess([.. _instances.Values.Select(i => i.Clone())]));
 
     /// <summary>
     /// Adds a new website configuration and creates an instance.

@@ -1,7 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
+using Microsoft.Extensions.Logging;
 
 Console.WriteLine("Starting");
 
