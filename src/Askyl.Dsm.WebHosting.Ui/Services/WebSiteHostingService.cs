@@ -434,9 +434,15 @@ public class WebSiteHostingService(
             return;  // Process is gone, nothing to stop
         }
 
+        // Use per-site timeout configuration (default 60 seconds if not configured)
+        var timeoutMs = instance.Configuration.ProcessTimeoutSeconds > 0
+            ? instance.Configuration.ProcessTimeoutSeconds * 1000
+            : ApplicationConstants.DefaultProcessTimeoutSeconds * 1000;
+
         process.CloseMainWindow();
 
-        if (!process.WaitForExit(5000))
+        // Wait for graceful shutdown using the full user-defined timeout
+        if (!process.WaitForExit(timeoutMs))
         {
             await ForceKillProcessAsync(process, siteName);
         }
@@ -452,7 +458,9 @@ public class WebSiteHostingService(
         try
         {
             process.Kill();
-            await WaitForProcessExitAsync(process, 1000);
+
+            // SIGKILL should terminate immediately - just wait a brief moment for OS cleanup
+            await Task.Delay(500);
         }
         catch (Exception killEx)
         {
@@ -460,12 +468,6 @@ public class WebSiteHostingService(
             // Still consider it success - we did our best, OS will clean up orphaned process eventually
         }
     }
-
-    /// <summary>
-    /// Waits for a process to exit with timeout.
-    /// </summary>
-    private static async Task WaitForProcessExitAsync(Process process, int timeoutMilliseconds)
-        => await Task.Run(() => process.WaitForExit(timeoutMilliseconds));
 
     /// <summary>
     /// Cleans up the instance state after stopping.

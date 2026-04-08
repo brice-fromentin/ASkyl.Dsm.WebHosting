@@ -60,7 +60,7 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
                 return [.. _cachedFrameworks];
             }
 
-            await RefreshCacheAsync();
+            await RefreshCacheInternalAsync();
             Volatile.Write(ref _cacheInitialized, true);  // Mark as initialized for fast subsequent calls
             return [.. _cachedFrameworks];
         }
@@ -79,32 +79,50 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
     {
         using (await SemaphoreLock.AcquireAsync(this, cancellationToken: cancellationToken))
         {
-            // Re-execute process to get fresh data
-            List<FrameworkInfo> frameworks = [];
+            await RefreshCacheInternalAsync();
+        }
+    }
 
-            try
-            {
-                var dotnetPath = Path.Combine(ApplicationConstants.RuntimesRootPath, "dotnet");
-                var output = await ExecuteProcessAndGetOutputAsync(dotnetPath, "--info", cancellationToken);
+    /// <summary>
+    /// Internal cache refresh logic without semaphore acquisition.
+    /// Called by both GetInstalledVersionsAsync and RefreshCacheAsync after acquiring the lock.
+    /// </summary>
+    private async Task RefreshCacheInternalAsync()
+    {
+        List<FrameworkInfo>? newFrameworks = null;
 
-                if (!String.IsNullOrEmpty(output))
-                {
-                    frameworks = ParseDotnetInfo(output);
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        try
+        {
+            var dotnetPath = Path.Combine(ApplicationConstants.RuntimesRootPath, "dotnet");
+
+            if (!File.Exists(dotnetPath))
             {
-                logger.LogWarning("Framework cache refresh cancelled");
-                throw;  // Re-throw to signal cancellation to caller
-            }
-            catch (Exception ex)
-            {
-                // Log but don't throw - keep existing cache if refresh fails
-                logger.LogWarning(ex, "Failed to refresh framework cache");
-                return;  // Preserve existing cached data on failure
+                logger.LogWarning("dotnet executable not found at {DotnetPath}. Keeping existing cached data.", dotnetPath);
+                return;  // Can't refresh without dotnet executable
             }
 
-            _cachedFrameworks = frameworks;  // Update cache with fresh data
+            var output = await ExecuteProcessAndGetOutputAsync(dotnetPath, "--info", default);
+
+            if (!String.IsNullOrEmpty(output))
+            {
+                newFrameworks = ParseDotnetInfo(output);
+                logger.LogDebug("Successfully refreshed framework cache with {FrameworkCount} frameworks", newFrameworks.Count);
+            }
+            else
+            {
+                logger.LogWarning("dotnet --info returned empty output. Keeping existing cached data.");
+                return;  // Preserve existing cache on empty output
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to refresh framework cache. Keeping existing cached data.");
+            return;  // Preserve existing cached data on failure
+        }
+
+        if (newFrameworks is not null)
+        {
+            _cachedFrameworks = newFrameworks;  // Update cache with fresh data
         }
     }
 

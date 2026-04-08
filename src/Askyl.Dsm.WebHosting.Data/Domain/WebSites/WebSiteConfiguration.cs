@@ -41,6 +41,9 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 
     public bool AutoStart { get; set; } = true;
 
+    [Range(0, int.MaxValue, ErrorMessage = "Process timeout must be between 0 and maximum integer value.")]
+    public int ProcessTimeoutSeconds { get; set; } = 60;
+
     public Dictionary<string, string> AdditionalEnvironmentVariables { get; set; } = [];
 
     #endregion

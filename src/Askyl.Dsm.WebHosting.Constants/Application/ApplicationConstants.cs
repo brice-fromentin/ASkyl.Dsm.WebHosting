@@ -70,6 +70,11 @@ public static class ApplicationConstants
     /// </summary>
     public const int HttpClientTimeoutSeconds = 10;
 
+    /// <summary>
+    /// Default process timeout in seconds for graceful shutdown operations.
+    /// </summary>
+    public const int DefaultProcessTimeoutSeconds = 60;
+
     #endregion
 
     #region Application Paths & Routing
