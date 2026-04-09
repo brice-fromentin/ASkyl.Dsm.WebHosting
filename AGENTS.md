@@ -2,7 +2,9 @@
 
 ## 1. PROJECT OVERVIEW
 
-Askyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. The solution consists of multiple projects that work together to provide a web‑based UI for managing .NET web applications on Synology NAS devices.
+Askyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+.
+The solution consists of multiple projects that work together to provide a web‑based
+UI for managing .NET web applications on Synology NAS devices.
 
 **Project Structure:**
 
@@ -551,13 +553,53 @@ The following git commands are **STRICTLY PROHIBITED** unless the user explicitl
 3. **GET EXPLICIT CONFIRMATION** - Wait for user approval before executing
 4. **RUN `git status` FIRST** - Always show current state before modifications
 
+### Explicit Authorization Required for Commits
+
+**NEVER commit changes without explicit user authorization.**
+
+- ❌ **DO NOT** automatically commit after making code changes
+- ❌ **DO NOT** assume user wants changes committed just because they asked for a fix
+- ✅ **MUST** ask user if they want to commit before running `git commit`
+- ✅ **MUST** show the proposed commit message and wait for approval
+- ✅ **MUST** give user the option to review changes first (`git diff`)
+
+**Correct workflow:**
+
+1. Make the requested code changes
+2. Run format and build to verify
+3. Tell user the changes are complete
+4. **ASK:** "Would you like me to commit these changes?"
+5. If user says yes, show the commit message and get approval
+6. Then stage and commit
+
+**Example:**
+
+```text
+❌ WRONG: Making changes and immediately committing
+
+✅ CORRECT: 
+"Changes complete. Build passed with no errors.
+
+Would you like me to commit these changes? (yes/no)"
+
+User: "yes"
+
+"Proposed commit message:
+
+  fix: Resolve issue X by doing Y
+
+  This prevents Z by implementing W pattern.
+
+Shall I proceed with this commit message? (yes/no/edit)"
+```
+
 ### Example Safety Flow
 
-```
-❌ WRONG: Just running the command
+```bash
+# ❌ WRONG: Just running the command
 git reset --hard HEAD~1
 
-✅ CORRECT: Show, explain, confirm
+# ✅ CORRECT: Show, explain, confirm
 "The following command will discard your last commit and all working changes:
 
   git reset --hard HEAD~1
@@ -578,7 +620,47 @@ These operations are generally safe and don't require explicit confirmation:
 - ✅ `git commit -m "..."` (after showing the commit message)
 - ✅ `git branch` (listing branches)
 
-**CRITICAL REMINDER:** NEVER assume user wants to discard changes. If a task can be completed without destructive git operations, choose that path. When in doubt, ask the user for clarification before proceeding.
+**CRITICAL REMINDER:** NEVER assume user wants to discard changes. If a task can
+be completed without destructive git operations, choose that path. When in doubt,
+ask the user for clarification before proceeding.
+
+### Commit Message Conventions
+
+**Commit messages MUST follow these rules:**
+
+1. **NEVER list changed files** - Git already tracks this; don't repeat it
+2. **NEVER include "Files Modified:" sections** - Redundant info via `git show`
+3. **FOCUS on "why" not "what"** - Explain reasoning and impact
+4. **Use conventional commit format** - `type: description` (e.g., `fix:`, `feat:`)
+5. **Keep it concise** - Summary line (50 chars max), blank line, detailed body
+
+**❌ WRONG - Don't list files:**
+
+```text
+fix: HttpClient lifetime violation in LicenseService (Phase 5)
+
+Files Modified:
+- LicenseService.cs: Fixed lifetime, added race condition protection
+- code-review-reconciled-2026-04-09.md: Updated with Phase 5 changes
+```
+
+**✅ CORRECT - Focus on impact:**
+
+```text
+fix: HttpClient lifetime violation in LicenseService (Phase 5)
+
+Prevents socket exhaustion by using field-based HttpClient injection
+instead of per-call disposal. Uses named client with configured
+BaseAddress for /adwh sub path mapping. Added Task-based
+double-checked locking for thread-safe initialization.
+```
+
+**Rationale:**
+
+- Git already tracks which files changed - no need to repeat
+- Commit messages should explain the "why" and "what changed logically"
+- File lists make commits harder to read and maintain over time
+- Use `git show <commit>` or `git log --name-only` to see changed files
 
 ---
 
