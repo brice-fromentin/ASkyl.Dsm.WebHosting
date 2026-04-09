@@ -79,6 +79,13 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
     {
         _logger.LogDebug("Setting HTTP group permissions for virtual path: {Path}", path);
 
+        // Validate path to prevent path traversal attacks
+        if (path.Contains(".."))
+        {
+            _logger.LogWarning("Path contains path traversal attempt: {Path}", path);
+            return ApiResult.CreateFailure("Invalid path: path traversal not allowed");
+        }
+
         var targetPath = isDirectory ? path : Path.GetDirectoryName(path) ?? path;
 
         _logger.LogDebug("Target path: {TargetPath}, IsDirectory: {IsDirectory}", targetPath, isDirectory);

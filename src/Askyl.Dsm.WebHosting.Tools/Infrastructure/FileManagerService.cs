@@ -12,6 +12,23 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
 {
     private readonly string _rootPath = rootPath;
 
+    private static string SanitizePathSegment(string name, string paramName)
+    {
+        if (String.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Value cannot be empty", paramName);
+        }
+
+        var sanitized = Path.GetFileName(name);
+
+        if (String.Equals(sanitized, String.Empty, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Invalid value: contains only path separators", paramName);
+        }
+
+        return sanitized;
+    }
+
     /// <inheritdoc/>
     public string BaseDirectory => AppContext.BaseDirectory;
 
@@ -30,19 +47,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public string GetDirectory(string name)
     {
-        if (String.IsNullOrWhiteSpace(name))
-        {
-            throw new ArgumentException("Directory name cannot be empty", nameof(name));
-        }
-
-        // Prevent path traversal - extract only the file/directory name
-        var sanitized = Path.GetFileName(name);
-
-        if (String.Equals(sanitized, String.Empty, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ArgumentException("Invalid directory name: contains only path separators", nameof(name));
-        }
-
+        var sanitized = SanitizePathSegment(name, nameof(name));
         var path = Path.Combine(BaseDirectory, _rootPath, sanitized);
 
         logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
@@ -54,7 +59,8 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public void DeleteDirectory(string name)
     {
-        var path = Path.Combine(BaseDirectory, _rootPath, name);
+        var sanitized = SanitizePathSegment(name, nameof(name));
+        var path = Path.Combine(BaseDirectory, _rootPath, sanitized);
 
         if (Directory.Exists(path))
         {
@@ -70,8 +76,9 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public string GetFullName(string directory, string file)
     {
+        var sanitizedFile = SanitizePathSegment(file, nameof(file));
         var path = GetDirectory(directory);
-        var fullPath = Path.Combine(path, file);
+        var fullPath = Path.Combine(path, sanitizedFile);
 
         logger.LogDebug("Getting full file path: {FullPath}", fullPath);
         return fullPath;

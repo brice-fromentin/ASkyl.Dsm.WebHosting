@@ -42,15 +42,23 @@ public sealed class ArchiveExtractorService(IFileManagerService fileManager, ILo
                     continue;
                 }
 
+                // Validate extracted path stays within target directory (prevent zip slip)
+                var absoluteTargetPath = Path.GetFullPath(Path.Combine(targetDirectory, entryName));
+
+                if (!absoluteTargetPath.StartsWith(targetDirectory, StringComparison.OrdinalIgnoreCase))
+                {
+                    logger.LogWarning("Archive entry '{EntryName}' attempts to escape target directory. Skipping.", entryName);
+                    continue;
+                }
+
                 // Create Entry on runtimes folder
-                var targetPath = Path.Combine(targetDirectory, entryName);
                 if (entry.EntryType == TarEntryType.Directory)
                 {
-                    Directory.CreateDirectory(targetPath);
+                    Directory.CreateDirectory(absoluteTargetPath);
                 }
                 else
                 {
-                    entry.ExtractToFile(targetPath, true);
+                    entry.ExtractToFile(absoluteTargetPath, true);
                 }
             }
 
