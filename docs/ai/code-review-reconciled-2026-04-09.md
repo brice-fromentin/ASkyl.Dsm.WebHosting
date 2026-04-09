@@ -365,7 +365,7 @@ if (path.Contains(".."))
 | 3 | Cache invalidation mechanism missing in VersionsDetectorService | April 8 #7 | ✅ NOT REQUIRED | Cache is **manually managed** via `RefreshCacheAsync()` - intentional design |
 | 4 | Process timeout should be configurable per-site | April 8 #8 | ✅ FIXED TODAY | Added ProcessTimeoutSeconds property with smart shutdown logic |
 | 5 | Source generator nullable reference type handling | April 8 #9 | ✅ IMPROVED (PHASE 4) | Enhanced in `ed39638` with `CancellationToken`, null safety, type symbols |
-| 6 | DI lifetime verification for HttpClient | April 8 #12 | 🟡 PRIORITY 2 | Technical debt |
+| 6 | DI lifetime verification for HttpClient | April 8 #12 | ✅ FIXED (PHASE 6) | `AuthenticationService` now uses per-call `CreateClient()` instead of field capture |
 | 7 | Path validation at service initialization | April 8 #13 | ✅ FIXED TODAY | Added EnsureInitializedAsync with semaphore protection |
 | 8 | Cache refresh error handling improvements (retry logic) | April 8 #16 | ✅ FIXED TODAY | Simplified to proper error handling without unnecessary retry for local process |
 
@@ -752,6 +752,7 @@ The Phase 3 comprehensive security audit (April 9, 2026) used the following meth
 | April 9, 2026 | 1.4 | Updated for Phase 4 commit (technical debt improvements) | Qwen Code |
 | April 9, 2026 | 1.5 | Updated for Phase 5 commit (HttpClient lifetime fix in LicenseService) | Qwen Code |
 | April 9, 2026 | 1.6 | Updated April 8 #7 to NOT REQUIRED (manual cache management) | Qwen Code |
+| April 9, 2026 | 1.7 | Added Phase 6: HttpClient lifetime fix in AuthenticationService | Qwen Code |
 
 ---
 
@@ -833,6 +834,77 @@ public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<Licens
 **Build Status:** ✅ Format and build passed with no errors or warnings
 
 **Impact:** Low - Internal implementation change, no API changes, no breaking changes
+
+---
+
+## Appendix E: Phase 6 - HttpClient Lifetime Fix in AuthenticationService (IN PROGRESS)
+
+**Status:** ✅ Changes implemented, awaiting commit
+
+**Issue:** April 8 #12 - DI lifetime verification for HttpClient
+
+**Root Cause:**
+
+- `AuthenticationService` is registered as **Singleton** in Blazor WebAssembly
+- Service was capturing `HttpClient` in a field: `private readonly HttpClient _httpClient`
+- According to Microsoft guidelines, **Singleton services should not capture HttpClient instances**
+- This prevents DNS changes from being respected and violates HttpClient lifetime best practices
+
+**Fix Applied:**
+
+1. **Per-call HttpClient creation:** Changed from field capture to `CreateClient()` per method call
+2. **Named client usage:** Uses `ApplicationConstants.HttpClientName` for consistent configuration
+3. **Compliant with Microsoft guidelines:** Follows recommended pattern for Singleton services
+
+**Code Changes:**
+
+**Before:**
+
+```csharp
+public class AuthenticationService(IHttpClientFactory httpClientFactory) : IAuthenticationService
+{
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
+
+    public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
+        => await _httpClient.PostJsonOrDefaultAsync<LoginCredentials, AuthenticationResult>(AuthenticationRoutes.LoginFullRoute, new(login, password, otpCode), () => AuthenticationResult.CreateNotAuthenticated("Failed to login"));
+}
+```
+
+**After:**
+
+```csharp
+public class AuthenticationService(IHttpClientFactory httpClientFactory) : IAuthenticationService
+{
+    public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
+    {
+        var httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
+        return await httpClient.PostJsonOrDefaultAsync<LoginCredentials, AuthenticationResult>(AuthenticationRoutes.LoginFullRoute, new(login, password, otpCode), () => AuthenticationResult.CreateNotAuthenticated("Failed to login"));
+    }
+}
+```
+
+**Benefits:**
+
+- ✅ Compliant with Microsoft HttpClient lifetime guidelines
+- ✅ Singleton service no longer captures short-lived HttpClient
+- ✅ DNS changes will be respected (new HttpClient per call)
+- ✅ Prevents potential connection issues in long-running sessions
+- ✅ Matches recommended pattern from .NET documentation
+
+**Files Modified:**
+
+- `src/Askyl.Dsm.WebHosting.Ui.Client/Services/AuthenticationService.cs`
+
+**Build Status:** ✅ Format and build passed with no errors or warnings
+
+**Impact:** Low - Internal implementation change, no API changes, no breaking changes
+
+**Note:** Server-side `DsmApiClient` also captures HttpClient in a field, but this is **acceptable** because:
+
+- It manages persistent session state (SID in headers)
+- It's designed as a long-lived client for DSM API communication
+- The service is Singleton and the client lifetime matches the service lifetime
+- This is a deliberate design choice for stateful API communication
 
 ---
 

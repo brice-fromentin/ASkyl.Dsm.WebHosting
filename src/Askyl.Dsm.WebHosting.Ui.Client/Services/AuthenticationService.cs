@@ -15,17 +15,24 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// <param name="httpClientFactory">HttpClientFactory to create the named client.</param>
 public class AuthenticationService(IHttpClientFactory httpClientFactory) : IAuthenticationService
 {
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
-
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
-        => await _httpClient.PostJsonOrDefaultAsync<LoginCredentials, AuthenticationResult>(AuthenticationRoutes.LoginFullRoute, new(login, password, otpCode), () => AuthenticationResult.CreateNotAuthenticated("Failed to login"));
+    {
+        var httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
+        return await httpClient.PostJsonOrDefaultAsync<LoginCredentials, AuthenticationResult>(AuthenticationRoutes.LoginFullRoute, new(login, password, otpCode), () => AuthenticationResult.CreateNotAuthenticated("Failed to login"));
+    }
 
     /// <inheritdoc/>
     public async Task<ApiResult> LogoutAsync()
-        => await _httpClient.PostJsonOrDefaultAsync<object, ApiResult>(AuthenticationRoutes.LogoutFullRoute, null, () => ApiResult.CreateFailure("Unknown error"));
+    {
+        var httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
+        return await httpClient.PostJsonOrDefaultAsync<object, ApiResult>(AuthenticationRoutes.LogoutFullRoute, null, () => ApiResult.CreateFailure("Unknown error"));
+    }
 
     /// <inheritdoc/>
     public async Task<ApiResultBool> IsAuthenticatedAsync()
-        => await _httpClient.GetJsonOrDefaultAsync<ApiResultBool>(AuthenticationRoutes.StatusFullRoute, () => ApiResultBool.CreateFailure("Failed to check authentication status"));
+    {
+        var httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
+        return await httpClient.GetJsonOrDefaultAsync<ApiResultBool>(AuthenticationRoutes.StatusFullRoute, () => ApiResultBool.CreateFailure("Failed to check authentication status"));
+    }
 }
