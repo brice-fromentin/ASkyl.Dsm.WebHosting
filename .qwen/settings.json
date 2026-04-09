@@ -48,8 +48,8 @@
       "command": "npx",
       "env": {
         "MODE": "stdio",
-        // Bing provides best results for .NET/C# projects: superior Microsoft Learn/devblogs indexing, comprehensive Stack Overflow coverage, and better technical documentation search
-        "DEFAULT_SEARCH_ENGINE": "bing",
+        // DuckDuckGo avoids anti-bot/CAPTCHA issues that block automated searches
+        "DEFAULT_SEARCH_ENGINE": "duckduckgo",
         "ALLOWED_SEARCH_ENGINES": "duckduckgo,bing,exa"
       },
       "timeout": 60000,
