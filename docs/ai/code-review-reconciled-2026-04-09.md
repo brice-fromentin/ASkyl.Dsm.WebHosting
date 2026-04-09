@@ -28,7 +28,7 @@ The solution is now **PRODUCTION-READY** from a security perspective.
 
 **What's Changed Since Last Update:**
 
-- **Phase 5 Changes (IN PROGRESS - HttpClient lifetime fix):**
+- **Phase 5 Changes (COMMITTED):**
   - ✅ `LicenseService.cs`: Fixed HttpClient lifetime violation:
     - Changed from per-call `using` disposal to field-based client injection
     - Uses named client `ApplicationConstants.HttpClientName` with configured BaseAddress
@@ -362,7 +362,7 @@ if (path.Contains(".."))
 |---|-------|------------------|--------|-------|
 | 1 | Session timeout duration may be too long (30 minutes) | April 8 #5 | ✅ CONSTANT ADDED (PHASE 4) | `SessionTimeoutMinutes` added in `ed39638`; value needs security review |
 | 2 | Configuration file integrity validation missing | April 8 #6 | ✅ FIXED TODAY | Added corrupted JSON handling with auto-backup |
-| 3 | Cache invalidation mechanism missing in VersionsDetectorService | April 8 #7 | 🟢 NICE TO HAVE | Low priority |
+| 3 | Cache invalidation mechanism missing in VersionsDetectorService | April 8 #7 | ✅ NOT REQUIRED | Cache is **manually managed** via `RefreshCacheAsync()` - intentional design |
 | 4 | Process timeout should be configurable per-site | April 8 #8 | ✅ FIXED TODAY | Added ProcessTimeoutSeconds property with smart shutdown logic |
 | 5 | Source generator nullable reference type handling | April 8 #9 | ✅ IMPROVED (PHASE 4) | Enhanced in `ed39638` with `CancellationToken`, null safety, type symbols |
 | 6 | DI lifetime verification for HttpClient | April 8 #12 | 🟡 PRIORITY 2 | Technical debt |
@@ -663,12 +663,11 @@ tracked in the main sections but are acknowledged for complete traceability.
 These are **low-priority code quality improvements** that do not impact
 security or production readiness.
 
-### 11.1 Untracked Suggestions (2 items)
+### 11.1 Untracked Suggestions (1 item)
 
 | # | Issue | File | Severity | Impact | Status |
 |---|-------|------|----------|--------|--------|
-| 1 | HttpClient lifecycle violation - creates new HttpClient instead of reusing injected client | `LicenseService.cs:58-60` | Suggestion | Socket exhaustion (theoretical) | ✅ FIXED (PHASE 5) |
-| 2 | Code duplication in FileSystemService - duplicate error handling in ExecuteFileStationListShareAsync and ExecuteFileStationListAsync | `FileSystemService.cs:143-180` | Nice to Have | Maintenance difficulty | ❌ NOT FIXED |
+| 1 | Code duplication in FileSystemService - duplicate error handling in ExecuteFileStationListShareAsync and ExecuteFileStationListAsync | `FileSystemService.cs:143-180` | Nice to Have | Maintenance difficulty | ❌ NOT FIXED |
 
 ### 11.2 Untracked Nice to Have (1 item)
 
@@ -682,7 +681,7 @@ security or production readiness.
 **Production Readiness Impact:** NONE ✅
 **Code Quality Impact:** MINIMAL 🟡
 
-**Estimated effort to fix all 3 items:** 2 hours total
+**Estimated effort to fix all 2 items:** 1 hour total
 
 **Recommendation:** Defer to future technical debt sprint. These items do not block production deployment.
 
@@ -751,22 +750,25 @@ The Phase 3 comprehensive security audit (April 9, 2026) used the following meth
 | April 9, 2026 | 1.2 | Added Section 11: Untracked Items (3 low-priority items) | Qwen Code |
 | April 9, 2026 | 1.3 | Added uncommitted changes tracking (SessionTimeoutMinutes, CloneGenerator improvements) | Qwen Code |
 | April 9, 2026 | 1.4 | Updated for Phase 4 commit (technical debt improvements) | Qwen Code |
-| April 9, 2026 | 1.5 | Added Phase 5: HttpClient lifetime fix in LicenseService (uncommitted) | Qwen Code |
+| April 9, 2026 | 1.5 | Updated for Phase 5 commit (HttpClient lifetime fix in LicenseService) | Qwen Code |
+| April 9, 2026 | 1.6 | Updated April 8 #7 to NOT REQUIRED (manual cache management) | Qwen Code |
 
 ---
 
-## Appendix D: Phase 5 - HttpClient Lifetime Fix (IN PROGRESS)
+## Appendix D: Phase 5 - HttpClient Lifetime Fix (COMMITTED)
 
-**Status:** ✅ Changes implemented, awaiting commit
+**Status:** ✅ COMMITTED
 
 **Issue:** Untracked Suggestion #1 - HttpClient lifecycle violation in LicenseService
 
 **Root Cause:**
+
 - LicenseService was creating a new HttpClient per call using `using var httpClient`
 - The `using` statement incorrectly disposed the client, breaking IHttpClientFactory's handler pooling
 - Could cause socket exhaustion in production under load
 
 **Fix Applied:**
+
 1. **Field-based HttpClient injection:** Changed from per-call `CreateClient()` to constructor-injected field
 2. **Named client usage:** Uses `ApplicationConstants.HttpClientName` to get the configured client with proper BaseAddress for `/adwh` sub path mapping
 3. **Task-based double-checked locking:** Added `_loadLicensesTask` to prevent race conditions during concurrent initialization
@@ -775,11 +777,12 @@ The Phase 3 comprehensive security audit (April 9, 2026) used the following meth
 **Code Changes:**
 
 **Before:**
+
 ```csharp
 public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<LicenseService> logger) : ILicenseService
 {
     private IReadOnlyList<LicenseInfo>? _licenses;
-    
+
     private async Task<string> FetchLicenseContentAsync(string fileName)
     {
         var url = $"licenses/{fileName}";
@@ -791,29 +794,31 @@ public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<Licens
 ```
 
 **After:**
+
 ```csharp
 public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<LicenseService> logger) : ILicenseService
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
     private Task<IReadOnlyList<LicenseInfo>>? _loadLicensesTask;
     private IReadOnlyList<LicenseInfo>? _licenses;
-    
+
     public async Task<IReadOnlyList<LicenseInfo>> GetLicensesAsync()
         => _licenses ?? await LazyInitializeLicensesAsync();
-    
+
     private async Task<IReadOnlyList<LicenseInfo>> LazyInitializeLicensesAsync()
     {
         var loadTask = _loadLicensesTask ??= LoadLicensesInternalAsync();
         _licenses = await loadTask;
         return _licenses;
     }
-    
+
     private async Task<string> FetchLicenseContentAsync(string fileName)
         => await _httpClient.GetStringAsync($"licenses/{fileName}");
 }
 ```
 
 **Benefits:**
+
 - ✅ Prevents socket exhaustion from incorrect HttpClient disposal
 - ✅ Reuses HttpClient instance matching service lifetime (Scoped)
 - ✅ Uses named client with configured BaseAddress for sub path mapping
@@ -822,6 +827,7 @@ public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<Licens
 - ✅ Cleaner code with expression-bodied members
 
 **Files Modified:**
+
 - `src/Askyl.Dsm.WebHosting.Ui.Client/Services/LicenseService.cs`
 
 **Build Status:** ✅ Format and build passed with no errors or warnings
