@@ -154,8 +154,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
 
         if (response?.Success != true || response.Data?.Shares is null)
         {
-            _logger.LogError("FileStation API call failed: Success={Success}, ErrorCode={ErrorCode}", response?.Success, response?.Error?.Code);
-            throw new FileStationApiException($"FileStation API call failed: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code);
+            throw new FileStationApiException($"FileStation list share operation failed: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code);
         }
 
         return response.Data.Shares;
@@ -176,7 +175,6 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
 
         if (response?.Success != true || response.Data?.Files is null)
         {
-            _logger.LogError("Failed to retrieve directory contents for {Path}: Success={Success}, ErrorCode={ErrorCode}", path, response?.Success, response?.Error?.Code);
             throw new FileStationApiException($"Failed to retrieve directory contents for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}", response?.Success, response?.Error?.Code, path);
         }
 
