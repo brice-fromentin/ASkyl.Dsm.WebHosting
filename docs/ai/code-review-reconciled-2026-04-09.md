@@ -667,21 +667,23 @@ security or production readiness.
 
 All untracked suggestions have been addressed.
 
-### 11.2 Untracked Nice to Have (1 item)
+### 11.2 Untracked Nice to Have (0 items)
+
+All untracked nice to have items have been addressed in Phase 8.
 
 | # | Issue | File | Severity | Impact | Status |
 |---|-------|------|----------|--------|--------|
-| 1 | Magic number 400ms for double-click timeout not in constants | `AutoDataGrid.razor:85` | Nice to Have | Hard to refactor | ❌ NOT FIXED |
+| 1 | Magic number 400ms for double-click timeout not in constants | `AutoDataGrid.razor:136` | Nice to Have | Hard to refactor | ✅ FIXED (Phase 8) |
 
 ### 11.3 Impact Assessment
 
 **Security Impact:** NONE ✅
 **Production Readiness Impact:** NONE ✅
-**Code Quality Impact:** MINIMAL 🟡
+**Code Quality Impact:** NONE ✅ (All items resolved)
 
-**Estimated effort to fix all 1 items:** 30 minutes total
+**Estimated effort to fix all 1 items:** 30 minutes (COMPLETED)
 
-**Recommendation:** Defer to future technical debt sprint. These items do not block production deployment.
+**Recommendation:** Phase 8 complete. All untracked items have been resolved.
 
 ---
 
@@ -752,6 +754,7 @@ The Phase 3 comprehensive security audit (April 9, 2026) used the following meth
 | April 9, 2026 | 1.6 | Updated April 8 #7 to NOT REQUIRED (manual cache management) | Qwen Code |
 | April 9, 2026 | 1.7 | Added Phase 6: HttpClient lifetime fix in AuthenticationService | Qwen Code |
 | April 9, 2026 | 1.8 | Added Phase 7: FileSystemService code duplication fix | Qwen Code |
+| April 9, 2026 | 1.9 | Added Phase 8: Double-click timeout constant (final untracked item) | Qwen Code |
 
 ---
 
@@ -978,6 +981,113 @@ private async Task<List<FileStationShare>> ExecuteFileStationListShareAsync()
 **Build Status:** ✅ Format and build passed with no errors or warnings
 
 **Impact:** Low - Internal implementation change, no API changes, no breaking changes
+
+---
+
+## Appendix G: Phase 8 - Double-Click Timeout Constant (IN PROGRESS)
+
+**Status:** ✅ Changes implemented, awaiting commit
+
+**Issue:** Untracked Nice to Have #1 - Magic number for double-click timeout
+
+**Root Cause:**
+
+- `AutoDataGrid.razor` had a magic number `400` for double-click detection timeout
+- Hard-coded value makes it difficult to adjust and test
+- Violates constants management principle from AGENTS.md
+
+**Fix Applied:**
+
+1. **Added constant:** Created `DoubleClickTimeoutMilliseconds = 400` in `ApplicationConstants.cs`
+2. **Replaced magic number:** Updated `AutoDataGrid.razor` to use `ApplicationConstants.DoubleClickTimeoutMilliseconds`
+3. **Added using directive:** Added `@using Askyl.Dsm.WebHosting.Constants.Application` to AutoDataGrid.razor
+
+**Code Changes:**
+
+**ApplicationConstants.cs - Before:**
+
+```csharp
+    #endregion
+}
+```
+
+**ApplicationConstants.cs - After:**
+
+```csharp
+    #endregion
+
+    #region UI Interaction
+
+    /// <summary>
+    /// Double-click detection timeout in milliseconds for UI components.
+    /// </summary>
+    public const int DoubleClickTimeoutMilliseconds = 400;
+
+    #endregion
+}
+```
+
+**AutoDataGrid.razor - Before:**
+
+```csharp
+@typeparam TItem where TItem : class
+
+<div class="auto-data-grid-content">
+<!-- ... -->
+</div>
+
+@code {
+    // ...
+    private const int DoubleClickTimeoutMs = 400;
+    // ...
+    
+    if (_lastClickedItem is null || timeSinceLastClick > DoubleClickTimeoutMs || false == SelectedItem?.Equals(_lastClickedItem))
+    {
+        return false; // Not a double-click
+    }
+}
+```
+
+**AutoDataGrid.razor - After:**
+
+```csharp
+@using Askyl.Dsm.WebHosting.Constants.Application
+@typeparam TItem where TItem : class
+
+<div class="auto-data-grid-content">
+<!-- ... -->
+</div>
+
+@code {
+    // ...
+    // (local constant removed)
+    // ...
+    
+    if (_lastClickedItem is null || timeSinceLastClick > ApplicationConstants.DoubleClickTimeoutMilliseconds || false == SelectedItem?.Equals(_lastClickedItem))
+    {
+        return false; // Not a double-click
+    }
+}
+```
+
+**Benefits:**
+
+- ✅ Eliminates magic number (code quality improvement)
+- ✅ Centralized configuration for UI interaction timeouts
+- ✅ Easier to adjust and test in the future
+- ✅ Consistent with other constants in the solution
+- ✅ Completes the last untracked item from the code review
+
+**Files Modified:**
+
+- `src/Askyl.Dsm.WebHosting.Constants/Application/ApplicationConstants.cs`
+- `src/Askyl.Dsm.WebHosting.Ui.Client/Components/Controls/AutoDataGrid.razor`
+
+**Build Status:** ✅ Format and build passed with no errors or warnings
+
+**Impact:** Low - Internal refactoring, no API changes, no breaking changes
+
+**Note:** This completes all tracked and untracked items from the April 6, April 8, and April 9 code reviews.
 
 ---
 

@@ -209,4 +209,13 @@ public static class ApplicationConstants
     public const string LoadingDirectoryContentsMessage = "Loading directory contents...";
 
     #endregion
+
+    #region UI Interaction
+
+    /// <summary>
+    /// Double-click detection timeout in milliseconds for UI components.
+    /// </summary>
+    public const int DoubleClickTimeoutMilliseconds = 400;
+
+    #endregion
 }
