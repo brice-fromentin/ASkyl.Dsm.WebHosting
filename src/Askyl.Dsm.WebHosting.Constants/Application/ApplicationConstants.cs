@@ -122,6 +122,11 @@ public static class ApplicationConstants
     /// </summary>
     public const string DsmSessionKey = "DsmSid";
 
+    /// <summary>
+    /// Session idle timeout in minutes.
+    /// </summary>
+    public const int SessionTimeoutMinutes = 30;
+
     #endregion
 
     #region File Extensions
