@@ -414,7 +414,7 @@ git commit -m "fix: <description> (Phase X)"
 
 | Phase | Status | Planned | Completed | Notes |
 |-------|--------|---------|-----------|-------|
-| Phase 9 | ⏳ Pending | Critical deadlock fix | - | Not started |
+| Phase 9 | ✅ Complete | Critical deadlock fix | April 10, 2026 | Replaced ContinueWith/.Result with async/await in TreeContentService.cs and FsEntryExtensions.cs |
 | Phase 10 | ⏳ Pending | High priority (3 issues) + 1 enhancement | - | Not started |
 | Phase 11 | ⏳ Pending | Medium priority (4 issues) | - | Not started |
 | Phase 12 | ⏳ Pending | Low priority (2 issues) | - | Not started |
