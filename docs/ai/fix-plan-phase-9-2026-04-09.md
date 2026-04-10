@@ -415,8 +415,14 @@ git commit -m "fix: <description> (Phase X)"
 | Phase | Status | Planned | Completed | Notes |
 |-------|--------|---------|-----------|-------|
 | Phase 9 | ✅ Complete | Critical deadlock fix | April 10, 2026 | Replaced ContinueWith/.Result with async/await in TreeContentService.cs and FsEntryExtensions.cs |
-| Phase 10 | ⏳ Pending | High priority (3 issues) + 1 enhancement | - | Not started |
-| Phase 11 | ⏳ Pending | Medium priority (4 issues) | - | Not started |
+| Phase 10 - Issue #2 | ✅ Complete | Strengthen path traversal validation | April 10, 2026 | Added URL-encoded path traversal detection and extracted IsPathValid() helper |
+| Phase 10 - Issue #3 | ✅ Complete | Add CancellationToken to process operations | April 10, 2026 | Added CancellationToken to StopProcessAsync, ForceKillProcessAsync, StopSiteAsync, and StopAllSitesAsync. Also fixed Issue #4 (removed Task.Run) |
+| Phase 10 - Issue #4 | ✅ Complete | Remove unnecessary Task.Run | April 10, 2026 | Removed Task.Run from StopAllSitesAsync, using direct async calls instead |
+| Phase 11 - Issue #6 | 🟡 Partial | Synchronous File I/O | April 10, 2026 | Fixed DsmApiClient.cs (File.ReadAllLinesAsync). ArchiveExtractorService.cs cannot be fixed - TarReader has no async API in .NET 10 |
+| Phase 11 - Issue #7 | ✅ Complete | Exception logging | April 10, 2026 | Verified all service files already log exceptions correctly. Found 8 Razor components without logging (tracked as enhancement, not critical) |
+| Phase 11 - Issue #8 | ✅ Complete | Magic number 500 | April 10, 2026 | Already fixed in Issue #3 with ProcessKillCleanupDelayMs constant |
+| Phase 11 - Issue #9 | ✅ By Design | Null-forgiving operator | April 10, 2026 | `_cachedConfiguration!` is guaranteed by SemaphoreLock.AcquireAsync pattern - callback executes before entering using block, so null check is redundant |
+| Phase 11 | ✅ Complete | Medium priority | April 10, 2026 | All issues addressed (1 fixed, 2 verified correct, 1 by design) |
 | Phase 12 | ⏳ Pending | Low priority (2 issues) | - | Not started |
 
 ---

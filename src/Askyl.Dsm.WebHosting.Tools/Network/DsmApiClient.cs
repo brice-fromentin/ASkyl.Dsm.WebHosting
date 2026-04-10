@@ -44,7 +44,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
 
     public async Task<bool> ConnectAsync(LoginCredentials model)
     {
-        if (!ReadSettings())
+        if (!await ReadSettingsAsync())
         {
             return false;
         }
@@ -62,7 +62,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
         return true;
     }
 
-    private bool ReadSettings()
+    private async Task<bool> ReadSettingsAsync()
     {
         if (!File.Exists(SystemDefaults.ConfigurationFileName))
         {
@@ -70,8 +70,8 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
             return false;
         }
 
-        var settings = File.ReadAllLines(SystemDefaults.ConfigurationFileName)
-                           .Where(x => x.Contains('='))
+        var lines = await File.ReadAllLinesAsync(SystemDefaults.ConfigurationFileName);
+        var settings = lines.Where(x => x.Contains('='))
                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", String.Empty));
 
         _log.LogDebug("Configuration file loaded with {Count} parameters.", settings.Count);

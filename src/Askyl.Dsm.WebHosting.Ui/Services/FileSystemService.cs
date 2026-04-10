@@ -80,9 +80,9 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
         _logger.LogDebug("Setting HTTP group permissions for virtual path: {Path}", path);
 
         // Validate path to prevent path traversal attacks
-        if (path.Contains(".."))
+        if (!IsPathValid(path))
         {
-            _logger.LogWarning("Path contains path traversal attempt: {Path}", path);
+            _logger.LogWarning("Path validation failed: {Path}", path);
             return ApiResult.CreateFailure("Invalid path: path traversal not allowed");
         }
 
@@ -194,4 +194,25 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
     /// </summary>
     private static FsEntry CreateFsEntry(FileStationShare share)
         => new(share.Path, share.Name, share.IsDirectory, share.Additional!.RealPath!, Size: null, Modified: DateTimeOffset.FromUnixTimeSeconds(share.Additional!.Time!.ModifyTime!.Value).UtcDateTime);
+
+    /// <summary>
+    /// Validates a DSM virtual path to prevent path traversal attacks.
+    /// </summary>
+    private static bool IsPathValid(string path)
+    {
+        if (String.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        // Check for literal path traversal
+        if (path.Contains(".."))
+        {
+            return false;
+        }
+
+        // Check for URL-encoded path traversal (%2e = '.', %2f = '/')
+        var lowerPath = path.ToLowerInvariant();
+        return !lowerPath.Contains("%2e") && !lowerPath.Contains("%2f");
+    }
 }

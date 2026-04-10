@@ -75,6 +75,11 @@ public static class ApplicationConstants
     /// </summary>
     public const int DefaultProcessTimeoutSeconds = 60;
 
+    /// <summary>
+    /// Delay in milliseconds to wait after process kill for OS cleanup.
+    /// </summary>
+    public const int ProcessKillCleanupDelayMs = 500;
+
     #endregion
 
     #region Application Paths & Routing

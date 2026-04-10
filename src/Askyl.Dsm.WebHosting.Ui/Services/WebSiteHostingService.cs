@@ -181,7 +181,7 @@ public class WebSiteHostingService(
     public override async Task StopAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("Stopping all websites");
-        await StopAllSitesAsync();
+        await StopAllSitesAsync(stoppingToken);
         await base.StopAsync(stoppingToken);
     }
 
@@ -379,7 +379,7 @@ public class WebSiteHostingService(
         }
     }
 
-    public async Task<ApiResult> StopSiteAsync(WebSiteInstance instance)
+    public async Task<ApiResult> StopSiteAsync(WebSiteInstance instance, CancellationToken cancellationToken = default)
     {
         if (!_instances.TryGetValue(instance.Id, out var internalInstance))
         {
@@ -399,7 +399,7 @@ public class WebSiteHostingService(
 
         try
         {
-            await StopProcessAsync(internalInstance, instance, siteName);
+            await StopProcessAsync(internalInstance, instance, siteName, cancellationToken);
 
             CleanUpInstanceState(internalInstance, instance);
             logger.LogInformation("Site {SiteName} stopped successfully", siteName);
@@ -423,7 +423,7 @@ public class WebSiteHostingService(
     /// <summary>
     /// Stops the process associated with a website instance.
     /// </summary>
-    private async Task StopProcessAsync(WebSiteInstance internalInstance, WebSiteInstance instance, string siteName)
+    private async Task StopProcessAsync(WebSiteInstance internalInstance, WebSiteInstance instance, string siteName, CancellationToken cancellationToken)
     {
         var process = Process.GetProcessById(internalInstance.Process!.Id);
 
@@ -444,14 +444,14 @@ public class WebSiteHostingService(
         // Wait for graceful shutdown using the full user-defined timeout
         if (!process.WaitForExit(timeoutMs))
         {
-            await ForceKillProcessAsync(process, siteName);
+            await ForceKillProcessAsync(process, siteName, cancellationToken);
         }
     }
 
     /// <summary>
     /// Force kills a process that didn't stop gracefully.
     /// </summary>
-    private async Task ForceKillProcessAsync(Process process, string siteName)
+    private async Task ForceKillProcessAsync(Process process, string siteName, CancellationToken cancellationToken)
     {
         logger.LogWarning("Site {SiteName} did not stop gracefully. Force killing process.", siteName);
 
@@ -459,8 +459,8 @@ public class WebSiteHostingService(
         {
             process.Kill();
 
-            // SIGKILL should terminate immediately - just wait a brief moment for OS cleanup
-            await Task.Delay(500);
+            // SIGKILL should terminate immediately - use cancellable delay
+            await Task.Delay(ApplicationConstants.ProcessKillCleanupDelayMs, cancellationToken);
         }
         catch (Exception killEx)
         {
@@ -488,9 +488,9 @@ public class WebSiteHostingService(
         target.Process = source.Process;
     }
 
-    private async Task StopAllSitesAsync()
+    private async Task StopAllSitesAsync(CancellationToken cancellationToken)
     {
-        var stopTasks = _instances.Values.Select(instance => Task.Run(() => StopSiteAsync(instance)));
+        var stopTasks = _instances.Values.Select(instance => StopSiteAsync(instance, cancellationToken));
         await Task.WhenAll(stopTasks);
     }
 
