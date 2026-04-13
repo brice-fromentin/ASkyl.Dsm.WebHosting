@@ -423,7 +423,7 @@ git commit -m "fix: <description> (Phase X)"
 | Phase 11 - Issue #8 | ✅ Complete | Magic number 500 | April 10, 2026 | Already fixed in Issue #3 with ProcessKillCleanupDelayMs constant |
 | Phase 11 - Issue #9 | ✅ By Design | Null-forgiving operator | April 10, 2026 | `_cachedConfiguration!` is guaranteed by SemaphoreLock.AcquireAsync pattern - callback executes before entering using block, so null check is redundant |
 | Phase 11 | ✅ Complete | Medium priority | April 10, 2026 | All issues addressed (1 fixed, 2 verified correct, 1 by design) |
-| Phase 12 | ⏳ Pending | Low priority (2 issues) | - | Not started |
+| Phase 12 | ❌ Reverted | Client-side logging to server | April 10, 2026 | BrowserHttp sink implementation reverted - excessive complexity for use case. Ui.Client logs to BrowserConsole only |
 
 ---
 
