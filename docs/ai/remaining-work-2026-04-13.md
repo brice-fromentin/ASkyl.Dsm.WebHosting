@@ -6,8 +6,8 @@
 - `code-review-reconciled-2026-04-09.md` (deleted)
 - `fix-plan-phase-9-2026-04-09.md` (deleted)
 
-**Current State:** All Phases 1-11 Complete ✅  
-**Security Score:** ⭐⭐⭐⭐☆ (4.0/5) - Production Ready  
+**Current State:** All Phases 1-11 Complete ✅ | Items 2.2 & 1.2 Complete ✅
+**Security Score:** ⭐⭐⭐⭐☆ (4.0/5) - Production Ready
 **Version:** 0.5.4
 
 ---
@@ -24,11 +24,11 @@ They are organized by category for future implementation planning.
 
 | Category | Items | Impact Level |
 |----------|-------|--------------|
-| **Architecture & Design Patterns** | 3 | Low - Code quality improvements |
-| **Performance & Efficiency** | 2 | Low - Minor optimizations |
+| **Architecture & Design Patterns** | 2 | Low - Code quality improvements |
+| **Performance & Efficiency** | 1 | Low - Minor optimizations |
 | **Code Quality & Consistency** | 3 | Low - Maintainability improvements |
 | **Future Enhancements** | 3 | Medium - Strategic improvements |
-| **Total** | **11 items** | **None block production** |
+| **Total** | **9 items** | **None block production** |
 
 ---
 
@@ -110,64 +110,55 @@ public class SiteStateMachine
 
 ---
 
-### 1.2 IEquatable Implementation for ReverseProxy Models
+### 1.2 IEquatable Implementation for ReverseProxy Models ✅ COMPLETE
 
-**Source:** April 8 Report #18  
-**Severity:** Nice to Have  
-**Files Affected:** `Data/DsmApi/Models/ReverseProxy/*.cs`
+**Completed:** April 15, 2026
+**Source:** April 8 Report #18
+**Severity:** Nice to Have
+**Files Affected:** `Data/DsmApi/Models/ReverseProxy/*.cs`, `Ui/Services/ReverseProxyManagerService.cs`
 
-**Problem:**
+**Change:**
 
-Reverse proxy models do not implement `IEquatable<T>`, making comparison operations rely on reference equality. This impacts:
+Implemented `IEquatable<T>` with business-key equality on five ReverseProxy models:
 
-- Collection deduplication (`Distinct()`, `Contains()`)
-- Change detection before updates
-- Unit testing with value equality
+- `ReverseProxy` - Equality based on composite key: `Backend.Port`, `Frontend.Fqdn/Port/Protocol`
+- `ReverseProxyBackend` - Equality based on `Fqdn` (case-insensitive), `Port`, `Protocol`
+- `ReverseProxyFrontend` - Equality based on `Fqdn` (case-insensitive), `Port`, `Protocol`, `Https`, `Acl`
+- `ReverseProxyHttps` - Equality based on `Hsts`
+- `ReverseProxyCustomHeader` - Equality based on `Name`, `Value`
 
-**Affected Models:**
-
-- `ReverseProxyInfo`
-- `ReverseProxyFrontend`
-- `ReverseProxyBackend`
-
-**Proposed Solution:**
-
-Implement `IEquatable<T>` with value-based equality:
+Updated `ReverseProxyManagerService.FindByCompositeKeyAsync` to use `IEquatable` instead of manual property comparisons:
 
 ```csharp
-public partial class ReverseProxyInfo : IEquatable<ReverseProxyInfo>
+// Before
+return allProxies.FirstOrDefault(p =>
+    p.Backend.Port == config.InternalPort &&
+    String.Equals(p.Frontend.Fqdn, config.HostName, StringComparison.OrdinalIgnoreCase) &&
+    p.Frontend.Port == config.PublicPort &&
+    p.Frontend.Protocol == (int)config.Protocol);
+
+// After
+var searchTemplate = new ReverseProxy
 {
-    public string Uuid { get; set; } = String.Empty;
-    public string Name { get; set; } = String.Empty;
-    public ReverseProxyFrontend Frontend { get; set; } = null!;
-    public ReverseProxyBackend Backend { get; set; } = null!;
+    Backend = new(null, config.InternalPort, 0),
+    Frontend = new(config.HostName, config.PublicPort, (int)config.Protocol, new())
+};
 
-    public bool Equals(ReverseProxyInfo? other)
-    {
-        if (other is null) return false;
-        if (ReferenceEquals(this, other)) return true;
-
-        return String.Equals(Uuid, other.Uuid, StringComparison.OrdinalIgnoreCase) &&
-               String.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) &&
-               Frontend.Equals(other.Frontend) &&
-               Backend.Equals(other.Backend);
-    }
-
-    public override bool Equals(object? obj) => Equals(obj as ReverseProxyInfo);
-
-    public override int GetHashCode() => HashCode.Combine(
-        Uuid.ToLowerInvariant(),
-        Name.ToLowerInvariant(),
-        Frontend,
-        Backend
-    );
-}
+return allProxies.FirstOrDefault(p => p.Equals(searchTemplate));
 ```
+
+**Key Design Decisions:**
+
+- FQDN comparisons use `OrdinalIgnoreCase` (DNS is case-insensitive)
+- Hash codes use `ToLowerInvariant()` for FQDN fields
+- Equality matches original `FindByCompositeKeyAsync` logic exactly
 
 **Benefits:**
 
 - Enables value-based comparisons in LINQ operations
+- Centralized comparison logic in one place (the model)
 - Better testability
+- Prevents duplicate proxies with same composite key
 - Consistent with .NET best practices
 
 **Estimated Effort:** 1-2 hours  
@@ -307,43 +298,24 @@ catch (Exception ex)
 
 ---
 
-### 2.2 LINQ .Any() vs .Count Performance
+### 2.2 LINQ .Any() vs .Count Performance ✅ COMPLETE
 
-**Source:** April 6 Report (Nice to Have)  
-**Severity:** Nice to Have  
+**Completed:** April 15, 2026
+**Source:** April 6 Report (Nice to Have)
+**Severity:** Nice to Have
 **Files Affected:** `Ui.Client/Components/Dialogs/DotnetVersionsDialog.razor`
 
-**Problem:**
+**Change:**
 
-Using `.Any()` on collections where `.Count` or `IsEmpty` property is available is less efficient and less clear.
-
-**Current Code:**
+Replaced `.Any()` with `.Count > 0` in `DotnetVersionsDialog.razor`:
 
 ```csharp
-if (!installedVersions.Any())
-{
-    // Show empty state
-}
+// Before
+else if (DotnetVersions?.Any() == true)
+
+// After
+else if (DotnetVersions?.Count > 0 == true)
 ```
-
-**Proposed Solution:**
-
-Use `IsEmpty` or `Count == 0` for clarity and performance:
-
-```csharp
-if (installedVersions.Count == 0)
-{
-    // Show empty state
-}
-
-// Or if using IReadOnlyCollection<T>:
-if (installedVersions.IsEmpty)
-{
-    // Show empty state
-}
-```
-
-**Note:** Per AGENTS.md guidelines, prefer `IsEmpty` over `Count == 0` when available.
 
 **Benefits:**
 
@@ -736,14 +708,12 @@ All blocking issues are resolved. Solution is production-ready.
 | Item | Effort | Impact | Recommendation |
 |------|--------|--------|----------------|
 | **4.1 Security Integration Tests** | 4-6 hours | High - Prevents regression | **Implement** before next release |
-| **2.2 LINQ .Any() → Count** | 15 minutes | Low - Code clarity | Quick win, do anytime |
 
 ### Medium-Term (Next Month)
 
 | Item | Effort | Impact | Recommendation |
 |------|--------|--------|----------------|
 | **1.1 State Machine Pattern** | 2-3 hours | Medium - Better state management | Implement when adding new states |
-| **1.2 IEquatable for ReverseProxy** | 1-2 hours | Low - Better comparisons | Implement when needed |
 | **4.2 Configuration Versioning** | 2-3 hours | Medium - Schema evolution | Implement before schema changes |
 | **4.3 Health Check Endpoint** | 1-2 hours | Medium - Monitoring | Implement before production deploy |
 

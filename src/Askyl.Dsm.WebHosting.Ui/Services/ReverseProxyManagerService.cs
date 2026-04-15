@@ -123,20 +123,20 @@ public class ReverseProxyManagerService(
     #region Helper Methods
 
     /// <summary>
-    /// Finds a reverse proxy using backend port + full frontend configuration.
+    /// Finds a reverse proxy using composite key (backend port + frontend configuration).
     /// This is the primary identification method (no UUID storage).
     /// </summary>
     private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config)
     {
         var allProxies = await GetAllReverseProxiesAsync();
 
-        // MATCH: Backend port + complete frontend configuration
-        // This combination uniquely identifies a reverse proxy entry
-        return allProxies.FirstOrDefault(p =>
-            p.Backend.Port == config.InternalPort &&
-            String.Equals(p.Frontend.Fqdn, config.HostName, StringComparison.OrdinalIgnoreCase) &&
-            p.Frontend.Port == config.PublicPort &&
-            p.Frontend.Protocol == (int)config.Protocol);
+        var searchTemplate = new ReverseProxy
+        {
+            Backend = new(null, config.InternalPort, 0),
+            Frontend = new(config.HostName, config.PublicPort, (int)config.Protocol, new())
+        };
+
+        return allProxies.FirstOrDefault(p => p.Equals(searchTemplate));
     }
 
     /// <summary>
