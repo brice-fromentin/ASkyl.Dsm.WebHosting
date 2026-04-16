@@ -12,6 +12,7 @@
 @inject IDotnetVersionService DotnetVersionService
 @inject IFrameworkManagementService ManagementService
 @inject IToastService ToastService
+@inject ILogger<AspNetReleasesDialog> Logger
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -137,6 +138,7 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to load .NET channels");
             await ShowErrorAsync(ex.Message);
             Channels.Clear();
             SelectedChannel = null;
@@ -169,6 +171,7 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to load releases for channel {Channel}", channel?.ProductVersion);
             await ShowErrorAsync(ex.Message);
             Releases = AutoDataGrid<AspNetRelease>.Empty();
         }
@@ -209,6 +212,7 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Installation error for framework {Version}", SelectedItem?.Version);
             await DialogService.ShowErrorAsync($"Installation error: {ex.Message}");
         }
     }
@@ -247,6 +251,7 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Uninstallation error for framework {Version}", SelectedItem?.Version);
             await DialogService.ShowErrorAsync($"Uninstallation error: {ex.Message}");
         }
     }

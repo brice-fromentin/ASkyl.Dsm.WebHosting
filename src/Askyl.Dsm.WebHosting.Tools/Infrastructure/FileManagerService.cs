@@ -10,8 +10,6 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// </summary>
 public sealed class FileManagerService(ILogger<FileManagerService> logger, string rootPath = "") : IFileManagerService
 {
-    private readonly string _rootPath = rootPath;
-
     private static string SanitizePathSegment(string name, string paramName)
     {
         if (String.IsNullOrWhiteSpace(name))
@@ -35,7 +33,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public void Initialize()
     {
-        logger.LogInformation("Initializing FileManager with base path: {BasePath}", String.IsNullOrEmpty(_rootPath) ? BaseDirectory : Path.Combine(BaseDirectory, _rootPath));
+        logger.LogInformation("Initializing FileManager with base path: {BasePath}", String.IsNullOrEmpty(rootPath) ? BaseDirectory : Path.Combine(BaseDirectory, rootPath));
 
         // Create default directories
         GetDirectory(InfrastructureConstants.Downloads);
@@ -48,7 +46,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     public string GetDirectory(string name)
     {
         var sanitized = SanitizePathSegment(name, nameof(name));
-        var path = Path.Combine(BaseDirectory, _rootPath, sanitized);
+        var path = Path.Combine(BaseDirectory, rootPath, sanitized);
 
         logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
         Directory.CreateDirectory(path);
@@ -60,7 +58,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     public void DeleteDirectory(string name)
     {
         var sanitized = SanitizePathSegment(name, nameof(name));
-        var path = Path.Combine(BaseDirectory, _rootPath, sanitized);
+        var path = Path.Combine(BaseDirectory, rootPath, sanitized);
 
         if (Directory.Exists(path))
         {

@@ -16,31 +16,28 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// </summary>
 public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService> logger) : Data.Contracts.IFileSystemService
 {
-    private readonly DsmApiClient _apiClient = apiClient;
-    private readonly ILogger<FileSystemService> _logger = logger;
-
     public async Task<SharedFoldersResult> GetSharedFoldersAsync()
     {
-        _logger.LogDebug("Retrieving shared folders from DSM FileStation API");
+        logger.LogDebug("Retrieving shared folders from DSM FileStation API");
 
         try
         {
             var sharedFolders = await ExecuteFileStationListShareAsync();
 
-            _logger.LogInformation("Retrieved {Count} shared folders", sharedFolders.Count);
+            logger.LogInformation("Retrieved {Count} shared folders", sharedFolders.Count);
 
             return SharedFoldersResult.CreateSuccess([.. sharedFolders.Select(CreateFsEntry)]);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving shared folders");
+            logger.LogError(ex, "Error retrieving shared folders");
             return SharedFoldersResult.CreateFailure($"Failed to retrieve shared folders: {ex.Message}");
         }
     }
 
     public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly)
     {
-        _logger.LogDebug("Retrieving directory contents for path: {Path}, DirectoryOnly: {DirectoryOnly}", path, directoryOnly);
+        logger.LogDebug("Retrieving directory contents for path: {Path}, DirectoryOnly: {DirectoryOnly}", path, directoryOnly);
 
         try
         {
@@ -49,7 +46,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
                 // Single API call for directories only - more efficient
                 var directoryFiles = await ExecuteFileStationListAsync(path, FileStationDefaults.PatternAll, FileStationDefaults.TypeDirectory); ;
 
-                _logger.LogDebug("Retrieved {DirectoryCount} directories from {Path}", directoryFiles.Count, path);
+                logger.LogDebug("Retrieved {DirectoryCount} directories from {Path}", directoryFiles.Count, path);
 
                 return DirectoryContentsResult.CreateSuccess([.. directoryFiles.Select(CreateFsEntry)]);
             }
@@ -64,33 +61,33 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
 
             List<FsEntry> allContents = [.. directories.Concat(files).Select(CreateFsEntry)];
 
-            _logger.LogDebug("Retrieved {DirectoryCount} directories and {FileCount} files from {Path}", directories.Count, files.Count, path);
+            logger.LogDebug("Retrieved {DirectoryCount} directories and {FileCount} files from {Path}", directories.Count, files.Count, path);
 
             return DirectoryContentsResult.CreateSuccess(allContents);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving directory contents for {Path}", path);
+            logger.LogError(ex, "Error retrieving directory contents for {Path}", path);
             return DirectoryContentsResult.CreateFailure($"Failed to retrieve directory contents: {ex.Message}");
         }
     }
 
     public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory)
     {
-        _logger.LogDebug("Setting HTTP group permissions for virtual path: {Path}", path);
+        logger.LogDebug("Setting HTTP group permissions for virtual path: {Path}", path);
 
         // Validate path to prevent path traversal attacks
         if (!IsPathValid(path))
         {
-            _logger.LogWarning("Path validation failed: {Path}", path);
+            logger.LogWarning("Path validation failed: {Path}", path);
             return ApiResult.CreateFailure("Invalid path: path traversal not allowed");
         }
 
         var targetPath = isDirectory ? path : Path.GetDirectoryName(path) ?? path;
 
-        _logger.LogDebug("Target path: {TargetPath}, IsDirectory: {IsDirectory}", targetPath, isDirectory);
+        logger.LogDebug("Target path: {TargetPath}, IsDirectory: {IsDirectory}", targetPath, isDirectory);
 
-        var parameters = new CoreAclSetParameters(_apiClient.ApiInformations);
+        var parameters = new CoreAclSetParameters(apiClient.ApiInformations);
         parameters.Parameters.FilePath = targetPath;
         parameters.Parameters.Files = targetPath;
         parameters.Parameters.DirPaths = targetPath;
@@ -131,26 +128,26 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
             }
         ];
 
-        var response = await _apiClient.ExecuteAsync<CoreAclSetResponse>(parameters);
+        var response = await apiClient.ExecuteAsync<CoreAclSetResponse>(parameters);
 
         if (response?.Success != true || response.Data?.TaskId is null)
         {
-            _logger.LogError("Failed to set ACL permissions for {Path}: Success={Success}, ErrorCode={ErrorCode}", path, response?.Success, response?.Error?.Code);
+            logger.LogError("Failed to set ACL permissions for {Path}: Success={Success}, ErrorCode={ErrorCode}", path, response?.Success, response?.Error?.Code);
             return ApiResult.CreateFailure($"Failed to set ACL permissions for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}");
         }
 
-        _logger.LogInformation("ACL permissions set successfully for {Path}, TaskId: {TaskId}", path, response.Data.TaskId);
+        logger.LogInformation("ACL permissions set successfully for {Path}, TaskId: {TaskId}", path, response.Data.TaskId);
         return ApiResult.CreateSuccess();
     }
 
     private async Task<List<FileStationShare>> ExecuteFileStationListShareAsync()
     {
-        var parameters = new FileStationListShareParameters(_apiClient.ApiInformations);
+        var parameters = new FileStationListShareParameters(apiClient.ApiInformations);
         parameters.Parameters.Additional = FileStationDefaults.AdditionalPathSizeTimeFields;
         parameters.Parameters.SortBy = FileStationDefaults.SortByName;
         parameters.Parameters.SortDirection = FileStationDefaults.SortDirectionAsc;
 
-        var response = await _apiClient.ExecuteAsync<FileStationListShareResponse>(parameters);
+        var response = await apiClient.ExecuteAsync<FileStationListShareResponse>(parameters);
 
         if (response?.Success != true || response.Data?.Shares is null)
         {
@@ -162,7 +159,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
 
     private async Task<List<FileStationFile>> ExecuteFileStationListAsync(string path, string pattern, string fileType)
     {
-        var parameters = new FileStationListParameters(_apiClient.ApiInformations);
+        var parameters = new FileStationListParameters(apiClient.ApiInformations);
         parameters.Parameters.FolderPath = path;
         parameters.Parameters.Additional = FileStationDefaults.AdditionalPathSizeTimeFields;
         parameters.Parameters.SortBy = FileStationDefaults.SortByName;
@@ -171,7 +168,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
         parameters.Parameters.Pattern = !String.IsNullOrEmpty(pattern) ? pattern : FileStationDefaults.PatternAll;
         parameters.Parameters.FileType = !String.IsNullOrEmpty(fileType) ? fileType : FileStationDefaults.TypeAll;
 
-        var response = await _apiClient.ExecuteAsync<FileStationListResponse>(parameters);
+        var response = await apiClient.ExecuteAsync<FileStationListResponse>(parameters);
 
         if (response?.Success != true || response.Data?.Files is null)
         {

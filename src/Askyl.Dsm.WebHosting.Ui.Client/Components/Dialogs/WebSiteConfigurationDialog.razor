@@ -10,6 +10,7 @@
 
 @inject IDialogService DialogService
 @inject IWebSiteHostingService HostingService
+@inject ILogger<WebSiteConfigurationDialog> Logger
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -181,7 +182,9 @@
         }
         catch (Exception ex)
         {
-            await DialogService.ShowErrorAsync($"Error {(IsEditMode ? "updating" : "creating")} website: {ex.Message}");
+            var action = IsEditMode ? "updating" : "creating";
+            Logger.LogError(ex, "Error {Action} website", action);
+            await DialogService.ShowErrorAsync($"Error {action} website: {ex.Message}");
         }
     }
 

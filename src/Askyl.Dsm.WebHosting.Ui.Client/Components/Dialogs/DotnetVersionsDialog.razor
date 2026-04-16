@@ -7,6 +7,7 @@
 
 @inject IDotnetVersionService DotnetVersionService
 @inject IToastService ToastService
+@inject ILogger<DotnetVersionsDialog> Logger
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">.NET Versions</FluentLabel>
@@ -95,6 +96,7 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Error while searching for global .NET version");
             ErrorMessage = $"Error while searching for global .NET version: {ex.Message}";
             DotnetVersions = [];
         }
