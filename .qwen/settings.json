@@ -28,7 +28,6 @@
       "Bash(git add *)",
       "Bash(git add <specific-file>)",
       "Bash(git branch *)",
-      "Bash(git commit *)",
       "Bash(git diff)",
       "Bash(git fetch *)",
       "Bash(git log *)",
