@@ -136,6 +136,30 @@ All projects share common build settings from `Directory.Build.props`:
 | **Cleanup** | IDE0005 | warning | Remove unnecessary using directives |
 | **Null Propagation** | IDE0031 | suggestion | Use `?.` operator |
 
+### Nullable Reference Types
+
+All projects in the solution have `<Nullable>enable</Nullable>` enabled in their `.csproj` files:
+
+- **Purpose:** Compile-time null safety checking to prevent NullReferenceException
+- **Coverage:** All 10 projects (Ui, Ui.Client, Data, Tools, Constants, etc.)
+- **Behavior with DI:** Blazor `@inject` directives and constructor-injected services do NOT require null-forgiving operators (`!`) because:
+  - Dependency injection container always provides non-null instances
+  - No compiler warnings are generated for injected services
+  - Runtime guarantees service availability through DI lifecycle management
+
+**Example:**
+
+```csharp
+// ✅ No ! needed - Blazor DI guarantees non-null
+@inject ILogger<MyComponent> Logger
+
+// ✅ No ! needed - Constructor injection guarantees non-null  
+public class MyService(ILogger<MyService> logger)
+{
+    // Compiler knows 'logger' is non-null from DI container
+}
+```
+
 **Standardized Build Command:**
 
 ```bash

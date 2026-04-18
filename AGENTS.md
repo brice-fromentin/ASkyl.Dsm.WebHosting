@@ -175,7 +175,6 @@ The AI assistant MUST use an **inference-based approach** rather than hardcoded 
     ```
 
   - Avoid redundant comparisons like `?.Count > 0 == true` or `!.Any() == false`
-- Use null-forgiving operator (`!`) for injected services and post-null-check contexts
 - Use conditional null operator (`?`) for truly optional scenarios
 - Fix all compiler warnings after build completion
 
