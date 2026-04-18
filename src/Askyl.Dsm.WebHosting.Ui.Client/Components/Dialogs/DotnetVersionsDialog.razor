@@ -25,7 +25,7 @@
             <FluentLabel>Searching for .NET versions...</FluentLabel>
         </FluentStack>
     }
-    else if (DotnetVersions?.Count > 0 == true)
+    else if (DotnetVersions is { Count: > 0 })
     {
         <FluentCard>
             <FluentStack Orientation="Orientation.Vertical">

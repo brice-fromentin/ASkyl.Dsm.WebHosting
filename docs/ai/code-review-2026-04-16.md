@@ -1,0 +1,285 @@
+# Code Review - Full .NET Solution
+
+**Review Date:** April 16, 2026  
+**Model:** qwen3.5-27b@q5_k_xl via Qwen Code /review  
+**Scope:** Commits HEAD~5..HEAD (last 5 commits on branch `fix/code-review-critical-issues`)  
+**Files Reviewed:** 23 files (1,640 deletions, 1,279 insertions)
+
+---
+
+## Executive Summary
+
+Reviewed recent changes focusing on:
+
+- IEquatable implementation for ReverseProxy models
+- Primary constructor refactoring (removing backfields)
+- Logger injection into Dialog components
+- Package version updates
+
+**Verdict:** **Comment** ✅ - No critical issues found. Changes are production-ready with 3 suggestions for improvement.
+
+---
+
+## Findings Summary
+
+| Severity | Count | Status |
+|----------|-------|--------|
+| **Critical** | 0 | None |
+| **Suggestion** | 3 | 1 resolved ✅, 2 pending ⚠️ |
+| **Nice to have** | 3 | Optional improvements |
+
+---
+
+## Resolution Updates (April 2026)
+
+### ✅ Resolved: Inefficient Collection Check in DotnetVersionsDialog
+
+- **Date:** April 2026
+- **File:** `src/Askyl.Dsm.WebHosting.Ui.Client/Components/Dialogs/DotnetVersionsDialog.razor:28`
+- **Resolution:** Applied pattern matching fix as recommended (Option 2)
+- **Before:**
+
+  ```csharp
+  else if (DotnetVersions?.Count > 0 == true)
+  {
+      @foreach (var framework in DotnetVersions!) // ⚠️ Needed ! operator
+  }
+  ```
+
+- **After:**
+
+  ```csharp
+  else if (DotnetVersions is { Count: > 0 })
+  {
+      @foreach (var framework in DotnetVersions) // ✅ No ! needed!
+  }
+  ```
+
+- **Benefits:**
+  - Removed redundant `== true` comparison
+  - Compiler now knows `DotnetVersions` is not null inside the block
+  - Follows modern C# pattern matching best practices
+  - Updated AGENTS.md with explicit collection emptiness check rules
+
+---
+
+## Detailed Findings
+
+### Suggestions (3)
+
+#### 1. ✅ RESOLVED: Inefficient Collection Check in DotnetVersionsDialog
+
+- **File:** `src/Askyl.Dsm.WebHosting.Ui.Client/Components/Dialogs/DotnetVersionsDialog.razor:28`
+- **Source:** [review]
+- **Issue:** Expression `DotnetVersions?.Count > 0 == true` is unnecessarily verbose with redundant `== true` comparison
+- **Impact:** Reduced code readability; doesn't follow project standards optimally
+- **Status:** ✅ **RESOLVED** (April 2026) - Applied pattern matching fix
+- **Suggested fix:** Use simpler pattern:
+
+  ```csharp
+  // Option 1: Remove redundant comparison
+  else if (DotnetVersions?.Count > 0)
+
+  // Option 2: Pattern matching (preferred) ✅ APPLIED
+  else if (DotnetVersions is { Count: > 0 })
+  ```
+
+- **Severity:** Suggestion
+
+---
+
+#### 2. Missing Null-Forgiving Operators on Injected Loggers
+
+- **File:** `src/Askyl.Dsm.WebHosting.Ui.Client/Components/Dialogs/*.razor` (4 files)
+  - AspNetReleasesDialog.razor
+  - DotnetVersionsDialog.razor
+  - FileSelectionDialog.razor
+  - WebSiteConfigurationDialog.razor
+- **Source:** [review]
+- **Issue:** All new `@inject ILogger<...> Logger` statements lack the null-forgiving operator (`!`) suffix
+- **Impact:** Potential compiler warnings with nullable reference types enabled; violates AGENTS.md Section 6.2 standard: "Use null-forgiving operator (`!`) for injected services"
+- **Suggested fix:** Add `!` to all logger injections:
+
+  ```csharp
+  @inject ILogger<AspNetReleasesDialog> Logger!
+  @inject ILogger<DotnetVersionsDialog> Logger!
+  @inject ILogger<FileSelectionDialog> Logger!
+  @inject ILogger<WebSiteConfigurationDialog> Logger!
+  ```
+
+- **Severity:** Suggestion
+
+---
+
+#### 3. Over-Engineering in ReverseProxyManagerService
+
+- **File:** `src/Askyl.Dsm.WebHosting.Ui/Services/ReverseProxyManagerService.cs:123-145`
+- **Source:** [review]
+- **Issue:** Method `FindByCompositeKeyAsync` creates new ReverseProxy object with nested Backend/Frontend objects just for comparison, allocating unnecessary memory on every call
+- **Impact:**
+  - Performance degradation due to allocations in what could be a frequently-called method
+  - Reduced code clarity (intent obscured by object creation)
+  - Maintenance risk if ReverseProxy.Equals changes
+- **Current implementation:**
+
+  ```csharp
+  private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config)
+  {
+      var allProxies = await GetAllReverseProxiesAsync();
+
+      var searchCriteria = new ReverseProxy
+      {
+          Backend = new ReverseProxyBackend { Port = config.InternalPort },
+          Frontend = new ReverseProxyFrontend
+          {
+              Fqdn = config.HostName,
+              Port = config.PublicPort,
+              Protocol = (int)config.Protocol
+          }
+      };
+
+      return allProxies.FirstOrDefault(p => p.Equals(searchCriteria));
+  }
+  ```
+
+- **Suggested fix:** Revert to direct property comparison:
+
+  ```csharp
+  private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config)
+  {
+      var allProxies = await GetAllReverseProxiesAsync();
+
+      return allProxies.FirstOrDefault(p =>
+          p.Backend.Port == config.InternalPort &&
+          String.Equals(p.Frontend.Fqdn, config.HostName, StringComparison.OrdinalIgnoreCase) &&
+          p.Frontend.Port == config.PublicPort &&
+          p.Frontend.Protocol == (int)config.Protocol);
+  }
+  ```
+
+- **Severity:** Suggestion
+
+---
+
+### Nice to Have (3)
+
+#### 1. Inconsistent Naming in DsmApiClient
+
+- **File:** `src/Askyl.Dsm.WebHosting.Tools/Network/DsmApiClient.cs:13-65`
+- **Source:** [review]
+- **Issue:** Constructor parameter changed from PascalCase to camelCase, and logger is now used directly from primary constructor while other fields (`_server`, `_port`) remain explicit private fields
+- **Impact:** Minor code style inconsistency; mixing direct parameter usage with explicit private fields reduces consistency
+- **Suggested fix:** Either:
+  1. Use `httpClientFactory` and `logger` consistently throughout (C# 14 primary constructor pattern)
+  2. OR add explicit field: `private readonly ILogger<DsmApiClient> _logger = logger;` and use `_logger` throughout
+- **Severity:** Nice to have
+
+---
+
+#### 2. Intermediate Variable in WebSiteConfigurationDialog
+
+- **File:** `src/Askyl.Dsm.WebHosting.Ui.Client/Components/Dialogs/WebSiteConfigurationDialog.razor:182-186`
+- **Source:** [review]
+- **Issue:** Variable `action` is created but the string interpolation could use ternary operator directly
+- **Impact:** Minor code clarity; adds a line without significant benefit
+- **Current implementation:**
+
+  ```csharp
+  catch (Exception ex)
+  {
+      var action = IsEditMode ? "updating" : "creating";
+      Logger.LogError(ex, "Error {Action} website", action);
+      await DialogService.ShowErrorAsync($"Error {action} website: {ex.Message}");
+  }
+  ```
+
+- **Suggested fix:** Use ternary directly:
+
+  ```csharp
+  catch (Exception ex)
+  {
+      Logger.LogError(ex, "Error {Action} website", IsEditMode ? "updating" : "creating");
+      await DialogService.ShowErrorAsync($"Error {(IsEditMode ? "updating" : "creating")} website: {ex.Message}");
+  }
+  ```
+
+- **Severity:** Nice to have
+
+---
+
+#### 3. Positive Acknowledgment: FileManagerService Refactoring
+
+- **File:** `src/Askyl.Dsm.WebHosting.Tools/Infrastructure/FileManagerService.cs`
+- **Source:** [review]
+- **Issue:** N/A - Primary constructor refactoring from backfields to direct parameter usage is correctly implemented
+- **Impact:** Improved code modernity and reduced boilerplate; follows C# 14 best practices
+- **Suggested fix:** N/A - Change is correct as implemented
+- **Severity:** Nice to have (acknowledging good change)
+
+---
+
+## Security Analysis
+
+**No security vulnerabilities found.** The reviewed changes do not introduce:
+
+- Path traversal vulnerabilities
+- Injection attacks (SQL, command, etc.)
+- XSS vulnerabilities
+- SSRF risks
+- Authentication/authorization bypasses
+- Information disclosure issues
+
+All async/await patterns are correctly implemented without blocking calls or fire-and-forget anti-patterns. Null safety is properly handled with nullable reference types and pattern matching.
+
+---
+
+## Performance Analysis
+
+**One performance concern identified:** The over-engineering in `ReverseProxyManagerService.FindByCompositeKeyAsync` creates unnecessary object allocations. These could impact performance if called frequently.
+
+**Recommendation:** Address Suggestion #3 to eliminate allocations and improve code clarity.
+
+---
+
+## Code Quality Assessment
+
+### Strengths
+
+✅ Modern C# 14 primary constructor patterns correctly applied in most files
+✅ Logger injection improves observability across Dialog components
+✅ IEquatable implementation enables proper object comparison for ReverseProxy models
+✅ Package version updates keep dependencies current
+
+### Areas for Improvement
+
+⚠️ Null-forgiving operators missing on injected services (violates AGENTS.md standards)
+⚠️ One instance of over-engineering reduces performance and clarity
+⚠️ Minor code style inconsistencies in collection checks
+
+---
+
+## Recommendations
+
+### Before Merge (Should Address)
+
+1. **Add null-forgiving operators** to all `@inject ILogger<...> Logger` statements in Dialog components
+2. **Simplify collection check** in DotnetVersionsDialog from `?.Count > 0 == true` to `?.Count > 0` or pattern matching
+3. **Refactor FindByCompositeKeyAsync** to use direct property comparison instead of object allocation
+
+### Optional Improvements (Nice to Have)
+
+1. Consider consistent primary constructor parameter usage in DsmApiClient (either all direct or all via fields)
+2. Simplify intermediate variable in WebSiteConfigurationDialog error handling
+
+---
+
+## Verdict: **Comment** ✅
+
+The changes are **production-ready** with no critical issues. The 3 suggestions should be addressed before merge to maintain code quality standards, but they do not block deployment.
+
+**Risk Level:** Low
+**Confidence:** High (comprehensive review of all changed files)
+
+---
+
+*Review generated by qwen3.5-27b@q5_k_xl via Qwen Code /review on April 16, 2026*

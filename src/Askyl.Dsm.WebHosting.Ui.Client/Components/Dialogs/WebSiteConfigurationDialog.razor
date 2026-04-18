@@ -165,10 +165,9 @@
                 return;
             }
 
-            using var worker = this.CreateWorkingState(
-                IsEditMode ? $"Updating '{Configuration.Name}'..." : $"Creating '{Configuration.Name}'...");
+            using var worker = this.CreateWorkingState(IsEditMode ? $"Updating '{Configuration.Name}'..." : $"Creating '{Configuration.Name}'...");
 
-            var result = IsEditMode 
+            var result = IsEditMode
                 ? await HostingService.UpdateWebsiteAsync(Configuration)
                 : await HostingService.AddWebsiteAsync(Configuration);
 

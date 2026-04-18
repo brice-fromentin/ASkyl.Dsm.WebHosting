@@ -157,8 +157,24 @@ The AI assistant MUST use an **inference-based approach** rather than hardcoded 
 
 - Use `GeneratedRegexAttribute` for regex patterns
 - **MANDATORY:** Use primary constructors for ALL classes with constructor parameters (except abstract classes and when inheritance requires it) - enforced by dotnet format
-- For simple emptiness checks on collections, prefer `IsEmpty` property if available, or `Count == 0` instead of `!collection.Any()`
-- Prefer `IsEmpty` over `Count` for both clarity and performance
+- **Collection Emptiness Checks:**
+  - For non-null collections: use `.Count == 0` or `.Length == 0` (simple, clear)
+
+    ```csharp
+    if (products.Count == 0) { throw new InvalidOperationException(...); }
+    ```
+
+  - For nullable collections when used inside block: use pattern matching `is { Count: > 0 }`
+
+    ```csharp
+    // ✅ Compiler knows DotnetVersions is not null inside the block
+    else if (DotnetVersions is { Count: > 0 })
+    {
+        @foreach (var framework in DotnetVersions) // No ! needed!
+    }
+    ```
+
+  - Avoid redundant comparisons like `?.Count > 0 == true` or `!.Any() == false`
 - Use null-forgiving operator (`!`) for injected services and post-null-check contexts
 - Use conditional null operator (`?`) for truly optional scenarios
 - Fix all compiler warnings after build completion
