@@ -15,8 +15,6 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="logger">Logger for tracking authentication operations.</param>
 public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor httpContextAccessor, ILogger<AuthenticationService> logger) : IAuthenticationService
 {
-    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
-
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
     {
@@ -29,7 +27,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         }
 
         // Store DSM _sid in server-side session for persistence
-        _httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmSessionKey, apiClient.Sid);
+        httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmSessionKey, apiClient.Sid);
         logger.LogInformation("Login successful for user: {Login} - SID stored", login);
         return AuthenticationResult.CreateAuthenticated();
     }
@@ -39,7 +37,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     {
         try
         {
-            _httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmSessionKey);
+            httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmSessionKey);
             await apiClient.DisconnectAsync();
             logger.LogInformation("User logged out");
             return ApiResult.CreateSuccess("Logout successful");
@@ -54,7 +52,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// <inheritdoc/>
     public Task<ApiResultBool> IsAuthenticatedAsync()
     {
-        var sid = _httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmSessionKey);
+        var sid = httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmSessionKey);
 
         return Task.FromResult(!String.IsNullOrEmpty(sid) ? ApiResultBool.CreateSuccess(true) : ApiResultBool.CreateSuccess(false, "No session found"));
     }

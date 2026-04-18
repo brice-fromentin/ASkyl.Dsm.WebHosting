@@ -14,8 +14,6 @@ public class FrameworkManagementService(
     IArchiveExtractorService archiveExtractor,
     ILogger<FrameworkManagementService> logger) : IFrameworkManagementService
 {
-    private readonly IDotnetVersionService _dotnetVersionService = dotnetVersionService;
-
     public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel, CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrEmpty(version))
@@ -33,7 +31,7 @@ public class FrameworkManagementService(
             archiveExtractor.Decompress(fileName);
 
             // Force cache refresh to detect the new installation
-            await _dotnetVersionService.RefreshCacheAsync();
+            await dotnetVersionService.RefreshCacheAsync();
 
             logger.LogInformation("ASP.NET Core {Version} installed successfully", version);
             return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been installed successfully.");
@@ -65,7 +63,7 @@ public class FrameworkManagementService(
             fileManager.DeleteDirectory($"shared/Microsoft.NETCore.App/{version}");
 
             // Force cache refresh to detect the removal
-            await _dotnetVersionService.RefreshCacheAsync();
+            await dotnetVersionService.RefreshCacheAsync();
 
             logger.LogInformation("ASP.NET Core {Version} uninstalled successfully", version);
             return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been uninstalled successfully.");
@@ -96,7 +94,7 @@ public class FrameworkManagementService(
             throw new MissingChannelConfigurationException();
         }
 
-        var installedResult = await _dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);
+        var installedResult = await dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);
         var installed = installedResult.Value ?? [];
 
         var channelPrefix = configuredChannel + ".";
