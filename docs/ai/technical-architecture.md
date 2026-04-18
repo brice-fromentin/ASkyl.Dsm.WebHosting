@@ -995,29 +995,50 @@ public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool recu
 
 #### ReverseProxy Management
 
+**IEquatable Implementation (April 2026):**
+
+All ReverseProxy models implement `IEquatable<T>` with business-key equality:
+
+| Model | Equality Logic | Source File |
+|-------|----------------|-------------|
+| **ReverseProxy** | Composite key: `Backend.Port + Frontend.Fqdn + Frontend.Port + Frontend.Protocol` | `Data/DsmApi/Models/ReverseProxy/ReverseProxy.cs` |
+| **ReverseProxyBackend** | All properties: `Fqdn + Port + Protocol` | `Data/DsmApi/Models/ReverseProxy/ReverseProxyBackend.cs` |
+| **ReverseProxyFrontend** | All properties: `Fqdn + Port + Protocol + Https + Acl` | `Data/DsmApi/Models/ReverseProxy/ReverseProxyFrontend.cs` |
+| **ReverseProxyHttps** | Single property: `HSTS` flag | `Data/DsmApi/Models/ReverseProxy/ReverseProxyHttps.cs` |
+| **ReverseProxyCustomHeader** | All header properties | `Data/DsmApi/Models/ReverseProxy/ReverseProxyCustomHeader.cs` |
+
+**Key Design Decision:** `ReverseProxy.Equals()` compares only the composite key fields
+(backend port + frontend configuration), ignoring Description, UUID, and timeout settings.
+This matches the business requirement that these four fields uniquely identify a proxy.
+
 **Composite Key Strategy:**
 
-Instead of storing UUIDs (which can desynchronize), use configuration-based lookup:
+Instead of storing UUIDs (which can desynchronize), use configuration-based lookup with IEquatable:
 
 ```csharp
-public async Task<ReverseProxyInfo?> FindByCompositeKeyAsync(WebSiteConfiguration config)
+private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config)
 {
-    var allProxies = await GetAllAsync();
-    
-    return allProxies.FirstOrDefault(proxy =>
-        proxy.Backend.Port == config.InternalPort &&
-        proxy.Frontend.Fqdn == config.HostName &&
-        proxy.Frontend.Port == config.PublicPort &&
-        proxy.Frontend.Protocol == config.Protocol.ToString().ToLower()
-    );
+    var allProxies = await GetAllReverseProxiesAsync();
+
+    // Leverages IEquatable<ReverseProxy> for clean, encapsulated comparison logic
+    var searchTemplate = new ReverseProxy
+    {
+        Backend = new(null, config.InternalPort, 0),
+        Frontend = new(config.HostName, config.PublicPort, (int)config.Protocol, new())
+    };
+
+    return allProxies.FirstOrDefault(p => p.Equals(searchTemplate));
 }
 ```
 
-**Benefits:**
+**Benefits of IEquatable Approach:**
 
-- Always reflects actual DSM state
-- No synchronization issues
-- Idempotent create operations
+1. **Encapsulation:** Comparison logic centralized in `ReverseProxy.Equals()` - if business rules change, only one file needs updating
+2. **Readability:** Intent is clear from method name (`p.Equals(searchTemplate)` vs scattered property comparisons)
+3. **Maintainability:** No risk of inconsistency between multiple comparison locations
+4. **Performance:** Negligible allocation cost (small POCO objects) compared to async API call; modern .NET GC handles short-lived allocations efficiently
+5. **Always reflects actual DSM state** - No synchronization issues
+6. **Idempotent create operations** - Safe to retry without duplicates
 
 ---
 
