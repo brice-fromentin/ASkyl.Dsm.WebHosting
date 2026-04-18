@@ -25,14 +25,14 @@ Reviewed recent changes focusing on:
 | Severity | Count | Status |
 |----------|-------|--------|
 | **Critical** | 0 | None |
-| **Suggestion** | 3 | 1 resolved ✅, 1 not applicable ℹ️, 1 pending ⚠️ |
+| **Suggestion** | 3 | All resolved ✅ (2 fixed, 1 not applicable) |
 | **Nice to have** | 3 | Optional improvements |
 
 ---
 
 ## Resolution Updates (April 2026)
 
-### ✅ Resolved: Inefficient Collection Check in DotnetVersionsDialog
+### ✅ Resolved: Inefficient Collection Check in DotnetVersionsDialog (Suggestion #1)
 
 - **Date:** April 2026
 - **File:** `src/Askyl.Dsm.WebHosting.Ui.Client/Components/Dialogs/DotnetVersionsDialog.razor:28`
@@ -70,6 +70,41 @@ Reviewed recent changes focusing on:
   - No compiler warnings are generated with `<Nullable>enable</Nullable>` enabled
   - The code review suggestion was overly cautious for Blazor @inject directives
 - **Status:** Marked as not applicable - no action needed
+
+### ✅ Resolved: Over-Engineering in ReverseProxyManagerService (Suggestion #3)
+
+- **Date:** April 2026
+- **File:** `src/Askyl.Dsm.WebHosting.Ui/Services/ReverseProxyManagerService.cs` and related model classes
+- **Resolution:** Removed all IEquatable implementations from ReverseProxy models and refactored FindByCompositeKeyAsync to use direct property comparison
+- **Before:**
+
+  ```csharp
+  // Created template object just for Equals comparison
+  var searchTemplate = new ReverseProxy
+  {
+      Backend = new(null, config.InternalPort, 0),
+      Frontend = new(config.HostName, config.PublicPort, (int)config.Protocol, new())
+  };
+
+  return allProxies.FirstOrDefault(p => p.Equals(searchTemplate));
+  ```
+
+- **After:**
+
+  ```csharp
+  // Direct property comparison - no allocations
+  return allProxies.FirstOrDefault(p =>
+      p.Backend.Port == config.InternalPort &&
+      String.Equals(p.Frontend.Fqdn, config.HostName, StringComparison.OrdinalIgnoreCase) &&
+      p.Frontend.Port == config.PublicPort &&
+      p.Frontend.Protocol == (int)config.Protocol);
+  ```
+
+- **Benefits:**
+  - Eliminated unnecessary object allocations per proxy lookup call
+  - Removed dead code: IEquatable implementations from 5 model classes (103 lines deleted)
+  - Improved performance through direct property access vs method calls
+  - Simpler model classes focused on data representation
 
 ---
 
@@ -116,51 +151,51 @@ Reviewed recent changes focusing on:
 
 ---
 
-#### 3. Over-Engineering in ReverseProxyManagerService
+#### 3. ✅ RESOLVED: Over-Engineering in ReverseProxyManagerService
 
-- **File:** `src/Askyl.Dsm.WebHosting.Ui/Services/ReverseProxyManagerService.cs:123-145`
+- **File:** `src/Askyl.Dsm.WebHosting.Ui/Services/ReverseProxyManagerService.cs` and related model classes
 - **Source:** [review]
 - **Issue:** Method `FindByCompositeKeyAsync` creates new ReverseProxy object with nested Backend/Frontend objects just for comparison, allocating unnecessary memory on every call
 - **Impact:**
   - Performance degradation due to allocations in what could be a frequently-called method
   - Reduced code clarity (intent obscured by object creation)
   - Maintenance risk if ReverseProxy.Equals changes
-- **Current implementation:**
+- **Status:** ✅ **RESOLVED** (April 2026) - Removed all IEquatable implementations and refactored to direct property comparison
+- **Original implementation:**
 
   ```csharp
-  private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config)
+  // Created template object just for Equals comparison
+  var searchCriteria = new ReverseProxy
   {
-      var allProxies = await GetAllReverseProxiesAsync();
-
-      var searchCriteria = new ReverseProxy
+      Backend = new ReverseProxyBackend { Port = config.InternalPort },
+      Frontend = new ReverseProxyFrontend
       {
-          Backend = new ReverseProxyBackend { Port = config.InternalPort },
-          Frontend = new ReverseProxyFrontend
-          {
-              Fqdn = config.HostName,
-              Port = config.PublicPort,
-              Protocol = (int)config.Protocol
-          }
-      };
+          Fqdn = config.HostName,
+          Port = config.PublicPort,
+          Protocol = (int)config.Protocol
+      }
+  };
 
-      return allProxies.FirstOrDefault(p => p.Equals(searchCriteria));
-  }
+  return allProxies.FirstOrDefault(p => p.Equals(searchCriteria));
   ```
 
-- **Suggested fix:** Revert to direct property comparison:
+- **Applied fix:** Direct property comparison with no allocations:
 
   ```csharp
-  private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config)
-  {
-      var allProxies = await GetAllReverseProxiesAsync();
-
-      return allProxies.FirstOrDefault(p =>
-          p.Backend.Port == config.InternalPort &&
-          String.Equals(p.Frontend.Fqdn, config.HostName, StringComparison.OrdinalIgnoreCase) &&
-          p.Frontend.Port == config.PublicPort &&
-          p.Frontend.Protocol == (int)config.Protocol);
-  }
+  // Direct property comparison - no template object needed
+  return allProxies.FirstOrDefault(p =>
+      p.Backend.Port == config.InternalPort &&
+      String.Equals(p.Frontend.Fqdn, config.HostName, StringComparison.OrdinalIgnoreCase) &&
+      p.Frontend.Port == config.PublicPort &&
+      p.Frontend.Protocol == (int)config.Protocol);
   ```
+
+- **Additional changes:** Removed IEquatable interface and Equals/GetHashCode methods from all ReverseProxy model classes:
+  - `ReverseProxy.cs`
+  - `ReverseProxyBackend.cs`
+  - `ReverseProxyFrontend.cs`
+  - `ReverseProxyHttps.cs`
+  - `ReverseProxyCustomHeader.cs`
 
 - **Severity:** Suggestion
 
@@ -252,27 +287,28 @@ All async/await patterns are correctly implemented without blocking calls or fir
 
 ✅ Modern C# 14 primary constructor patterns correctly applied in most files
 ✅ Logger injection improves observability across Dialog components
-✅ IEquatable implementation enables proper object comparison for ReverseProxy models
+✅ Direct property comparison for ReverseProxy models (no unnecessary allocations)
 ✅ Package version updates keep dependencies current
 
 ### Areas for Improvement
 
-⚠️ One instance of over-engineering reduces performance and clarity (Suggestion #3)
-ℹ️ Null-forgiving operators on injected services - NOT required for Blazor @inject (Suggestion #2 marked not applicable)
-✅ Collection check pattern matching applied (Suggestion #1 resolved)
+All suggestions from the April 16, 2026 code review have been addressed:
+
+- ✅ **Suggestion #1:** Collection check pattern matching applied in DotnetVersionsDialog
+- ℹ️ **Suggestion #2:** Null-forgiving operators NOT required for Blazor @inject (documented as not applicable)
+- ✅ **Suggestion #3:** Over-engineering removed from ReverseProxyManagerService
 
 ---
 
 ## Recommendations
 
-### Before Merge (Should Address)
+### All Suggestions Resolved
 
-1. **Refactor FindByCompositeKeyAsync** to use direct property comparison instead of object allocation (Suggestion #3 - only remaining item)
+All three suggestions from the April 16, 2026 code review have been addressed:
 
-### Resolved Items
-
-- ✅ **Simplify collection check** in DotnetVersionsDialog from `?.Count > 0 == true` to pattern matching `is { Count: > 0 }` (Suggestion #1 - RESOLVED April 2026)
-- ℹ️ **Add null-forgiving operators** to all `@inject ILogger<...> Logger` statements in Dialog components (Suggestion #2 - NOT APPLICABLE for Blazor @inject directives)
+- ✅ **Simplify collection check** in DotnetVersionsDialog from `?.Count > 0 == true` to pattern matching `is { Count: > 0 }` (RESOLVED)
+- ℹ️ **Add null-forgiving operators** to all `@inject ILogger<...> Logger` statements (NOT APPLICABLE - Blazor DI guarantees non-null services)
+- ✅ **Refactor FindByCompositeKeyAsync** to use direct property comparison instead of object allocation (RESOLVED - removed IEquatable implementations from 5 model classes)
 
 ### Optional Improvements (Nice to Have)
 
@@ -283,7 +319,7 @@ All async/await patterns are correctly implemented without blocking calls or fir
 
 ## Verdict: **Comment** ✅
 
-The changes are **production-ready** with no critical issues. Only 1 suggestion remains to be addressed (Suggestion #3), but it does not block deployment.
+The changes are **production-ready** with no critical issues. All suggestions have been addressed and do not block deployment.
 
 **Risk Level:** Low
 **Confidence:** High (comprehensive review of all changed files)
@@ -291,3 +327,5 @@ The changes are **production-ready** with no critical issues. Only 1 suggestion 
 ---
 
 *Review generated by qwen3.5-27b@q5_k_xl via Qwen Code /review on April 16, 2026*
+
+*Updated: All suggestions resolved in April 2026 - see Resolution Updates section above*
