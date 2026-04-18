@@ -1,15 +1,22 @@
 # ASkyl.Dsm.WebHosting - Remaining Work & Technical Debt
 
 **Created:** April 13, 2026
-**Last Updated:** April 16, 2026
+**Last Updated:** April 18, 2026
 **Previous Documents Superseded:**
 
 - `code-review-reconciled-2026-04-09.md` (deleted)
 - `fix-plan-phase-9-2026-04-09.md` (deleted)
+- `code-review-2026-04-16.md` (deleted - completed)
+- `primary-constructor-usage-report-2026-04-15.md` (deleted - completed)
 
-**Current State:** All Phases 1-11 Complete ✅ | Items 2.2, 1.2, 1.3, 2.1, 3.1, 3.3 Complete ✅
+**Current State:** All Phases 1-11 Complete ✅ | Items 1.3, 2.1, 2.2, 3.1, 3.3 Complete ✅
 **Security Score:** ⭐⭐⭐⭐☆ (4.0/5) - Production Ready
 **Version:** 0.5.4
+
+**Update (April 18, 2026):** Primary constructor migration completed across all
+server-side services (LogDownloadService, AuthenticationService,
+FrameworkManagementService). PlatformInfoService intentionally kept as traditional
+constructor due to initialization complexity.
 
 ---
 
@@ -21,7 +28,7 @@ medium priority issues have been resolved** in Phases 1-11.
 
 **Update (April 16, 2026):** Verified Long-Term items status. Four of five items
 (1.3, 2.1, 3.1, 3.3) were already completed during Phases 1-11 but not documented
-as such. Only item 3.2 (State Machine Pattern) remains as optional technical debt.
+as such. Item 1.2 (IEquatable) was implemented then removed per code review as over-engineering.
 
 The items listed below are **low-priority technical debt and optional
 enhancements** that do not impact security, stability, or production readiness.
@@ -29,11 +36,11 @@ They are organized by category for future implementation planning.
 
 | Category | Items | Impact Level |
 |----------|-------|--------------|
-| **Architecture & Design Patterns** | 1 remaining (1 of 2 complete) | Low - Code quality improvements |
+| **Architecture & Design Patterns** | 1 remaining (IEquatable removed) | Low - Code quality improvements |
 | **Performance & Efficiency** | 0 remaining (1 of 1 complete) | Low - Minor optimizations |
 | **Code Quality & Consistency** | 1 remaining (2 of 3 complete) | Low - Maintainability improvements |
 | **Future Enhancements** | 3 | Medium - Strategic improvements |
-| **Total** | **5 items remaining** (4 of 9 complete) | **None block production** |
+| **Total** | **5 items remaining** | **None block production** |
 
 ---
 
@@ -115,59 +122,51 @@ public class SiteStateMachine
 
 ---
 
-### 1.2 IEquatable Implementation for ReverseProxy Models ✅ COMPLETE
+### 1.2 IEquatable Implementation for ReverseProxy Models ❌ REMOVED
 
-**Completed:** April 15, 2026
+**Implemented:** April 15, 2026
+**Removed:** April 16, 2026 (per code review suggestion #3)
 **Source:** April 8 Report #18
 **Severity:** Nice to Have
 **Files Affected:** `Data/DsmApi/Models/ReverseProxy/*.cs`, `Ui/Services/ReverseProxyManagerService.cs`
 
-**Change:**
+**History:**
 
-Implemented `IEquatable<T>` with business-key equality on five ReverseProxy models:
+Initially implemented `IEquatable<T>` with business-key equality on five
+ReverseProxy models to enable value-based comparisons. However, this was identified
+as over-engineering during the April 16 code review.
 
-- `ReverseProxy` - Equality based on composite key: `Backend.Port`, `Frontend.Fqdn/Port/Protocol`
-- `ReverseProxyBackend` - Equality based on `Fqdn` (case-insensitive), `Port`, `Protocol`
-- `ReverseProxyFrontend` - Equality based on `Fqdn` (case-insensitive), `Port`, `Protocol`, `Https`, `Acl`
-- `ReverseProxyHttps` - Equality based on `Hsts`
-- `ReverseProxyCustomHeader` - Equality based on `Name`, `Value`
+**Removed Implementation:**
 
-Updated `ReverseProxyManagerService.FindByCompositeKeyAsync` to use `IEquatable` instead of manual property comparisons:
+The following IEquatable implementations were removed:
+
+- `ReverseProxy.Equals()` and `GetHashCode()`
+- `ReverseProxyBackend.Equals()` and `GetHashCode()`
+- `ReverseProxyFrontend.Equals()` and `GetHashCode()`
+- `ReverseProxyHttps.Equals()` and `GetHashCode()`
+- `ReverseProxyCustomHeader.Equals()` and `GetHashCode()`
+
+**Current Implementation (Post-Removal):**
+
+`ReverseProxyManagerService.FindByCompositeKeyAsync` uses direct property comparison with no allocations:
 
 ```csharp
-// Before
+// Direct property comparison - no template object needed
 return allProxies.FirstOrDefault(p =>
     p.Backend.Port == config.InternalPort &&
     String.Equals(p.Frontend.Fqdn, config.HostName, StringComparison.OrdinalIgnoreCase) &&
     p.Frontend.Port == config.PublicPort &&
     p.Frontend.Protocol == (int)config.Protocol);
-
-// After
-var searchTemplate = new ReverseProxy
-{
-    Backend = new(null, config.InternalPort, 0),
-    Frontend = new(config.HostName, config.PublicPort, (int)config.Protocol, new())
-};
-
-return allProxies.FirstOrDefault(p => p.Equals(searchTemplate));
 ```
 
-**Key Design Decisions:**
+**Benefits of Removal:**
 
-- FQDN comparisons use `OrdinalIgnoreCase` (DNS is case-insensitive)
-- Hash codes use `ToLowerInvariant()` for FQDN fields
-- Equality matches original `FindByCompositeKeyAsync` logic exactly
+- Eliminated unnecessary object allocations per proxy lookup call
+- Removed dead code: 103 lines deleted from 5 model classes
+- Improved performance through direct property access vs method calls
+- Simpler model classes focused on data representation
 
-**Benefits:**
-
-- Enables value-based comparisons in LINQ operations
-- Centralized comparison logic in one place (the model)
-- Better testability
-- Prevents duplicate proxies with same composite key
-- Consistent with .NET best practices
-
-**Estimated Effort:** 1-2 hours  
-**Risk:** Very Low - Pure addition, no breaking changes
+**Status:** ❌ **REMOVED** - Over-engineering identified and eliminated per code review
 
 ---
 
@@ -326,30 +325,39 @@ catch (Exception ex)
 
 ### 2.2 LINQ .Any() vs .Count Performance ✅ COMPLETE
 
-**Completed:** April 15, 2026
+**Completed:** April 15, 2026 (initial), April 16, 2026 (improved)
 **Source:** April 6 Report (Nice to Have)
 **Severity:** Nice to Have
 **Files Affected:** `Ui.Client/Components/Dialogs/DotnetVersionsDialog.razor`
 
-**Change:**
+**Change History:**
 
-Replaced `.Any()` with `.Count > 0` in `DotnetVersionsDialog.razor`:
+**Step 1 (April 15):** Replaced `.Any()` with `.Count > 0`:
 
 ```csharp
 // Before
 else if (DotnetVersions?.Any() == true)
+```
 
-// After
-else if (DotnetVersions?.Count > 0 == true)
+**Step 2 (April 16 - Code Review Improvement):** Applied pattern matching for optimal clarity:
+
+```csharp
+// After (final implementation)
+else if (DotnetVersions is { Count: > 0 })
+{
+    @foreach (var framework in DotnetVersions) // ✅ No ! needed!
+}
 ```
 
 **Benefits:**
 
-- Clearer intent (checking for emptiness vs. counting)
+- Removed redundant `== true` comparison
+- Compiler now knows `DotnetVersions` is not null inside the block (no `!` operator needed)
 - O(1) performance for collections with `Count` property
+- Follows modern C# pattern matching best practices
 - Consistent with AGENTS.md standards
 
-**Estimated Effort:** 15 minutes  
+**Estimated Effort:** 15 minutes
 **Risk:** Very Low - Simple replacement
 
 ---
@@ -673,6 +681,8 @@ For historical context, all completed phases are documented here:
 | **Phase 10** | ✅ Complete | Path traversal strengthening, CancellationToken, Task.Run removal | April 10, 2026 |
 | **Phase 11** | ✅ Complete | Sync File I/O → async, verified exception logging, magic numbers | April 10, 2026 |
 | **Phase 12** | ❌ Reverted | BrowserHttp logging - too complex for use case | April 10, 2026 |
+| **Phase 13** | ✅ Complete | Primary constructor migration (LogDownloadService, AuthenticationService, FrameworkManagementService) | April 18, 2026 |
+| **Phase 14** | ✅ Complete | Code review resolutions (IEquatable removal, pattern matching improvements) | April 16, 2026 |
 
 ---
 
@@ -742,14 +752,23 @@ markdownlint docs/ai/remaining-work-2026-04-13.md
 
 ## 8. Notes
 
-- This document supersedes both `code-review-reconciled-2026-04-09.md` and `fix-plan-phase-9-2026-04-09.md`
-- All completed phases (1-11) remain documented in Section 5 for historical reference
-- Items are ordered by implementation priority (most important first within each category)
+- This document supersedes both `code-review-reconciled-2026-04-09.md` and
+  `fix-plan-phase-9-2026-04-09.md`
+- **Deleted completed documents:** `code-review-2026-04-16.md` and
+  `primary-constructor-usage-report-2026-04-15.md` (April 18, 2026)
+- All completed phases (1-14) remain documented in Section 5 for historical
+  reference
+- Items are ordered by implementation priority (most important first within each
+  category)
 - Estimated efforts are approximate and should be validated before starting work
 - No items in this document block production deployment
+- **Primary constructor migration:** PlatformInfoService intentionally kept as
+  traditional constructor due to initialization complexity (constructor must call
+  InitializePlatformInfo() which requires instance state)
 
 ---
 
-**Document Created:** April 13, 2026  
-**Next Review:** After implementing any items or before next major release  
+**Document Created:** April 13, 2026
+**Last Updated:** April 18, 2026
+**Next Review:** After implementing any items or before next major release
 **Maintained By:** Qwen Code
