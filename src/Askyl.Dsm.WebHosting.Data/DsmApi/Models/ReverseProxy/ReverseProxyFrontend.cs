@@ -4,7 +4,7 @@ using Askyl.Dsm.WebHosting.SourceGenerators;
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.ReverseProxy;
 
 [GenerateClone]
-public partial class ReverseProxyFrontend(string? fqdn, int port, int protocol, ReverseProxyHttps https) : IEquatable<ReverseProxyFrontend>
+public partial class ReverseProxyFrontend(string? fqdn, int port, int protocol, ReverseProxyHttps https)
 {
     public ReverseProxyFrontend() : this(null, 0, 0, new()) { }
 
@@ -22,28 +22,4 @@ public partial class ReverseProxyFrontend(string? fqdn, int port, int protocol, 
 
     [JsonPropertyName("protocol")]
     public int Protocol { get; set; } = protocol;
-
-    public bool Equals(ReverseProxyFrontend? other)
-    {
-        if (other is null || ReferenceEquals(this, other))
-        {
-            return ReferenceEquals(this, other);
-        }
-
-        return String.Equals(Fqdn, other.Fqdn, StringComparison.OrdinalIgnoreCase) &&
-               Int32.Equals(Port, other.Port) &&
-               Int32.Equals(Protocol, other.Protocol) &&
-               Https.Equals(other.Https) &&
-               Equals(Acl, other.Acl);
-    }
-
-    public override bool Equals(object? obj) => Equals(obj as ReverseProxyFrontend);
-
-    public override int GetHashCode() => HashCode.Combine(
-        Acl,
-        Fqdn?.ToLowerInvariant(),
-        Https,
-        Port,
-        Protocol
-    );
 }

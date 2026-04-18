@@ -130,13 +130,11 @@ public class ReverseProxyManagerService(
     {
         var allProxies = await GetAllReverseProxiesAsync();
 
-        var searchTemplate = new ReverseProxy
-        {
-            Backend = new(null, config.InternalPort, 0),
-            Frontend = new(config.HostName, config.PublicPort, (int)config.Protocol, new())
-        };
-
-        return allProxies.FirstOrDefault(p => p.Equals(searchTemplate));
+        return allProxies.FirstOrDefault(p =>
+            p.Backend.Port == config.InternalPort &&
+            String.Equals(p.Frontend.Fqdn, config.HostName, StringComparison.OrdinalIgnoreCase) &&
+            p.Frontend.Port == config.PublicPort &&
+            p.Frontend.Protocol == (int)config.Protocol);
     }
 
     /// <summary>
