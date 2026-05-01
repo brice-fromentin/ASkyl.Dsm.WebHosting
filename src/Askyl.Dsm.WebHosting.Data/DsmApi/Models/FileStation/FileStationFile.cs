@@ -1,26 +1,24 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-[GenerateClone]
-public partial class FileStationFile
+public record FileStationFile
 {
     [JsonPropertyName("name")]
-    public string Name { get; set; } = default!;
+    public string Name { get; init; } = default!;
 
     [JsonPropertyName("path")]
-    public string Path { get; set; } = default!;
+    public string Path { get; init; } = default!;
 
     [JsonPropertyName("type")]
-    public string Type { get; set; } = default!; // "file" or "dir"
+    public string Type { get; init; } = default!; // "file" or "dir"
 
     [JsonPropertyName("isdir")]
-    public bool IsDirectory { get; set; }
+    public bool IsDirectory { get; init; }
 
     [JsonPropertyName("children")]
-    public List<FileStationFile>? Children { get; set; }
+    public List<FileStationFile>? Children { get; init; }
 
     [JsonPropertyName("additional")]
-    public FileStationFileAdditional? Additional { get; set; }
+    public FileStationFileAdditional? Additional { get; init; }
 }

@@ -1,20 +1,18 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-[GenerateClone]
-public partial class FileStationTime
+public record FileStationTime
 {
     [JsonPropertyName("atime")]
-    public long? AccessTime { get; set; }
+    public long? AccessTime { get; init; }
 
     [JsonPropertyName("mtime")]
-    public long? ModifyTime { get; set; }
+    public long? ModifyTime { get; init; }
 
     [JsonPropertyName("ctime")]
-    public long? CreateTime { get; set; }
+    public long? CreateTime { get; init; }
 
     [JsonPropertyName("crtime")]
-    public long? CreationTime { get; set; }
+    public long? CreationTime { get; init; }
 }

@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreAcl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.FileStation;
@@ -87,46 +88,49 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
 
         logger.LogDebug("Target path: {TargetPath}, IsDirectory: {IsDirectory}", targetPath, isDirectory);
 
-        var parameters = new CoreAclSetParameters(apiClient.ApiInformations);
-        parameters.Parameters.FilePath = targetPath;
-        parameters.Parameters.Files = targetPath;
-        parameters.Parameters.DirPaths = targetPath;
-        parameters.Parameters.ChangeAcl = true;
-        parameters.Parameters.Inherited = true;
-        parameters.Parameters.AclRecur = false;
-
-        parameters.Parameters.Rules =
-        [
-            new()
-            {
-                OwnerType = "group",
-                OwnerName = "http",
-                PermissionType = "allow",
-                Permission = new()
+        var aclSet = new CoreAclSet
+        {
+            FilePath = targetPath,
+            Files = targetPath,
+            DirPaths = targetPath,
+            ChangeAcl = true,
+            Inherited = true,
+            AclRecur = false,
+            Rules =
+            [
+                new()
                 {
-                    ReadData = true,
-                    WriteData = true,
-                    ExeFile = true,
-                    AppendData = true,
-                    Delete = true,
-                    DeleteSub = true,
-                    ReadAttr = true,
-                    WriteAttr = true,
-                    ReadExtAttr = true,
-                    WriteExtAttr = true,
-                    ReadPerm = true,
-                    ChangePerm = false,
-                    TakeOwnership = false
-                },
-                Inherit = new()
-                {
-                    ChildFiles = true,
-                    ChildFolders = true,
-                    ThisFolder = true,
-                    AllDescendants = true
+                    OwnerType = "group",
+                    OwnerName = "http",
+                    PermissionType = "allow",
+                    Permission = new()
+                    {
+                        ReadData = true,
+                        WriteData = true,
+                        ExeFile = true,
+                        AppendData = true,
+                        Delete = true,
+                        DeleteSub = true,
+                        ReadAttr = true,
+                        WriteAttr = true,
+                        ReadExtAttr = true,
+                        WriteExtAttr = true,
+                        ReadPerm = true,
+                        ChangePerm = false,
+                        TakeOwnership = false
+                    },
+                    Inherit = new()
+                    {
+                        ChildFiles = true,
+                        ChildFolders = true,
+                        ThisFolder = true,
+                        AllDescendants = true
+                    }
                 }
-            }
-        ];
+            ]
+        };
+
+        var parameters = new CoreAclSetParameters(apiClient.ApiInformations, aclSet);
 
         var response = await apiClient.ExecuteAsync<CoreAclSetResponse>(parameters);
 
@@ -142,10 +146,14 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
 
     private async Task<List<FileStationShare>> ExecuteFileStationListShareAsync()
     {
-        var parameters = new FileStationListShareParameters(apiClient.ApiInformations);
-        parameters.Parameters.Additional = FileStationDefaults.AdditionalPathSizeTimeFields;
-        parameters.Parameters.SortBy = FileStationDefaults.SortByName;
-        parameters.Parameters.SortDirection = FileStationDefaults.SortDirectionAsc;
+        var entry = new FileStationListShare
+        {
+            Additional = FileStationDefaults.AdditionalPathSizeTimeFields,
+            SortBy = FileStationDefaults.SortByName,
+            SortDirection = FileStationDefaults.SortDirectionAsc
+        };
+
+        var parameters = new FileStationListShareParameters(apiClient.ApiInformations, entry);
 
         var response = await apiClient.ExecuteAsync<FileStationListShareResponse>(parameters);
 
@@ -159,14 +167,17 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
 
     private async Task<List<FileStationFile>> ExecuteFileStationListAsync(string path, string pattern, string fileType)
     {
-        var parameters = new FileStationListParameters(apiClient.ApiInformations);
-        parameters.Parameters.FolderPath = path;
-        parameters.Parameters.Additional = FileStationDefaults.AdditionalPathSizeTimeFields;
-        parameters.Parameters.SortBy = FileStationDefaults.SortByName;
-        parameters.Parameters.SortDirection = FileStationDefaults.SortDirectionAsc;
+        var entry = new FileStationList
+        {
+            FolderPath = path,
+            Additional = FileStationDefaults.AdditionalPathSizeTimeFields,
+            SortBy = FileStationDefaults.SortByName,
+            SortDirection = FileStationDefaults.SortDirectionAsc,
+            Pattern = !String.IsNullOrEmpty(pattern) ? pattern : FileStationDefaults.PatternAll,
+            FileType = !String.IsNullOrEmpty(fileType) ? fileType : FileStationDefaults.TypeAll
+        };
 
-        parameters.Parameters.Pattern = !String.IsNullOrEmpty(pattern) ? pattern : FileStationDefaults.PatternAll;
-        parameters.Parameters.FileType = !String.IsNullOrEmpty(fileType) ? fileType : FileStationDefaults.TypeAll;
+        var parameters = new FileStationListParameters(apiClient.ApiInformations, entry);
 
         var response = await apiClient.ExecuteAsync<FileStationListResponse>(parameters);
 

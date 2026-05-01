@@ -118,8 +118,9 @@ The AI assistant MUST use an **inference-based approach** rather than hardcoded 
 
 1. **FIRST ACTION:** Say Hello briefly
 2. **ACKNOWLEDGE:** List standards by extracting them from AGENTS.md (not hardcoded)
-3. **APPLY:** Use all extracted directives throughout the session
-4. **DOCUMENTATION CHECK:** Before creating any docs, verify if they belong in `docs/ai/`
+3. **DISPLAY MEMORIES:** Show all recorded memories from the memory system (loaded at session start)
+4. **APPLY:** Use all extracted directives throughout the session
+5. **DOCUMENTATION CHECK:** Before creating any docs, verify if they belong in `docs/ai/`
 
 **Benefits:**
 
@@ -213,6 +214,32 @@ var configuration = CreateConfiguration(
     environment: Environment.Production,
     settings: new Settings { DebugMode = false }
 );
+```
+
+**Method Declarations (MANUAL CHECK REQUIRED):**
+Declarations with **≤ 4 parameters** should be on a single line unless the total line length exceeds **200 characters**:
+
+```csharp
+// ✅ Single-line — 3 params, fits within 200 chars
+public async Task<ApiResult> StopWebsiteAsync(Guid id)
+
+// ✅ Single-line — 4 params, fits within 200 chars
+public async Task<ApiResultData<T>> FindByCompositeKeyAsync(long paramOne, long paramTwo, long paramThree, CancellationToken cancellationToken)
+
+// ✅ Multi-line — exceeds 200 characters despite ≤ 4 params
+public async Task<ApiResultData<SomeVeryLongTypeNameHere>> ExecuteComplexOperationWithDetailedName(
+    SomeOtherLongType firstParameterName,
+    YetAnotherLongType secondParameterName,
+    CancellationToken cancellationToken)
+
+// ✅ Multi-line — more than 4 params regardless of line length
+public async Task<Result> CreateWebsiteAsync(
+    string name,
+    Guid id,
+    int port,
+    string path,
+    bool enableSsl,
+    CancellationToken cancellationToken)
 ```
 
 **Logging Statements (MANUAL CHECK REQUIRED):**
@@ -432,6 +459,7 @@ After EVERY code modification, you MUST:
 - [ ] Use constants from `Askyl.Dsm.WebHosting.Constants` (create if needed)
 - [ ] Write all logger calls on a single line
 - [ ] Add blank lines before/after control flow (not inside blocks)
+- [ ] Method declarations with ≤ 4 params on one line (unless > 200 chars)
 - [ ] Comments ONLY in English
 - [ ] Messages ONLY in English
 - [ ] Apply all architectural guidelines from `docs/ai/technical-architecture.md`
@@ -444,6 +472,7 @@ After EVERY code modification, you MUST:
 - [ ] Verify no magic strings remain (MANUAL CHECK)
 - [ ] Verify single-line logging (MANUAL CHECK)
 - [ ] Verify control flow blank lines (MANUAL CHECK)
+- [ ] Verify method declarations with ≤ 4 params are on one line (unless > 200 chars) (MANUAL CHECK)
 - [ ] Validate English-only comments
 - [ ] Ensure successful build with no errors or warnings
 - [ ] Run `markdownlint <file-path>` and fix ALL errors (for .md file changes)
@@ -455,6 +484,7 @@ After EVERY code modification, you MUST:
 - [ ] No magic strings/numbers in code (MANUAL)
 - [ ] Single-line logging format (MANUAL)
 - [ ] Control flow blank lines correct (MANUAL)
+- [ ] Method declarations with ≤ 4 params on one line (unless > 200 chars) (MANUAL)
 - [ ] Markdown validation passed (`markdownlint`) - for .md files
 - [ ] All comments/messages in English
 - [ ] FluentUI requirements met (for UI code)

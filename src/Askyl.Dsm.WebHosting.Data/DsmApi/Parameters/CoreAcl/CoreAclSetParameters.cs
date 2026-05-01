@@ -4,7 +4,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreAcl;
 
-public class CoreAclSetParameters(ApiInformationCollection informations) : ApiParametersBase<CoreAclSet>(informations)
+public class CoreAclSetParameters(ApiInformationCollection informations, CoreAclSet? entry = null) : ApiParametersBase<CoreAclSet>(informations, entry)
 {
     public override string Name => ApiNames.CoreAcl;
 

@@ -1,13 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Network;
-using Askyl.Dsm.WebHosting.Data.Patterns;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
-[GenerateClone]
-public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
+public sealed class WebSiteConfiguration
 {
     #region General
 
@@ -40,9 +37,6 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
     public bool IsEnabled { get; set; } = true;
 
     public bool AutoStart { get; set; } = true;
-
-    [Range(0, int.MaxValue, ErrorMessage = "Process timeout must be between 0 and maximum integer value.")]
-    public int ProcessTimeoutSeconds { get; set; } = 60;
 
     public Dictionary<string, string> AdditionalEnvironmentVariables { get; set; } = [];
 

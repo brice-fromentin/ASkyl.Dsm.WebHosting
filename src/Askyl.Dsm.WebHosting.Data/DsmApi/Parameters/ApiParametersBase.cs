@@ -6,13 +6,15 @@ using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Data.Attributes;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
-using Askyl.Dsm.WebHosting.Data.Patterns;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 
-[GenerateClone]
-public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGenericCloneable<T>, new()
+/// <summary>
+/// Base class for DSM API request parameters.
+/// T is expected to be a record with init setters (immutable after construction).
+/// No cloning needed — init setters prevent mutation.
+/// </summary>
+public abstract class ApiParametersBase<T> : IApiParameters where T : class, new()
 {
     private ApiParametersBase() => throw new NotImplementedException();
 
@@ -28,7 +30,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, IGe
         }
 
         Path = infos.Path;
-        Parameters = (entry is null) ? new() : entry.Clone();
+        Parameters = entry ?? new();
     }
 
     private static ApiInformation CreateDefaultHandshakeInfo()

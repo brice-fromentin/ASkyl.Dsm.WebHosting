@@ -1,26 +1,26 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
+
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-[GenerateClone]
-public partial class FileStationCopyMove
+
+public record FileStationCopyMove
 {
     [JsonPropertyName("path")]
-    public List<string> Paths { get; set; } = [];
+    public List<string> Paths { get; init; } = [];
 
     [JsonPropertyName("dest_folder_path")]
-    public string DestFolderPath { get; set; } = default!;
+    public string DestFolderPath { get; init; } = default!;
 
     [JsonPropertyName("overwrite")]
-    public bool? Overwrite { get; set; } = false;
+    public bool? Overwrite { get; init; } = false;
 
     [JsonPropertyName("remove_src")]
-    public bool? RemoveSource { get; set; } = false; // true for move, false for copy
+    public bool? RemoveSource { get; init; } = false; // true for move, false for copy
 
     [JsonPropertyName("accurate_progress")]
-    public bool? AccurateProgress { get; set; } = false;
+    public bool? AccurateProgress { get; init; } = false;
 
     [JsonPropertyName("search_taskid")]
-    public string? SearchTaskId { get; set; }
+    public string? SearchTaskId { get; init; }
 }

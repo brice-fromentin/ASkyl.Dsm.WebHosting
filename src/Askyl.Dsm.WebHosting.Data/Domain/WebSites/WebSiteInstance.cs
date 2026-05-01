@@ -1,10 +1,8 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
-[GenerateClone]
-public partial class WebSiteInstance
+public sealed class WebSiteInstance
 {
     /// <summary>
     /// Gets the unique identifier for this instance (forwarding property to Configuration.Id).

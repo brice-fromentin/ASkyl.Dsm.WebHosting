@@ -102,15 +102,18 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
 
     private async Task<bool> AuthenticateAsync(LoginCredentials model)
     {
-        var parameters = new AuthenticationLoginParameters(ApiInformations);
+        var login = new AuthenticateLogin
+        {
+            Account = model.Login,
+            Password = model.Password,
+            OtpCode = model.OtpCode
+        };
 
-        parameters.Parameters.Account = model.Login;
-        parameters.Parameters.Password = model.Password;
-        parameters.Parameters.OtpCode = model.OtpCode;
+        var parameters = new AuthenticationLoginParameters(ApiInformations, login);
 
         var response = await ExecuteAsync<SynoLoginResponse>(parameters);
 
-        if (response is null || !response.Success || response.Data is null)
+        if (response?.Success != true || response.Data is null)
         {
             return false;
         }
@@ -140,9 +143,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
     }
 
     public async Task<ApiResponseBase<EmptyResponse>?> ExecuteSimpleAsync(IApiParameters parameters)
-    {
-        return await ExecuteAsync<ApiResponseBase<EmptyResponse>>(parameters);
-    }
+        => await ExecuteAsync<ApiResponseBase<EmptyResponse>>(parameters);
 
     private async Task<R?> ExecuteFormAsync<R>(string url, IApiParameters parameters)
         => await ExecutePostAsync<R>(url, parameters.ToForm());

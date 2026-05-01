@@ -40,7 +40,8 @@
       "Bash(mkdir *)",
       "Bash(markdownlint *)",
       "Bash(sed *)",
-      "Bash(tail *)"
+      "Bash(tail *)",
+      "Bash(true)"
     ],
     "deny": [
       "Bash(git clean -f)",

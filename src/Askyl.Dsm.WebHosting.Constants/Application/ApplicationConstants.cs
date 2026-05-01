@@ -66,14 +66,14 @@ public static class ApplicationConstants
     public const string HttpClientName = "UiClient";
 
     /// <summary>
-    /// HTTP client timeout in seconds.
+    /// HTTP client timeout in seconds. Must exceed DefaultProcessTimeoutSeconds to avoid client-side timeouts during stop operations. SIGTERM + ASP.NET Core drain completes in ~1-3 seconds; 15s provides headroom for the full request/response roundtrip.
     /// </summary>
-    public const int HttpClientTimeoutSeconds = 10;
+    public const int HttpClientTimeoutSeconds = 15;
 
     /// <summary>
-    /// Default process timeout in seconds for graceful shutdown operations.
+    /// Default process timeout in seconds for graceful shutdown operations. ASP.NET Core default shutdown timeout is 5 seconds; 10s provides headroom for custom background service cleanup after SIGTERM.
     /// </summary>
-    public const int DefaultProcessTimeoutSeconds = 60;
+    public const int DefaultProcessTimeoutSeconds = 10;
 
     /// <summary>
     /// Delay in milliseconds to wait after process kill for OS cleanup.
