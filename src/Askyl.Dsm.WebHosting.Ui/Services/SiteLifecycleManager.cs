@@ -219,11 +219,9 @@ public sealed class SiteLifecycleManager : IDisposable
             return WebSiteRuntimeState.Stopped;
         }
 
-        var processInfo = new ProcessInfo(_process.Id, !_process.HasExited);
+        var processInfo = new ProcessInfo(_process.Id);
 
-        return processInfo.IsResponding
-            ? WebSiteRuntimeState.Running(processInfo)
-            : WebSiteRuntimeState.NotResponding(processInfo);
+        return WebSiteRuntimeState.Running(processInfo);
     }
 
     private async Task ProcessDisposeCommand()

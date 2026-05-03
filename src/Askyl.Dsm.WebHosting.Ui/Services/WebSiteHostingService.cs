@@ -19,7 +19,7 @@ public class WebSiteHostingService(
 {
     #region Fields
 
-    private readonly ConcurrentDictionary<Guid, WebSiteInstance> _instances = new();
+    private readonly ConcurrentDictionary<Guid, WebSiteInstanceDetails> _instances = new();
     private readonly ConcurrentDictionary<Guid, SiteLifecycleManager> _lifecycleManagers = new();
 
     #endregion
@@ -42,7 +42,7 @@ public class WebSiteHostingService(
                 UpdateInstanceRuntimeState(instance, runtimeState);
             }
 
-            instances.Add(instance);
+            instances.Add(instance); // Serialized as base type — Process excluded
         }
 
         return WebSiteInstancesResult.CreateSuccess(instances);
@@ -241,7 +241,7 @@ public class WebSiteHostingService(
 
         foreach (var site in allSites)
         {
-            var instance = new WebSiteInstance(site);
+            var instance = new WebSiteInstanceDetails(site);
             _instances[instance.Id] = instance;
 
             var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), site);
@@ -261,7 +261,7 @@ public class WebSiteHostingService(
                 .Select(i => StartWebsiteAsync(i.Id)));
 
         var failures = results.Where(r => !r.Success).ToList();
-        if (failures.Count > 0)
+        if (failures.Count != 0)
         {
             logger.LogWarning("{Count} site(s) failed to start: {Failures}", failures.Count, String.Join(", ", failures.Select(f => f.Message)));
         }
@@ -273,7 +273,7 @@ public class WebSiteHostingService(
 
     public async Task<WebSiteInstance> AddInstanceAsync(WebSiteConfiguration configuration)
     {
-        var instance = new WebSiteInstance(configuration);
+        var instance = new WebSiteInstanceDetails(configuration);
         _instances[instance.Id] = instance;
 
         var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), configuration);
@@ -289,7 +289,7 @@ public class WebSiteHostingService(
         return instance;
     }
 
-    public async Task UpdateInstanceAsync(WebSiteInstance instance, WebSiteConfiguration newConfiguration)
+    public async Task UpdateInstanceAsync(WebSiteInstanceDetails instance, WebSiteConfiguration newConfiguration)
     {
         if (!_instances.TryGetValue(instance.Id, out var existingInstance))
         {
@@ -399,7 +399,7 @@ public class WebSiteHostingService(
     /// Updates the runtime state of a WebSiteInstance from WebSiteRuntimeState.
     /// Helper method for synchronizing instance state with lifecycle manager state.
     /// </summary>
-    private static void UpdateInstanceRuntimeState(WebSiteInstance instance, WebSiteRuntimeState runtimeState)
+    private static void UpdateInstanceRuntimeState(WebSiteInstanceDetails instance, WebSiteRuntimeState runtimeState)
     {
         instance.IsRunning = runtimeState.IsRunning;
         instance.Process = runtimeState.ProcessDetails;

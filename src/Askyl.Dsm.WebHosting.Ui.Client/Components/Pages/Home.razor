@@ -135,7 +135,7 @@
         _ = ShowWebSiteConfigurationDialogAsync(instance);
     }
 
-    private async Task AddWebSite() => await ShowWebSiteConfigurationDialogAsync(WebSiteInstance.New());
+    private async Task AddWebSite() => await ShowWebSiteConfigurationDialogAsync(new WebSiteInstance());
 
     private async Task EditWebSite() => await ShowWebSiteConfigurationDialogAsync(SelectedInstance);
 

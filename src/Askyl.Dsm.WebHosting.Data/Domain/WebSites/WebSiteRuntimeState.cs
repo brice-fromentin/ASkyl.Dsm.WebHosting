@@ -17,15 +17,4 @@ public sealed record WebSiteRuntimeState(bool IsRunning, ProcessInfo? ProcessDet
     /// Creates a running state instance with process details.
     /// </summary>
     public static WebSiteRuntimeState Running(ProcessInfo info) => new(true, info, "Running");
-
-    /// <summary>
-    /// Creates a not responding state instance with process details.
-    /// </summary>
-    public static WebSiteRuntimeState NotResponding(ProcessInfo info) => new(true, info, "Not Responding");
-
-    /// <summary>
-    /// Gets whether the process is currently responding to health checks.
-    /// </summary>
-    [JsonIgnore]
-    public bool IsResponding => ProcessDetails?.IsResponding == true;
 }

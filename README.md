@@ -16,6 +16,7 @@ This project has also the following goals :
 
     Macro
         - Certificates management for the reverse proxy configurations.
+        - Support Web Station integration. 
         - Check required .NET version when configuraring an application.
         - Route applications stdout and errout to downloadable logs.
         - Support deploying from a compressed file.

@@ -364,6 +364,7 @@ These require manual verification BEFORE responding:
 
 4. **Target-Typed `new` Expressions** (MANUAL CHECK)
    - Use target-typed `new` when type can be inferred: `new(1, 1)` instead of `new SemaphoreSlim(1, 1)`
+   - **Exception:** When the variable name already includes the type name (e.g., `lockInstance` for `SemaphoreLock`), `var` is acceptable — the type is already evident
    - Applies to: local variables, fields, auto-properties, explicit interface implementations
    - Note: Analyzers (IDE0295/RCS1187) don't catch all cases (e.g., explicit interface properties), so manual verification is required
 

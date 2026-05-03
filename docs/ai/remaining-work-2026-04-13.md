@@ -1,7 +1,7 @@
 # ASkyl.Dsm.WebHosting - Remaining Work & Technical Debt
 
 **Created:** April 13, 2026
-**Last Updated:** April 18, 2026
+**Last Updated:** May 3, 2026
 **Previous Documents Superseded:**
 
 - `code-review-reconciled-2026-04-09.md` (deleted)
@@ -9,14 +9,18 @@
 - `code-review-2026-04-16.md` (deleted - completed)
 - `primary-constructor-usage-report-2026-04-15.md` (deleted - completed)
 
-**Current State:** All Phases 1-11 Complete ✅ | Items 1.3, 2.1, 2.2, 3.1, 3.3 Complete ✅
+**Current State:** All Phases 1-15 Complete ✅ | Items 1.3, 2.1, 2.2, 3.1, 3.2, 3.3 Complete ✅
 **Security Score:** ⭐⭐⭐⭐☆ (4.0/5) - Production Ready
-**Version:** 0.5.4
+**Version:** 0.5.5
 
 **Update (April 18, 2026):** Primary constructor migration completed across all
 server-side services (LogDownloadService, AuthenticationService,
 FrameworkManagementService). PlatformInfoService intentionally kept as traditional
 constructor due to initialization complexity.
+
+**Update (May 3, 2026):** WebSiteHostingService simplification completed via
+`SiteLifecycleManager` channel-based rewrite. Constants split into dedicated
+`WebSiteConstants.cs`. Per-site `ProcessTimeoutSeconds` restored.
 
 ---
 
@@ -36,89 +40,39 @@ They are organized by category for future implementation planning.
 
 | Category | Items | Impact Level |
 |----------|-------|--------------|
-| **Architecture & Design Patterns** | 1 remaining (IEquatable removed) | Low - Code quality improvements |
+| **Architecture & Design Patterns** | 0 remaining (IEquatable removed, State Machine superseded) | Low - Code quality improvements |
 | **Performance & Efficiency** | 0 remaining (1 of 1 complete) | Low - Minor optimizations |
-| **Code Quality & Consistency** | 1 remaining (2 of 3 complete) | Low - Maintainability improvements |
+| **Code Quality & Consistency** | 0 remaining (3 of 3 complete) | Low - Maintainability improvements |
 | **Future Enhancements** | 3 | Medium - Strategic improvements |
-| **Total** | **5 items remaining** | **None block production** |
+| **Total** | **3 items remaining** | **None block production** |
 
 ---
 
 ## 1. Architecture & Design Patterns
 
-### 1.1 State Machine Pattern for Site Lifecycle Management
+### 1.1 ~~State Machine Pattern for Site Lifecycle Management~~ ✅ **SUPERSEDED**
 
-**Source:** April 8 Report #17  
-**Severity:** Nice to Have  
-**Files Affected:** `Ui/Services/WebSiteHostingService.cs`
+**Completed:** May 3, 2026
+**Source:** April 8 Report #17
+**Severity:** Nice to Have
+**Files Affected:** `Data/Domain/WebSites/WebSiteInstance.cs`, `WebSiteInstanceDetails.cs`
 
-**Problem:**
+**Status:** Superseded by inheritance-based separation of client/server concerns.
 
-The website lifecycle currently uses boolean flags and string-based state
-checks (`IsRunning`, `State` property). This can lead to invalid state
-transitions (e.g., starting an already-running site) and makes the state logic
-harder to reason about.
+**Approach Taken:**
 
-**Current Approach:**
+Instead of a state machine, the team adopted a cleaner separation:
 
-```csharp
-public string State => Process?.IsResponding == true ? "Running" :
-                       Process == null ? (IsRunning ? "Running" : "Stopped") : "Not Responding";
-```
+- `WebSiteInstance` — concrete base class, client-facing, JSON serializable (no `Process`)
+- `WebSiteInstanceDetails : WebSiteInstance` — sealed derived class, server-only, adds `ProcessInfo? Process`
 
-**Proposed Solution:**
+**Benefits (Already Realized):**
 
-Implement a proper state machine with defined transitions:
-
-```csharp
-public enum SiteState
-{
-    Stopped,
-    Starting,
-    Running,
-    Stopping,
-    NotResponding,
-    Error
-}
-
-public class SiteStateMachine
-{
-    private SiteState _currentState = SiteState.Stopped;
-
-    public bool CanTransition(SiteState targetState) => (_currentState, targetState) switch
-    {
-        (SiteState.Stopped, SiteState.Starting) => true,
-        (SiteState.Starting, SiteState.Running) => true,
-        (SiteState.Running, SiteState.Stopping) => true,
-        (SiteState.Running, SiteState.NotResponding) => true,
-        (SiteState.Stopping, SiteState.Stopped) => true,
-        (SiteState.NotResponding, SiteState.Stopping) => true,
-        (SiteState.Error, SiteState.Stopped) => true,
-        _ => false
-    };
-
-    public async Task TransitionAsync(SiteState targetState, Func<Task> action)
-    {
-        if (!CanTransition(targetState))
-        {
-            throw new InvalidOperationException($"Cannot transition from {_currentState} to {targetState}");
-        }
-
-        _currentState = targetState;
-        await action();
-    }
-}
-```
-
-**Benefits:**
-
-- Prevents invalid state transitions
-- Clear documentation of allowed transitions
-- Easier to add new states (e.g., `Updating`, `Migrating`)
-- Thread-safe state management
-
-**Estimated Effort:** 2-3 hours  
-**Risk:** Low - Internal refactoring, no API changes
+- No `[JsonIgnore]` hack — client type simply has no `Process` property
+- Server mutates `WebSiteInstanceDetails` internally; client receives base type
+- Clear boundary between client-facing and server-only state
+- `State` property simplified to `IsRunning ? "Running" : "Stopped"` (no dead code)
+- "Not Responding" state removed (unreachable on Linux/DSM target platform)
 
 ---
 
@@ -390,62 +344,30 @@ Searched entire codebase for naming patterns:
 
 ---
 
-### 3.2 Over-Engineering in WebSiteHostingService State Management
+### 3.2 ~~Over-Engineering in WebSiteHostingService State Management~~ ✅ **COMPLETE**
 
-**Source:** April 6 Report (Nice to Have)  
-**Severity:** Nice to Have  
-**Files Affected:** `Ui/Services/WebSiteHostingService.cs`
+**Completed:** May 3, 2026
+**Source:** April 6 Report (Nice to Have)
+**Severity:** Nice to Have
+**Files Affected:** `Ui/Services/WebSiteHostingService.cs`, `Ui/Services/SiteLifecycleManager.cs`
 
-**Problem:**
+**Status:** Resolved by the `SiteLifecycleManager` channel-based rewrite (May 1, 2026).
 
-The `WebSiteHostingService` maintains complex state management with multiple dictionaries, flags, and manual synchronization. This could be simplified.
+**Current Implementation (Post-Rewrite):**
 
-**Current Complexity:**
+The `WebSiteHostingService` was significantly simplified by delegating per-site process lifecycle to `SiteLifecycleManager`:
 
-- `ConcurrentDictionary<Guid, WebSiteInstance> _instances`
-- Manual process tracking
-- Multiple boolean flags per instance
-- String-based state computation
+- Process management (~200 lines) extracted to `SiteLifecycleManager`
+- Channel-based command queue eliminates semaphore-based concurrency
+- `WebSiteHostingService` now manages instances and lifecycle managers via `ConcurrentDictionary`
+- No manual process tracking, no TOCTOU races, no `ObjectDisposedException` boilerplate
 
-**Proposed Solution:**
+**Benefits (Already Realized):**
 
-Simplify by:
-
-1. Using the state machine from **Section 1.1**
-2. Encapsulating process tracking in a `SiteInstanceManager` class
-3. Reducing public API surface
-
-```csharp
-public class SiteInstanceManager
-{
-    private readonly WebSiteConfiguration _configuration;
-    private readonly SiteStateMachine _stateMachine;
-    private Process? _process;
-
-    public SiteInstanceManager(WebSiteConfiguration configuration)
-    {
-        _configuration = configuration;
-        _stateMachine = new SiteStateMachine();
-    }
-
-    public async Task StartAsync() => await _stateMachine.TransitionAsync(
-        SiteState.Starting,
-        async () => { /* start process */ });
-
-    public async Task StopAsync() => await _stateMachine.TransitionAsync(
-        SiteState.Stopping,
-        async () => { /* stop process */ });
-}
-```
-
-**Benefits:**
-
-- Cleaner separation of concerns
-- Easier to test individual components
-- Less cognitive complexity
-
-**Estimated Effort:** 3-4 hours  
-**Risk:** Medium - Refactoring core service, requires thorough testing
+- ~200 lines removed from `WebSiteHostingService`
+- Single consumer loop in `SiteLifecycleManager` serializes all operations
+- Clean separation: service orchestrates, manager executes
+- Thread-safe by design (channel serialization)
 
 ---
 
@@ -683,6 +605,7 @@ For historical context, all completed phases are documented here:
 | **Phase 12** | ❌ Reverted | BrowserHttp logging - too complex for use case | April 10, 2026 |
 | **Phase 13** | ✅ Complete | Primary constructor migration (LogDownloadService, AuthenticationService, FrameworkManagementService) | April 18, 2026 |
 | **Phase 14** | ✅ Complete | Code review resolutions (IEquatable removal, pattern matching improvements) | April 16, 2026 |
+| **Phase 15** | ✅ Complete | Constants split, ProcessTimeoutSeconds, inheritance (WebSiteInstanceDetails), code review fixes | May 3, 2026 |
 
 ---
 
@@ -713,8 +636,9 @@ All blocking issues are resolved. Solution is production-ready.
 | **1.3 SemaphoreLock Exception Preservation** | 30 minutes | Low - Better debugging | Implement during threading work |
 | **2.1 Unnecessary Allocations** | 30 minutes | Low - Micro-optimization | Implement during performance work |
 | **3.1 Naming Conventions** | 1-2 hours | Low - Consistency | Implement during major refactor |
-| **3.2 WebSiteHostingService Simplification** | 3-4 hours | Medium - Complexity reduction | Implement with state machine (1.1) |
-| **3.3 Razor Exception Logging** | 1 hour | Low - Better diagnostics | Implement during UI work |
+| **4.1 Security Integration Tests** | 4-6 hours | High - Prevents regression | Before next release |
+| **4.2 Configuration Versioning** | 2-3 hours | Medium - Schema evolution | Before schema changes |
+| **4.3 Health Check Endpoint** | 1-2 hours | Medium - Monitoring | Before production deploy |
 
 ---
 
@@ -769,6 +693,6 @@ markdownlint docs/ai/remaining-work-2026-04-13.md
 ---
 
 **Document Created:** April 13, 2026
-**Last Updated:** April 18, 2026
+**Last Updated:** May 3, 2026
 **Next Review:** After implementing any items or before next major release
 **Maintained By:** Qwen Code

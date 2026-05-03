@@ -1,8 +1,8 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.4
+**Version:** 0.5.5
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 1, 2026 (Source generator removed — 41 classes converted to records, SiteLifecycleManager channel rewrite — 11 issues resolved)
+**Last Updated:** May 3, 2026 (Constants split into WebSiteConstants, per-site ProcessTimeoutSeconds restored — issue 5 resolved)
 
 ---
 
@@ -103,11 +103,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.4</Version>
-<AssemblyVersion>0.5.4.0</AssemblyVersion>
-<FileVersion>0.5.4.0</FileVersion>
-<InformationalVersion>0.5.4</InformationalVersion>
-<PackageVersion>0.5.4</PackageVersion>
+<Version>0.5.5</Version>
+<AssemblyVersion>0.5.5.0</AssemblyVersion>
+<FileVersion>0.5.5.0</FileVersion>
+<InformationalVersion>0.5.5</InformationalVersion>
+<PackageVersion>0.5.5</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
