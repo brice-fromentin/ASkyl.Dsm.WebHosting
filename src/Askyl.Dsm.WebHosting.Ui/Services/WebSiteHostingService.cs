@@ -446,7 +446,7 @@ public class WebSiteHostingService(
         }
 
         // Determine if the target is a directory (if ApplicationPath ends with .dll, set permissions on parent directory)
-        var isDirectory = !configuration.ApplicationRealPath.EndsWith(ApplicationConstants.DllFileExtension, StringComparison.OrdinalIgnoreCase);
+        var isDirectory = !configuration.ApplicationRealPath.EndsWith(WebSiteConstants.DllFileExtension, StringComparison.OrdinalIgnoreCase);
 
         logger.LogDebug("Setting HTTP group permissions for '{SiteName}' at path: {Path} (IsDirectory: {IsDirectory})", configuration.Name, configuration.ApplicationRealPath, isDirectory);
 

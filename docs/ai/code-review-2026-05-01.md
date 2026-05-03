@@ -53,17 +53,16 @@ for isolated process lifecycle management, and significantly simplifies
 - **Status:** ✅ Fixed — replaced manual 11-property copy with `proxy with { ... }`
   expression. Build verified clean.
 
-#### 5. `ProcessTimeoutSeconds` removed — default dropped from 60s to 10s
+#### 5. ~~`ProcessTimeoutSeconds` removed — default dropped from 60s to 10s~~ **(FIXED)**
 
-- **File:** `WebSiteConfiguration.cs` (property removed), `ApplicationConstants.cs:73`
+- **File:** `WebSiteConfiguration.cs`, `ApplicationConstants.cs`, `SiteLifecycleManager.cs`, `WebSiteConfigurationDialog.razor`
 - **Source:** [review]
-- **Issue:** Per-site `ProcessTimeoutSeconds` removed. Global default changed
-  60→10s. Existing persisted configs with custom timeout silently ignored.
-- **Impact:** Applications needing >10s for graceful shutdown will be
-  force-killed prematurely.
-- **Suggested fix:** Retain per-site property with fallback to constant, or
-  document as breaking change.
-- **Severity:** Suggestion
+- **Status:** ✅ Fixed — restored as `int` (default-initialized to 10s).
+  Added Min/Max constants (10–120s, Min equals Default), `[Range]` validation
+  attribute, and `RealTimeNumberField` in UI dialog with real-time binding.
+  `SiteLifecycleManager` uses value directly (no fallback logic).
+  Existing configs deserialize missing field to default 10s. No migration required.
+  Build verified clean.
 
 #### 6. `ProcessInfo.IsResponding` regression — "Not Responding" unreachable
 
@@ -120,9 +119,10 @@ for isolated process lifecycle management, and significantly simplifies
 
 ## Verdict
 
-**Approve** — all Critical issues resolved, Suggestions remain
-(optional improvements):
+**Approve** — all Critical issues resolved, remaining Suggestions are
+optional improvements:
 
 1. ~~Spurious restarts from `SequenceEqual` on dictionaries~~ ✅ Fixed
 2. ~~Concurrency races (disposed manager + unsynchronized Dispose)~~ ✅ Fixed
    (channel rewrite)
+3. ~~`ProcessTimeoutSeconds` removed (60→10s default)~~ ✅ Fixed (per-site `int?` with fallback)

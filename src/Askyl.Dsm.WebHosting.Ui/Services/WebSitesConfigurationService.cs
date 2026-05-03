@@ -17,7 +17,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
 
     #region Fields
 
-    private readonly string _configurationFilePath = Path.Combine(AppContext.BaseDirectory, ApplicationConstants.WebSitesConfigFileName);
+    private readonly string _configurationFilePath = Path.Combine(AppContext.BaseDirectory, WebSiteConstants.ConfigurationFileName);
 
     private WebSitesConfiguration? _cachedConfiguration;
 

@@ -183,19 +183,20 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 ### 1. Askyl.Dsm.WebHosting.Constants
 
-**Purpose:** Centralized constants, defaults, and enums for the entire solution (26 source files, ~160+ constants)
+**Purpose:** Centralized constants, defaults, and enums for the entire solution (27 source files, ~160+ constants)
 
 **Complete Inventory:**
 
 ```text
 
 Constants/
-├── Application/                            # Application-wide constants (5 files)
-│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, validation messages
+├── Application/                            # Application-wide constants (6 files)
+│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session, auth messages
 │   ├── DotnetInfoParserConstants.cs        # dotnet --info section headers and framework identifiers
 │   ├── InfrastructureConstants.cs          # Directory names (Downloads)
 │   ├── LicenseConstants.cs                 # License file management
-│   └── LogConstants.cs                     # Log directory and file paths
+│   ├── LogConstants.cs                     # Log directory and file paths
+│   └── WebSiteConstants.cs                 # Website config, process lifecycle, port validation
 ├── DSM/                                    # Synology DSM-specific constants (8 files)
 │   ├── API/                                # API-related constants
 │   │   ├── ApiMethods.cs                   # CRUD operation names (Create, Get, List, etc.)
@@ -234,7 +235,8 @@ Constants/
 
 | Category | Key Constants | Count |
 |----------|---------------|-------|
-| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), Port range (1024-65535) | ~50 |
+| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), Session | ~35 |
+| **Websites** | Process timeouts, port range (1024-65535), environment vars, validation messages | ~25 |
 | **DSM APIs** | 19 API names, CRUD methods, version ranges, error codes | ~35 + 1 enum |
 | **FileStation** | Listing patterns, compression level (6), pagination (100 limit) | ~15 |
 | **Network** | Cookie header ("Cookie"), SSID prefix ("_SSID="), localhost | 6 + 1 enum |

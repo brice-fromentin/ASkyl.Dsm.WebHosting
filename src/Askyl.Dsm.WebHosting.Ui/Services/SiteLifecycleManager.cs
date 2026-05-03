@@ -236,7 +236,7 @@ public sealed class SiteLifecycleManager : IDisposable
             try
             {
                 _process.Kill();
-                await Task.Delay(ApplicationConstants.ProcessKillCleanupDelayMs);
+                await Task.Delay(WebSiteConstants.ProcessKillCleanupDelayMs);
             }
             catch (Exception ex)
             {
@@ -264,8 +264,11 @@ public sealed class SiteLifecycleManager : IDisposable
 
         ProcessTerminator.SendGracefulShutdownSignal(process);
 
+        int timeoutSeconds = _configuration.ProcessTimeoutSeconds;
+        _logger.LogInformation("Site '{SiteName}' sent SIGTERM (timeout {Timeout}s)", _configuration.Name, timeoutSeconds);
+
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(ApplicationConstants.DefaultProcessTimeoutSeconds * 1000);
+        timeoutCts.CancelAfter(timeoutSeconds * 1000);
 
         try
         {
@@ -290,7 +293,7 @@ public sealed class SiteLifecycleManager : IDisposable
         try
         {
             process.Kill();
-            await Task.Delay(ApplicationConstants.ProcessKillCleanupDelayMs, cancellationToken);
+            await Task.Delay(WebSiteConstants.ProcessKillCleanupDelayMs, cancellationToken);
         }
         catch (Exception killEx)
         {
@@ -305,7 +308,7 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = ApplicationConstants.DotnetExecutable,
+            FileName = WebSiteConstants.DotnetExecutable,
             Arguments = _configuration.ApplicationRealPath,
             WorkingDirectory = Path.GetDirectoryName(_configuration.ApplicationRealPath)!,
             UseShellExecute = false,
@@ -314,8 +317,8 @@ public sealed class SiteLifecycleManager : IDisposable
             CreateNoWindow = true
         };
 
-        startInfo.Environment[ApplicationConstants.AspNetCoreUrlsEnvironmentVariable] = $"http://localhost:{_configuration.InternalPort}";
-        startInfo.Environment[ApplicationConstants.AspNetCoreEnvironmentVariable] = _configuration.Environment;
+        startInfo.Environment[WebSiteConstants.AspNetCoreUrlsEnvironmentVariable] = $"http://localhost:{_configuration.InternalPort}";
+        startInfo.Environment[WebSiteConstants.AspNetCoreEnvironmentVariable] = _configuration.Environment;
 
         foreach (var envVar in _configuration.AdditionalEnvironmentVariables)
         {

@@ -46,6 +46,8 @@
                     <FluentValidationMessage For="@(() => Configuration.InternalPort)" />
                 </FluentStack>
             </FluentStack>
+            <RealTimeNumberField @bind-Value="Configuration.ProcessTimeoutSeconds" Label="Shutdown Timeout (seconds)" Class="full-size" />
+            <FluentValidationMessage For="@(() => Configuration.ProcessTimeoutSeconds)" />
             <FluentCheckbox @bind-Value="Configuration.IsEnabled" Label="Enabled" />
             <FluentCheckbox @bind-Value="Configuration.AutoStart" Label="Auto Start" />
 

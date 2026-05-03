@@ -14,7 +14,7 @@ public sealed class WebSiteConfiguration
     /// </summary>
     public Guid Id { get; set; } = Guid.Empty;
 
-    [Required(ErrorMessage = ApplicationConstants.SiteNameRequiredErrorMessage)]
+    [Required(ErrorMessage = WebSiteConstants.SiteNameRequiredErrorMessage)]
     [StringLength(100, MinimumLength = 1, ErrorMessage = "Site name cannot be empty and must be 100 characters or less.")]
     public string Name { get; set; } = "";
 
@@ -22,21 +22,27 @@ public sealed class WebSiteConfiguration
 
     #region Application
 
-    [Required(ErrorMessage = ApplicationConstants.ApplicationPathRequiredErrorMessage)]
+    [Required(ErrorMessage = WebSiteConstants.ApplicationPathRequiredErrorMessage)]
     public string ApplicationPath { get; set; } = "";
 
     public string ApplicationRealPath { get; set; } = "";
 
-    [Required(ErrorMessage = ApplicationConstants.PortRequiredErrorMessage)]
-    [Range(ApplicationConstants.MinWebApplicationPort, ApplicationConstants.MaxWebApplicationPort, ErrorMessage = ApplicationConstants.PortRangeErrorMessage)]
-    public int InternalPort { get; set; } = ApplicationConstants.MinWebApplicationPort;
+    [Required(ErrorMessage = WebSiteConstants.PortRequiredErrorMessage)]
+    [Range(WebSiteConstants.MinWebApplicationPort, WebSiteConstants.MaxWebApplicationPort, ErrorMessage = WebSiteConstants.PortRangeErrorMessage)]
+    public int InternalPort { get; set; } = WebSiteConstants.MinWebApplicationPort;
 
-    [Required(ErrorMessage = ApplicationConstants.EnvironmentRequiredErrorMessage)]
-    public string Environment { get; set; } = ApplicationConstants.DefaultEnvironment;
+    [Required(ErrorMessage = WebSiteConstants.EnvironmentRequiredErrorMessage)]
+    public string Environment { get; set; } = WebSiteConstants.DefaultEnvironment;
 
     public bool IsEnabled { get; set; } = true;
 
     public bool AutoStart { get; set; } = true;
+
+    /// <summary>
+    /// Graceful shutdown timeout in seconds. Defaults to <c>WebSiteConstants.DefaultProcessTimeoutSeconds</c> (10s).
+    /// </summary>
+    [Range(WebSiteConstants.MinProcessTimeoutSeconds, WebSiteConstants.MaxProcessTimeoutSeconds, ErrorMessage = WebSiteConstants.ProcessTimeoutRangeErrorMessage)]
+    public int ProcessTimeoutSeconds { get; set; } = WebSiteConstants.DefaultProcessTimeoutSeconds;
 
     public Dictionary<string, string> AdditionalEnvironmentVariables { get; set; } = [];
 
@@ -44,10 +50,10 @@ public sealed class WebSiteConfiguration
 
     #region Reverse Proxy
 
-    [Required(ErrorMessage = ApplicationConstants.HostNameRequiredErrorMessage)]
+    [Required(ErrorMessage = WebSiteConstants.HostNameRequiredErrorMessage)]
     public string HostName { get; set; } = "";
 
-    [Required(ErrorMessage = ApplicationConstants.PortRequiredErrorMessage)]
+    [Required(ErrorMessage = WebSiteConstants.PortRequiredErrorMessage)]
     public int PublicPort { get; set; } = 443;
 
     public ProtocolType Protocol { get; set; } = ProtocolType.HTTPS;

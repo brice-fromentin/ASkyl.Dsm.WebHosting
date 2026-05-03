@@ -2,6 +2,7 @@ namespace Askyl.Dsm.WebHosting.Constants.Application;
 
 /// <summary>
 /// Defines application-specific constants for configuration and settings.
+/// For website hosting constants, see <see cref="WebSiteConstants"/>.
 /// </summary>
 public static class ApplicationConstants
 {
@@ -11,11 +12,6 @@ public static class ApplicationConstants
     /// Default name for the application settings file.
     /// </summary>
     public const string SettingsFileName = "appsettings.json";
-
-    /// <summary>
-    /// Default name for the websites configuration file.
-    /// </summary>
-    public const string WebSitesConfigFileName = "websites.json";
 
     /// <summary>
     /// Configuration key for the download channel version setting.
@@ -29,35 +25,6 @@ public static class ApplicationConstants
 
     #endregion
 
-    #region Environment & Runtime
-
-    /// <summary>
-    /// Default environment for ASP.NET Core applications.
-    /// </summary>
-    public const string DefaultEnvironment = "Production";
-
-    /// <summary>
-    /// Environment variable for ASP.NET Core URLs.
-    /// </summary>
-    public const string AspNetCoreUrlsEnvironmentVariable = "ASPNETCORE_URLS";
-
-    /// <summary>
-    /// Environment variable for ASP.NET Core environment.
-    /// </summary>
-    public const string AspNetCoreEnvironmentVariable = "ASPNETCORE_ENVIRONMENT";
-
-    /// <summary>
-    /// .NET CLI executable name.
-    /// </summary>
-    public const string DotnetExecutable = "dotnet";
-
-    /// <summary>
-    /// The root path for the .NET runtimes directory.
-    /// </summary>
-    public const string RuntimesRootPath = "../runtimes";
-
-    #endregion
-
     #region HTTP Client
 
     /// <summary>
@@ -66,19 +33,18 @@ public static class ApplicationConstants
     public const string HttpClientName = "UiClient";
 
     /// <summary>
-    /// HTTP client timeout in seconds. Must exceed DefaultProcessTimeoutSeconds to avoid client-side timeouts during stop operations. SIGTERM + ASP.NET Core drain completes in ~1-3 seconds; 15s provides headroom for the full request/response roundtrip.
+    /// HTTP client timeout in seconds. Must exceed <see cref="WebSiteConstants.DefaultProcessTimeoutSeconds"/> to avoid client-side timeouts during stop operations. SIGTERM + ASP.NET Core drain completes in ~1-3 seconds; 15s provides headroom for the full request/response roundtrip.
     /// </summary>
     public const int HttpClientTimeoutSeconds = 15;
 
-    /// <summary>
-    /// Default process timeout in seconds for graceful shutdown operations. ASP.NET Core default shutdown timeout is 5 seconds; 10s provides headroom for custom background service cleanup after SIGTERM.
-    /// </summary>
-    public const int DefaultProcessTimeoutSeconds = 10;
+    #endregion
+
+    #region Runtime Path
 
     /// <summary>
-    /// Delay in milliseconds to wait after process kill for OS cleanup.
+    /// The root path for the .NET runtimes directory.
     /// </summary>
-    public const int ProcessKillCleanupDelayMs = 500;
+    public const string RuntimesRootPath = "../runtimes";
 
     #endregion
 
@@ -106,20 +72,6 @@ public static class ApplicationConstants
 
     #endregion
 
-    #region Port Configuration
-
-    /// <summary>
-    /// Minimum port number for web applications (avoiding system services).
-    /// </summary>
-    public const int MinWebApplicationPort = 1024;
-
-    /// <summary>
-    /// Maximum port number for web applications.
-    /// </summary>
-    public const int MaxWebApplicationPort = 65535;
-
-    #endregion
-
     #region Session & Authentication
 
     /// <summary>
@@ -131,49 +83,6 @@ public static class ApplicationConstants
     /// Session idle timeout in minutes.
     /// </summary>
     public const int SessionTimeoutMinutes = 30;
-
-    #endregion
-
-    #region File Extensions
-
-    /// <summary>
-    /// File extension for DLL files.
-    /// </summary>
-    public const string DllFileExtension = ".dll";
-
-    #endregion
-
-    #region Validation Error Messages
-
-    /// <summary>
-    /// Validation error message for required site name.
-    /// </summary>
-    public const string SiteNameRequiredErrorMessage = "Site name is required.";
-
-    /// <summary>
-    /// Validation error message for required application path.
-    /// </summary>
-    public const string ApplicationPathRequiredErrorMessage = "Application path is required.";
-
-    /// <summary>
-    /// Validation error message for required port.
-    /// </summary>
-    public const string PortRequiredErrorMessage = "Port is required.";
-
-    /// <summary>
-    /// Validation error message for port range.
-    /// </summary>
-    public const string PortRangeErrorMessage = "Port must be between 1024 and 65535.";
-
-    /// <summary>
-    /// Validation error message for required environment.
-    /// </summary>
-    public const string EnvironmentRequiredErrorMessage = "Environment is required.";
-
-    /// <summary>
-    /// Validation error message for required host name.
-    /// </summary>
-    public const string HostNameRequiredErrorMessage = "Host name is required.";
 
     #endregion
 
