@@ -1,17 +1,17 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
+
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-[GenerateClone]
-public partial class FileStationDelete
+
+public record FileStationDelete
 {
     [JsonPropertyName("path")]
-    public List<string> Paths { get; set; } = [];
+    public List<string> Paths { get; init; } = [];
 
     [JsonPropertyName("accurate_progress")]
-    public bool? AccurateProgress { get; set; } = false;
+    public bool? AccurateProgress { get; init; } = false;
 
     [JsonPropertyName("recursive")]
-    public bool? Recursive { get; set; } = true;
+    public bool? Recursive { get; init; } = true;
 }

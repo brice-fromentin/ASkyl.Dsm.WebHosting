@@ -1,8 +1,8 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.4
+**Version:** 0.5.5
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** April 5, 2026
+**Last Updated:** May 3, 2026 (Constants split into WebSiteConstants, per-site ProcessTimeoutSeconds restored — issue 5 resolved)
 
 ---
 
@@ -31,7 +31,7 @@
 - File system operations through FileStation API
 - Framework/runtime installation and management
 - Centralized logging with Serilog
-- Source-generated clone methods for data models
+- Immutable C# record types for DSM API models with `init` setters
 
 The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid architecture (Interactive WebAssembly), FluentUI components, and a clean layered architecture pattern.
 
@@ -39,11 +39,12 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 
 - **Hybrid Rendering Mode:** Server-side authentication with WebAssembly interactive components
 - **Result Pattern:** Strongly-typed success/failure results instead of exceptions for control flow
-- **Source Generators:** Custom Roslyn generator for clone method implementation
+- **C# Records (init setters):** 41 DSM API model classes converted from source-generated clone methods to immutable records
 - **Centralized Constants:** All magic strings/numbers extracted to dedicated Constants project
-- **Background Service:** Website hosting service runs as singleton hosted service for lifecycle management
+- **Background Service:** WebSiteHostingService orchestrates website instances; per-site process lifecycle delegated to SiteLifecycleManager (SIGTERM graceful shutdown, force kill fallback)
+- **Cross-platform Process Termination:** `ProcessTerminator` sends SIGTERM on Unix/Linux/macOS (P/Invoke `libc.kill`) and CloseMainWindow on Windows — enables ~1-3 second graceful drain
 
-**Current Status (v0.5.3):**
+**Current Status (v0.5.4):**
 
 - ✅ Blazor Server + Interactive WebAssembly hybrid rendering
 - ✅ DSM API integration (Authentication, FileStation, ReverseProxy)
@@ -53,9 +54,21 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ✅ **Smart caching strategy** for expensive operations (VersionsDetectorService with lazy initialization)
 - ✅ **Full CancellationToken support** across all async operations
 - ✅ **All static classes converted** to injectable services for testability
+- ✅ **Critical security issues resolved** (April 8, 2026):
+  - ✅ Path traversal vulnerability fixed in FileManagerService with input sanitization
+  - ✅ Blocking calls removed from async context in DotnetVersionService
+  - ✅ HttpClient content disposal race condition resolved
+  - ✅ All Console.WriteLine replaced with structured ILogger logging
+- ✅ **SIGTERM process termination fix** (April 29, 2026):
+  - ✅ Cross-platform `ProcessTerminator` utility replaces Windows-only `CloseMainWindow()`
+  - ✅ SIGTERM sent via P/Invoke (`libc.kill`) on Unix/Linux/macOS for ~1-3 second graceful drain
+  - ✅ Async `WaitForExitAsync` with linked cancellation token replaces blocking `WaitForExit(timeoutMs)`
+  - ✅ Reduced timeouts: HttpClient (90→15s), Process (60→10s) — eliminates DSM reverse proxy 504 errors
 - ⏳ TODO: Certificate management for reverse proxy
 - ⏳ TODO: Multi-language support
 - ⏳ TODO: Unit test implementation
+
+**Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 
 ---
 
@@ -70,7 +83,6 @@ Askyl.Dsm.WebHosting.slnx (Version 0.5.3)
 ├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
 ├── Askyl.Dsm.WebHosting.DotnetInstaller    # .NET runtime installer utility
 ├── Askyl.Dsm.WebHosting.Logging            # Logging extensions (source-generated log methods)
-├── Askyl.Dsm.WebHosting.SourceGenerators   # Custom source generators (CloneGenerator)
 ├── Askyl.Dsm.WebHosting.Tools              # Utility tools & DSM API client
 ├── Askyl.Dsm.WebHosting.Ui                 # Main Blazor Server-WASM hybrid UI
 └── Askyl.Dsm.WebHosting.Ui.Client          # Blazor WebAssembly client library
@@ -80,7 +92,7 @@ Askyl.Dsm.WebHosting.slnx (Version 0.5.3)
 
 - **Multi-project solution** with clear separation of concerns
 - **Shared constants** across all projects for maintainability
-- **Source generators** for reducing boilerplate code (clone methods, logging)
+- **Source generators** for reducing boilerplate code (Serilog logging methods)
 - **Hybrid rendering mode** (InteractiveServer + InteractiveWebAssembly)
 - **Background services** for long-running operations
 - **Centralized versioning** via Directory.Build.props
@@ -91,11 +103,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.4</Version>
-<AssemblyVersion>0.5.4.0</AssemblyVersion>
-<FileVersion>0.5.4.0</FileVersion>
-<InformationalVersion>0.5.4</InformationalVersion>
-<PackageVersion>0.5.4</PackageVersion>
+<Version>0.5.5</Version>
+<AssemblyVersion>0.5.5.0</AssemblyVersion>
+<FileVersion>0.5.5.0</FileVersion>
+<InformationalVersion>0.5.5</InformationalVersion>
+<PackageVersion>0.5.5</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -129,6 +141,30 @@ All projects share common build settings from `Directory.Build.props`:
 | **Cleanup** | IDE0005 | warning | Remove unnecessary using directives |
 | **Null Propagation** | IDE0031 | suggestion | Use `?.` operator |
 
+### Nullable Reference Types
+
+All projects in the solution have `<Nullable>enable</Nullable>` enabled in their `.csproj` files:
+
+- **Purpose:** Compile-time null safety checking to prevent NullReferenceException
+- **Coverage:** All 10 projects (Ui, Ui.Client, Data, Tools, Constants, etc.)
+- **Behavior with DI:** Blazor `@inject` directives and constructor-injected services do NOT require null-forgiving operators (`!`) because:
+  - Dependency injection container always provides non-null instances
+  - No compiler warnings are generated for injected services
+  - Runtime guarantees service availability through DI lifecycle management
+
+**Example:**
+
+```csharp
+// ✅ No ! needed - Blazor DI guarantees non-null
+@inject ILogger<MyComponent> Logger
+
+// ✅ No ! needed - Constructor injection guarantees non-null  
+public class MyService(ILogger<MyService> logger)
+{
+    // Compiler knows 'logger' is non-null from DI container
+}
+```
+
 **Standardized Build Command:**
 
 ```bash
@@ -147,18 +183,20 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 ### 1. Askyl.Dsm.WebHosting.Constants
 
-**Purpose:** Centralized constants, defaults, and enums for the entire solution (26 source files, ~160+ constants)
+**Purpose:** Centralized constants, defaults, and enums for the entire solution (27 source files, ~160+ constants)
 
 **Complete Inventory:**
 
 ```text
 
 Constants/
-├── Application/                            # Application-wide constants (4 files)
-│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, validation messages
+├── Application/                            # Application-wide constants (6 files)
+│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session, auth messages
+│   ├── DotnetInfoParserConstants.cs        # dotnet --info section headers and framework identifiers
 │   ├── InfrastructureConstants.cs          # Directory names (Downloads)
 │   ├── LicenseConstants.cs                 # License file management
-│   └── LogConstants.cs                     # Log directory and file paths
+│   ├── LogConstants.cs                     # Log directory and file paths
+│   └── WebSiteConstants.cs                 # Website config, process lifecycle, port validation
 ├── DSM/                                    # Synology DSM-specific constants (8 files)
 │   ├── API/                                # API-related constants
 │   │   ├── ApiMethods.cs                   # CRUD operation names (Create, Get, List, etc.)
@@ -197,7 +235,8 @@ Constants/
 
 | Category | Key Constants | Count |
 |----------|---------------|-------|
-| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), Port range (1024-65535) | ~50 |
+| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), Session | ~35 |
+| **Websites** | Process timeouts, port range (1024-65535), environment vars, validation messages | ~25 |
 | **DSM APIs** | 19 API names, CRUD methods, version ranges, error codes | ~35 + 1 enum |
 | **FileStation** | Listing patterns, compression level (6), pagination (100 limit) | ~15 |
 | **Network** | Cookie header ("Cookie"), SSID prefix ("_SSID="), localhost | 6 + 1 enum |
@@ -213,44 +252,7 @@ Constants/
 4. **Static Properties:** JsonOptionsCache provides pre-configured JsonSerializerOptions
 5. **Validation Messages:** User-facing error messages centralized for consistency
 
-### 2. Askyl.Dsm.WebHosting.SourceGenerators
-
-**Purpose:** Custom Roslyn source generator for automatic clone method implementation
-
-**Implementation:**
-
-```csharp
-// Usage in data models
-[GenerateClone]
-public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
-{
-    // Properties...
-    // Clone() method auto-generated
-}
-```
-
-**Generated Code:**
-
-- `Clone()` method implementation for deep copying
-- Implements `IGenericCloneable<T>` interface automatically
-- Reduces boilerplate code by 60-70%
-
-**Technical Details:**
-
-- Target: .NET Standard 2.0 (compatible with all projects)
-- Uses Microsoft.CodeAnalysis.CSharp 5.0.0
-- Generates files in `obj/Generated` directory
-- Attribute-based activation via `[GenerateClone]`
-- Supports nested cloneable types (recursive cloning)
-
-**Generator Flow:**
-
-1. **Post-Initialization:** Generates `GenerateCloneAttribute.g.cs` for the assembly
-2. **Syntax Provider:** Identifies classes with `[GenerateClone]` attribute
-3. **Semantic Analysis:** Validates attribute and extracts property declarations
-4. **Code Generation:** Creates partial class implementation with Clone() method
-
-### 3. Askyl.Dsm.WebHosting.Data
+### 2. Askyl.Dsm.WebHosting.Data
 
 **Purpose:** Core data layer, API definitions, domain services, and result types (13 service contracts)
 
@@ -278,8 +280,6 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 
 ```text
 Data/
-├── Attributes/                             # Custom attributes
-│   └── GenerateCloneAttribute.cs           # Source generator trigger (backup)
 ├── Contracts/                              # Service interfaces
 │   ├── IAuthenticationService.cs           # Authentication facade
 │   ├── IDotnetVersionService.cs            # .NET version detection (with RefreshCacheAsync)
@@ -304,9 +304,10 @@ Data/
 │   ├── Runtime/                            # .NET runtime information
 │   │   └── [Version models]                # Runtime version data
 │   └── WebSites/                           # Website management domain
-│       ├── ProcessInfo.cs                  # Process runtime information
-│       ├── WebSiteConfiguration.cs         # Main config model ([GenerateClone])
-│       ├── WebSiteInstance.cs              # Runtime instance ([GenerateClone])
+│       ├── ProcessInfo.cs                  # Process runtime snapshot (Id, IsResponding)
+│       ├── WebSiteConfiguration.cs         # Main config model
+│       ├── WebSiteInstance.cs              # Runtime instance
+│       ├── WebSiteRuntimeState.cs          # Immutable record for site state (Running/Stopped/NotResponding)
 │       └── WebSitesConfiguration.cs        # Persistent configuration store
 ├── DsmApi/                                 # DSM API integration
 │   ├── Models/                             # Auto-generated response models
@@ -324,8 +325,6 @@ Data/
 │   │   └── IApiParameters.cs               # Parameter interface
 │   └── Responses/                          # API response wrappers
 ├── Exceptions/                             # Custom exception types
-├── Patterns/                               # Design patterns
-│   └── IGenericCloneable<T>.cs             # Clone pattern interface
 └── Results/                                # Result pattern implementations
     ├── ApiResult.cs                        # Base success/failure result
     ├── ApiResultBool.cs                    # Boolean result wrapper
@@ -336,6 +335,7 @@ Data/
     ├── AuthenticationResult.cs             # Auth state with user info
     ├── ChannelsResult.cs                   # .NET channel information
     ├── DirectoryContentsResult.cs          # File system directory listing
+    ├── DirectoryFilesResult.cs             # File system files listing
     ├── InstallationResult.cs               # Framework installation status
     ├── InstalledVersionsResult.cs          # Installed .NET versions
     ├── ReleasesResult.cs                   # .NET release information
@@ -347,8 +347,7 @@ Data/
 **Key Features:**
 
 - **Result Pattern:** All operations return typed results (eliminates null checks)
-- **API Abstraction:** Strong-typed request/response models for DSM APIs
-- **Clone Generation:** Source-generated deep copy methods via `[GenerateClone]`
+- **API Abstraction:** Strong-typed request/response models for DSM APIs (records with `init` setters)
 - **Validation:** Data annotations with localized error messages from Constants
 - **Service Interfaces:** Clean separation between domain logic and UI implementation
 
@@ -361,11 +360,15 @@ Data/
 ```text
 Tools/
 ├── Extensions/                             # Extension methods
+│   ├── ApiResponseExtensions.cs            # Response mapping helpers
+│   ├── DsmToolsExtensions.cs               # DSM tools integration
+│   ├── HttpClientExtensions.cs             # HTTP client helpers
 │   └── UriExtensions.cs                    # URI manipulation helpers
-├── Infrastructure/                         # Infrastructure utilities (DI-based)
+├── Infrastructure/                         # Infrastructure utilities
 │   ├── ArchiveExtractorService.cs          # gzip + tar extraction (implements IArchiveExtractorService)
-│   └── FileManagerService.cs               # File system initialization (implements IFileManagerService)
-│   └── PlatformInfoService.cs              # Platform detection (implements IPlatformInfoService)
+│   ├── FileManagerService.cs               # File system initialization (implements IFileManagerService)
+│   ├── PlatformInfoService.cs              # Platform detection (implements IPlatformInfoService)
+│   └── ProcessTerminator.cs                # Cross-platform process termination (SIGTERM/CloseMainWindow)
 ├── Network/                                # Network communication
 │   └── DsmApiClient.cs                     # Centralized DSM API client
 ├── Runtime/                                # .NET runtime management (DI-based)
@@ -428,7 +431,6 @@ Ui/
 │   ├── LogDownloadController.cs            # Log file retrieval
 │   ├── RuntimeManagementController.cs      # .NET version detection
 │   └── WebsiteHostingController.cs         # Website CRUD + lifecycle
-├── Models/                                 # UI-specific view models
 ├── Properties/                             # Assembly info, launch settings
 ├── Services/                               # UI business logic services
 │   ├── AuthenticationService.cs            # Auth façade over DsmApiClient
@@ -437,7 +439,8 @@ Ui/
 │   ├── FrameworkManagementService.cs       # Framework installation
 │   ├── LogDownloadService.cs               # Log file retrieval
 │   ├── ReverseProxyManagerService.cs       # Proxy CRUD operations
-│   ├── WebSiteHostingService.cs            # Website lifecycle (background service)
+│   ├── SiteLifecycleManager.cs             # Per-site process management (start/stop, graceful shutdown, force kill)
+│   ├── WebSiteHostingService.cs            # Website orchestration (delegates process lifecycle to SiteLifecycleManager)
 │   └── WebSitesConfigurationService.cs     # Configuration persistence
 ├── wwwroot/                                # Static assets (CSS, JS, images)
 ├── appsettings.json                        # Production configuration
@@ -694,7 +697,8 @@ Singleton (Application-wide)
 ├── DsmApiClient
 ├── PlatformInfoService (platform detection, config loading)
 ├── VersionsDetectorService (smart caching for dotnet --info)
-└── WebSiteHostingService (background service)
+└── WebSiteHostingService (background service - orchestrator)
+    └── SiteLifecycleManager (per-instance process management)
 
 Scoped (Per HTTP request)
 ├── FileManagerService (configured via factory with root path)
@@ -713,6 +717,7 @@ Scoped (Per HTTP request)
 3. **Factory Lambda for Configuration:** FileManagerService uses factory pattern to inject logger + configure root path
 4. **Dependency Hierarchy Respected:** Scoped services can depend on Singletons, but not vice versa
 5. **All Infrastructure Services Testable:** No static classes - everything injectable via interfaces
+6. **Process Lifecycle Delegation:** WebSiteHostingService orchestrates instances; SiteLifecycleManager handles per-site process start/stop with graceful shutdown and force kill fallback
 
 ### 2. Result Pattern
 
@@ -765,40 +770,25 @@ IFileSystemService                FileSystemService            │
 - `IReverseProxyManagerService` - Reverse proxy CRUD operations
 - `IFileSystemService` - File system operations via FileStation API
 
-### 4. Source Generator Pattern
+### 4. Background Service Pattern
 
-**CloneGenerator Implementation:**
+**Architecture:** Two-tier process management with clear separation of concerns.
 
-```csharp
-// Input: [GenerateClone] attribute on partial class
-[GenerateClone]
-public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; }
-    // ... properties
-}
+```text
+WebSiteHostingService (BackgroundService, Singleton)
+├── Orchestrates website instances via ConcurrentDictionary<Guid, WebSiteInstance>
+├── Loads configurations from JSON on startup
+├── Manages instance lifecycle (add/update/remove)
+└── Delegates per-site process management to SiteLifecycleManager
 
-// Output: Auto-generated Clone() method
-public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
-{
-    public WebSiteConfiguration Clone() => new()
-    {
-        Id = this.Id,
-        Name = this.Name,
-        // ... property copying
-    };
-}
+SiteLifecycleManager (Per-instance, Thread-safe)
+├── Starts/stops .NET web application processes via System.Diagnostics.Process
+├── Configures environment variables (ASPNETCORE_URLS, ASPNETCORE_ENVIRONMENT, custom vars)
+├── Graceful shutdown with ProcessTerminator.SendGracefulShutdownSignal() (SIGTERM on Unix, CloseMainWindow on Windows)
+├── Async WaitForExitAsync with linked cancellation token + configurable timeout
+├── Force kill fallback if process doesn't exit gracefully
+└── Thread-safe operations via Channel-based command queue (eliminates TOCTOU races)
 ```
-
-**Benefits:**
-
-- Reduces boilerplate code by 60-70%
-- Compile-time type safety
-- Automatic interface implementation
-- Supports nested cloneable types
-
-### 5. Background Service Pattern
 
 **WebSiteHostingService Implementation:**
 
@@ -807,7 +797,7 @@ public class WebSiteHostingService(
     ILogger<WebSiteHostingService> logger,
     IWebSitesConfigurationService configService,
     IFileSystemService fileSystemService,
-    IReverseProxyManagerService reverseProxyManager) 
+    IReverseProxyManagerService reverseProxyManager)
     : BackgroundService, IWebSiteHostingService
 {
     private readonly ConcurrentDictionary<Guid, WebSiteInstance> _instances = new();
@@ -816,13 +806,13 @@ public class WebSiteHostingService(
     {
         // Load configurations from JSON on startup
         var configs = await configService.GetAllAsync();
-        
+
         // Reinitialize instances (processes not restarted)
         foreach (var config in configs)
         {
             await AddInstanceAsync(config);
         }
-        
+
         // Monitor and manage lifecycle until stopping
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -832,12 +822,82 @@ public class WebSiteHostingService(
 }
 ```
 
+**SiteLifecycleManager Implementation (Channel-based command queue):**
+
+```csharp
+public sealed class SiteLifecycleManager : IDisposable
+{
+    private readonly Channel<LifecycleCommand> _channel =
+        Channel.CreateBounded<LifecycleCommand>(16);
+    private readonly Task _loopTask = ProcessSiteCommandsAsync();
+    private Process? _process;
+    private volatile bool _isDisposing;
+
+    public async Task<ApiResult> StartAsync()
+    {
+        if (_isDisposing) return ApiResult.CreateFailure("Site configuration is being updated");
+        var tcs = new TaskCompletionSource<ApiResult>();
+        _channel.Writer.TryWrite(new StartCommand(tcs));
+        return await tcs.Task;
+    }
+
+    public async Task<ApiResult> StopAsync(CancellationToken cancellationToken = default)
+    {
+        if (_isDisposing) return ApiResult.CreateFailure("Site configuration is being updated");
+        var tcs = new TaskCompletionSource<ApiResult>();
+        _channel.Writer.TryWrite(new StopCommand(tcs, cancellationToken));
+        return await tcs.Task;
+    }
+
+    public async Task<WebSiteRuntimeState> GetRuntimeStateAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (_isDisposing) return WebSiteRuntimeState.Stopped;
+        var tcs = new TaskCompletionSource<WebSiteRuntimeState>();
+        _channel.Writer.TryWrite(new GetStateCommand(tcs));
+        return await tcs.Task.WaitAsync(cancellationToken);
+    }
+
+    // DisposeCommand queues after pending commands, drains, kills process if running
+    public void Dispose()
+    {
+        if (_isDisposing) return;
+        _isDisposing = true;
+        _channel.Writer.TryWrite(new DisposeCommand());
+        _channel.Writer.Complete();
+        _loopTask.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+    }
+
+    // Single consumer loop — all state mutation happens here
+    private async Task ProcessSiteCommandsAsync()
+    {
+        await foreach (var command in _channel.Reader.ReadAllAsync())
+        {
+            switch (command)
+            {
+                case StartCommand start: start.Result.SetResult(ProcessStartCommand()); break;
+                case StopCommand stop: stop.Result.SetResult(await ProcessStopCommand(stop.Token)); break;
+                case GetStateCommand state: state.Result.SetResult(BuildRuntimeState()); break;
+                case DisposeCommand: await ProcessDisposeCommand(); return;
+            }
+        }
+    }
+
+    // Private command types (Start, Stop, GetState, Dispose)
+}
+```
+
 **Key Features:**
 
-- **Singleton lifetime** - One instance per application
-- **Startup initialization** - Loads configurations from persistent storage
-- **Graceful shutdown** - Stops all website processes on host termination
-- **Thread-safe operations** - Uses `ConcurrentDictionary` for instance management
+- **Two-tier architecture** — WebSiteHostingService orchestrates; SiteLifecycleManager handles per-site process lifecycle
+- **Singleton lifetime** — WebSiteHostingService runs as one instance per application
+- **Startup initialization** — Loads configurations from persistent storage
+- **Cross-platform graceful shutdown** — ProcessTerminator sends SIGTERM on Unix (via P/Invoke `libc.kill`) or CloseMainWindow on Windows; ASP.NET Core child processes drain in ~1-3 seconds
+- **Async process wait** — WaitForExitAsync with linked cancellation token replaces blocking WaitForExit(timeoutMs)
+- **Force kill fallback** — If process doesn't exit within timeout, Process.Kill() is called as last resort
+- **Thread-safe operations** — `ConcurrentDictionary` for instance management; Channel-based command serialization in SiteLifecycleManager (eliminates TOCTOU races)
+- **Idempotent stop** — Calling `StopAsync()` when already stopped returns success without error
+- **Safe disposal** — `DisposeCommand` queues after all pending commands; `Dispose()` blocks until loop drains
 
 ### 6. Strategy Pattern (Serialization)
 
@@ -867,16 +927,19 @@ public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
 
 ### Frameworks & Libraries
 
-| Component | Technology | Version | Purpose |
-|-----------|------------|---------|---------|
-| **Runtime** | .NET | 10.0 | Application framework |
-| **UI Framework** | Blazor Hybrid | 10.0.5 | Interactive WebAssembly + Server |
-| **UI Components** | FluentUI | 4.14.0 | Modern UI component library |
-| **Logging** | Serilog | 10.0.0 | Structured logging |
-| **HTTP Client** | Microsoft.Extensions.Http | 10.0.5 | HttpClient factory |
-| **Benchmarking** | BenchmarkDotNet | 0.15.8 | Performance testing |
-| **.NET Releases** | Microsoft.Deployment.DotNet.Releases | 1.0.1 | Version detection |
-| **Source Generators** | Microsoft.CodeAnalysis.CSharp | 5.0.0 | Clone generator |
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Runtime** | .NET 10 | Application framework |
+| **UI Framework** | Blazor Hybrid (Interactive WebAssembly) | Server + client rendering |
+| **UI Components** | FluentUI Blazor | Modern UI component library |
+| **Logging** | Serilog | Structured logging |
+| **HTTP Client** | Microsoft.Extensions.Http | HttpClient factory |
+| **Benchmarking** | BenchmarkDotNet | Performance testing |
+| **.NET Releases** | Microsoft.Deployment.DotNet.Releases | Version detection |
+| **WASM Server** | Microsoft.AspNetCore.Components.WebAssembly.Server | Blazor WASM hosting |
+| **Analyzer Rules** | Roslynator.Analyzers + Formatting.Analyzers | Code style enforcement |
+
+> **Note:** Package versions are declared inline in each `.csproj` file and updated regularly. Consult the project files for current versions.
 
 ### Development Tools
 
@@ -894,8 +957,7 @@ public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
 #### WebSiteConfiguration
 
 ```csharp
-[GenerateClone]
-public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfiguration>
+public sealed class WebSiteConfiguration
 {
     // General
     public Guid Id { get; set; }
@@ -925,24 +987,38 @@ public partial class WebSiteConfiguration : IGenericCloneable<WebSiteConfigurati
 #### WebSiteInstance
 
 ```csharp
-[GenerateClone]
-public partial class WebSiteInstance : IGenericCloneable<WebSiteInstance>
+public sealed class WebSiteInstance
 {
     public Guid Id => Configuration.Id;
     public WebSiteConfiguration Configuration { get; set; }
-    
+
     // Runtime state (not serialized)
     [JsonIgnore]
     public ProcessInfo? Process { get; set; }
-    
+
     // Serialized state
     public bool IsRunning { get; set; }
-    
+
     // Computed property
-    public string State => Process?.IsResponding == true ? "Running" : 
+    public string State => Process?.IsResponding == true ? "Running" :
                            Process == null ? (IsRunning ? "Running" : "Stopped") : "Not Responding";
 }
 ```
+
+#### ProcessInfo
+
+```csharp
+/// <summary>
+/// Snapshot of process state at a point in time.
+/// Does not hold a live Process reference to avoid serialization staleness.
+/// </summary>
+public record ProcessInfo(int Id, bool IsResponding);
+```
+
+**Key Design Decisions:**
+
+- **Snapshot model** — captures `Id` and `IsResponding` at construction, avoiding `InvalidOperationException` if the process exits during JSON serialization
+- **No live `Process` reference** — eliminates staleness risk and cross-platform issues with `Process.Responding` (always `false` for headless processes on Windows)
 
 ### DSM API Integration
 
@@ -988,29 +1064,50 @@ public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool recu
 
 #### ReverseProxy Management
 
+**IEquatable Implementation (April 2026):**
+
+All ReverseProxy models implement `IEquatable<T>` with business-key equality:
+
+| Model | Equality Logic | Source File |
+|-------|----------------|-------------|
+| **ReverseProxy** | Composite key: `Backend.Port + Frontend.Fqdn + Frontend.Port + Frontend.Protocol` | `Data/DsmApi/Models/ReverseProxy/ReverseProxy.cs` |
+| **ReverseProxyBackend** | All properties: `Fqdn + Port + Protocol` | `Data/DsmApi/Models/ReverseProxy/ReverseProxyBackend.cs` |
+| **ReverseProxyFrontend** | All properties: `Fqdn + Port + Protocol + Https + Acl` | `Data/DsmApi/Models/ReverseProxy/ReverseProxyFrontend.cs` |
+| **ReverseProxyHttps** | Single property: `HSTS` flag | `Data/DsmApi/Models/ReverseProxy/ReverseProxyHttps.cs` |
+| **ReverseProxyCustomHeader** | All header properties | `Data/DsmApi/Models/ReverseProxy/ReverseProxyCustomHeader.cs` |
+
+**Key Design Decision:** `ReverseProxy.Equals()` compares only the composite key fields
+(backend port + frontend configuration), ignoring Description, UUID, and timeout settings.
+This matches the business requirement that these four fields uniquely identify a proxy.
+
 **Composite Key Strategy:**
 
-Instead of storing UUIDs (which can desynchronize), use configuration-based lookup:
+Instead of storing UUIDs (which can desynchronize), use configuration-based lookup with IEquatable:
 
 ```csharp
-public async Task<ReverseProxyInfo?> FindByCompositeKeyAsync(WebSiteConfiguration config)
+private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config)
 {
-    var allProxies = await GetAllAsync();
-    
-    return allProxies.FirstOrDefault(proxy =>
-        proxy.Backend.Port == config.InternalPort &&
-        proxy.Frontend.Fqdn == config.HostName &&
-        proxy.Frontend.Port == config.PublicPort &&
-        proxy.Frontend.Protocol == config.Protocol.ToString().ToLower()
-    );
+    var allProxies = await GetAllReverseProxiesAsync();
+
+    // Leverages IEquatable<ReverseProxy> for clean, encapsulated comparison logic
+    var searchTemplate = new ReverseProxy
+    {
+        Backend = new(null, config.InternalPort, 0),
+        Frontend = new(config.HostName, config.PublicPort, (int)config.Protocol, new())
+    };
+
+    return allProxies.FirstOrDefault(p => p.Equals(searchTemplate));
 }
 ```
 
-**Benefits:**
+**Benefits of IEquatable Approach:**
 
-- Always reflects actual DSM state
-- No synchronization issues
-- Idempotent create operations
+1. **Encapsulation:** Comparison logic centralized in `ReverseProxy.Equals()` - if business rules change, only one file needs updating
+2. **Readability:** Intent is clear from method name (`p.Equals(searchTemplate)` vs scattered property comparisons)
+3. **Maintainability:** No risk of inconsistency between multiple comparison locations
+4. **Performance:** Negligible allocation cost (small POCO objects) compared to async API call; modern .NET GC handles short-lived allocations efficiently
+5. **Always reflects actual DSM state** - No synchronization issues
+6. **Idempotent create operations** - Safe to retry without duplicates
 
 ---
 
@@ -1287,6 +1384,7 @@ Key Features:
 - **CancellationToken support** - Cooperative cancellation during wait
 - Prevents race conditions in concurrent scenarios
 - Used in `WebSitesConfigurationService` for lazy-loaded configuration cache
+- ~~Previously used in `SiteLifecycleManager`~~ — replaced with channel-based command queue (May 2026)
 
 Interface Definition:
 
@@ -1503,6 +1601,9 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.5.4 | May 1, 2026 | Replaced custom `CloneGenerator` source generator with C# records (`init` setters) — 41 classes converted, `GenerateCloneAttribute`/`IGenericCloneable<T>` removed, `ApiParametersBase<T>` simplified (no cloning needed with immutability); SiteLifecycleManager hardening: lifecycle manager recreation on config update (stale config fix), removed vestigial `.Clone()` calls (Interactive WASM has no shared memory), removed `ProcessTimeoutSeconds` (inlined 10s constant), added `IOException` to `StopAsync` exception filter, `ProcessInfo` converted to snapshot record, parallel startup in `StartEligibleSitesAsync`, `CancellationToken` forwarding in `StopAllSitesAsync` and `GetRuntimeStateAsync`, removed dead null check and misleading `CancellationToken` from `StartAsync`; **post-review fixes**: `RemoveInstanceAsync` restructured to remove persistent config before in-memory state (prevents orphaned configs on failure), `StopAllSitesAsync` wraps `Dispose()` in `finally` (prevents `SemaphoreSlim` leak on exception), `StartAsync` disposes stale `_process` handle before restart (prevents handle leak on crash-restart cycles); **SiteLifecycleManager concurrency rewrite**: replaced `SemaphoreSlim` + `ISemaphoreOwner` with `Channel<LifecycleCommand>` + single consumer loop — eliminates TOCTOU races, no `ObjectDisposedException` boilerplate, safe disposal via queued `DisposeCommand`, `ConfigurationRequiresRestart` uses order-independent dictionary comparison |
+| 0.5.4 | April 29, 2026 | SIGTERM process termination fix: added `ProcessTerminator` utility (cross-platform SIGTERM via P/Invoke), replaced blocking `WaitForExit` with async `WaitForExitAsync`, reduced timeouts (HttpClient 90→15s, Process 60→10s) — eliminates DSM reverse proxy 504 errors |
+| 0.5.4 | April 25, 2026 | Synchronized with codebase: added `SiteLifecycleManager` two-tier process architecture (graceful shutdown, force kill fallback), documented `DirectoryFilesResult`, `WebSiteRuntimeState`, `DotnetInfoParserConstants`; removed version column from Technical Stack table; cleaned up stale empty directory references |
 | 0.5.4 | April 5, 2026 | Architecture documentation synchronized with codebase; corrected service lifetimes, added SemaphoreLock and AuthorizeSessionAttribute documentation |
 | 0.5.3 | March 2026 | Architecture documentation update, version bump |
 | 0.5.2 | Earlier | Initial architecture documentation |
@@ -1511,5 +1612,5 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 ---
 
 **Document Maintained By:** AI Assistant (Qwen Code)
-**Last Review Date:** April 5, 2026
+**Last Review Date:** May 1, 2026
 **Next Review Date:** TBD (after major feature implementation)

@@ -1,10 +1,9 @@
-using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
-
 namespace Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
-[GenerateClone]
-public partial class WebSiteInstance
+/// <summary>
+/// Client-facing website instance — JSON serializable.
+/// </summary>
+public class WebSiteInstance
 {
     /// <summary>
     /// Gets the unique identifier for this instance (forwarding property to Configuration.Id).
@@ -26,7 +25,6 @@ public partial class WebSiteInstance
 
     public WebSiteInstance()
     {
-        // Default constructor creates instance with empty configuration (Id = Guid.Empty, IsRunning = false)
     }
 
     public WebSiteInstance(WebSiteConfiguration configuration)
@@ -35,31 +33,7 @@ public partial class WebSiteInstance
     }
 
     /// <summary>
-    /// Creates a new website instance for creation (not edit).
-    /// Returns an instance with empty IDs to indicate it's a new entity.
-    /// </summary>
-    public static WebSiteInstance New() => new();
-
-    /// <summary>
     /// Gets a human-readable state description.
-    /// Uses serialized IsRunning for client-side, Process for server-side detail.
     /// </summary>
-    [JsonIgnore]
-    public string State
-    {
-        get
-        {
-            // If no process, rely on serialized IsRunning flag
-            if (Process == null)
-            {
-                return IsRunning ? "Running" : "Stopped";
-            }
-
-            // Has process - check responsiveness for detailed state
-            return Process.IsResponding ? "Running" : "Not Responding";
-        }
-    }
-
-    [JsonIgnore]
-    public ProcessInfo? Process { get; set; }
+    public string State => IsRunning ? "Running" : "Stopped";
 }

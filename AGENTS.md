@@ -2,7 +2,9 @@
 
 ## 1. PROJECT OVERVIEW
 
-Askyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+. The solution consists of multiple projects that work together to provide a web‑based UI for managing .NET web applications on Synology NAS devices.
+Askyl.Dsm.WebHosting is a .NET Web sites hosting manager for Synology DSM 7.2+.
+The solution consists of multiple projects that work together to provide a web‑based
+UI for managing .NET web applications on Synology NAS devices.
 
 **Project Structure:**
 
@@ -116,8 +118,9 @@ The AI assistant MUST use an **inference-based approach** rather than hardcoded 
 
 1. **FIRST ACTION:** Say Hello briefly
 2. **ACKNOWLEDGE:** List standards by extracting them from AGENTS.md (not hardcoded)
-3. **APPLY:** Use all extracted directives throughout the session
-4. **DOCUMENTATION CHECK:** Before creating any docs, verify if they belong in `docs/ai/`
+3. **DISPLAY MEMORIES:** Show all recorded memories from the memory system (loaded at session start)
+4. **APPLY:** Use all extracted directives throughout the session
+5. **DOCUMENTATION CHECK:** Before creating any docs, verify if they belong in `docs/ai/`
 
 **Benefits:**
 
@@ -155,9 +158,24 @@ The AI assistant MUST use an **inference-based approach** rather than hardcoded 
 
 - Use `GeneratedRegexAttribute` for regex patterns
 - **MANDATORY:** Use primary constructors for ALL classes with constructor parameters (except abstract classes and when inheritance requires it) - enforced by dotnet format
-- For simple emptiness checks on collections, prefer `IsEmpty` property if available, or `Count == 0` instead of `!collection.Any()`
-- Prefer `IsEmpty` over `Count` for both clarity and performance
-- Use null-forgiving operator (`!`) for injected services and post-null-check contexts
+- **Collection Emptiness Checks:**
+  - For non-null collections: use `.Count == 0` or `.Length == 0` (simple, clear)
+
+    ```csharp
+    if (products.Count == 0) { throw new InvalidOperationException(...); }
+    ```
+
+  - For nullable collections when used inside block: use pattern matching `is { Count: > 0 }`
+
+    ```csharp
+    // ✅ Compiler knows DotnetVersions is not null inside the block
+    else if (DotnetVersions is { Count: > 0 })
+    {
+        @foreach (var framework in DotnetVersions) // No ! needed!
+    }
+    ```
+
+  - Avoid redundant comparisons like `?.Count > 0 == true` or `!.Any() == false`
 - Use conditional null operator (`?`) for truly optional scenarios
 - Fix all compiler warnings after build completion
 
@@ -196,6 +214,32 @@ var configuration = CreateConfiguration(
     environment: Environment.Production,
     settings: new Settings { DebugMode = false }
 );
+```
+
+**Method Declarations (MANUAL CHECK REQUIRED):**
+Declarations with **≤ 4 parameters** should be on a single line unless the total line length exceeds **200 characters**:
+
+```csharp
+// ✅ Single-line — 3 params, fits within 200 chars
+public async Task<ApiResult> StopWebsiteAsync(Guid id)
+
+// ✅ Single-line — 4 params, fits within 200 chars
+public async Task<ApiResultData<T>> FindByCompositeKeyAsync(long paramOne, long paramTwo, long paramThree, CancellationToken cancellationToken)
+
+// ✅ Multi-line — exceeds 200 characters despite ≤ 4 params
+public async Task<ApiResultData<SomeVeryLongTypeNameHere>> ExecuteComplexOperationWithDetailedName(
+    SomeOtherLongType firstParameterName,
+    YetAnotherLongType secondParameterName,
+    CancellationToken cancellationToken)
+
+// ✅ Multi-line — more than 4 params regardless of line length
+public async Task<Result> CreateWebsiteAsync(
+    string name,
+    Guid id,
+    int port,
+    string path,
+    bool enableSsl,
+    CancellationToken cancellationToken)
 ```
 
 **Logging Statements (MANUAL CHECK REQUIRED):**
@@ -320,6 +364,7 @@ These require manual verification BEFORE responding:
 
 4. **Target-Typed `new` Expressions** (MANUAL CHECK)
    - Use target-typed `new` when type can be inferred: `new(1, 1)` instead of `new SemaphoreSlim(1, 1)`
+   - **Exception:** When the variable name already includes the type name (e.g., `lockInstance` for `SemaphoreLock`), `var` is acceptable — the type is already evident
    - Applies to: local variables, fields, auto-properties, explicit interface implementations
    - Note: Analyzers (IDE0295/RCS1187) don't catch all cases (e.g., explicit interface properties), so manual verification is required
 
@@ -415,6 +460,7 @@ After EVERY code modification, you MUST:
 - [ ] Use constants from `Askyl.Dsm.WebHosting.Constants` (create if needed)
 - [ ] Write all logger calls on a single line
 - [ ] Add blank lines before/after control flow (not inside blocks)
+- [ ] Method declarations with ≤ 4 params on one line (unless > 200 chars)
 - [ ] Comments ONLY in English
 - [ ] Messages ONLY in English
 - [ ] Apply all architectural guidelines from `docs/ai/technical-architecture.md`
@@ -427,6 +473,7 @@ After EVERY code modification, you MUST:
 - [ ] Verify no magic strings remain (MANUAL CHECK)
 - [ ] Verify single-line logging (MANUAL CHECK)
 - [ ] Verify control flow blank lines (MANUAL CHECK)
+- [ ] Verify method declarations with ≤ 4 params are on one line (unless > 200 chars) (MANUAL CHECK)
 - [ ] Validate English-only comments
 - [ ] Ensure successful build with no errors or warnings
 - [ ] Run `markdownlint <file-path>` and fix ALL errors (for .md file changes)
@@ -438,6 +485,7 @@ After EVERY code modification, you MUST:
 - [ ] No magic strings/numbers in code (MANUAL)
 - [ ] Single-line logging format (MANUAL)
 - [ ] Control flow blank lines correct (MANUAL)
+- [ ] Method declarations with ≤ 4 params on one line (unless > 200 chars) (MANUAL)
 - [ ] Markdown validation passed (`markdownlint`) - for .md files
 - [ ] All comments/messages in English
 - [ ] FluentUI requirements met (for UI code)
@@ -551,13 +599,53 @@ The following git commands are **STRICTLY PROHIBITED** unless the user explicitl
 3. **GET EXPLICIT CONFIRMATION** - Wait for user approval before executing
 4. **RUN `git status` FIRST** - Always show current state before modifications
 
+### Explicit Authorization Required for Commits
+
+**NEVER commit changes without explicit user authorization.**
+
+- ❌ **DO NOT** automatically commit after making code changes
+- ❌ **DO NOT** assume user wants changes committed just because they asked for a fix
+- ✅ **MUST** ask user if they want to commit before running `git commit`
+- ✅ **MUST** show the proposed commit message and wait for approval
+- ✅ **MUST** give user the option to review changes first (`git diff`)
+
+**Correct workflow:**
+
+1. Make the requested code changes
+2. Run format and build to verify
+3. Tell user the changes are complete
+4. **ASK:** "Would you like me to commit these changes?"
+5. If user says yes, show the commit message and get approval
+6. Then stage and commit
+
+**Example:**
+
+```text
+❌ WRONG: Making changes and immediately committing
+
+✅ CORRECT: 
+"Changes complete. Build passed with no errors.
+
+Would you like me to commit these changes? (yes/no)"
+
+User: "yes"
+
+"Proposed commit message:
+
+  fix: Resolve issue X by doing Y
+
+  This prevents Z by implementing W pattern.
+
+Shall I proceed with this commit message? (yes/no/edit)"
+```
+
 ### Example Safety Flow
 
-```
-❌ WRONG: Just running the command
+```bash
+# ❌ WRONG: Just running the command
 git reset --hard HEAD~1
 
-✅ CORRECT: Show, explain, confirm
+# ✅ CORRECT: Show, explain, confirm
 "The following command will discard your last commit and all working changes:
 
   git reset --hard HEAD~1
@@ -578,7 +666,47 @@ These operations are generally safe and don't require explicit confirmation:
 - ✅ `git commit -m "..."` (after showing the commit message)
 - ✅ `git branch` (listing branches)
 
-**CRITICAL REMINDER:** NEVER assume user wants to discard changes. If a task can be completed without destructive git operations, choose that path. When in doubt, ask the user for clarification before proceeding.
+**CRITICAL REMINDER:** NEVER assume user wants to discard changes. If a task can
+be completed without destructive git operations, choose that path. When in doubt,
+ask the user for clarification before proceeding.
+
+### Commit Message Conventions
+
+**Commit messages MUST follow these rules:**
+
+1. **NEVER list changed files** - Git already tracks this; don't repeat it
+2. **NEVER include "Files Modified:" sections** - Redundant info via `git show`
+3. **FOCUS on "why" not "what"** - Explain reasoning and impact
+4. **Use conventional commit format** - `type: description` (e.g., `fix:`, `feat:`)
+5. **Keep it concise** - Summary line (50 chars max), blank line, detailed body
+
+**❌ WRONG - Don't list files:**
+
+```text
+fix: HttpClient lifetime violation in LicenseService (Phase 5)
+
+Files Modified:
+- LicenseService.cs: Fixed lifetime, added race condition protection
+- code-review-reconciled-2026-04-09.md: Updated with Phase 5 changes
+```
+
+**✅ CORRECT - Focus on impact:**
+
+```text
+fix: HttpClient lifetime violation in LicenseService (Phase 5)
+
+Prevents socket exhaustion by using field-based HttpClient injection
+instead of per-call disposal. Uses named client with configured
+BaseAddress for /adwh sub path mapping. Added Task-based
+double-checked locking for thread-safe initialization.
+```
+
+**Rationale:**
+
+- Git already tracks which files changed - no need to repeat
+- Commit messages should explain the "why" and "what changed logically"
+- File lists make commits harder to read and maintain over time
+- Use `git show <commit>` or `git log --name-only` to see changed files
 
 ---
 

@@ -1,27 +1,25 @@
 using System.Text.Json.Serialization;
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-[GenerateClone]
-public partial class FileStationVirtualFolder
+public record FileStationVirtualFolder
 {
     [JsonPropertyName("type")]
-    public string Type { get; set; } = FileStationDefaults.VirtualFolderTypeAll;
+    public string Type { get; init; } = FileStationDefaults.VirtualFolderTypeAll;
 
     [JsonPropertyName("offset")]
-    public int? Offset { get; set; } = PaginationDefaults.DefaultOffset;
+    public int? Offset { get; init; } = PaginationDefaults.DefaultOffset;
 
     [JsonPropertyName("limit")]
-    public int? Limit { get; set; } = PaginationDefaults.DefaultLimit;
+    public int? Limit { get; init; } = PaginationDefaults.DefaultLimit;
 
     [JsonPropertyName("sort_by")]
-    public string? SortBy { get; set; } = FileStationDefaults.SortByName;
+    public string? SortBy { get; init; } = FileStationDefaults.SortByName;
 
     [JsonPropertyName("sort_direction")]
-    public string? SortDirection { get; set; } = FileStationDefaults.SortDirectionAsc;
+    public string? SortDirection { get; init; } = FileStationDefaults.SortDirectionAsc;
 
     [JsonPropertyName("additional")]
-    public string? Additional { get; set; }
+    public string? Additional { get; init; }
 }

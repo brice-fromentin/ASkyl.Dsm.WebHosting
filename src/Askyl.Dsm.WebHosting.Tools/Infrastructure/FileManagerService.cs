@@ -10,24 +10,34 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// </summary>
 public sealed class FileManagerService(ILogger<FileManagerService> logger, string rootPath = "") : IFileManagerService
 {
-    private readonly string _rootPath = rootPath;
+    private static string SanitizePathSegment(string name, string paramName)
+    {
+        if (String.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Value cannot be empty", paramName);
+        }
+
+        var sanitized = Path.GetFileName(name);
+
+        if (String.Equals(sanitized, String.Empty, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("Invalid value: contains only path separators", paramName);
+        }
+
+        return sanitized;
+    }
 
     /// <inheritdoc/>
     public string BaseDirectory => AppContext.BaseDirectory;
 
-    /// <summary>
-    /// Default directory name for temporary files.
-    /// </summary>
-    private const string Temp = "temp";
-
     /// <inheritdoc/>
     public void Initialize()
     {
-        logger.LogInformation("Initializing FileManager with base path: {BasePath}", String.IsNullOrEmpty(_rootPath) ? BaseDirectory : Path.Combine(BaseDirectory, _rootPath));
+        logger.LogInformation("Initializing FileManager with base path: {BasePath}", String.IsNullOrEmpty(rootPath) ? BaseDirectory : Path.Combine(BaseDirectory, rootPath));
 
         // Create default directories
         GetDirectory(InfrastructureConstants.Downloads);
-        GetDirectory(Temp);
+        GetDirectory(InfrastructureConstants.TempDirectory);
 
         logger.LogInformation("FileManager initialized successfully");
     }
@@ -35,7 +45,8 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public string GetDirectory(string name)
     {
-        var path = Path.Combine(BaseDirectory, _rootPath, name);
+        var sanitized = SanitizePathSegment(name, nameof(name));
+        var path = Path.Combine(BaseDirectory, rootPath, sanitized);
 
         logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
         Directory.CreateDirectory(path);
@@ -46,7 +57,8 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public void DeleteDirectory(string name)
     {
-        var path = Path.Combine(BaseDirectory, _rootPath, name);
+        var sanitized = SanitizePathSegment(name, nameof(name));
+        var path = Path.Combine(BaseDirectory, rootPath, sanitized);
 
         if (Directory.Exists(path))
         {
@@ -62,8 +74,9 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public string GetFullName(string directory, string file)
     {
+        var sanitizedFile = SanitizePathSegment(file, nameof(file));
         var path = GetDirectory(directory);
-        var fullPath = Path.Combine(path, file);
+        var fullPath = Path.Combine(path, sanitizedFile);
 
         logger.LogDebug("Getting full file path: {FullPath}", fullPath);
         return fullPath;

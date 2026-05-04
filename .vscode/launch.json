@@ -1,20 +1,20 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    // ============================================================================
+    // DEBUG CONFIGURATION - ASKYL.DSM.WEBHOSTING
+    // ============================================================================
+    // RECOMMENDED: Use "Build + Blazor WASM" for all development work.
+    // This configuration builds the solution and launches the Blazor WASM debugger.
+    //
+    // To use: Press F5 or click the "Build + Blazor WASM" configuration in the
+    // debugger dropdown (Run and Debug sidebar).
+    //
+    // Alternative configurations:
+    //   - "Blazor WASM": Launch only (no build)
+    //   - ".NET Launch Program": Server-side only (rarely needed)
+    // ============================================================================
     "version": "0.2.0",
+    // Default compound configuration for development (Build + Blazor WASM)
     "configurations": [
-        {
-            "name": ".NET Launch Program",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "🔧",
-            "program": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0/Askyl.Dsm.WebHosting.Ui.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui",
-            "stopAtEntry": false,
-            "console": "internalConsole"
-        },
         {
             "name": "Blazor WASM",
             "type": "blazorwasm",
@@ -26,13 +26,32 @@
             "cwd": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0",
             "webRoot": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/wwwroot",
             "timeout": 123456
+        },
+        {
+            "name": ".NET Launch Program",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "🔧",
+            "program": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0/Askyl.Dsm.WebHosting.Ui.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui",
+            "stopAtEntry": false,
+            "console": "internalConsole"
         }
     ],
+    // Compound configurations - "Build + Blazor WASM" is the default for development
     "compounds": [
         {
             "name": "Build + Blazor WASM",
-            "configurations": ["Blazor WASM"],
-            "preLaunchTask": "🔧"
+            "configurations": [
+                "Blazor WASM"
+            ],
+            "preLaunchTask": "🔧",
+            "presentation": {
+                "hidden": false,
+                "group": "compound_1",
+                "order": 1
+            }
         }
     ]
 }

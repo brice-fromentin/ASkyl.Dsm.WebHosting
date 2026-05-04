@@ -47,12 +47,11 @@ public class TreeContentService(IFileSystemService fileSystemService) : ITreeCon
     {
         return new(path, name, TreeViewItem.LoadingTreeViewItems)
         {
-            OnExpandedAsync = (args) => loadChildrenAsync(args.CurrentItem.Id).ContinueWith(t =>
+            OnExpandedAsync = async args =>
             {
-                args.CurrentItem.Items = t.Result ?? TreeViewItem.LoadingTreeViewItems;
-
-                return Task.CompletedTask;
-            })
+                var result = await loadChildrenAsync(args.CurrentItem.Id);
+                args.CurrentItem.Items = result ?? TreeViewItem.LoadingTreeViewItems;
+            }
         };
     }
 }

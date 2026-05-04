@@ -1,19 +1,17 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.ReverseProxy;
 
-[GenerateClone]
-public partial class ReverseProxyBackend(string? fqdn, int port, int protocol)
+public record ReverseProxyBackend(string? Fqdn, int Port, int Protocol)
 {
     public ReverseProxyBackend() : this(null, 0, 0) { }
 
     [JsonPropertyName("fqdn")]
-    public string? Fqdn { get; set; } = fqdn;
+    public string? Fqdn { get; init; } = Fqdn;
 
     [JsonPropertyName("port")]
-    public int Port { get; set; } = port;
+    public int Port { get; init; } = Port;
 
     [JsonPropertyName("protocol")]
-    public int Protocol { get; set; } = protocol;
+    public int Protocol { get; init; } = Protocol;
 }

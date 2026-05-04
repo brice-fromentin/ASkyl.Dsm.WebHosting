@@ -1,29 +1,27 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 
-[GenerateClone]
-public partial class CoreAclSet
+public record CoreAclSet
 {
     [JsonPropertyName("file_path")]
-    public string FilePath { get; set; } = "";
+    public string FilePath { get; init; } = "";
 
     [JsonPropertyName("files")]
-    public string Files { get; set; } = "";
+    public string Files { get; init; } = "";
 
     [JsonPropertyName("dirPaths")]
-    public string DirPaths { get; set; } = "";
+    public string DirPaths { get; init; } = "";
 
     [JsonPropertyName("change_acl")]
-    public bool ChangeAcl { get; set; }
+    public bool ChangeAcl { get; init; }
 
     [JsonPropertyName("rules")]
-    public List<CoreAclRule> Rules { get; set; } = [];
+    public List<CoreAclRule> Rules { get; init; } = [];
 
     [JsonPropertyName("inherited")]
-    public bool Inherited { get; set; }
+    public bool Inherited { get; init; }
 
     [JsonPropertyName("acl_recur")]
-    public bool AclRecur { get; set; }
+    public bool AclRecur { get; init; }
 }

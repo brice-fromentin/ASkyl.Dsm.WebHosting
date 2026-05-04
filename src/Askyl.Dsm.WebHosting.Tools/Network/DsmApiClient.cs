@@ -13,10 +13,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
 
-public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiClient> log)
+public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiClient> logger)
 {
-    private readonly HttpClient _httpClient = HttpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
-    private readonly ILogger<DsmApiClient> _log = log;
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     private string _server = String.Empty;
     private int _port = SystemDefaults.DefaultHttpsPort;
@@ -44,7 +43,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
 
     public async Task<bool> ConnectAsync(LoginCredentials model)
     {
-        if (!ReadSettings())
+        if (!await ReadSettingsAsync())
         {
             return false;
         }
@@ -62,19 +61,19 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
         return true;
     }
 
-    private bool ReadSettings()
+    private async Task<bool> ReadSettingsAsync()
     {
         if (!File.Exists(SystemDefaults.ConfigurationFileName))
         {
-            _log.LogCritical($"Configuration file \"{SystemDefaults.ConfigurationFileName}\" does not exists.");
+            logger.LogCritical($"Configuration file \"{SystemDefaults.ConfigurationFileName}\" does not exists.");
             return false;
         }
 
-        var settings = File.ReadAllLines(SystemDefaults.ConfigurationFileName)
-                           .Where(x => x.Contains('='))
+        var lines = await File.ReadAllLinesAsync(SystemDefaults.ConfigurationFileName);
+        var settings = lines.Where(x => x.Contains('='))
                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", String.Empty));
 
-        _log.LogDebug("Configuration file loaded with {Count} parameters.", settings.Count);
+        logger.LogDebug("Configuration file loaded with {Count} parameters.", settings.Count);
         _server = settings[SystemDefaults.KeyExternalHostIp];
 
         if (!Int32.TryParse(settings[SystemDefaults.KeyExternalHttpsPort], out _port))
@@ -103,15 +102,18 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
 
     private async Task<bool> AuthenticateAsync(LoginCredentials model)
     {
-        var parameters = new AuthenticationLoginParameters(ApiInformations);
+        var login = new AuthenticateLogin
+        {
+            Account = model.Login,
+            Password = model.Password,
+            OtpCode = model.OtpCode
+        };
 
-        parameters.Parameters.Account = model.Login;
-        parameters.Parameters.Password = model.Password;
-        parameters.Parameters.OtpCode = model.OtpCode;
+        var parameters = new AuthenticationLoginParameters(ApiInformations, login);
 
         var response = await ExecuteAsync<SynoLoginResponse>(parameters);
 
-        if (response is null || !response.Success || response.Data is null)
+        if (response?.Success != true || response.Data is null)
         {
             return false;
         }
@@ -141,9 +143,7 @@ public class DsmApiClient(IHttpClientFactory HttpClientFactory, ILogger<DsmApiCl
     }
 
     public async Task<ApiResponseBase<EmptyResponse>?> ExecuteSimpleAsync(IApiParameters parameters)
-    {
-        return await ExecuteAsync<ApiResponseBase<EmptyResponse>>(parameters);
-    }
+        => await ExecuteAsync<ApiResponseBase<EmptyResponse>>(parameters);
 
     private async Task<R?> ExecuteFormAsync<R>(string url, IApiParameters parameters)
         => await ExecutePostAsync<R>(url, parameters.ToForm());

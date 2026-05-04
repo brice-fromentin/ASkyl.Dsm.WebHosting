@@ -1,17 +1,15 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-[GenerateClone]
-public partial class FileStationPermission
+public record FileStationPermission
 {
     [JsonPropertyName("posix")]
-    public int? Posix { get; set; }
+    public int? Posix { get; init; }
 
     [JsonPropertyName("is_acl_mode")]
-    public bool? IsAclMode { get; set; }
+    public bool? IsAclMode { get; init; }
 
     [JsonPropertyName("acl")]
-    public FileStationAcl? Acl { get; set; }
+    public FileStationAcl? Acl { get; init; }
 }

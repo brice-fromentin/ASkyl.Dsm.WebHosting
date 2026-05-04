@@ -1,14 +1,14 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
+
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-[GenerateClone]
-public partial class FileStationDownload
+
+public record FileStationDownload
 {
     [JsonPropertyName("path")]
-    public List<string> Paths { get; set; } = [];
+    public List<string> Paths { get; init; } = [];
 
     [JsonPropertyName("mode")]
-    public string? Mode { get; set; } = "open"; // "open" or "download"
+    public string? Mode { get; init; } = "open"; // "open" or "download"
 }

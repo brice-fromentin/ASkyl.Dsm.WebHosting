@@ -1,20 +1,18 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-[GenerateClone]
-public partial class FileStationOwner
+public record FileStationOwner
 {
     [JsonPropertyName("user")]
-    public string? User { get; set; }
+    public string? User { get; init; }
 
     [JsonPropertyName("group")]
-    public string? Group { get; set; }
+    public string? Group { get; init; }
 
     [JsonPropertyName("uid")]
-    public int? Uid { get; set; }
+    public int? Uid { get; init; }
 
     [JsonPropertyName("gid")]
-    public int? Gid { get; set; }
+    public int? Gid { get; init; }
 }

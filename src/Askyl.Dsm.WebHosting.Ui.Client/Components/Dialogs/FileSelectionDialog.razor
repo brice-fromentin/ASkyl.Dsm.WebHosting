@@ -11,6 +11,7 @@
 @inject IFileSystemService FileSystemService
 @inject ITreeContentService TreeContentService
 @inject IJSRuntime JSRuntime
+@inject ILogger<FileSelectionDialog> Logger
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -133,6 +134,7 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to load shared folders");
             await ShowErrorAsync(ex.Message);
             TreeItems = [];
         }
@@ -145,8 +147,9 @@
             // Pass the same callback for nested lazy loading
             return await TreeContentService.LoadChildDirectoriesAsync(path, ShowErrorAsync, LoadChildDirectoriesAsync);
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to load child directories for path {Path}", path);
             return [];
         }
     }
@@ -192,6 +195,7 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to load directory contents for path {Path}", selectedPath);
             await HandleDirectoryLoadErrorAsync($"{ApplicationConstants.FailedToLoadDirectoryContentsErrorMessage}: {ex.Message}");
         }
     }
@@ -209,7 +213,7 @@
 
     private async Task OnFileDoubleClick(FsEntry file)
     {
-        Console.WriteLine($"[FileSelectionDialog] OnFileDoubleClick : {file.IsDirectory} - {file.Name}");
+        Logger.LogDebug("File double-clicked: {FileName} (IsDirectory: {IsDirectory})", file.Name, file.IsDirectory);
 
         if (file.IsDirectory)
         {

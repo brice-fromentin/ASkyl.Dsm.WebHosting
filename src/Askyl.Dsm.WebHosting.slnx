@@ -5,7 +5,6 @@
   <Project Path="Askyl.Dsm.WebHosting.Data/Askyl.Dsm.WebHosting.Data.csproj" />
   <Project Path="Askyl.Dsm.WebHosting.DotnetInstaller/Askyl.Dsm.WebHosting.DotnetInstaller.csproj" />
   <Project Path="Askyl.Dsm.WebHosting.Logging/Askyl.Dsm.WebHosting.Logging.csproj" />
-  <Project Path="Askyl.Dsm.WebHosting.SourceGenerators/Askyl.Dsm.WebHosting.SourceGenerators.csproj" />
   <Project Path="Askyl.Dsm.WebHosting.Tools/Askyl.Dsm.WebHosting.Tools.csproj" />
   <Project Path="Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj" />
   <Project Path="Askyl.Dsm.WebHosting.Ui.Client/Askyl.Dsm.WebHosting.Ui.Client.csproj" />

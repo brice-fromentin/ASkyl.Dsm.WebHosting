@@ -10,6 +10,7 @@
 
 @inject IDialogService DialogService
 @inject IWebSiteHostingService HostingService
+@inject ILogger<WebSiteConfigurationDialog> Logger
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -45,6 +46,8 @@
                     <FluentValidationMessage For="@(() => Configuration.InternalPort)" />
                 </FluentStack>
             </FluentStack>
+            <RealTimeNumberField @bind-Value="Configuration.ProcessTimeoutSeconds" Label="Shutdown Timeout (seconds)" Class="full-size" />
+            <FluentValidationMessage For="@(() => Configuration.ProcessTimeoutSeconds)" />
             <FluentCheckbox @bind-Value="Configuration.IsEnabled" Label="Enabled" />
             <FluentCheckbox @bind-Value="Configuration.AutoStart" Label="Auto Start" />
 
@@ -164,10 +167,9 @@
                 return;
             }
 
-            using var worker = this.CreateWorkingState(
-                IsEditMode ? $"Updating '{Configuration.Name}'..." : $"Creating '{Configuration.Name}'...");
+            using var worker = this.CreateWorkingState(IsEditMode ? $"Updating '{Configuration.Name}'..." : $"Creating '{Configuration.Name}'...");
 
-            var result = IsEditMode 
+            var result = IsEditMode
                 ? await HostingService.UpdateWebsiteAsync(Configuration)
                 : await HostingService.AddWebsiteAsync(Configuration);
 
@@ -181,7 +183,9 @@
         }
         catch (Exception ex)
         {
-            await DialogService.ShowErrorAsync($"Error {(IsEditMode ? "updating" : "creating")} website: {ex.Message}");
+            var action = IsEditMode ? "updating" : "creating";
+            Logger.LogError(ex, "Error {Action} website", action);
+            await DialogService.ShowErrorAsync($"Error {action} website: {ex.Message}");
         }
     }
 

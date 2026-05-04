@@ -45,18 +45,15 @@ public static class HttpClientExtensions
                 ? new StringContent(JsonSerializer.Serialize(content, JsonOptionsCache.Options), System.Text.Encoding.UTF8, NetworkConstants.ApplicationJson)
                 : null;
 
-            using (jsonContent)
+            var response = await client.PostAsync(requestUri, jsonContent, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
             {
-                var response = await client.PostAsync(requestUri, jsonContent, cancellationToken);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    return default;
-                }
-
-                var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                return await JsonSerializer.DeserializeAsync(stream, typeof(TResponse), JsonOptionsCache.Options, cancellationToken) as TResponse;
+                return default;
             }
+
+            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            return await JsonSerializer.DeserializeAsync(stream, typeof(TResponse), JsonOptionsCache.Options, cancellationToken) as TResponse;
         }
 
         /// <summary>

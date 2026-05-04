@@ -1,17 +1,15 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-[GenerateClone]
-public partial class FileStationRename
+public record FileStationRename
 {
     [JsonPropertyName("path")]
-    public string Path { get; set; } = default!;
+    public string Path { get; init; } = default!;
 
     [JsonPropertyName("name")]
-    public string Name { get; set; } = default!;
+    public string Name { get; init; } = default!;
 
     [JsonPropertyName("additional")]
-    public string? Additional { get; set; }
+    public string? Additional { get; init; }
 }

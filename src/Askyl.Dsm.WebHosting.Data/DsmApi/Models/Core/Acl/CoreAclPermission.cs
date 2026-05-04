@@ -1,47 +1,45 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 
-[GenerateClone]
-public partial class CoreAclPermission
+public record CoreAclPermission
 {
     [JsonPropertyName("read_data")]
-    public bool ReadData { get; set; }
+    public bool ReadData { get; init; }
 
     [JsonPropertyName("write_data")]
-    public bool WriteData { get; set; }
+    public bool WriteData { get; init; }
 
     [JsonPropertyName("exe_file")]
-    public bool ExeFile { get; set; }
+    public bool ExeFile { get; init; }
 
     [JsonPropertyName("append_data")]
-    public bool AppendData { get; set; }
+    public bool AppendData { get; init; }
 
     [JsonPropertyName("delete")]
-    public bool Delete { get; set; }
+    public bool Delete { get; init; }
 
     [JsonPropertyName("delete_sub")]
-    public bool DeleteSub { get; set; }
+    public bool DeleteSub { get; init; }
 
     [JsonPropertyName("read_attr")]
-    public bool ReadAttr { get; set; }
+    public bool ReadAttr { get; init; }
 
     [JsonPropertyName("write_attr")]
-    public bool WriteAttr { get; set; }
+    public bool WriteAttr { get; init; }
 
     [JsonPropertyName("read_ext_attr")]
-    public bool ReadExtAttr { get; set; }
+    public bool ReadExtAttr { get; init; }
 
     [JsonPropertyName("write_ext_attr")]
-    public bool WriteExtAttr { get; set; }
+    public bool WriteExtAttr { get; init; }
 
     [JsonPropertyName("read_perm")]
-    public bool ReadPerm { get; set; }
+    public bool ReadPerm { get; init; }
 
     [JsonPropertyName("change_perm")]
-    public bool ChangePerm { get; set; }
+    public bool ChangePerm { get; init; }
 
     [JsonPropertyName("take_ownership")]
-    public bool TakeOwnership { get; set; }
+    public bool TakeOwnership { get; init; }
 }

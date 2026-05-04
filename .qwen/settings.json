@@ -1,44 +1,5 @@
 {
   "$version": 3,
-  "tools": {
-    "approvalMode": "auto-edit"
-  },
-  "permissions": {
-    "allow": [
-      "Bash(cat *)",
-      "Bash(cd *)",
-      "Bash(curl *)",
-      "Bash(dotnet *)",
-      "Bash(echo *)",
-      "Bash(find *)",
-      "Bash(git status)",
-      "Bash(git diff)",
-      "Bash(git log *)",
-      "Bash(git add <specific-file>)",
-      "Bash(git commit *)",
-      "Bash(git branch *)",
-      "Bash(git remote *)",
-      "Bash(git fetch *)",
-      "Bash(git pull)",
-      "Bash(git push)",
-      "Bash(head *)",
-      "Bash(ls *)",
-      "Bash(mkdir *)",
-      "Bash(markdownlint *)",
-      "Bash(sed *)",
-      "Bash(tail *)",
-      "Bash(git add *)"
-    ],
-    "deny": [
-      "Bash(git reset --hard)",
-      "Bash(git reset --soft)",
-      "Bash(git clean -f)",
-      "Bash(git checkout -- .)",
-      "Bash(git rebase --abort)",
-      "Bash(git reflog expire)",
-      "Bash(git gc --prune)"
-    ]
-  },
   "mcpServers": {
     "web-search": {
       "args": [
@@ -48,13 +9,51 @@
       "command": "npx",
       "env": {
         "MODE": "stdio",
-        // Bing provides best results for .NET/C# projects: superior Microsoft Learn/devblogs indexing, comprehensive Stack Overflow coverage, and better technical documentation search
-        "DEFAULT_SEARCH_ENGINE": "bing",
+        "DEFAULT_SEARCH_ENGINE": "duckduckgo",
         "ALLOWED_SEARCH_ENGINES": "duckduckgo,bing,exa"
       },
       "timeout": 60000,
       "trust": true,
       "type": "stdio"
     }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(cat *)",
+      "Bash(cd *)",
+      "Bash(curl *)",
+      "Bash(dotnet *)",
+      "Bash(echo *)",
+      "Bash(find *)",
+      "Bash(git add *)",
+      "Bash(git add <specific-file>)",
+      "Bash(git branch *)",
+      "Bash(git diff)",
+      "Bash(git fetch *)",
+      "Bash(git log *)",
+      "Bash(git pull)",
+      "Bash(git push)",
+      "Bash(git remote *)",
+      "Bash(git status)",
+      "Bash(head *)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(markdownlint *)",
+      "Bash(sed *)",
+      "Bash(tail *)",
+      "Bash(true)"
+    ],
+    "deny": [
+      "Bash(git clean -f)",
+      "Bash(git checkout -- .)",
+      "Bash(git gc --prune)",
+      "Bash(git reflog expire)",
+      "Bash(git rebase --abort)",
+      "Bash(git reset --hard)",
+      "Bash(git reset --soft)"
+    ]
+  },
+  "tools": {
+    "approvalMode": "auto-edit"
   }
 }

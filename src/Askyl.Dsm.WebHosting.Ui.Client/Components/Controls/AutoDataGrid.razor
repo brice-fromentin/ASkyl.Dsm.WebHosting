@@ -1,3 +1,4 @@
+@using Askyl.Dsm.WebHosting.Constants.Application
 @typeparam TItem where TItem : class
 
 <div class="auto-data-grid-content">
@@ -82,7 +83,6 @@
     private TItem? SelectedItem { get; set; }
     private TItem? _lastClickedItem { get; set; }
     private DateTime _lastClickTime { get; set; }
-    private const int DoubleClickTimeoutMs = 400;
 
     public static IQueryable<TItem> Empty() => Enumerable.Empty<TItem>().AsQueryable();
 
@@ -133,7 +133,7 @@
         var now = DateTime.UtcNow;
         var timeSinceLastClick = (now - _lastClickTime).TotalMilliseconds;
 
-        if (_lastClickedItem is null || timeSinceLastClick > DoubleClickTimeoutMs || false == SelectedItem?.Equals(_lastClickedItem))
+        if (_lastClickedItem is null || timeSinceLastClick > ApplicationConstants.DoubleClickTimeoutMilliseconds || false == SelectedItem?.Equals(_lastClickedItem))
         {
             return false; // Not a double-click
         }

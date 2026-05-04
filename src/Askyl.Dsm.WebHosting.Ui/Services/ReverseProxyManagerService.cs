@@ -34,10 +34,14 @@ public class ReverseProxyManagerService(
         }
 
         var description = GetDescription(site.Name);
-        var createParams = new ReverseProxyCreateParameters(dsmApiClient.ApiInformations);
-        createParams.Parameters.Description = description;
-        createParams.Parameters.Frontend = new(site.HostName, site.PublicPort, (int)site.Protocol, new(site.EnableHSTS));
-        createParams.Parameters.Backend = new(NetworkConstants.Localhost, site.InternalPort, (int)ProtocolType.HTTP);
+        var proxy = new ReverseProxy
+        {
+            Description = description,
+            Frontend = new(site.HostName, site.PublicPort, (int)site.Protocol, new(site.EnableHSTS)),
+            Backend = new(NetworkConstants.Localhost, site.InternalPort, (int)ProtocolType.HTTP)
+        };
+
+        var createParams = new ReverseProxyCreateParameters(dsmApiClient.ApiInformations, proxy);
 
         var response = await dsmApiClient.ExecuteSimpleAsync(createParams);
 
@@ -69,11 +73,15 @@ public class ReverseProxyManagerService(
         // Find the proxy using composite key (backend port + frontend config)
         var proxy = await FindByCompositeKeyAsync(config) ?? throw new ReverseProxyNotFoundException($"Reverse proxy not found for site '{config.Name}'. You may need to recreate it.");
 
-        // Update using the found proxy's UUID with NEW configuration values
-        var updateParams = new ReverseProxyUpdateParameters(dsmApiClient.ApiInformations, proxy);
-        updateParams.Parameters.Description = GetDescription(config.Name);
-        updateParams.Parameters.Frontend = new(config.HostName, config.PublicPort, (int)config.Protocol, new(config.EnableHSTS));
-        updateParams.Parameters.Backend = new(NetworkConstants.Localhost, config.InternalPort, (int)ProtocolType.HTTP);
+        // Update using record 'with' expression — preserves all existing properties
+        var updatedProxy = proxy with
+        {
+            Description = GetDescription(config.Name),
+            Frontend = new(config.HostName, config.PublicPort, (int)config.Protocol, new(config.EnableHSTS)),
+            Backend = new(NetworkConstants.Localhost, config.InternalPort, (int)ProtocolType.HTTP)
+        };
+
+        var updateParams = new ReverseProxyUpdateParameters(dsmApiClient.ApiInformations, updatedProxy);
 
         var response = await dsmApiClient.ExecuteSimpleAsync(updateParams);
 
@@ -123,15 +131,13 @@ public class ReverseProxyManagerService(
     #region Helper Methods
 
     /// <summary>
-    /// Finds a reverse proxy using backend port + full frontend configuration.
+    /// Finds a reverse proxy using composite key (backend port + frontend configuration).
     /// This is the primary identification method (no UUID storage).
     /// </summary>
     private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config)
     {
         var allProxies = await GetAllReverseProxiesAsync();
 
-        // MATCH: Backend port + complete frontend configuration
-        // This combination uniquely identifies a reverse proxy entry
         return allProxies.FirstOrDefault(p =>
             p.Backend.Port == config.InternalPort &&
             String.Equals(p.Frontend.Fqdn, config.HostName, StringComparison.OrdinalIgnoreCase) &&

@@ -14,7 +14,10 @@ var fileManager = new FileManagerService(fileManagerLogger, String.Empty);
 fileManager.Initialize();
 
 var downloader = new DownloaderService(platformInfo, fileManager);
-var archiveExtractor = new ArchiveExtractorService(fileManager);
+
+// Create logger for ArchiveExtractorService
+var archiveExtractorLogger = loggerFactory.CreateLogger<ArchiveExtractorService>();
+var archiveExtractor = new ArchiveExtractorService(fileManager, archiveExtractorLogger);
 
 var fileName = await downloader.DownloadToAsync(true, CancellationToken.None);
 archiveExtractor.Decompress(fileName);

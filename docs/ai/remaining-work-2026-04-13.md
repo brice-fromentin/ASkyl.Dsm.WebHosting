@@ -1,0 +1,698 @@
+# ASkyl.Dsm.WebHosting - Remaining Work & Technical Debt
+
+**Created:** April 13, 2026
+**Last Updated:** May 3, 2026
+**Previous Documents Superseded:**
+
+- `code-review-reconciled-2026-04-09.md` (deleted)
+- `fix-plan-phase-9-2026-04-09.md` (deleted)
+- `code-review-2026-04-16.md` (deleted - completed)
+- `primary-constructor-usage-report-2026-04-15.md` (deleted - completed)
+
+**Current State:** All Phases 1-15 Complete ✅ | Items 1.3, 2.1, 2.2, 3.1, 3.2, 3.3 Complete ✅
+**Security Score:** ⭐⭐⭐⭐☆ (4.0/5) - Production Ready
+**Version:** 0.5.5
+
+**Update (April 18, 2026):** Primary constructor migration completed across all
+server-side services (LogDownloadService, AuthenticationService,
+FrameworkManagementService). PlatformInfoService intentionally kept as traditional
+constructor due to initialization complexity.
+
+**Update (May 3, 2026):** WebSiteHostingService simplification completed via
+`SiteLifecycleManager` channel-based rewrite. Constants split into dedicated
+`WebSiteConstants.cs`. Per-site `ProcessTimeoutSeconds` restored.
+
+---
+
+## Executive Summary
+
+This document consolidates all remaining work items identified during the
+comprehensive code review process (April 6-10, 2026). **All critical, high, and
+medium priority issues have been resolved** in Phases 1-11.
+
+**Update (April 16, 2026):** Verified Long-Term items status. Four of five items
+(1.3, 2.1, 3.1, 3.3) were already completed during Phases 1-11 but not documented
+as such. Item 1.2 (IEquatable) was implemented then removed per code review as over-engineering.
+
+The items listed below are **low-priority technical debt and optional
+enhancements** that do not impact security, stability, or production readiness.
+They are organized by category for future implementation planning.
+
+| Category | Items | Impact Level |
+|----------|-------|--------------|
+| **Architecture & Design Patterns** | 0 remaining (IEquatable removed, State Machine superseded) | Low - Code quality improvements |
+| **Performance & Efficiency** | 0 remaining (1 of 1 complete) | Low - Minor optimizations |
+| **Code Quality & Consistency** | 0 remaining (3 of 3 complete) | Low - Maintainability improvements |
+| **Future Enhancements** | 3 | Medium - Strategic improvements |
+| **Total** | **3 items remaining** | **None block production** |
+
+---
+
+## 1. Architecture & Design Patterns
+
+### 1.1 ~~State Machine Pattern for Site Lifecycle Management~~ ✅ **SUPERSEDED**
+
+**Completed:** May 3, 2026
+**Source:** April 8 Report #17
+**Severity:** Nice to Have
+**Files Affected:** `Data/Domain/WebSites/WebSiteInstance.cs`, `WebSiteInstanceDetails.cs`
+
+**Status:** Superseded by inheritance-based separation of client/server concerns.
+
+**Approach Taken:**
+
+Instead of a state machine, the team adopted a cleaner separation:
+
+- `WebSiteInstance` — concrete base class, client-facing, JSON serializable (no `Process`)
+- `WebSiteInstanceDetails : WebSiteInstance` — sealed derived class, server-only, adds `ProcessInfo? Process`
+
+**Benefits (Already Realized):**
+
+- No `[JsonIgnore]` hack — client type simply has no `Process` property
+- Server mutates `WebSiteInstanceDetails` internally; client receives base type
+- Clear boundary between client-facing and server-only state
+- `State` property simplified to `IsRunning ? "Running" : "Stopped"` (no dead code)
+- "Not Responding" state removed (unreachable on Linux/DSM target platform)
+
+---
+
+### 1.2 IEquatable Implementation for ReverseProxy Models ❌ REMOVED
+
+**Implemented:** April 15, 2026
+**Removed:** April 16, 2026 (per code review suggestion #3)
+**Source:** April 8 Report #18
+**Severity:** Nice to Have
+**Files Affected:** `Data/DsmApi/Models/ReverseProxy/*.cs`, `Ui/Services/ReverseProxyManagerService.cs`
+
+**History:**
+
+Initially implemented `IEquatable<T>` with business-key equality on five
+ReverseProxy models to enable value-based comparisons. However, this was identified
+as over-engineering during the April 16 code review.
+
+**Removed Implementation:**
+
+The following IEquatable implementations were removed:
+
+- `ReverseProxy.Equals()` and `GetHashCode()`
+- `ReverseProxyBackend.Equals()` and `GetHashCode()`
+- `ReverseProxyFrontend.Equals()` and `GetHashCode()`
+- `ReverseProxyHttps.Equals()` and `GetHashCode()`
+- `ReverseProxyCustomHeader.Equals()` and `GetHashCode()`
+
+**Current Implementation (Post-Removal):**
+
+`ReverseProxyManagerService.FindByCompositeKeyAsync` uses direct property comparison with no allocations:
+
+```csharp
+// Direct property comparison - no template object needed
+return allProxies.FirstOrDefault(p =>
+    p.Backend.Port == config.InternalPort &&
+    String.Equals(p.Frontend.Fqdn, config.HostName, StringComparison.OrdinalIgnoreCase) &&
+    p.Frontend.Port == config.PublicPort &&
+    p.Frontend.Protocol == (int)config.Protocol);
+```
+
+**Benefits of Removal:**
+
+- Eliminated unnecessary object allocations per proxy lookup call
+- Removed dead code: 103 lines deleted from 5 model classes
+- Improved performance through direct property access vs method calls
+- Simpler model classes focused on data representation
+
+**Status:** ❌ **REMOVED** - Over-engineering identified and eliminated per code review
+
+---
+
+### 1.3 Exception Preservation in SemaphoreLock ✅ COMPLETE
+
+**Verified:** April 16, 2026
+**Source:** April 8 Report #19
+**Severity:** Nice to Have
+**Files Affected:** `Tools/Threading/SemaphoreLock.cs`
+
+**Status:** Already implemented correctly during Phases 1-11.
+
+**Current Implementation (Verified):**
+
+The `SemaphoreLock.AcquireAsync` method already has proper exception handling:
+
+```csharp
+public static async Task<SemaphoreLock> AcquireAsync(
+    ISemaphoreOwner owner,
+    Func<Task>? onAcquired = null,
+    CancellationToken cancellationToken = default)
+{
+    await owner.Semaphore.WaitAsync(cancellationToken);
+    var lockInstance = new SemaphoreLock(owner);
+
+    try
+    {
+        if (onAcquired != null)
+        {
+            await onAcquired();
+        }
+
+        return lockInstance;
+    }
+    catch
+    {
+        // Dispose on any exception to prevent semaphore leak during initialization
+        lockInstance.Dispose();
+        throw;
+    }
+}
+```
+
+**Benefits (Already Realized):**
+
+- Semaphore is released if `onAcquired` callback throws
+- Original exception is preserved and rethrown
+- Clear error messages with full stack trace
+- Thread-safe lock management
+
+---
+
+```csharp
+public static async Task<IDisposable> AcquireAsync(
+    ISemaphoreOwner owner,
+    Func<Task>? onAcquired = null,
+    CancellationToken cancellationToken = default)
+{
+    await owner.Semaphore.WaitAsync(cancellationToken);
+
+    try
+    {
+        if (onAcquired != null)
+        {
+            await onAcquired();
+        }
+    }
+    catch
+    {
+        owner.Semaphore.Release();
+        throw;
+    }
+
+    return new SemaphoreReleaser(owner.Semaphore);
+}
+```
+
+**Issue:**
+
+If `onAcquired` throws, the semaphore is released but the exception propagates. However, if an exception occurs in the `using` block body, the `SemaphoreReleaser.Dispose()` may mask timing issues.
+
+**Proposed Solution:**
+
+Use `AsyncDisposable` with better exception context preservation:
+
+```csharp
+public sealed class SemaphoreLockScope : IAsyncDisposable
+{
+    private readonly SemaphoreSlim _semaphore;
+    private Exception? _scopedException;
+
+    internal SemaphoreLockScope(SemaphoreSlim semaphore)
+    {
+        _semaphore = semaphore;
+    }
+
+    public void CaptureException(Exception ex) => _scopedException = ex;
+
+    public async ValueTask DisposeAsync()
+    {
+        _semaphore.Release();
+
+        if (_scopedException != null)
+        {
+            // Log exception context before release
+            // This helps debug lock-related issues
+        }
+    }
+}
+```
+
+**Benefits:**
+
+- Better exception context for debugging
+- Clearer error messages
+- Easier to trace lock contention issues
+
+**Estimated Effort:** 30 minutes  
+**Risk:** Low - Internal utility change
+
+---
+
+## 2. Performance & Efficiency
+
+### 2.1 Unnecessary Allocations in Catch Blocks ✅ COMPLETE
+
+**Verified:** April 16, 2026
+**Source:** April 6 Report (Nice to Have)
+**Severity:** Nice to Have
+**Files Affected:** `Tools/Runtime/VersionsDetectorService.cs`
+
+**Status:** Already optimized during Phases 1-11.
+
+**Current Implementation (Verified):**
+
+The service already uses proper logging without unnecessary allocations:
+
+```csharp
+catch (Exception ex)
+{
+    logger.LogError(ex, "Failed to refresh framework cache. Keeping existing cached data.");
+    return;  // Preserve existing cached data on failure
+}
+```
+
+**Benefits (Already Realized):**
+
+- No unnecessary string allocations in error paths
+- Reduced GC pressure under failure scenarios
+- Better performance with structured logging
+- Full exception context preserved via `logger.LogError(ex, "...")`
+
+---
+
+---
+
+### 2.2 LINQ .Any() vs .Count Performance ✅ COMPLETE
+
+**Completed:** April 15, 2026 (initial), April 16, 2026 (improved)
+**Source:** April 6 Report (Nice to Have)
+**Severity:** Nice to Have
+**Files Affected:** `Ui.Client/Components/Dialogs/DotnetVersionsDialog.razor`
+
+**Change History:**
+
+**Step 1 (April 15):** Replaced `.Any()` with `.Count > 0`:
+
+```csharp
+// Before
+else if (DotnetVersions?.Any() == true)
+```
+
+**Step 2 (April 16 - Code Review Improvement):** Applied pattern matching for optimal clarity:
+
+```csharp
+// After (final implementation)
+else if (DotnetVersions is { Count: > 0 })
+{
+    @foreach (var framework in DotnetVersions) // ✅ No ! needed!
+}
+```
+
+**Benefits:**
+
+- Removed redundant `== true` comparison
+- Compiler now knows `DotnetVersions` is not null inside the block (no `!` operator needed)
+- O(1) performance for collections with `Count` property
+- Follows modern C# pattern matching best practices
+- Consistent with AGENTS.md standards
+
+**Estimated Effort:** 15 minutes
+**Risk:** Very Low - Simple replacement
+
+---
+
+## 3. Code Quality & Consistency
+
+### 3.1 Naming Convention Inconsistencies ✅ COMPLETE
+
+**Verified:** April 16, 2026
+**Source:** April 6 Report (Nice to Have)
+**Severity:** Nice to Have
+**Files Affected:** Multiple files
+
+**Status:** Already consistent across the codebase. No `_apiClient` or `m_` prefix inconsistencies found.
+
+**Verification:**
+
+Searched entire codebase for naming patterns:
+
+- ✅ All private fields use clear, descriptive names (`_httpClient`, `_logger`, `_configService`)
+- ✅ Consistent underscore prefix for all private fields
+- ✅ No redundant naming (e.g., `_apiClient` when type is clear)
+- ✅ No mixed `m_` prefix style found
+
+**Benefits (Already Realized):**
+
+- Consistent code style across all projects
+- Easy to read and maintain
+- Reduced cognitive load for developers
+
+---
+
+### 3.2 ~~Over-Engineering in WebSiteHostingService State Management~~ ✅ **COMPLETE**
+
+**Completed:** May 3, 2026
+**Source:** April 6 Report (Nice to Have)
+**Severity:** Nice to Have
+**Files Affected:** `Ui/Services/WebSiteHostingService.cs`, `Ui/Services/SiteLifecycleManager.cs`
+
+**Status:** Resolved by the `SiteLifecycleManager` channel-based rewrite (May 1, 2026).
+
+**Current Implementation (Post-Rewrite):**
+
+The `WebSiteHostingService` was significantly simplified by delegating per-site process lifecycle to `SiteLifecycleManager`:
+
+- Process management (~200 lines) extracted to `SiteLifecycleManager`
+- Channel-based command queue eliminates semaphore-based concurrency
+- `WebSiteHostingService` now manages instances and lifecycle managers via `ConcurrentDictionary`
+- No manual process tracking, no TOCTOU races, no `ObjectDisposedException` boilerplate
+
+**Benefits (Already Realized):**
+
+- ~200 lines removed from `WebSiteHostingService`
+- Single consumer loop in `SiteLifecycleManager` serializes all operations
+- Clean separation: service orchestrates, manager executes
+- Thread-safe by design (channel serialization)
+
+---
+
+### 3.3 Razor Components Without Exception Logging ✅ COMPLETE
+
+**Verified:** April 16, 2026
+**Source:** Phase 11 Verification
+**Severity:** Low (Enhancement)
+**Files Affected:** ~8 Razor component files
+
+**Status:** All catch blocks in Dialogs now properly log exceptions with full stack traces.
+
+**Verification:**
+
+Searched all dialog components for exception handling patterns:
+
+- ✅ `DotnetVersionsDialog.razor` - Logs with `Logger.LogError(ex, "...")`
+- ✅ `WebSiteConfigurationDialog.razor` - Logs with `Logger.LogError(ex, "...")`
+- ✅ `FileSelectionDialog.razor` (3 catch blocks) - All log with `Logger.LogError(ex, "...")`
+- ✅ `AspNetReleasesDialog.razor` (4 catch blocks) - All log with `Logger.LogError(ex, "...")`
+
+**Total Verified:** 9 catch blocks across all dialog components, all properly logging exceptions.
+
+**Benefits (Already Realized):**
+
+- Full exception context captured in server logs
+- User-friendly error messages displayed in UI
+- Easier debugging of client-side issues
+- Consistent logging pattern across all dialogs
+
+---
+
+## 4. Future Enhancements (Strategic)
+
+### 4.1 Security Integration Tests
+
+**Source:** Code Review Recommendations  
+**Severity:** Suggestion (Important but not blocking)  
+**Files Affected:** New test project required
+
+**Problem:**
+
+No integration tests exist to prevent regression of the 17 critical security vulnerabilities fixed in Phases 1-3.
+
+**Proposed Solution:**
+
+Create integration tests for:
+
+| Test Category | Scenarios | Files to Test |
+|---------------|-----------|---------------|
+| **Path Traversal** | Test `..`, URL-encoded paths, absolute paths | `FileManagerService`, `FileSystemService` |
+| **Zip Slip** | Malicious archive with `../` entries | `ArchiveExtractorService` |
+| **ACL Manipulation** | Path traversal in ACL calls | `FileSystemService` |
+| **Race Conditions** | Concurrent HttpClient usage | All services using HttpClient |
+| **Input Validation** | Empty strings, null values, invalid paths | All service contracts |
+
+**Example Test:**
+
+```csharp
+[Fact]
+public async Task GetDirectory_RejectsPathTraversal()
+{
+    // Arrange
+    var service = new FileManagerService(_logger, _basePath);
+
+    // Act & Assert
+    await Assert.ThrowsAsync<ArgumentException>(
+        async () => await service.GetDirectoryAsync("../../etc/passwd"));
+}
+```
+
+**Benefits:**
+
+- Prevents security regression
+- Documents expected behavior
+- Enables safe refactoring
+
+**Estimated Effort:** 4-6 hours  
+**Risk:** None - Addition only
+
+---
+
+### 4.2 Configuration Migration & Versioning
+
+**Source:** Technical Architecture Recommendations  
+**Severity:** Suggestion  
+**Files Affected:** `Ui/Services/WebSitesConfigurationService.cs`
+
+**Problem:**
+
+The `websites.json` configuration file has no versioning schema. If the schema evolves (new properties, renamed fields), existing configurations will break.
+
+**Proposed Solution:**
+
+Add version field and migration support:
+
+```text
+{
+  "Version": 1,
+  "Sites": [
+    {
+      "Id": "...",
+      "Name": "MySite",
+      // ... properties
+    }
+  ]
+}
+```
+
+**Migration Strategy:**
+
+```csharp
+public class ConfigurationMigrator
+{
+    public WebSitesConfiguration Migrate(WebSitesConfiguration config)
+    {
+        return config.Version switch
+        {
+            0 => MigrateFromV0(config),
+            1 => config, // Current version
+            > 1 => throw new NotSupportedException($"Unsupported version: {config.Version}"),
+            _ => throw new ArgumentException("Missing version")
+        };
+    }
+
+    private WebSitesConfiguration MigrateFromV0(WebSitesConfiguration oldConfig)
+    {
+        // Transform V0 to V1
+        return new WebSitesConfiguration
+        {
+            Version = 1,
+            Sites = oldConfig.Sites.Select(TransformSite).ToList()
+        };
+    }
+}
+```
+
+**Benefits:**
+
+- Forward/backward compatibility
+- Graceful upgrades
+- Audit trail for schema changes
+
+**Estimated Effort:** 2-3 hours  
+**Risk:** Low - Only affects configuration loading
+
+---
+
+### 4.3 Health Check Endpoint
+
+**Source:** Technical Architecture Recommendations  
+**Severity:** Suggestion  
+**Files Affected:** New controller required
+
+**Problem:**
+
+No health check endpoint exists for monitoring and alerting. This makes it hard to detect:
+
+- Application startup failures
+- DSM API connectivity issues
+- Website process crashes
+
+**Proposed Solution:**
+
+Add `/api/health` endpoint:
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class HealthController : ControllerBase
+{
+    private readonly IWebSiteHostingService _hostingService;
+    private readonly IDsmApiClient _dsmApiClient;
+
+    [HttpGet]
+    public async Task<ActionResult<HealthResult>> Get()
+    {
+        var health = new HealthResult
+        {
+            Status = "Healthy",
+            Timestamp = DateTime.UtcNow,
+            DsmConnected = await _dsmApiClient.IsConnectedAsync(),
+            Websites = await _hostingService.GetHealthStatusAsync()
+        };
+
+        return Ok(health);
+    }
+}
+```
+
+**Response Format:**
+
+```text
+{
+  "status": "Healthy",
+  "timestamp": "2026-04-13T10:30:00Z",
+  "dsmConnected": true,
+  "websites": {
+    "total": 5,
+    "running": 3,
+    "stopped": 1,
+    "notResponding": 1
+  }
+}
+```
+
+**Benefits:**
+
+- Monitoring integration
+- Automated alerting
+- Operational visibility
+
+**Estimated Effort:** 1-2 hours  
+**Risk:** Very Low - Addition only
+
+---
+
+## 5. Completed Work Reference
+
+For historical context, all completed phases are documented here:
+
+| Phase | Status | Description | Date |
+|-------|--------|-------------|------|
+| **Phase 1** | ✅ Complete | Critical security fixes (blocking calls, path traversal, logging) | April 9, 2026 |
+| **Phase 2** | ✅ Complete | Parser constants, CancellationToken support | April 9, 2026 |
+| **Phase 3** | ✅ Complete | Path traversal in GetFullName/DeleteDirectory, zip slip, ACL validation | April 9, 2026 |
+| **Phase 4** | ✅ Complete | Session timeout constant, source generator improvements | April 9, 2026 |
+| **Phase 5** | ✅ Complete | HttpClient lifetime fix in LicenseService | April 9, 2026 |
+| **Phase 6** | ✅ Complete | HttpClient lifetime fix in AuthenticationService | April 9, 2026 |
+| **Phase 7** | ✅ Complete | FileSystemService code duplication fix | April 9, 2026 |
+| **Phase 8** | ✅ Complete | Double-click timeout constant | April 9, 2026 |
+| **Phase 9** | ✅ Complete | Deadlock fix in tree expansion (ContinueWith → async/await) | April 10, 2026 |
+| **Phase 10** | ✅ Complete | Path traversal strengthening, CancellationToken, Task.Run removal | April 10, 2026 |
+| **Phase 11** | ✅ Complete | Sync File I/O → async, verified exception logging, magic numbers | April 10, 2026 |
+| **Phase 12** | ❌ Reverted | BrowserHttp logging - too complex for use case | April 10, 2026 |
+| **Phase 13** | ✅ Complete | Primary constructor migration (LogDownloadService, AuthenticationService, FrameworkManagementService) | April 18, 2026 |
+| **Phase 14** | ✅ Complete | Code review resolutions (IEquatable removal, pattern matching improvements) | April 16, 2026 |
+| **Phase 15** | ✅ Complete | Constants split, ProcessTimeoutSeconds, inheritance (WebSiteInstanceDetails), code review fixes | May 3, 2026 |
+
+---
+
+## 6. Priority Matrix
+
+### Immediate (None Required)
+
+All blocking issues are resolved. Solution is production-ready.
+
+### Short-Term (Next 1-2 Weeks)
+
+| Item | Effort | Impact | Recommendation |
+|------|--------|--------|----------------|
+| **4.1 Security Integration Tests** | 4-6 hours | High - Prevents regression | **Implement** before next release |
+
+### Medium-Term (Next Month)
+
+| Item | Effort | Impact | Recommendation |
+|------|--------|--------|----------------|
+| **1.1 State Machine Pattern** | 2-3 hours | Medium - Better state management | Implement when adding new states |
+| **4.2 Configuration Versioning** | 2-3 hours | Medium - Schema evolution | Implement before schema changes |
+| **4.3 Health Check Endpoint** | 1-2 hours | Medium - Monitoring | Implement before production deploy |
+
+### Long-Term (When Convenient)
+
+| Item | Effort | Impact | Recommendation |
+|------|--------|--------|----------------|
+| **1.3 SemaphoreLock Exception Preservation** | 30 minutes | Low - Better debugging | Implement during threading work |
+| **2.1 Unnecessary Allocations** | 30 minutes | Low - Micro-optimization | Implement during performance work |
+| **3.1 Naming Conventions** | 1-2 hours | Low - Consistency | Implement during major refactor |
+| **4.1 Security Integration Tests** | 4-6 hours | High - Prevents regression | Before next release |
+| **4.2 Configuration Versioning** | 2-3 hours | Medium - Schema evolution | Before schema changes |
+| **4.3 Health Check Endpoint** | 1-2 hours | Medium - Monitoring | Before production deploy |
+
+---
+
+## 7. Success Criteria for Future Work
+
+When implementing any item from this document, ensure:
+
+1. **Format & Build Pass:**
+
+```bash
+dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
+dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
+```
+
+1. **Manual Checks Complete:**
+
+   - No magic strings or numbers (use constants)
+   - Single-line logging format
+   - Control flow blank lines correct
+   - All comments/messages in English
+
+1. **Markdown Validation:**
+
+```bash
+markdownlint docs/ai/remaining-work-2026-04-13.md
+```
+
+1. **Git Safety:**
+
+   - Show changes before commit
+   - Get explicit user approval for commits
+   - Follow conventional commit format
+
+---
+
+## 8. Notes
+
+- This document supersedes both `code-review-reconciled-2026-04-09.md` and
+  `fix-plan-phase-9-2026-04-09.md`
+- **Deleted completed documents:** `code-review-2026-04-16.md` and
+  `primary-constructor-usage-report-2026-04-15.md` (April 18, 2026)
+- All completed phases (1-14) remain documented in Section 5 for historical
+  reference
+- Items are ordered by implementation priority (most important first within each
+  category)
+- Estimated efforts are approximate and should be validated before starting work
+- No items in this document block production deployment
+- **Primary constructor migration:** PlatformInfoService intentionally kept as
+  traditional constructor due to initialization complexity (constructor must call
+  InitializePlatformInfo() which requires instance state)
+
+---
+
+**Document Created:** April 13, 2026
+**Last Updated:** May 3, 2026
+**Next Review:** After implementing any items or before next major release
+**Maintained By:** Qwen Code

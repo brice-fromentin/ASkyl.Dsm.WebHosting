@@ -1,23 +1,21 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-[GenerateClone]
-public partial class FileStationAcl
+public record FileStationAcl
 {
     [JsonPropertyName("append")]
-    public bool? Append { get; set; }
+    public bool? Append { get; init; }
 
     [JsonPropertyName("del")]
-    public bool? Delete { get; set; }
+    public bool? Delete { get; init; }
 
     [JsonPropertyName("exec")]
-    public bool? Execute { get; set; }
+    public bool? Execute { get; init; }
 
     [JsonPropertyName("read")]
-    public bool? Read { get; set; }
+    public bool? Read { get; init; }
 
     [JsonPropertyName("write")]
-    public bool? Write { get; set; }
+    public bool? Write { get; init; }
 }

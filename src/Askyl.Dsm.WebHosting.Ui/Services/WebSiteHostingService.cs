@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
@@ -9,16 +8,19 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 
 /// <summary>
 /// Background service that manages website instances and their lifecycle.
+/// Orchestrates instance management by delegating to SiteLifecycleManager for process operations.
 /// </summary>
 public class WebSiteHostingService(
     ILogger<WebSiteHostingService> logger,
+    ILoggerFactory loggerFactory,
     IWebSitesConfigurationService configService,
     IFileSystemService fileSystemService,
     IReverseProxyManagerService reverseProxyManager) : BackgroundService, IWebSiteHostingService
 {
     #region Fields
 
-    private readonly ConcurrentDictionary<Guid, WebSiteInstance> _instances = new();
+    private readonly ConcurrentDictionary<Guid, WebSiteInstanceDetails> _instances = new();
+    private readonly ConcurrentDictionary<Guid, SiteLifecycleManager> _lifecycleManagers = new();
 
     #endregion
 
@@ -26,9 +28,25 @@ public class WebSiteHostingService(
 
     /// <summary>
     /// Gets all website instances with their current runtime status.
+    /// Updates runtime state from lifecycle managers before returning.
     /// </summary>
-    public Task<WebSiteInstancesResult> GetAllWebsitesAsync()
-        => Task.FromResult(WebSiteInstancesResult.CreateSuccess([.. _instances.Values.Select(i => i.Clone())]));
+    public async Task<WebSiteInstancesResult> GetAllWebsitesAsync()
+    {
+        var instances = new List<WebSiteInstance>();
+
+        foreach (var instance in _instances.Values)
+        {
+            if (_lifecycleManagers.TryGetValue(instance.Id, out var lifecycleManager))
+            {
+                var runtimeState = await lifecycleManager.GetRuntimeStateAsync();
+                UpdateInstanceRuntimeState(instance, runtimeState);
+            }
+
+            instances.Add(instance); // Serialized as base type — Process excluded
+        }
+
+        return WebSiteInstancesResult.CreateSuccess(instances);
+    }
 
     /// <summary>
     /// Adds a new website configuration and creates an instance.
@@ -107,7 +125,7 @@ public class WebSiteHostingService(
             // STEP 4: Update instance
             await UpdateInstanceAsync(existingInstance, configuration);
 
-            return WebSiteInstanceResult.CreateSuccess(existingInstance.Clone());
+            return WebSiteInstanceResult.CreateSuccess(existingInstance);
         }
         catch (Exception ex)
         {
@@ -123,7 +141,7 @@ public class WebSiteHostingService(
         => await RemoveInstanceAsync(id);
 
     /// <summary>
-    /// Starts a website by ID.
+    /// Starts a website by ID. Synchronous — waits for process to start and update runtime state.
     /// </summary>
     public async Task<ApiResult> StartWebsiteAsync(Guid id)
     {
@@ -133,11 +151,25 @@ public class WebSiteHostingService(
             return ApiResult.CreateFailure($"Site with ID '{id}' not found");
         }
 
-        return await StartSiteAsync(instance);
+        if (!_lifecycleManagers.TryGetValue(id, out var lifecycleManager))
+        {
+            logger.LogError("Lifecycle manager not found for site: {SiteId}", id);
+            return ApiResult.CreateFailure("Internal error: lifecycle manager not found");
+        }
+
+        var result = await lifecycleManager.StartAsync();
+
+        if (result.Success)
+        {
+            var runtimeState = await lifecycleManager.GetRuntimeStateAsync();
+            UpdateInstanceRuntimeState(instance, runtimeState);
+        }
+
+        return result;
     }
 
     /// <summary>
-    /// Stops a website by ID.
+    /// Stops a website by ID. Synchronous — waits for SIGTERM signal and process exit (typically 1-3 seconds).
     /// </summary>
     public async Task<ApiResult> StopWebsiteAsync(Guid id)
     {
@@ -147,7 +179,21 @@ public class WebSiteHostingService(
             return ApiResult.CreateFailure($"Site with ID '{id}' not found");
         }
 
-        return await StopSiteAsync(instance);
+        if (!_lifecycleManagers.TryGetValue(id, out var lifecycleManager))
+        {
+            logger.LogError("Lifecycle manager not found for site: {SiteId}", id);
+            return ApiResult.CreateFailure("Internal error: lifecycle manager not found");
+        }
+
+        var result = await lifecycleManager.StopAsync();
+
+        if (result.Success)
+        {
+            var runtimeState = await lifecycleManager.GetRuntimeStateAsync();
+            UpdateInstanceRuntimeState(instance, runtimeState);
+        }
+
+        return result;
     }
 
     #endregion
@@ -181,7 +227,7 @@ public class WebSiteHostingService(
     public override async Task StopAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("Stopping all websites");
-        await StopAllSitesAsync();
+        await StopAllSitesAsync(stoppingToken);
         await base.StopAsync(stoppingToken);
     }
 
@@ -195,8 +241,12 @@ public class WebSiteHostingService(
 
         foreach (var site in allSites)
         {
-            var instance = new WebSiteInstance(site);
+            var instance = new WebSiteInstanceDetails(site);
             _instances[instance.Id] = instance;
+
+            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), site);
+            _lifecycleManagers[instance.Id] = lifecycleManager;
+
             logger.LogInformation("Instance created for site: {SiteName}", site.Name);
         }
 
@@ -205,14 +255,15 @@ public class WebSiteHostingService(
 
     private async Task StartEligibleSitesAsync()
     {
-        var instancesToStart = _instances.Values.Where(i => i.Configuration.IsEnabled && i.Configuration.AutoStart);
+        var results = await Task.WhenAll(
+            _instances.Values
+                .Where(i => i.Configuration.IsEnabled && i.Configuration.AutoStart)
+                .Select(i => StartWebsiteAsync(i.Id)));
 
-        foreach (var instance in instancesToStart)
+        var failures = results.Where(r => !r.Success).ToList();
+        if (failures.Count != 0)
         {
-            if (instance != null)
-            {
-                await StartSiteAsync(instance);
-            }
+            logger.LogWarning("{Count} site(s) failed to start: {Failures}", failures.Count, String.Join(", ", failures.Select(f => f.Message)));
         }
     }
 
@@ -222,19 +273,23 @@ public class WebSiteHostingService(
 
     public async Task<WebSiteInstance> AddInstanceAsync(WebSiteConfiguration configuration)
     {
-        var instance = new WebSiteInstance(configuration.Clone());
+        var instance = new WebSiteInstanceDetails(configuration);
         _instances[instance.Id] = instance;
+
+        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), configuration);
+        _lifecycleManagers[instance.Id] = lifecycleManager;
+
         logger.LogInformation("Instance added for site: {SiteName}", configuration.Name);
 
         if (configuration.IsEnabled && configuration.AutoStart)
         {
-            await StartSiteAsync(instance);
+            await StartWebsiteAsync(instance.Id);
         }
 
         return instance;
     }
 
-    public async Task UpdateInstanceAsync(WebSiteInstance instance, WebSiteConfiguration newConfiguration)
+    public async Task UpdateInstanceAsync(WebSiteInstanceDetails instance, WebSiteConfiguration newConfiguration)
     {
         if (!_instances.TryGetValue(instance.Id, out var existingInstance))
         {
@@ -248,15 +303,24 @@ public class WebSiteHostingService(
         if (wasRunning && (!newConfiguration.IsEnabled || ConfigurationRequiresRestart(oldConfiguration, newConfiguration)))
         {
             logger.LogInformation("Stopping site: {SiteName} (disabled or restart required)", newConfiguration.Name);
-            await StopSiteAsync(existingInstance);
+            await StopWebsiteAsync(existingInstance.Id);
         }
 
-        existingInstance.Configuration = newConfiguration.Clone();
+        // Recreate lifecycle manager with new configuration to avoid stale config
+        if (_lifecycleManagers.TryRemove(instance.Id, out var oldManager))
+        {
+            oldManager.Dispose();
+        }
+
+        existingInstance.Configuration = newConfiguration;
+        _lifecycleManagers[instance.Id] = new SiteLifecycleManager(
+            loggerFactory.CreateLogger<SiteLifecycleManager>(), newConfiguration);
+
         logger.LogInformation("Instance updated for site: {SiteName}", newConfiguration.Name);
 
         if (newConfiguration.IsEnabled && (wasRunning || newConfiguration.AutoStart))
         {
-            await StartSiteAsync(existingInstance);
+            await StartWebsiteAsync(existingInstance.Id);
         }
     }
 
@@ -265,7 +329,10 @@ public class WebSiteHostingService(
         return oldConfig.ApplicationPath != newConfig.ApplicationPath
             || oldConfig.InternalPort != newConfig.InternalPort
             || oldConfig.Environment != newConfig.Environment
-            || !oldConfig.AdditionalEnvironmentVariables.SequenceEqual(newConfig.AdditionalEnvironmentVariables);
+            || oldConfig.AdditionalEnvironmentVariables.Count != newConfig.AdditionalEnvironmentVariables.Count
+            || !oldConfig.AdditionalEnvironmentVariables.All(
+                kvp => newConfig.AdditionalEnvironmentVariables.TryGetValue(kvp.Key, out var value)
+                    && value == kvp.Value);
     }
 
     #endregion
@@ -274,7 +341,7 @@ public class WebSiteHostingService(
 
     public async Task<ApiResult> RemoveInstanceAsync(Guid instanceId)
     {
-        if (!_instances.TryRemove(instanceId, out var instance))
+        if (!_instances.TryGetValue(instanceId, out var instance))
         {
             logger.LogWarning("Cannot remove instance: instance {InstanceId} not found", instanceId);
             return ApiResult.CreateFailure("Instance not found");
@@ -284,212 +351,83 @@ public class WebSiteHostingService(
 
         try
         {
-            if (instance.IsRunning)
+            // Stop lifecycle manager if running (without removing from dictionary yet)
+            if (_lifecycleManagers.TryGetValue(instanceId, out var lifecycleManager))
             {
-                var stopResult = await StopSiteAsync(instance);
-
-                if (!stopResult.Success)
+                if (instance.IsRunning)
                 {
-                    // Special case: NotFound is OK during deletion
-                    // It means the instance was already removed from memory, nothing to stop
-                    if (stopResult.ErrorCode != ApiErrorCode.NotFound)
-                    {
-                        _instances[instanceId] = instance;
-                        return ApiResult.CreateFailure($"Failed to stop site before deletion: {stopResult.Message}");
-                    }
+                    var stopResult = await lifecycleManager.StopAsync();
 
-                    logger.LogWarning("Site was already stopped or removed from memory. Continuing with cleanup.");
+                    if (!stopResult.Success && stopResult.ErrorCode != ApiErrorCode.NotFound)
+                    {
+                        logger.LogWarning("Failed to stop site before deletion: {ErrorMessage}", stopResult.Message);
+                        // Continue with cleanup anyway
+                    }
                 }
             }
 
-            // STEP 1: Delete reverse proxy rule (best effort - log but don't fail if it errors)
+            // Delete reverse proxy rule (best effort - log but don't fail if it errors)
             var proxyDeleteResult = await DeleteReverseProxyRuleAsync(instance.Configuration);
 
             if (!proxyDeleteResult.Success)
             {
                 logger.LogWarning("Reverse proxy deletion failed for '{SiteName}' (site will be removed anyway): {ErrorMessage}", siteName, proxyDeleteResult.Message);
-                // Continue with removal even if proxy deletion fails
             }
 
-            // STEP 2: Remove configuration (persistent storage)
+            // Remove configuration (persistent storage) — MUST succeed before removing from memory
             await configService.RemoveSiteAsync(instance.Configuration.Id);
+
+            // Safe to remove from memory now — persistent config is gone
+            _ = _instances.TryRemove(instanceId, out _);
+
+            if (_lifecycleManagers.TryRemove(instanceId, out lifecycleManager))
+            {
+                lifecycleManager.Dispose();
+            }
 
             logger.LogInformation("Instance removed for site: {SiteName}", siteName);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex)
         {
-            _instances[instanceId] = instance;
             logger.LogError(ex, "Failed to remove site: {SiteName}", siteName);
             return ApiResult.CreateFailure($"Failed to remove site: {ex.Message}");
         }
     }
 
-    public async Task<ApiResult> StartSiteAsync(WebSiteInstance instance)
+    /// <summary>
+    /// Updates the runtime state of a WebSiteInstance from WebSiteRuntimeState.
+    /// Helper method for synchronizing instance state with lifecycle manager state.
+    /// </summary>
+    private static void UpdateInstanceRuntimeState(WebSiteInstanceDetails instance, WebSiteRuntimeState runtimeState)
     {
-        if (!_instances.TryGetValue(instance.Id, out var internalInstance))
-        {
-            logger.LogError("Instance not found: {InstanceId}", instance.Id);
-            return ApiResult.CreateFailure("Instance not found");
-        }
+        instance.IsRunning = runtimeState.IsRunning;
+        instance.Process = runtimeState.ProcessDetails;
+    }
 
-        var siteName = internalInstance.Configuration.Name;
+    #endregion
 
-        if (internalInstance.IsRunning)
-        {
-            instance.IsRunning = internalInstance.IsRunning;  // Sync to caller's instance
-            logger.LogWarning("Site {SiteName} is already running", siteName);
-            return ApiResult.CreateFailure($"Site '{siteName}' is already running");
-        }
+    #region Bulk Operations
 
-        logger.LogInformation("Starting site: {SiteName}", siteName);
-
-        try
-        {
-            var site = internalInstance.Configuration;
-            var executablePath = site.ApplicationRealPath;
-
-            if (!File.Exists(executablePath))
+    private async Task StopAllSitesAsync(CancellationToken cancellationToken)
+    {
+        var stopTasks = _lifecycleManagers.Values.Select(
+            async m =>
             {
-                logger.LogError("Application binary not found: {ApplicationPath}", executablePath);
-                return ApiResult.CreateFailure($"Application binary not found: {executablePath}");
-            }
-
-            var startInfo = CreateProcessStartInfo(site, executablePath);
-            var process = Process.Start(startInfo);
-
-            if (process == null)
-            {
-                logger.LogError("Failed to start process for site: {SiteName}", siteName);
-                return ApiResult.CreateFailure($"Failed to start process for site '{siteName}'");
-            }
-
-            internalInstance.Process = new ProcessInfo(process);
-            internalInstance.IsRunning = true;  // Update serialized state
-            instance.Process = internalInstance.Process;
-            instance.IsRunning = internalInstance.IsRunning;  // Sync to caller's instance
-            logger.LogInformation("Site {SiteName} started with PID {ProcessId}", siteName, process.Id);
-
-            return ApiResult.CreateSuccess();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to start site: {SiteName}", siteName);
-            return ApiResult.CreateFailure($"Failed to start site: {ex.Message}");
-        }
-    }
-
-    public async Task<ApiResult> StopSiteAsync(WebSiteInstance instance)
-    {
-        if (!_instances.TryGetValue(instance.Id, out var internalInstance))
-        {
-            logger.LogError("Instance not found: {InstanceId}", instance.Id);
-            return ApiResult.CreateFailure(ApiErrorCode.NotFound, "Instance not found");
-        }
-
-        var siteName = internalInstance.Configuration.Name;
-
-        // Idempotency check: already stopped
-        if (!internalInstance.IsRunning)
-        {
-            SyncInstanceState(instance, internalInstance);
-            logger.LogWarning("Site {SiteName} is already stopped (idempotent operation)", siteName);
-            return ApiResult.CreateSuccess();
-        }
-
-        try
-        {
-            await StopProcessAsync(internalInstance, instance, siteName);
-
-            CleanUpInstanceState(internalInstance, instance);
-            logger.LogInformation("Site {SiteName} stopped successfully", siteName);
-
-            return ApiResult.CreateSuccess();
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            // Process-related exceptions usually mean the process is already gone
-            logger.LogWarning(ex, "Site {SiteName} process no longer exists. Cleaning up state.", siteName);
-            CleanUpInstanceState(internalInstance, instance);
-            return ApiResult.CreateSuccess();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to stop site: {SiteName}", siteName);
-            return ApiResult.CreateFailure(ApiErrorCode.Failure, $"Failed to stop site: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Stops the process associated with a website instance.
-    /// </summary>
-    private async Task StopProcessAsync(WebSiteInstance internalInstance, WebSiteInstance instance, string siteName)
-    {
-        var process = Process.GetProcessById(internalInstance.Process!.Id);
-
-        // Check if process is already dead
-        if (process.HasExited)
-        {
-            logger.LogWarning("Site {SiteName} process was already dead. Cleaning up state.", siteName);
-            return;  // Process is gone, nothing to stop
-        }
-
-        process.CloseMainWindow();
-
-        if (!process.WaitForExit(5000))
-        {
-            await ForceKillProcessAsync(process, siteName);
-        }
-    }
-
-    /// <summary>
-    /// Force kills a process that didn't stop gracefully.
-    /// </summary>
-    private async Task ForceKillProcessAsync(Process process, string siteName)
-    {
-        logger.LogWarning("Site {SiteName} did not stop gracefully. Force killing process.", siteName);
-
-        try
-        {
-            process.Kill();
-            await WaitForProcessExitAsync(process, 1000);
-        }
-        catch (Exception killEx)
-        {
-            logger.LogError(killEx, "Failed to force kill process for site {SiteName}. Process may still be running.", siteName);
-            // Still consider it success - we did our best, OS will clean up orphaned process eventually
-        }
-    }
-
-    /// <summary>
-    /// Waits for a process to exit with timeout.
-    /// </summary>
-    private static async Task WaitForProcessExitAsync(Process process, int timeoutMilliseconds)
-        => await Task.Run(() => process.WaitForExit(timeoutMilliseconds));
-
-    /// <summary>
-    /// Cleans up the instance state after stopping.
-    /// </summary>
-    private void CleanUpInstanceState(WebSiteInstance internalInstance, WebSiteInstance instance)
-    {
-        internalInstance.Process = null;
-        internalInstance.IsRunning = false;  // Update serialized state
-        SyncInstanceState(instance, internalInstance);
-    }
-
-    /// <summary>
-    /// Synchronizes the caller's instance with the internal instance state.
-    /// </summary>
-    private void SyncInstanceState(WebSiteInstance target, WebSiteInstance source)
-    {
-        target.IsRunning = source.IsRunning;
-        target.Process = source.Process;
-    }
-
-    private async Task StopAllSitesAsync()
-    {
-        var stopTasks = _instances.Values.Select(instance => Task.Run(() => StopSiteAsync(instance)));
+                try
+                {
+                    await m.StopAsync(cancellationToken);
+                }
+                finally
+                {
+                    m.Dispose();
+                }
+            })
+            .ToList();
         await Task.WhenAll(stopTasks);
+
+        _lifecycleManagers.Clear();
+        _instances.Clear();
     }
 
     #endregion
@@ -508,7 +446,7 @@ public class WebSiteHostingService(
         }
 
         // Determine if the target is a directory (if ApplicationPath ends with .dll, set permissions on parent directory)
-        var isDirectory = !configuration.ApplicationRealPath.EndsWith(ApplicationConstants.DllFileExtension, StringComparison.OrdinalIgnoreCase);
+        var isDirectory = !configuration.ApplicationRealPath.EndsWith(WebSiteConstants.DllFileExtension, StringComparison.OrdinalIgnoreCase);
 
         logger.LogDebug("Setting HTTP group permissions for '{SiteName}' at path: {Path} (IsDirectory: {IsDirectory})", configuration.Name, configuration.ApplicationRealPath, isDirectory);
 
@@ -571,34 +509,6 @@ public class WebSiteHostingService(
             logger.LogError(ex, "Failed to delete reverse proxy rule for '{SiteName}'", configuration.Name);
             return ApiResult.CreateFailure($"Failed to delete reverse proxy: {ex.Message}");
         }
-    }
-
-    #endregion
-
-    #region Process Management
-
-    private static ProcessStartInfo CreateProcessStartInfo(WebSiteConfiguration site, string executablePath)
-    {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = ApplicationConstants.DotnetExecutable,
-            Arguments = executablePath,
-            WorkingDirectory = Path.GetDirectoryName(executablePath),
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
-        startInfo.Environment[ApplicationConstants.AspNetCoreUrlsEnvironmentVariable] = $"http://localhost:{site.InternalPort}";
-        startInfo.Environment[ApplicationConstants.AspNetCoreEnvironmentVariable] = site.Environment;
-
-        foreach (var envVar in site.AdditionalEnvironmentVariables)
-        {
-            startInfo.Environment[envVar.Key] = envVar.Value;
-        }
-
-        return startInfo;
     }
 
     #endregion

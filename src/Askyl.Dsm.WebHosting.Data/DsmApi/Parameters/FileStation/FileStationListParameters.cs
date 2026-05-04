@@ -4,7 +4,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.FileStation;
 
-public class FileStationListParameters(ApiInformationCollection informations) : ApiParametersBase<FileStationList>(informations)
+public class FileStationListParameters(ApiInformationCollection informations, FileStationList? entry = null) : ApiParametersBase<FileStationList>(informations, entry)
 {
     public override string Name => ApiNames.FileStationList;
 

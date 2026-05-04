@@ -1,23 +1,21 @@
 using System.Text.Json.Serialization;
-using Askyl.Dsm.WebHosting.SourceGenerators;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 
-[GenerateClone]
-public partial class CoreAclRule
+public record CoreAclRule
 {
     [JsonPropertyName("owner_type")]
-    public string OwnerType { get; set; } = "";
+    public string OwnerType { get; init; } = "";
 
     [JsonPropertyName("owner_name")]
-    public string OwnerName { get; set; } = "";
+    public string OwnerName { get; init; } = "";
 
     [JsonPropertyName("permission_type")]
-    public string PermissionType { get; set; } = "";
+    public string PermissionType { get; init; } = "";
 
     [JsonPropertyName("permission")]
-    public CoreAclPermission Permission { get; set; } = new();
+    public CoreAclPermission Permission { get; init; } = new();
 
     [JsonPropertyName("inherit")]
-    public CoreAclInherit Inherit { get; set; } = new();
+    public CoreAclInherit Inherit { get; init; } = new();
 }

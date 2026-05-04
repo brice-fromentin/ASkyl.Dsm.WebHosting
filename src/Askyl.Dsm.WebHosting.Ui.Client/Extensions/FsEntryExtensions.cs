@@ -30,15 +30,15 @@ public static class FsEntryExtensions
         public TreeViewItem ToTreeViewItemWithLazyLoading(Func<string, Task<List<TreeViewItem>>> loadChildrenAsync)
             => new(item.Path, item.Name, TreeViewItem.LoadingTreeViewItems)
             {
-                OnExpandedAsync = args => loadChildrenAsync(args.CurrentItem.Id!).ContinueWith(t =>
+                OnExpandedAsync = async args =>
                 {
-                    if (t.Result is not null)
-                    {
-                        args.CurrentItem.Items = [.. t.Result];
-                    }
+                    var result = await loadChildrenAsync(args.CurrentItem.Id!);
 
-                    return Task.CompletedTask;
-                })
+                    if (result is not null)
+                    {
+                        args.CurrentItem.Items = [.. result];
+                    }
+                }
             };
     }
 }

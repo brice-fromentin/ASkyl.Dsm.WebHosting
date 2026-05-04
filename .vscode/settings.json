@@ -3,6 +3,7 @@
     "editor.wordWrap": "off",
     "dotnet.formatting.organizeImportsOnFormat": true,
     "html.format.wrapLineLength": 500,
+    "debug.internalConsoleOptions": "openOnSessionStart",
     "github.copilot.enable": {
         "*": false
     },

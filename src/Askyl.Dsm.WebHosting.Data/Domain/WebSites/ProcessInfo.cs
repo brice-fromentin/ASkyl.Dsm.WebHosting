@@ -1,10 +1,7 @@
-using System.Diagnostics;
-
 namespace Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
-public record ProcessInfo(Process Process)
-{
-    public int Id => Process.Id;
-
-    public bool IsResponding => !Process.HasExited && Process.Responding;
-}
+/// <summary>
+/// Snapshot of process state at a point in time.
+/// Does not hold a live Process reference to avoid serialization staleness.
+/// </summary>
+public record ProcessInfo(int Id);
