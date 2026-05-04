@@ -30,7 +30,7 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
     #region Regex Patterns
 
     [GeneratedRegex(@"^\s*(\d+\.\d+\.\d+(?:-[\w\.-]+)?)")]
-    private static partial Regex SdkVersionRegex();
+    internal static partial Regex SdkVersionRegex();
 
     [GeneratedRegex(@"Microsoft\.AspNetCore\.App\s+(\d+\.\d+\.\d+(?:-[\w\.-]+)?)")]
     private static partial Regex AspNetCoreVersionRegex();
@@ -150,7 +150,7 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
 
     #region Output Parsing
 
-    private List<FrameworkInfo> ParseDotnetInfo(string output)
+    internal List<FrameworkInfo> ParseDotnetInfo(string output)
     {
         List<FrameworkInfo> frameworks = [];
         var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -186,7 +186,7 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
         return [.. frameworks.OrderBy(f => GetFrameworkOrder(f.Type)).ThenBy(f => f.Version)];
     }
 
-    private string? DetectCurrentSection(string trimmedLine)
+    internal string? DetectCurrentSection(string trimmedLine)
     {
         // Detect main sections using constants
         if (trimmedLine.StartsWith(DotnetInfoParserConstants.SdkSectionHeader))
@@ -206,7 +206,7 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
         return null;
     }
 
-    private void ParseVersionsInSection(List<FrameworkInfo> frameworks, string currentSection, string trimmedLine)
+    internal void ParseVersionsInSection(List<FrameworkInfo> frameworks, string currentSection, string trimmedLine)
     {
         // Parse versions in each section using constants
         if (currentSection == DotnetInfoParserConstants.FrameworkTypeSdk)
@@ -240,7 +240,7 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
 
     #region Framework Management
 
-    private void TryAddFrameworkFromRegex(List<FrameworkInfo> frameworks, Regex regex, string trimmedLine, string frameworkType)
+    internal void TryAddFrameworkFromRegex(List<FrameworkInfo> frameworks, Regex regex, string trimmedLine, string frameworkType)
     {
         var match = regex.Match(trimmedLine);
 

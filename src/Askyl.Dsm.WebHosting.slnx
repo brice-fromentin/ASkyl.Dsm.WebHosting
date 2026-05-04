@@ -1,6 +1,7 @@
 <Solution>
 
   <Project Path="Askyl.Dsm.WebHosting.Benchmarks/Askyl.Dsm.WebHosting.Benchmarks.csproj" />
+  <Project Path="Askyl.Dsm.WebHosting.Tests/Askyl.Dsm.WebHosting.Tests.csproj" />
   <Project Path="Askyl.Dsm.WebHosting.Constants/Askyl.Dsm.WebHosting.Constants.csproj" />
   <Project Path="Askyl.Dsm.WebHosting.Data/Askyl.Dsm.WebHosting.Data.csproj" />
   <Project Path="Askyl.Dsm.WebHosting.DotnetInstaller/Askyl.Dsm.WebHosting.DotnetInstaller.csproj" />
