@@ -21,6 +21,7 @@
     "allow": [
       "Bash(cat *)",
       "Bash(cd *)",
+      "Bash(coverlet *)",
       "Bash(curl *)",
       "Bash(dotnet *)",
       "Bash(echo *)",
@@ -37,11 +38,10 @@
       "Bash(git status)",
       "Bash(head *)",
       "Bash(ls *)",
-      "Bash(mkdir *)",
       "Bash(markdownlint *)",
+      "Bash(mkdir *)",
       "Bash(sed *)",
-      "Bash(tail *)",
-      "Bash(true)"
+      "Bash(tail *)"
     ],
     "deny": [
       "Bash(git clean -f)",

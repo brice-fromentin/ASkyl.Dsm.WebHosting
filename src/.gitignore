@@ -3,6 +3,9 @@ bin/
 obj/
 logs/
 
+# Test coverage artifacts
+TestResults/
+
 # Visual Studio / Rider
 .vs/
 .idea/
@@ -33,3 +36,4 @@ Askyl.Dsm.WebHosting.Ui/websites.json
 */.DS_Store
 */*/.DS_Store
 */*/*/.DS_Store
+

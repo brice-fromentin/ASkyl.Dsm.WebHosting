@@ -66,7 +66,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
   - ✅ Reduced timeouts: HttpClient (90→15s), Process (60→10s) — eliminates DSM reverse proxy 504 errors
 - ⏳ TODO: Certificate management for reverse proxy
 - ⏳ TODO: Multi-language support
-- ⏳ TODO: Unit test implementation
+- ✅ Unit test implementation (187 tests, 9 phases complete — May 2026)
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 
@@ -84,6 +84,7 @@ Askyl.Dsm.WebHosting.slnx (Version 0.5.3)
 ├── Askyl.Dsm.WebHosting.DotnetInstaller    # .NET runtime installer utility
 ├── Askyl.Dsm.WebHosting.Logging            # Logging extensions (source-generated log methods)
 ├── Askyl.Dsm.WebHosting.Tools              # Utility tools & DSM API client
+├── Askyl.Dsm.WebHosting.Tests              # Unit tests (xUnit, Moq, FluentAssertions)
 ├── Askyl.Dsm.WebHosting.Ui                 # Main Blazor Server-WASM hybrid UI
 └── Askyl.Dsm.WebHosting.Ui.Client          # Blazor WebAssembly client library
 ```
@@ -1505,10 +1506,10 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 
 ### Immediate Priorities
 
-1. **Unit Test Implementation**
-   - Start with `WebSiteHostingService` (core business logic)
-   - Mock `DsmApiClient` for integration tests
-   - Target 80%+ code coverage on critical paths
+1. **Unit Test Implementation — Partially Complete**
+   - ✅ 187 tests across 9 phases (Data validation, domain, Result types, threading, extensions, I/O, parsing, platform)
+   - ⏳ Deferred: `DsmApiClient` (no interface), `DownloaderService` (external library), `WebSiteHostingService` (complex orchestration)
+   - See `docs/ai/test-plan-2026-05-04.md` for results and coverage gaps
 
 2. **Certificate Management**
    - Add UI for SSL certificate selection per website

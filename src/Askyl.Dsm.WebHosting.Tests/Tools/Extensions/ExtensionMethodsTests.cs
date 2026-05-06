@@ -3,8 +3,19 @@ using Askyl.Dsm.WebHosting.Tools.Extensions;
 
 namespace Askyl.Dsm.WebHosting.Tests.Tools.Extensions;
 
-public class ExtensionMethodsTests
+public class ExtensionMethodsTests : IDisposable
 {
+    private readonly MockHttpMessageHandler _handler = new();
+
+    private void SetResponse(string content = "", int statusCode = 200)
+    {
+        _handler.AddResponse(content, statusCode);
+    }
+
+    private HttpClient CreateClient() => new(_handler) { BaseAddress = new Uri("https://example.com") };
+
+    public void Dispose() => _handler.Dispose();
+
     #region ApiResponseExtensions
 
     [Fact]
@@ -165,9 +176,8 @@ public class ExtensionMethodsTests
     public async Task GetJsonAsync_Success_DeserializesResponse()
     {
         // Arrange
-        var json = "{\"name\":\"test\",\"value\":42}";
-        var handler = CreateMockHandler(json);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse("{\"name\":\"test\",\"value\":42}");
+        var client = CreateClient();
 
         // Act
         var result = await client.GetJsonAsync<TestModel>("/");
@@ -182,8 +192,8 @@ public class ExtensionMethodsTests
     public async Task GetJsonAsync_NonSuccess_ReturnsDefault()
     {
         // Arrange
-        var handler = CreateMockHandler(statusCode: (int)System.Net.HttpStatusCode.NotFound);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse(statusCode: (int)System.Net.HttpStatusCode.NotFound);
+        var client = CreateClient();
 
         // Act
         var result = await client.GetJsonAsync<TestModel>("/");
@@ -196,9 +206,8 @@ public class ExtensionMethodsTests
     public async Task GetJsonOrDefaultAsync_Success_ReturnsDeserialized()
     {
         // Arrange
-        var json = "{\"name\":\"test\",\"value\":42}";
-        var handler = CreateMockHandler(json);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse("{\"name\":\"test\",\"value\":42}");
+        var client = CreateClient();
 
         // Act
         var result = await client.GetJsonOrDefaultAsync<TestModel>("/default", () => new TestModel());
@@ -212,8 +221,8 @@ public class ExtensionMethodsTests
     public async Task GetJsonOrDefaultAsync_Failure_ReturnsDefaultValue()
     {
         // Arrange
-        var handler = CreateMockHandler(statusCode: (int)System.Net.HttpStatusCode.NotFound);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse(statusCode: (int)System.Net.HttpStatusCode.NotFound);
+        var client = CreateClient();
 
         // Act
         var result = await client.GetJsonOrDefaultAsync<TestModel>("/", () => new TestModel { Name = "fallback" });
@@ -227,9 +236,8 @@ public class ExtensionMethodsTests
     public async Task PostJsonAsync_Success_DeserializesResponse()
     {
         // Arrange
-        var json = "{\"name\":\"test\",\"value\":42}";
-        var handler = CreateMockHandler(json);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse("{\"name\":\"test\",\"value\":42}");
+        var client = CreateClient();
 
         // Act
         var result = await client.PostJsonAsync<TestModel, TestModel>("/", new TestModel { Name = "input" });
@@ -243,8 +251,8 @@ public class ExtensionMethodsTests
     public async Task PostJsonAsync_NonSuccess_ReturnsDefault()
     {
         // Arrange
-        var handler = CreateMockHandler(statusCode: (int)System.Net.HttpStatusCode.BadRequest);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse(statusCode: (int)System.Net.HttpStatusCode.BadRequest);
+        var client = CreateClient();
 
         // Act
         var result = await client.PostJsonAsync<TestModel, TestModel>("/", new TestModel { Name = "input" });
@@ -257,9 +265,8 @@ public class ExtensionMethodsTests
     public async Task PostJsonAsync_NullContent_SendsNullContent()
     {
         // Arrange
-        var json = "{\"name\":\"test\",\"value\":42}";
-        var handler = CreateMockHandler(json);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse("{\"name\":\"test\",\"value\":42}");
+        var client = CreateClient();
 
         // Act
         var result = await client.PostJsonAsync<TestModel, TestModel>("/", null);
@@ -272,9 +279,8 @@ public class ExtensionMethodsTests
     public async Task DeleteJsonAsync_Success_DeserializesResponse()
     {
         // Arrange
-        var json = "{\"name\":\"test\",\"value\":42}";
-        var handler = CreateMockHandler(json);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse("{\"name\":\"test\",\"value\":42}");
+        var client = CreateClient();
 
         // Act
         var result = await client.DeleteJsonAsync<TestModel>("/");
@@ -288,8 +294,8 @@ public class ExtensionMethodsTests
     public async Task DeleteJsonAsync_NonSuccess_ReturnsDefault()
     {
         // Arrange
-        var handler = CreateMockHandler(statusCode: (int)System.Net.HttpStatusCode.NotFound);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse(statusCode: (int)System.Net.HttpStatusCode.NotFound);
+        var client = CreateClient();
 
         // Act
         var result = await client.DeleteJsonAsync<TestModel>("/");
@@ -302,8 +308,8 @@ public class ExtensionMethodsTests
     public async Task DeleteJsonOrDefaultAsync_Failure_ReturnsDefaultValue()
     {
         // Arrange
-        var handler = CreateMockHandler(statusCode: (int)System.Net.HttpStatusCode.NotFound);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse(statusCode: (int)System.Net.HttpStatusCode.NotFound);
+        var client = CreateClient();
 
         // Act
         var result = await client.DeleteJsonOrDefaultAsync<TestModel>("/", () => new TestModel { Name = "fallback" });
@@ -317,8 +323,8 @@ public class ExtensionMethodsTests
     public async Task PostJsonOrDefaultAsync_Failure_ReturnsDefaultValue()
     {
         // Arrange
-        var handler = CreateMockHandler(statusCode: (int)System.Net.HttpStatusCode.BadRequest);
-        var client = new HttpClient(handler) { BaseAddress = new Uri("https://example.com") };
+        SetResponse(statusCode: (int)System.Net.HttpStatusCode.BadRequest);
+        var client = CreateClient();
 
         // Act
         var result = await client.PostJsonOrDefaultAsync<TestModel, TestModel>("/", new TestModel(), () => new TestModel { Name = "fallback" });
@@ -357,13 +363,6 @@ public class ExtensionMethodsTests
     #endregion
 
     #region Mock Handler
-
-    private static HttpMessageHandler CreateMockHandler(string content = "", int statusCode = 200)
-    {
-        var handler = new MockHttpMessageHandler();
-        handler.AddResponse(content, statusCode);
-        return handler;
-    }
 
     private sealed class MockHttpMessageHandler : HttpMessageHandler
     {

@@ -22,17 +22,35 @@ public class ArchiveExtractorServiceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempBase))
-            Directory.Delete(_tempBase, true);
-        if (Directory.Exists(_tempExtract))
-            Directory.Delete(_tempExtract, true);
+        try
+        {
+            if (Directory.Exists(_tempBase))
+            {
+                Directory.Delete(_tempBase, true);
+            }
+        }
+        catch
+        {
+            // Best-effort cleanup
+        }
+
+        try
+        {
+            if (Directory.Exists(_tempExtract))
+            {
+                Directory.Delete(_tempExtract, true);
+            }
+        }
+        catch
+        {
+            // Best-effort cleanup
+        }
     }
 
     private ArchiveExtractorService CreateService()
     {
         var fileManager = new Mock<IFileManagerService>();
         fileManager.Setup(f => f.GetDirectory(String.Empty)).Returns(_tempExtract);
-        fileManager.Setup(f => f.BaseDirectory).Returns(_tempBase);
         var logger = new Mock<ILogger<ArchiveExtractorService>>();
         return new(fileManager.Object, logger.Object);
     }
@@ -209,36 +227,23 @@ public class ArchiveExtractorServiceTests : IDisposable
 
     private string CreateArchiveWithZipSlip()
     {
-        // Create tar.gz with path traversal entry using Python
         var archivePath = Path.Combine(_tempBase, "zipslip.tar.gz");
+        var safeFile = Path.Combine(_tempBase, "safe.txt");
+        var maliciousFile = Path.Combine(_tempBase, "escaped.txt");
+        File.WriteAllText(safeFile, "safe content");
+        File.WriteAllText(maliciousFile, "escaped content");
 
-        // Use Python to create a tar.gz with path traversal
-        var pythonScript = $@"
-import tarfile, io
-with tarfile.open('{archivePath}', 'w:gz') as tar:
-    # Safe entry
-    safe_info = tarfile.TarInfo(name='safe.txt')
-    safe_data = b'safe content'
-    safe_info.size = len(safe_data)
-    tar.addfile(safe_info, io.BytesIO(safe_data))
-    # Malicious entry with path traversal
-    malicious_info = tarfile.TarInfo(name='../../escaped.txt')
-    malicious_data = b'escaped content'
-    malicious_info.size = len(malicious_data)
-    tar.addfile(malicious_info, io.BytesIO(malicious_data))
-";
+        using var stream = new FileStream(archivePath, FileMode.Create);
+        using var gzip = new GZipStream(stream, CompressionLevel.Optimal);
+        using var tar = new TarWriter(gzip);
 
-        var result = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = "python3",
-            Arguments = $"-c \"{pythonScript}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        });
-        result?.WaitForExit();
+        // Safe entry
+        tar.WriteEntry(safeFile, "safe.txt");
+        // Malicious entry with path traversal
+        tar.WriteEntry(maliciousFile, "../../escaped.txt");
 
+        File.Delete(safeFile);
+        File.Delete(maliciousFile);
         return archivePath;
     }
 

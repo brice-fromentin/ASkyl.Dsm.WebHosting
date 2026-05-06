@@ -6,6 +6,11 @@ namespace Askyl.Dsm.WebHosting.Tests.Data.Domain.WebSites;
 
 public class WebSiteConfigurationTests
 {
+    private const int PortMin = 1024;
+    private const int PortMax = 65535;
+    private const int TimeoutMin = 10;
+    private const int TimeoutMax = 120;
+    private const int NameMaxLength = 100;
     #region Name
 
     [Fact]
@@ -46,7 +51,7 @@ public class WebSiteConfigurationTests
     public void Validate_Name_Exceeds100Chars_Fails()
     {
         // Arrange
-        var config = new WebSiteConfiguration { Name = new string('A', 101) };
+        var config = new WebSiteConfiguration { Name = new string('A', NameMaxLength + 1) };
         var context = new ValidationContext(config);
         var results = new List<ValidationResult>();
 
@@ -64,7 +69,7 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        config.Name = new string('A', 100);
+        config.Name = new string('A', NameMaxLength);
         var context = new ValidationContext(config);
         var results = new List<ValidationResult>();
 
@@ -157,7 +162,7 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        config.InternalPort = 1023;
+        config.InternalPort = PortMin - 1;
         var context = new ValidationContext(config);
         var results = new List<ValidationResult>();
 
@@ -175,7 +180,7 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        config.InternalPort = 65536;
+        config.InternalPort = PortMax + 1;
         var context = new ValidationContext(config);
         var results = new List<ValidationResult>();
 
@@ -193,7 +198,7 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        config.InternalPort = 1024;
+        config.InternalPort = PortMin;
         var context = new ValidationContext(config);
         var results = new List<ValidationResult>();
 
@@ -210,7 +215,7 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        config.InternalPort = 65535;
+        config.InternalPort = PortMax;
         var context = new ValidationContext(config);
         var results = new List<ValidationResult>();
 
@@ -343,7 +348,7 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        config.ProcessTimeoutSeconds = 9;
+        config.ProcessTimeoutSeconds = TimeoutMin - 1;
         var context = new ValidationContext(config);
         var results = new List<ValidationResult>();
 
@@ -361,7 +366,7 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        config.ProcessTimeoutSeconds = 121;
+        config.ProcessTimeoutSeconds = TimeoutMax + 1;
         var context = new ValidationContext(config);
         var results = new List<ValidationResult>();
 
@@ -379,7 +384,7 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        config.ProcessTimeoutSeconds = 10;
+        config.ProcessTimeoutSeconds = TimeoutMin;
         var context = new ValidationContext(config);
         var results = new List<ValidationResult>();
 
@@ -396,7 +401,7 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        config.ProcessTimeoutSeconds = 120;
+        config.ProcessTimeoutSeconds = TimeoutMax;
         var context = new ValidationContext(config);
         var results = new List<ValidationResult>();
 

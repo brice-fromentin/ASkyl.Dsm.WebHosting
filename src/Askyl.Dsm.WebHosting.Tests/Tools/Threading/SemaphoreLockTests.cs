@@ -129,7 +129,20 @@ public class SemaphoreLockTests
             {
                 using var @lock = await SemaphoreLock.AcquireAsync(owner);
                 Interlocked.Increment(ref concurrentCount);
-                maxConcurrent = Math.Max(maxConcurrent, concurrentCount);
+                while (true)
+                {
+                    var current = Volatile.Read(ref maxConcurrent);
+                    if (concurrentCount <= current)
+                    {
+                        break;
+                    }
+
+                    var compareExchangeResult = Interlocked.CompareExchange(ref maxConcurrent, concurrentCount, current);
+                    if (compareExchangeResult == current)
+                    {
+                        break;
+                    }
+                }
                 await Task.Delay(10);
                 Interlocked.Decrement(ref concurrentCount);
             })

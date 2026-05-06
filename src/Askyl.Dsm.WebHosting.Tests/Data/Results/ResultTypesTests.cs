@@ -196,261 +196,71 @@ public class ResultTypesTests
 
     #endregion
 
-    #region SharedFoldersResult (ApiResultItems<FsEntry>)
+    #region Items Result Types - Parameterized
 
-    [Fact]
-    public void SharedFoldersResult_CreateSuccess_SetsValueAndSuccess()
+    public static IEnumerable<object[]> GetItemsSuccessTestData()
     {
-        // Arrange
-        var entries = new List<FsEntry> { new("/path/folder1", "folder1", true, "/real/folder1", null, DateTime.UtcNow) };
+        var sharedFolders = new List<FsEntry> { new("/path/folder1", "folder1", true, "/real/folder1", null, DateTime.UtcNow) };
+        yield return new object[] { "SharedFoldersResult", sharedFolders, (Func<object, string, object>)((v, m) => SharedFoldersResult.CreateSuccess((List<FsEntry>)v, m)) };
 
-        // Act
-        var result = SharedFoldersResult.CreateSuccess(entries, "OK");
+        var directoryContents = new List<FsEntry> { new("/path/subdir", "subdir", true, "/real/subdir", null, DateTime.UtcNow) };
+        yield return new object[] { "DirectoryContentsResult", directoryContents, (Func<object, string, object>)((v, _) => DirectoryContentsResult.CreateSuccess((List<FsEntry>)v)) };
 
-        // Assert
-        Assert.True(result.Success);
-        Assert.Same(entries, result.Value);
-        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
-        Assert.Equal("OK", result.Message);
-    }
+        var directoryFiles = new List<FsEntry> { new("/path/file.txt", "file.txt", false, "/real/file.txt", 1024, DateTime.UtcNow) };
+        yield return new object[] { "DirectoryFilesResult", directoryFiles, (Func<object, string, object>)((v, _) => DirectoryFilesResult.CreateSuccess((List<FsEntry>)v)) };
 
-    [Fact]
-    public void SharedFoldersResult_CreateFailure_SetsNullAndFailureCode()
-    {
-        // Act
-        var result = SharedFoldersResult.CreateFailure("Disk error");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
-    }
-
-    [Fact]
-    public void SharedFoldersResult_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = SharedFoldersResult.CreateFailure(ApiErrorCode.NotFound, "Missing");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.NotFound, result.ErrorCode);
-    }
-
-    #endregion
-
-    #region DirectoryContentsResult
-
-    [Fact]
-    public void DirectoryContentsResult_CreateSuccess_SetsValueAndSuccess()
-    {
-        // Arrange
-        var entries = new List<FsEntry> { new("/path/subdir", "subdir", true, "/real/subdir", null, DateTime.UtcNow) };
-
-        // Act
-        var result = DirectoryContentsResult.CreateSuccess(entries);
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Same(entries, result.Value);
-        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
-    }
-
-    [Fact]
-    public void DirectoryContentsResult_CreateFailure_SetsNullAndFailureCode()
-    {
-        // Act
-        var result = DirectoryContentsResult.CreateFailure("Permission denied");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
-    }
-
-    [Fact]
-    public void DirectoryContentsResult_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = DirectoryContentsResult.CreateFailure(ApiErrorCode.BadRequest, "Invalid path");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.BadRequest, result.ErrorCode);
-    }
-
-    #endregion
-
-    #region DirectoryFilesResult
-
-    [Fact]
-    public void DirectoryFilesResult_CreateSuccess_SetsValueAndSuccess()
-    {
-        // Arrange
-        var entries = new List<FsEntry> { new("/path/file.txt", "file.txt", false, "/real/file.txt", 1024, DateTime.UtcNow) };
-
-        // Act
-        var result = DirectoryFilesResult.CreateSuccess(entries);
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Same(entries, result.Value);
-        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
-    }
-
-    [Fact]
-    public void DirectoryFilesResult_CreateFailure_SetsNullAndFailureCode()
-    {
-        // Act
-        var result = DirectoryFilesResult.CreateFailure("IO error");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
-    }
-
-    [Fact]
-    public void DirectoryFilesResult_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = DirectoryFilesResult.CreateFailure(ApiErrorCode.NotFound, "Gone");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.NotFound, result.ErrorCode);
-    }
-
-    #endregion
-
-    #region ChannelsResult
-
-    [Fact]
-    public void ChannelsResult_CreateSuccess_SetsValueAndSuccess()
-    {
-        // Arrange
         var channels = new List<AspNetChannel> { new(CreateReleaseInfo("8.0.1", "8.0", isLts: true)) };
+        yield return new object[] { "ChannelsResult", channels, (Func<object, string, object>)((v, m) => ChannelsResult.CreateSuccess((List<AspNetChannel>)v, m)) };
 
-        // Act
-        var result = ChannelsResult.CreateSuccess(channels, "Fetched");
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Same(channels, result.Value);
-        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
-    }
-
-    [Fact]
-    public void ChannelsResult_CreateFailure_SetsNullAndFailureCode()
-    {
-        // Act
-        var result = ChannelsResult.CreateFailure("Network error");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
-    }
-
-    [Fact]
-    public void ChannelsResult_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = ChannelsResult.CreateFailure(ApiErrorCode.Failure, "Timeout");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
-    }
-
-    #endregion
-
-    #region ReleasesResult
-
-    [Fact]
-    public void ReleasesResult_CreateSuccess_SetsValueAndSuccess()
-    {
-        // Arrange
         var releases = new List<AspNetRelease> { AspNetRelease.Create(CreateReleaseInfo("8.0.1", "8.0")) };
+        yield return new object[] { "ReleasesResult", releases, (Func<object, string, object>)((v, _) => ReleasesResult.CreateSuccess((List<AspNetRelease>)v)) };
 
-        // Act
-        var result = ReleasesResult.CreateSuccess(releases);
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Same(releases, result.Value);
-        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
-    }
-
-    [Fact]
-    public void ReleasesResult_CreateFailure_SetsNullAndFailureCode()
-    {
-        // Act
-        var result = ReleasesResult.CreateFailure("Fetch failed");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
-    }
-
-    [Fact]
-    public void ReleasesResult_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = ReleasesResult.CreateFailure(ApiErrorCode.NotFound, "Missing");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.NotFound, result.ErrorCode);
-    }
-
-    #endregion
-
-    #region InstalledVersionsResult
-
-    [Fact]
-    public void InstalledVersionsResult_CreateSuccess_SetsValueAndSuccess()
-    {
-        // Arrange
         var versions = new List<FrameworkInfo> { new("Microsoft.NETCore.App", "8.0.1") };
+        yield return new object[] { "InstalledVersionsResult", versions, (Func<object, string, object>)((v, _) => InstalledVersionsResult.CreateSuccess((List<FrameworkInfo>)v)) };
 
-        // Act
-        var result = InstalledVersionsResult.CreateSuccess(versions);
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Same(versions, result.Value);
-        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
+        var instances = new List<WebSiteInstance> { new(new WebSiteConfiguration { Name = "Test" }) };
+        yield return new object[] { "WebSiteInstancesResult", instances, (Func<object, string, object>)((v, _) => WebSiteInstancesResult.CreateSuccess((List<WebSiteInstance>)v)) };
     }
 
-    [Fact]
-    public void InstalledVersionsResult_CreateFailure_SetsNullAndFailureCode()
+    [Theory]
+    [MemberData(nameof(GetItemsSuccessTestData))]
+    public void ItemsResults_CreateSuccess_SetsValueAndSuccess(
+        string _, object value, Func<object, string, object> createSuccess)
     {
         // Act
-        var result = InstalledVersionsResult.CreateFailure("Parse failed");
+        var result = createSuccess(value, "OK");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
+        Assert.True(((dynamic)result).Success);
+        Assert.Same(value, ((dynamic)result).Value);
+        Assert.Equal(ApiErrorCode.None, ((dynamic)result).ErrorCode);
     }
 
-    [Fact]
-    public void InstalledVersionsResult_CreateFailure_WithErrorCode_SetsCustomCode()
+    public static IEnumerable<object[]> GetItemsFailureTestData()
     {
-        // Act
-        var result = InstalledVersionsResult.CreateFailure(ApiErrorCode.Failure, "Timeout");
+        yield return new object[] { "SharedFoldersResult", SharedFoldersResult.CreateFailure("Disk error"), ApiErrorCode.NotFound, SharedFoldersResult.CreateFailure(ApiErrorCode.NotFound, "Missing") };
+        yield return new object[] { "DirectoryContentsResult", DirectoryContentsResult.CreateFailure("Permission denied"), ApiErrorCode.BadRequest, DirectoryContentsResult.CreateFailure(ApiErrorCode.BadRequest, "Invalid path") };
+        yield return new object[] { "DirectoryFilesResult", DirectoryFilesResult.CreateFailure("IO error"), ApiErrorCode.NotFound, DirectoryFilesResult.CreateFailure(ApiErrorCode.NotFound, "Gone") };
+        yield return new object[] { "ChannelsResult", ChannelsResult.CreateFailure("Network error"), ApiErrorCode.Failure, ChannelsResult.CreateFailure(ApiErrorCode.Failure, "Timeout") };
+        yield return new object[] { "ReleasesResult", ReleasesResult.CreateFailure("Fetch failed"), ApiErrorCode.NotFound, ReleasesResult.CreateFailure(ApiErrorCode.NotFound, "Missing") };
+        yield return new object[] { "InstalledVersionsResult", InstalledVersionsResult.CreateFailure("Parse failed"), ApiErrorCode.Failure, InstalledVersionsResult.CreateFailure(ApiErrorCode.Failure, "Timeout") };
+        yield return new object[] { "WebSiteInstancesResult", WebSiteInstancesResult.CreateFailure("Load failed"), ApiErrorCode.NotFound, WebSiteInstancesResult.CreateFailure(ApiErrorCode.NotFound, "Empty") };
+    }
 
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
+    [Theory]
+    [MemberData(nameof(GetItemsFailureTestData))]
+    public void ItemsResults_CreateFailure_SetsExpectedProperties(
+        string _, object defaultFailureResult, ApiErrorCode expectedErrorCode, object customFailureResult)
+    {
+        // Default failure
+        Assert.False(((dynamic)defaultFailureResult).Success);
+        Assert.Null(((dynamic)defaultFailureResult).Value);
+        Assert.Equal(ApiErrorCode.Failure, ((dynamic)defaultFailureResult).ErrorCode);
+
+        // Custom error code
+        Assert.False(((dynamic)customFailureResult).Success);
+        Assert.Null(((dynamic)customFailureResult).Value);
+        Assert.Equal(expectedErrorCode, ((dynamic)customFailureResult).ErrorCode);
     }
 
     #endregion
@@ -495,49 +305,6 @@ public class ResultTypesTests
         Assert.False(result.Success);
         Assert.Null(result.Value);
         Assert.Equal(ApiErrorCode.InvalidState, result.ErrorCode);
-    }
-
-    #endregion
-
-    #region WebSiteInstancesResult
-
-    [Fact]
-    public void WebSiteInstancesResult_CreateSuccess_SetsValueAndSuccess()
-    {
-        // Arrange
-        var instances = new List<WebSiteInstance> { new(new WebSiteConfiguration { Name = "Test" }) };
-
-        // Act
-        var result = WebSiteInstancesResult.CreateSuccess(instances);
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Same(instances, result.Value);
-        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
-    }
-
-    [Fact]
-    public void WebSiteInstancesResult_CreateFailure_SetsNullAndFailureCode()
-    {
-        // Act
-        var result = WebSiteInstancesResult.CreateFailure("Load failed");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
-    }
-
-    [Fact]
-    public void WebSiteInstancesResult_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = WebSiteInstancesResult.CreateFailure(ApiErrorCode.NotFound, "Empty");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.NotFound, result.ErrorCode);
     }
 
     #endregion

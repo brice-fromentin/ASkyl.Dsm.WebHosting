@@ -17,11 +17,6 @@ dist/
 *_old.*
 *-old.*
 
-# Test coverage artifacts
-**/TestResults/
-**/coverage.xml
-**/coverage.json
-
 # PR descriptions (generated for reference)
 PULL_REQUEST.md
 

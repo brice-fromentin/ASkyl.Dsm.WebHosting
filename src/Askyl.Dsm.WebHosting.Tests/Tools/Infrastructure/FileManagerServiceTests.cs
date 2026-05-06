@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -45,23 +46,27 @@ public class FileManagerServiceTests : IDisposable
     }
 
     [Fact]
-    public void GetDirectory_EmptyName_ThrowsArgumentException()
+    public void GetDirectory_EmptyName_ReturnsRootDirectory()
     {
         // Arrange
         var service = CreateService(_tempBase);
 
-        // Act & Assert
-        Assert.Throws<ArgumentException>(() => service.GetDirectory(""));
+        // Act
+        var result = service.GetDirectory(String.Empty);
+
+        // Assert
+        Assert.Equal(_tempBase, result);
+        Assert.True(Directory.Exists(result));
     }
 
     [Fact]
-    public void GetDirectory_NullName_ThrowsArgumentException()
+    public void GetDirectory_NullName_ThrowsArgumentNullException()
     {
         // Arrange
         var service = CreateService(_tempBase);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => service.GetDirectory(null!));
+        Assert.Throws<ArgumentNullException>(() => service.GetDirectory(null!));
     }
 
     [Fact]
@@ -232,8 +237,8 @@ public class FileManagerServiceTests : IDisposable
         service.Initialize();
 
         // Assert
-        var downloadsPath = Path.Combine(_tempBase, "downloads");
-        var tempPath = Path.Combine(_tempBase, "temp");
+        var downloadsPath = Path.Combine(_tempBase, InfrastructureConstants.Downloads);
+        var tempPath = Path.Combine(_tempBase, InfrastructureConstants.TempDirectory);
         Assert.True(Directory.Exists(downloadsPath), "downloads directory should exist");
         Assert.True(Directory.Exists(tempPath), "temp directory should exist");
     }
