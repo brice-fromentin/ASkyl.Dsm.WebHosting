@@ -150,7 +150,7 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
 
     #region Output Parsing
 
-    internal List<FrameworkInfo> ParseDotnetInfo(string output)
+    public List<FrameworkInfo> ParseDotnetInfo(string output)
     {
         List<FrameworkInfo> frameworks = [];
         var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);

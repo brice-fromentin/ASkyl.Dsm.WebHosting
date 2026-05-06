@@ -107,13 +107,18 @@ The project referenced `FluentAssertions` 8.9.0 but none of the 13 test files im
 
 ---
 
-### 9. Tests of internal methods via InternalsVisibleTo are tightly coupled
+### 9. Tests of internal methods via InternalsVisibleTo are tightly coupled ✅ FIXED
 
 **File:** `VersionsDetectorServiceTests.cs:168-204`
 
-`TryAddFrameworkFromRegex_*` tests directly invoke an `internal` method. Tightly coupled to implementation details and will break on any refactoring.
+`TryAddFrameworkFromRegex_*` tests directly invoked `internal` methods (`DetectCurrentSection`, `TryAddFrameworkFromRegex`, `SdkVersionRegex`). Tightly coupled to implementation details.
 
-**Fix:** Replace with tests that exercise the same logic through the public `ParseDotnetInfo` method with crafted input strings.
+**Fix applied:**
+
+- Made `ParseDotnetInfo` public (it's the natural entry point for parsing logic)
+- Replaced all internal method tests with crafted `ParseDotnetInfo` input strings that exercise the same section detection, regex matching, and deduplication logic
+- Removed `InternalsVisibleTo` from the Tools project (AssemblyInfo.cs deleted, project property removed)
+- Tests no longer depend on internal implementation details
 
 ---
 
@@ -133,5 +138,5 @@ The project referenced `FluentAssertions` 8.9.0 but none of the 13 test files im
 |----------|-------|--------|
 | Critical | 2 | ✅ Fixed |
 | Suggestion | 3 | ✅ Fixed |
-| Nice to have | 5 | 4 fixed, 1 pending (#9) |
-| **Total** | **10** | |
+| Nice to have | 5 | ✅ Fixed |
+| **Total** | **10** | ✅ All Fixed |

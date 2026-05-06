@@ -1,5 +1,4 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -16,46 +15,64 @@ public class VersionsDetectorServiceTests
         _service = new(logger.Object);
     }
 
-    #region DetectCurrentSection
+    #region ParseDotnetInfo - Section Detection
 
     [Fact]
-    public void DetectCurrentSection_SdkHeader_ReturnsSdkType()
+    public void ParseDotnetInfo_DetectsSdkSection()
     {
-        // Arrange & Act
-        var result = _service.DetectCurrentSection(DotnetInfoParserConstants.SdkSectionHeader);
+        // Arrange
+        var output = $@"{DotnetInfoParserConstants.SdkSectionHeader}
+  9.0.300 [/usr/local/share/dotnet/sdk]";
+
+        // Act
+        var result = _service.ParseDotnetInfo(output);
 
         // Assert
-        Assert.Equal(DotnetInfoParserConstants.FrameworkTypeSdk, result);
+        Assert.Single(result);
+        Assert.Equal(DotnetInfoParserConstants.FrameworkTypeSdk, result[0].Type);
     }
 
     [Fact]
-    public void DetectCurrentSection_RuntimeHeader_ReturnsRuntimeType()
+    public void ParseDotnetInfo_DetectsRuntimeSection()
     {
-        // Arrange & Act
-        var result = _service.DetectCurrentSection(DotnetInfoParserConstants.RuntimeSectionHeader);
+        // Arrange
+        var output = $@"{DotnetInfoParserConstants.RuntimeSectionHeader}
+  Microsoft.NETCore.App 9.0.5 [/usr/local/share/dotnet/shared/Microsoft.NETCore.App]";
+
+        // Act
+        var result = _service.ParseDotnetInfo(output);
 
         // Assert
-        Assert.Equal(DotnetInfoParserConstants.FrameworkTypeRuntime, result);
+        Assert.Single(result);
+        Assert.Equal(DotnetInfoParserConstants.FrameworkTypeRuntime, result[0].Type);
     }
 
     [Fact]
-    public void DetectCurrentSection_MainSdkHeader_ReturnsMainSdkType()
+    public void ParseDotnetInfo_DetectsMainSdkSection()
     {
-        // Arrange & Act
-        var result = _service.DetectCurrentSection(DotnetInfoParserConstants.MainSdkSectionHeader);
+        // Arrange
+        var output = $@"{DotnetInfoParserConstants.MainSdkSectionHeader}
+ Version:           9.0.301";
+
+        // Act
+        var result = _service.ParseDotnetInfo(output);
 
         // Assert
-        Assert.Equal(DotnetInfoParserConstants.FrameworkTypeMainSdk, result);
+        Assert.Single(result);
+        Assert.Equal(DotnetInfoParserConstants.FrameworkTypeMainSdk, result[0].Type);
     }
 
     [Fact]
-    public void DetectCurrentSection_UnknownLine_ReturnsNull()
+    public void ParseDotnetInfo_IgnoresUnknownLines()
     {
-        // Arrange & Act
-        var result = _service.DetectCurrentSection("Random line");
+        // Arrange
+        var output = "Random content without any section headers";
+
+        // Act
+        var result = _service.ParseDotnetInfo(output);
 
         // Assert
-        Assert.Null(result);
+        Assert.Empty(result);
     }
 
     #endregion
@@ -117,6 +134,40 @@ public class VersionsDetectorServiceTests
 
     #endregion
 
+    #region ParseDotnetInfo - Regex Pattern Matching
+
+    [Fact]
+    public void ParseDotnetInfo_MatchesSdkVersionPattern()
+    {
+        // Arrange
+        var output = $@"{DotnetInfoParserConstants.SdkSectionHeader}
+  9.0.300 [/usr/local/share/dotnet/sdk]";
+
+        // Act
+        var result = _service.ParseDotnetInfo(output);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(DotnetInfoParserConstants.FrameworkTypeSdk, result[0].Type);
+        Assert.Equal("9.0.300", result[0].Version);
+    }
+
+    [Fact]
+    public void ParseDotnetInfo_IgnoresInvalidSdkVersionPattern()
+    {
+        // Arrange
+        var output = $@"{DotnetInfoParserConstants.SdkSectionHeader}
+  invalid version line";
+
+        // Act
+        var result = _service.ParseDotnetInfo(output);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    #endregion
+
     #region ParseDotnetInfo - Ordering
 
     [Fact]
@@ -161,74 +212,6 @@ public class VersionsDetectorServiceTests
         // Assert
         Assert.Single(result);
         Assert.Equal("9.0.300", result[0].Version);
-    }
-
-    #endregion
-
-    #region TryAddFrameworkFromRegex
-
-    [Fact]
-    public void TryAddFrameworkFromRegex_ValidMatch_AddsFramework()
-    {
-        // Arrange
-        var frameworks = new List<FrameworkInfo>();
-        var regex = VersionsDetectorService.SdkVersionRegex();
-        var line = "  9.0.300 [/usr/local/share/dotnet/sdk]";
-
-        // Act
-        _service.TryAddFrameworkFromRegex(frameworks, regex, line, DotnetInfoParserConstants.FrameworkTypeSdk);
-
-        // Assert
-        Assert.Single(frameworks);
-        Assert.Equal(DotnetInfoParserConstants.FrameworkTypeSdk, frameworks[0].Type);
-        Assert.Equal("9.0.300", frameworks[0].Version);
-    }
-
-    [Fact]
-    public void TryAddFrameworkFromRegex_NoMatch_DoesNotAdd()
-    {
-        // Arrange
-        var frameworks = new List<FrameworkInfo>();
-        var regex = VersionsDetectorService.SdkVersionRegex();
-        var line = "  invalid version line";
-
-        // Act
-        _service.TryAddFrameworkFromRegex(frameworks, regex, line, DotnetInfoParserConstants.FrameworkTypeSdk);
-
-        // Assert
-        Assert.Empty(frameworks);
-    }
-
-    #endregion
-
-    #region AddFrameworkIfNotExists (via ParseVersionsInSection)
-
-    [Fact]
-    public void AddFrameworkIfNotExists_NewFramework_Adds()
-    {
-        // Arrange
-        var frameworks = new List<FrameworkInfo>();
-
-        // Act - uses internal parsing path
-        var result = _service.ParseDotnetInfo($@"{DotnetInfoParserConstants.SdkSectionHeader}
-  9.0.300 [/usr/local/share/dotnet/sdk]");
-
-        // Assert
-        Assert.Single(result);
-        Assert.Equal("9.0.300", result[0].Version);
-    }
-
-    [Fact]
-    public void AddFrameworkIfNotExists_Duplicate_DoesNotAdd()
-    {
-        // Arrange
-        // Act
-        var result = _service.ParseDotnetInfo($@"{DotnetInfoParserConstants.SdkSectionHeader}
-  9.0.300 [/usr/local/share/dotnet/sdk]
-  9.0.300 [/usr/local/share/dotnet/sdk]");
-
-        // Assert
-        Assert.Single(result);
     }
 
     #endregion
