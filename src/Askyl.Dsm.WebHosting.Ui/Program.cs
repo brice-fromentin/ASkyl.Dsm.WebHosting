@@ -56,6 +56,9 @@ builder.Services.AddScoped<IDownloaderService, DownloaderService>();
 // Register versions detector service (Singleton - caches expensive dotnet --info output)
 builder.Services.AddSingleton<IVersionsDetectorService, VersionsDetectorService>();
 
+// Register process runner (Singleton - stateless process spawning abstraction)
+builder.Services.AddSingleton<IProcessRunner, SystemProcessRunner>();
+
 // Register services for runtime/framework management
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
 builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();

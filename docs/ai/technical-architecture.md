@@ -2,7 +2,7 @@
 
 **Version:** 0.5.5
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 3, 2026 (Constants split into WebSiteConstants, per-site ProcessTimeoutSeconds restored — issue 5 resolved)
+**Last Updated:** May 8, 2026 (IProcessRunner abstraction — co-located interfaces in Tools, non-blocking Dispose, ConfigureAwait on command loop, 189 tests)
 
 ---
 
@@ -66,7 +66,8 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
   - ✅ Reduced timeouts: HttpClient (90→15s), Process (60→10s) — eliminates DSM reverse proxy 504 errors
 - ⏳ TODO: Certificate management for reverse proxy
 - ⏳ TODO: Multi-language support
-- ✅ Unit test implementation (187 tests, 9 phases complete — May 2026)
+- ✅ Unit test implementation (189 tests, 10 phases complete — May 2026)
+- ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 
@@ -369,6 +370,8 @@ Tools/
 │   ├── ArchiveExtractorService.cs          # gzip + tar extraction (implements IArchiveExtractorService)
 │   ├── FileManagerService.cs               # File system initialization (implements IFileManagerService)
 │   ├── PlatformInfoService.cs              # Platform detection (implements IPlatformInfoService)
+│   ├── ProcessHandle.cs                    # IProcessHandle + SystemProcessHandle (co-located)
+│   ├── ProcessRunner.cs                    # IProcessRunner + SystemProcessRunner (co-located)
 │   └── ProcessTerminator.cs                # Cross-platform process termination (SIGTERM/CloseMainWindow)
 ├── Network/                                # Network communication
 │   └── DsmApiClient.cs                     # Centralized DSM API client
@@ -783,7 +786,8 @@ WebSiteHostingService (BackgroundService, Singleton)
 └── Delegates per-site process management to SiteLifecycleManager
 
 SiteLifecycleManager (Per-instance, Thread-safe)
-├── Starts/stops .NET web application processes via System.Diagnostics.Process
+├── Starts/stops .NET web application processes via IProcessRunner abstraction (unit-testable)
+├── IProcessHandle? replaces direct Process? reference — delegates to SystemProcessHandle
 ├── Configures environment variables (ASPNETCORE_URLS, ASPNETCORE_ENVIRONMENT, custom vars)
 ├── Graceful shutdown with ProcessTerminator.SendGracefulShutdownSignal() (SIGTERM on Unix, CloseMainWindow on Windows)
 ├── Async WaitForExitAsync with linked cancellation token + configurable timeout
@@ -831,7 +835,7 @@ public sealed class SiteLifecycleManager : IDisposable
     private readonly Channel<LifecycleCommand> _channel =
         Channel.CreateBounded<LifecycleCommand>(16);
     private readonly Task _loopTask = ProcessSiteCommandsAsync();
-    private Process? _process;
+    private IProcessHandle? _process; // abstracted via IProcessRunner
     private volatile bool _isDisposing;
 
     public async Task<ApiResult> StartAsync()
