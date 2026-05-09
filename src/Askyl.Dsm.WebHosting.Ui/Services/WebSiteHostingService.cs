@@ -3,6 +3,7 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -13,6 +14,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 public class WebSiteHostingService(
     ILogger<WebSiteHostingService> logger,
     ILoggerFactory loggerFactory,
+    IProcessRunner processRunner,
     IWebSitesConfigurationService configService,
     IFileSystemService fileSystemService,
     IReverseProxyManagerService reverseProxyManager) : BackgroundService, IWebSiteHostingService
@@ -244,7 +246,7 @@ public class WebSiteHostingService(
             var instance = new WebSiteInstanceDetails(site);
             _instances[instance.Id] = instance;
 
-            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), site);
+            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), processRunner, site);
             _lifecycleManagers[instance.Id] = lifecycleManager;
 
             logger.LogInformation("Instance created for site: {SiteName}", site.Name);
@@ -276,7 +278,7 @@ public class WebSiteHostingService(
         var instance = new WebSiteInstanceDetails(configuration);
         _instances[instance.Id] = instance;
 
-        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), configuration);
+        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), processRunner, configuration);
         _lifecycleManagers[instance.Id] = lifecycleManager;
 
         logger.LogInformation("Instance added for site: {SiteName}", configuration.Name);
@@ -313,8 +315,7 @@ public class WebSiteHostingService(
         }
 
         existingInstance.Configuration = newConfiguration;
-        _lifecycleManagers[instance.Id] = new SiteLifecycleManager(
-            loggerFactory.CreateLogger<SiteLifecycleManager>(), newConfiguration);
+        _lifecycleManagers[instance.Id] = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), processRunner, newConfiguration);
 
         logger.LogInformation("Instance updated for site: {SiteName}", newConfiguration.Name);
 

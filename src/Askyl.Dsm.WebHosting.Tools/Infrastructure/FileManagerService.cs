@@ -10,11 +10,23 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// </summary>
 public sealed class FileManagerService(ILogger<FileManagerService> logger, string rootPath = "") : IFileManagerService
 {
-    private static string SanitizePathSegment(string name, string paramName)
+    private static string SanitizePathSegment(string? name, string paramName, bool allowEmpty)
     {
-        if (String.IsNullOrWhiteSpace(name))
+        ArgumentNullException.ThrowIfNull(name, paramName);
+
+        if (name.Length == 0)
         {
+            if (allowEmpty)
+            {
+                return String.Empty;
+            }
+
             throw new ArgumentException("Value cannot be empty", paramName);
+        }
+
+        if (name.Trim().Length == 0)
+        {
+            throw new ArgumentException("Value cannot be whitespace", paramName);
         }
 
         var sanitized = Path.GetFileName(name);
@@ -45,7 +57,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public string GetDirectory(string name)
     {
-        var sanitized = SanitizePathSegment(name, nameof(name));
+        var sanitized = SanitizePathSegment(name, nameof(name), true);
         var path = Path.Combine(BaseDirectory, rootPath, sanitized);
 
         logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
@@ -57,7 +69,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public void DeleteDirectory(string name)
     {
-        var sanitized = SanitizePathSegment(name, nameof(name));
+        var sanitized = SanitizePathSegment(name, nameof(name), false);
         var path = Path.Combine(BaseDirectory, rootPath, sanitized);
 
         if (Directory.Exists(path))
@@ -74,7 +86,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public string GetFullName(string directory, string file)
     {
-        var sanitizedFile = SanitizePathSegment(file, nameof(file));
+        var sanitizedFile = SanitizePathSegment(file, nameof(file), false);
         var path = GetDirectory(directory);
         var fullPath = Path.Combine(path, sanitizedFile);
 

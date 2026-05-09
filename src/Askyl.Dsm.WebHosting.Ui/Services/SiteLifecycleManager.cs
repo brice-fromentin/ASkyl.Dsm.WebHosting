@@ -16,6 +16,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 public sealed class SiteLifecycleManager : IDisposable
 {
     private readonly ILogger<SiteLifecycleManager> _logger;
+    private readonly IProcessRunner _processRunner;
     private readonly WebSiteConfiguration _configuration;
     private readonly Channel<LifecycleCommand> _channel = Channel.CreateBounded<LifecycleCommand>(new BoundedChannelOptions(16)
     {
@@ -24,12 +25,13 @@ public sealed class SiteLifecycleManager : IDisposable
         SingleWriter = false
     });
     private readonly Task _loopTask;
-    private Process? _process;
+    private IProcessHandle? _process;
     private volatile bool _isDisposing;
 
-    public SiteLifecycleManager(ILogger<SiteLifecycleManager> logger, WebSiteConfiguration configuration)
+    public SiteLifecycleManager(ILogger<SiteLifecycleManager> logger, IProcessRunner processRunner, WebSiteConfiguration configuration)
     {
         _logger = logger;
+        _processRunner = processRunner;
         _configuration = configuration;
         _loopTask = ProcessSiteCommandsAsync();
     }
@@ -96,7 +98,8 @@ public sealed class SiteLifecycleManager : IDisposable
     }
 
     /// <summary>
-    /// Disposes managed resources. Blocks until all pending commands complete.
+    /// Disposes managed resources. Fires dispose command and completes the channel.
+    /// The command loop drains pending commands and cleans up in the background.
     /// Commands queued after this call are rejected by the _isDisposing check.
     /// </summary>
     public void Dispose()
@@ -111,9 +114,6 @@ public sealed class SiteLifecycleManager : IDisposable
         // Queue dispose command — executes after all previously queued commands
         _ = _channel.Writer.TryWrite(new DisposeCommand());
         _channel.Writer.Complete();
-
-        // Wait for loop to drain pending commands and clean up
-        _loopTask.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
     }
 
     #region Command Loop
@@ -121,31 +121,36 @@ public sealed class SiteLifecycleManager : IDisposable
     /// <summary>
     /// Single consumer loop — all state mutation happens here.
     /// Commands execute sequentially, eliminating TOCTOU races.
+    /// Uses ConfigureAwait(false) to avoid capturing synchronization context
+    /// (this runs on background thread pool, no UI/context dependencies).
     /// </summary>
     private async Task ProcessSiteCommandsAsync()
     {
-        await foreach (var command in _channel.Reader.ReadAllAsync())
+        while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false))
         {
-            switch (command)
+            while (_channel.Reader.TryRead(out var command))
             {
-                case StartCommand start:
-                    start.Result.SetResult(ProcessStartCommand());
-                    break;
+                switch (command)
+                {
+                    case StartCommand start:
+                        start.Result.SetResult(ProcessStartCommand());
+                        break;
 
-                case StopCommand stop:
-                    stop.Result.SetResult(await ProcessStopCommand(stop.CancellationToken));
-                    break;
+                    case StopCommand stop:
+                        stop.Result.SetResult(await ProcessStopCommand(stop.CancellationToken).ConfigureAwait(false));
+                        break;
 
-                case GetStateCommand state:
-                    state.Result.SetResult(BuildRuntimeState());
-                    break;
+                    case GetStateCommand state:
+                        state.Result.SetResult(BuildRuntimeState());
+                        break;
 
-                case DisposeCommand:
-                    await ProcessDisposeCommand();
-                    return;
+                    case DisposeCommand:
+                        await ProcessDisposeCommand().ConfigureAwait(false);
+                        return;
 
-                default:
-                    break;
+                    default:
+                        break;
+                }
             }
         }
     }
@@ -170,7 +175,7 @@ public sealed class SiteLifecycleManager : IDisposable
         try
         {
             var startInfo = CreateProcessStartInfo();
-            _process = Process.Start(startInfo)!;
+            _process = _processRunner.Start(startInfo);
 
             _logger.LogInformation("Site '{SiteName}' started with PID {ProcessId}", _configuration.Name, _process.Id);
             return ApiResult.CreateSuccess();
@@ -234,7 +239,7 @@ public sealed class SiteLifecycleManager : IDisposable
             try
             {
                 _process.Kill();
-                await Task.Delay(WebSiteConstants.ProcessKillCleanupDelayMs);
+                await Task.Delay(WebSiteConstants.ProcessKillCleanupDelayMs).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -252,7 +257,7 @@ public sealed class SiteLifecycleManager : IDisposable
     /// <summary>
     /// Stops the process with graceful shutdown and timeout-based force kill.
     /// </summary>
-    private async Task StopProcessAsync(Process? process, CancellationToken cancellationToken)
+    private async Task StopProcessAsync(IProcessHandle? process, CancellationToken cancellationToken)
     {
         if (process?.HasExited != false)
         {
@@ -260,7 +265,7 @@ public sealed class SiteLifecycleManager : IDisposable
             return;
         }
 
-        ProcessTerminator.SendGracefulShutdownSignal(process);
+        process.SendGracefulShutdownSignal();
 
         int timeoutSeconds = _configuration.ProcessTimeoutSeconds;
         _logger.LogInformation("Site '{SiteName}' sent SIGTERM (timeout {Timeout}s)", _configuration.Name, timeoutSeconds);
@@ -284,7 +289,7 @@ public sealed class SiteLifecycleManager : IDisposable
     /// <summary>
     /// Force kills a process that didn't stop gracefully.
     /// </summary>
-    private async Task ForceKillProcessAsync(Process process, CancellationToken cancellationToken)
+    private async Task ForceKillProcessAsync(IProcessHandle process, CancellationToken cancellationToken)
     {
         _logger.LogWarning("Site '{SiteName}' did not stop gracefully. Force killing process.", _configuration.Name);
 

@@ -12,8 +12,7 @@ public class StringBuilderBenchmark
     private const string _api = "SYNO.API.Info";
     private const int _version = 1;
     private const string _method = "query";
-    private readonly Dictionary<string, string> _parameters = Enumerable.Range(1, 10)
-                                                                        .ToDictionary(i => $"parameter{i}", i => $"value{i}");
+    private readonly Dictionary<string, string> _parameters = Enumerable.Range(1, 10).ToDictionary(i => $"parameter{i}", i => $"value{i}");
 
     [Benchmark]
     public void UrlInterpolatedString()
