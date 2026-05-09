@@ -29,5 +29,6 @@ This project has also the following goals :
         - ...
     
     Technical
-        - Implement unit tests.
+        - Integration tests for DsmApiClient, FileSystemService, DownloaderService.
+        - Blazor UI tests (bUnit).
         - ...
