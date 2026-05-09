@@ -1,6 +1,6 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.5
+**Version:** 0.5.7
 **Target Framework:** .NET 10 (net10.0)
 **Last Updated:** May 9, 2026 (Dead code cleanup — removed DotnetInstaller project, 38 unused FileStation DSM API scaffolds, 3 unused constants, orphaned Dockerfile)
 
@@ -66,7 +66,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
   - ✅ Reduced timeouts: HttpClient (90→15s), Process (60→10s) — eliminates DSM reverse proxy 504 errors
 - ⏳ TODO: Certificate management for reverse proxy
 - ⏳ TODO: Multi-language support
-- ✅ Unit test implementation (189 tests, 10 phases complete — May 2026)
+- ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
@@ -104,11 +104,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.5</Version>
-<AssemblyVersion>0.5.5.0</AssemblyVersion>
-<FileVersion>0.5.5.0</FileVersion>
-<InformationalVersion>0.5.5</InformationalVersion>
-<PackageVersion>0.5.5</PackageVersion>
+<Version>0.5.7</Version>
+<AssemblyVersion>0.5.7.0</AssemblyVersion>
+<FileVersion>0.5.7.0</FileVersion>
+<InformationalVersion>0.5.7</InformationalVersion>
+<PackageVersion>0.5.7</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -125,8 +125,8 @@ All projects share common build settings from `Directory.Build.props`:
 
 **Analyzer Packages:**
 
-- **Roslynator.Analyzers** (v4.12.7) - Enhanced code style enforcement
-- **Roslynator.Formatting.Analyzers** (v4.12.7) - Formatting rules
+- **Roslynator.Analyzers** - Enhanced code style enforcement
+- **Roslynator.Formatting.Analyzers** - Formatting rules
 
 **.editorconfig Rule Severities (Updated April 3, 2026):**
 
@@ -171,7 +171,7 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 ### 1. Askyl.Dsm.WebHosting.Constants
 
-**Purpose:** Centralized constants, defaults, and enums for the entire solution (34 source files, ~170+ constants)
+**Purpose:** Centralized constants, defaults, and enums for the entire solution (~170+ constants)
 
 **Complete Inventory:**
 
@@ -214,7 +214,8 @@ Constants/
     ├── FrameworkManagementRoutes.cs        # /api/v1/frameworks/* (install, uninstall)
     ├── LogDownloadRoutes.cs                # /api/v1/logdownload/* (logs)
     ├── RuntimeManagementRoutes.cs          # /api/v1/runtime/* (versions, channels, releases)
-    └── WebsiteHostingRoutes.cs             # /api/v1/websites/* (all, add, update, remove, start, stop)
+    ├── LicenseRoutes.cs                    # /api/v1/license/*
+    ├── WebsiteHostingRoutes.cs             # /api/v1/websites/* (all, add, update, remove, start, stop)
 
 **Note:** License API routes are handled client-side via `ILicenseService` (no server controller).
 ```
@@ -248,21 +249,21 @@ Constants/
 
 | Interface | Source File | Key Methods | Implemented By |
 |-----------|-------------|-------------|----------------|
-| **IAuthenticationService** | `Contracts/IAuthenticationService.cs` | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() | Ui.Services.AuthenticationService |
-| **IDotnetVersionService** | `Contracts/IDotnetVersionService.cs` | GetInstalledVersionsAsync(), GetChannelsAsync(), GetReleasesWithStatusAsync() | Ui.Services.DotnetVersionService, Ui.Client.Services.DotnetVersionService |
-| **IFileSystemService** | `Contracts/IFileSystemService.cs` | GetSharedFoldersAsync(), GetDirectoryContentsAsync(), SetHttpGroupPermissionsAsync() | Ui.Services.FileSystemService, Ui.Client.Services.FileSystemService |
-| **IFrameworkManagementService** | `Contracts/IFrameworkManagementService.cs` | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services.FrameworkManagementService, Ui.Client.Services.FrameworkManagementService |
-| **ILogDownloadService** | `Contracts/ILogDownloadService.cs` | GetLogsArchiveAsync() | Ui.Services.LogDownloadService |
+| **IAuthenticationService** | `Contracts/IAuthenticationService.cs` | LoginAsync(), IsAuthenticatedAsync() | Ui.Services.AuthenticationService, Ui.Client.Services.AuthenticationService |
+| **IDotnetVersionService** | `Contracts/IDotnetVersionService.cs` | GetInstalledVersionsAsync(), GetChannelsAsync() | Ui.Services.DotnetVersionService, Ui.Client.Services.DotnetVersionService |
+| **IFileSystemService** | `Contracts/IFileSystemService.cs` | GetSharedFoldersAsync(), GetDirectoryContentsAsync() | Ui.Services.FileSystemService, Ui.Client.Services.FileSystemService |
+| **IFrameworkManagementService** | `Contracts/IFrameworkManagementService.cs` | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services.FrameworkManagementService |
+| **ILogDownloadService** | `Contracts/ILogDownloadService.cs` | CreateLogZipStreamAsync() | Ui.Services.LogDownloadService |
 | **IReverseProxyManagerService** | `Contracts/IReverseProxyManagerService.cs` | CreateAsync(), UpdateAsync(), DeleteAsync() | Ui.Services.ReverseProxyManagerService |
-| **IWebSiteHostingService** | `Contracts/IWebSiteHostingService.cs` | GetAllWebsitesAsync(), AddWebsiteAsync(), UpdateWebsiteAsync() | Ui.Services.WebSiteHostingService, Ui.Client.Services.WebSiteHostingService |
+| **IWebSiteHostingService** | `Contracts/IWebSiteHostingService.cs` | GetAllWebsitesAsync(), AddWebsiteAsync() | Ui.Services.WebSiteHostingService, Ui.Client.Services.WebSiteHostingService |
 
 **Note:** `FindByCompositeKeyAsync()` is a private helper method in the implementation, not part of the public interface.
-| **IWebSitesConfigurationService** | `Contracts/IWebSitesConfigurationService.cs` | GetAllAsync(), SaveAsync(), DeleteAsync() | Ui.Services.WebSitesConfigurationService |
+| **IWebSitesConfigurationService** | `Contracts/IWebSitesConfigurationService.cs` | GetAllSitesAsync(), AddSiteAsync(), RemoveSiteAsync() | Ui.Services.WebSitesConfigurationService |
 | **IPlatformInfoService** | `Contracts/IPlatformInfoService.cs` | (Properties: ChannelVersion, CurrentArchitecture, CurrentOS) | Tools.Infrastructure.PlatformInfoService |
-| **IFileManagerService** | `Contracts/IFileManagerService.cs` | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName() | Tools.Infrastructure.FileManagerService |
+| **IFileManagerService** | `Contracts/IFileManagerService.cs` | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName(), BaseDirectory property | Tools.Infrastructure.FileManagerService |
 | **IArchiveExtractorService** | `Contracts/IArchiveExtractorService.cs` | Decompress(inputFile, exclude) | Tools.Infrastructure.ArchiveExtractorService |
-| **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), GetReleasesAsync() | Tools.Runtime.DownloaderService |
-| **IVersionsDetectorService** | `Contracts/IVersionsDetectorService.cs` | GetInstalledVersionsAsync(), RefreshCacheAsync() | Tools.Runtime.VersionsDetectorService |
+| **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), DownloadVersionToAsync(), GetAspNetCoreReleasesAsync() | Tools.Runtime.DownloaderService |
+| **IVersionsDetectorService** | `Contracts/IVersionsDetectorService.cs` | GetInstalledVersionsAsync(), IsChannelInstalled(), RefreshCacheAsync() | Tools.Runtime.VersionsDetectorService |
 
 **Structure:**
 
@@ -290,16 +291,24 @@ Data/
 │   ├── Licensing/                          # License information
 │   │   └── LicenseInfo.cs                  # License data model
 │   ├── Runtime/                            # .NET runtime information
-│   │   └── [Version models]                # Runtime version data
+│   │   ├── AspNetChannel.cs                # .NET channel info
+│   │   ├── AspNetCoreReleaseInfo.cs        # Release version details
+│   │   ├── AspNetRelease.cs                # Release metadata
+│   │   ├── FrameworkInfo.cs                # Framework metadata
+│   │   └── InstallFramework.cs             # Framework installation target
 │   └── WebSites/                           # Website management domain
 │       ├── ProcessInfo.cs                  # Process runtime snapshot (Id, IsResponding)
 │       ├── WebSiteConfiguration.cs         # Main config model
 │       ├── WebSiteInstance.cs              # Runtime instance
 │       ├── WebSiteRuntimeState.cs          # Immutable record for site state (Running/Stopped/NotResponding)
-│       └── WebSitesConfiguration.cs        # Persistent configuration store
+│       ├── WebSiteInstanceDetails.cs       # Website instance details for UI
+│       ├── WebSitesConfiguration.cs        # Persistent configuration store
+├── Attributes/                             # Custom attributes
+│   └── DsmParameterNameAttribute.cs        # DSM parameter name mapping
 ├── DsmApi/                                 # DSM API integration
 │   ├── Models/                             # Auto-generated response models
-│   │   ├── Core/                           # Authentication, system info
+│   │   ├── Core/                           # Authentication, system info, ACL
+│   │   │   └── Acl/                        # ACL models (CoreAclSet, Rule, Permission, Inherit)
 │   │   ├── FileStation/                    # 9 file operation models
 │   │   └── ReverseProxy/                   # Proxy configuration models
 │   ├── Parameters/                         # Request parameter classes
@@ -311,8 +320,8 @@ Data/
 │   │   ├── ApiParametersBase.cs            # Base parameter class
 │   │   ├── ApiParametersNone.cs            # No-parameters wrapper
 │   │   └── IApiParameters.cs               # Parameter interface
-│   └── Responses/                          # API response wrappers
-├── Exceptions/                             # Custom exception types
+│   └── Responses/                          # API response wrappers (8 files)
+├── Exceptions/                             # Custom exception types (4 files)
 └── Results/                                # Result pattern implementations
     ├── ApiResult.cs                        # Base success/failure result
     ├── ApiResultBool.cs                    # Boolean result wrapper
@@ -376,9 +385,9 @@ The Tools project contains DI-based infrastructure services for platform detecti
 |---------|-----------|----------|--------------|--------------|-------------|
 | **PlatformInfoService** | `IPlatformInfoService` | Singleton | Platform detection, config loading | ILogger | `Tools/Infrastructure/PlatformInfoService.cs` |
 | **FileManagerService** | `IFileManagerService` | Scoped | Directory management, configurable root path | ILogger, string rootPath | `Tools/Infrastructure/FileManagerService.cs` |
-| **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz extraction | IFileManagerService | `Tools/Infrastructure/ArchiveExtractorService.cs` |
+| **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz extraction | IFileManagerService, ILogger | `Tools/Infrastructure/ArchiveExtractorService.cs` |
 | **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | IPlatformInfoService, IFileManagerService | `Tools/Runtime/DownloaderService.cs` |
-| **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | None (stateful singleton) | `Tools/Runtime/VersionsDetectorService.cs` |
+| **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | ILogger, ISemaphoreOwner | `Tools/Runtime/VersionsDetectorService.cs` |
 
 **Key Design Decisions:**
 
@@ -417,7 +426,6 @@ Ui/
 │   ├── AuthenticationController.cs         # Login/logout/status endpoints
 │   ├── FileManagementController.cs         # File system operations
 │   ├── FrameworkManagementController.cs    # Framework installation
-│   ├── HelloWorldController.cs             # Test endpoint controller
 │   ├── LogDownloadController.cs            # Log file retrieval
 │   ├── RuntimeManagementController.cs      # .NET version detection
 │   └── WebsiteHostingController.cs         # Website CRUD + lifecycle
@@ -512,12 +520,11 @@ Ui.Client/
 │   ├── DotnetVersionService.cs             # GET /api/runtime-management/{versions,channels,releases}
 │   ├── FileSystemService.cs                # GET /api/file-management/{shared-folders,directory-contents}
 │   ├── FrameworkManagementService.cs       # POST /api/framework-management/{install,uninstall}
-│   ├── LicenseService.cs                   # Parallel HTTP fetches from wwwroot/licenses/
+│   ├── LicenseService.cs                   # Parallel HTTP fetches from server licenses/ path
 │   ├── TreeContentService.cs               # Convert FsEntry to TreeViewItem with lazy loading callbacks
 │   └── WebSiteHostingService.cs            # GET/POST/DELETE /api/website-hosting/{all,add,update,remove,start,stop}
 ├── wwwroot/                                # Client-side static assets
-│   ├── appsettings.json                    # Client Serilog config (BrowserConsole sink)
-│   └── licenses/                           # Third-party license files (Application.txt, FluentUI Blazor.txt, NET.txt, Serilog.txt)
+│   └── appsettings.json                    # Client Serilog config (BrowserConsole sink)
 ├── _Imports.razor                          # Global using directives (System.Net.Http, Microsoft.FluentUI, Icons namespaces)
 ├── Program.cs                              # WASM entry point (service registration, HttpClient configuration)
 └── Routes.razor                            # Router with AppAssembly route discovery, MainLayout default
@@ -553,7 +560,7 @@ Ui.Client/
 6. **JavaScript Interop Usage:**
    - Single usage in FileSelectionDialog: `JSRuntime.InvokeVoidAsync("selectChildItem", filePath, parentPath)`
    - Purpose: Navigate tree view to child directory after double-clicking folder in grid
-   - JavaScript function defined in wwwroot/js/app.js (external file)
+   - JavaScript function defined in wwwroot/js/tree-navigation.js (external file)
 
 **Service Registration (Program.cs):**
 
@@ -824,8 +831,6 @@ builder.Services.AddRazorComponents()
 ```text
 App.razor (Root)
 └── MainLayout.razor
-    ├── HeaderBar.razor (User info, logout)
-    ├── NavigationMenu.razor (Navigation)
     └── Page Content
         ├── Home.razor (Dashboard with website grid)
         ├── Login.razor (Authentication)
@@ -1138,9 +1143,3 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 | 0.5.3 | March 2026 | Architecture documentation update, version bump |
 | 0.5.2 | Earlier | Initial architecture documentation |
 | ... | ... | Previous versions |
-
----
-
-**Document Maintained By:** AI Assistant (Qwen Code)
-**Last Review Date:** May 1, 2026
-**Next Review Date:** TBD (after major feature implementation)
