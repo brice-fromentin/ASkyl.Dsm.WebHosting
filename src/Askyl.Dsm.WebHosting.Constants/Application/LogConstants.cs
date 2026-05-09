@@ -10,10 +10,9 @@ public static class LogConstants
 
     #endregion
 
-    #region File and Media Type Constants
+    #region File Type Constants
 
     public const string ZipFileExtension = ".zip";
-    public const string ZipMediaType = "application/zip";
 
     #endregion
 }
