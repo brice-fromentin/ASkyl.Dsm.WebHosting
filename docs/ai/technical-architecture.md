@@ -2,7 +2,7 @@
 
 **Version:** 0.5.7
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 9, 2026 (Dead code cleanup — removed DotnetInstaller project, 38 unused FileStation DSM API scaffolds, 3 unused constants, orphaned Dockerfile)
+**Last Updated:** May 11, 2026 (Dead code sweep — removed 4 unused types, 2 unused NuGet packages, unused extension method, stale doc references)
 
 ---
 
@@ -185,16 +185,15 @@ Constants/
 │   ├── LicenseConstants.cs                 # License file management
 │   ├── LogConstants.cs                     # Log directory and file paths
 │   └── WebSiteConstants.cs                 # Website config, process lifecycle, port validation
-├── DSM/                                    # Synology DSM-specific constants (8 files)
+├── DSM/                                    # Synology DSM-specific constants (7 files)
 │   ├── API/                                # API-related constants
 │   │   ├── ApiMethods.cs                   # CRUD operation names (Create, Get, List, etc.)
 │   │   ├── ApiNames.cs                     # 7 DSM API identifiers (SYNO.API.Auth, FileStation, etc.)
 │   │   ├── ApiVersions.cs                  # Version range constants (Min: 1, Max: 7)
 │   │   ├── ReverseProxyConstants.cs        # Proxy error codes and description prefix
 │   │   └── SerializationFormats.cs         # Enum: Form, Json
-│   ├── FileStation/                        # FileStation-specific constants (2 files)
-│   │   ├── FileStationDefaults.cs          # Listing patterns, sorting, file types
-│   │   └── PaginationDefaults.cs           # Offset (0), Limit (100)
+│   ├── FileStation/                        # FileStation-specific constants (1 file)
+│   │   └── FileStationDefaults.cs          # Listing patterns, sorting, file types
 │   └── System/                             # DSM system defaults (1 file)
 │       └── SystemDefaults.cs               # Config paths, external ports (5001 default)
 ├── JSON/                                   # JSON serialization settings (1 file)
@@ -214,10 +213,9 @@ Constants/
     ├── FrameworkManagementRoutes.cs        # /api/v1/frameworks/* (install, uninstall)
     ├── LogDownloadRoutes.cs                # /api/v1/logdownload/* (logs)
     ├── RuntimeManagementRoutes.cs          # /api/v1/runtime/* (versions, channels, releases)
-    ├── LicenseRoutes.cs                    # /api/v1/license/*
     ├── WebsiteHostingRoutes.cs             # /api/v1/websites/* (all, add, update, remove, start, stop)
 
-**Note:** License API routes are handled client-side via `ILicenseService` (no server controller).
+**Note:** License handling is done client-side via `ILicenseService` (no server controller or route constants needed).
 ```
 
 **Key Constants by Category:**
@@ -332,7 +330,6 @@ Data/
     ├── AuthenticationResult.cs             # Auth state with user info
     ├── ChannelsResult.cs                   # .NET channel information
     ├── DirectoryContentsResult.cs          # File system directory listing
-    ├── DirectoryFilesResult.cs             # File system files listing
     ├── InstallationResult.cs               # Framework installation status
     ├── InstalledVersionsResult.cs          # Installed .NET versions
     ├── ReleasesResult.cs                   # .NET release information
@@ -358,7 +355,6 @@ Data/
 Tools/
 ├── Extensions/                             # Extension methods
 │   ├── ApiResponseExtensions.cs            # Response mapping helpers
-│   ├── DsmToolsExtensions.cs               # DSM tools integration
 │   ├── HttpClientExtensions.cs             # HTTP client helpers
 │   └── UriExtensions.cs                    # URI manipulation helpers
 ├── Infrastructure/                         # Infrastructure utilities
@@ -1136,6 +1132,7 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.5.7 | May 11, 2026 | Dead code sweep: removed `ApiGenericResponse`, `PaginationDefaults`, `LicenseRoutes`, `DirectoryFilesResult`, `DsmToolsExtensions`; removed NuGet packages `Microsoft.AspNetCore.Mvc.Versioning` and `Microsoft.FluentUI.AspNetCore.Components.Emoji`; preserved `EmptyResponse` as standalone type (used by `DsmApiClient`); cleaned stale references in Constants tree diagram and Tools Extensions listing |
 | 0.5.4 | May 1, 2026 | Replaced custom `CloneGenerator` source generator with C# records (`init` setters) — 41 classes converted, `GenerateCloneAttribute`/`IGenericCloneable<T>` removed, `ApiParametersBase<T>` simplified (no cloning needed with immutability); SiteLifecycleManager hardening: lifecycle manager recreation on config update (stale config fix), removed vestigial `.Clone()` calls (Interactive WASM has no shared memory), removed `ProcessTimeoutSeconds` (inlined 10s constant), added `IOException` to `StopAsync` exception filter, `ProcessInfo` converted to snapshot record, parallel startup in `StartEligibleSitesAsync`, `CancellationToken` forwarding in `StopAllSitesAsync` and `GetRuntimeStateAsync`, removed dead null check and misleading `CancellationToken` from `StartAsync`; **post-review fixes**: `RemoveInstanceAsync` restructured to remove persistent config before in-memory state (prevents orphaned configs on failure), `StopAllSitesAsync` wraps `Dispose()` in `finally` (prevents `SemaphoreSlim` leak on exception), `StartAsync` disposes stale `_process` handle before restart (prevents handle leak on crash-restart cycles); **SiteLifecycleManager concurrency rewrite**: replaced `SemaphoreSlim` + `ISemaphoreOwner` with `Channel<LifecycleCommand>` + single consumer loop — eliminates TOCTOU races, no `ObjectDisposedException` boilerplate, safe disposal via queued `DisposeCommand`, `ConfigurationRequiresRestart` uses order-independent dictionary comparison |
 | 0.5.4 | April 29, 2026 | SIGTERM process termination fix: added `ProcessTerminator` utility (cross-platform SIGTERM via P/Invoke), replaced blocking `WaitForExit` with async `WaitForExitAsync`, reduced timeouts (HttpClient 90→15s, Process 60→10s) — eliminates DSM reverse proxy 504 errors |
 | 0.5.4 | April 25, 2026 | Synchronized with codebase: added `SiteLifecycleManager` two-tier process architecture (graceful shutdown, force kill fallback), documented `DirectoryFilesResult`, `WebSiteRuntimeState`, `DotnetInfoParserConstants`; removed version column from Technical Stack table; cleaned up stale empty directory references |

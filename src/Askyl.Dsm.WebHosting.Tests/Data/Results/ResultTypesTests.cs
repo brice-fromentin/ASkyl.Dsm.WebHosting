@@ -206,9 +206,6 @@ public class ResultTypesTests
         var directoryContents = new List<FsEntry> { new("/path/subdir", "subdir", true, "/real/subdir", null, DateTime.UtcNow) };
         yield return new object[] { "DirectoryContentsResult", directoryContents, (Func<object, string, object>)((v, _) => DirectoryContentsResult.CreateSuccess((List<FsEntry>)v)) };
 
-        var directoryFiles = new List<FsEntry> { new("/path/file.txt", "file.txt", false, "/real/file.txt", 1024, DateTime.UtcNow) };
-        yield return new object[] { "DirectoryFilesResult", directoryFiles, (Func<object, string, object>)((v, _) => DirectoryFilesResult.CreateSuccess((List<FsEntry>)v)) };
-
         var channels = new List<AspNetChannel> { new(CreateReleaseInfo("8.0.1", "8.0", isLts: true)) };
         yield return new object[] { "ChannelsResult", channels, (Func<object, string, object>)((v, m) => ChannelsResult.CreateSuccess((List<AspNetChannel>)v, m)) };
 
@@ -240,7 +237,6 @@ public class ResultTypesTests
     {
         yield return new object[] { "SharedFoldersResult", SharedFoldersResult.CreateFailure("Disk error"), ApiErrorCode.NotFound, SharedFoldersResult.CreateFailure(ApiErrorCode.NotFound, "Missing") };
         yield return new object[] { "DirectoryContentsResult", DirectoryContentsResult.CreateFailure("Permission denied"), ApiErrorCode.BadRequest, DirectoryContentsResult.CreateFailure(ApiErrorCode.BadRequest, "Invalid path") };
-        yield return new object[] { "DirectoryFilesResult", DirectoryFilesResult.CreateFailure("IO error"), ApiErrorCode.NotFound, DirectoryFilesResult.CreateFailure(ApiErrorCode.NotFound, "Gone") };
         yield return new object[] { "ChannelsResult", ChannelsResult.CreateFailure("Network error"), ApiErrorCode.Failure, ChannelsResult.CreateFailure(ApiErrorCode.Failure, "Timeout") };
         yield return new object[] { "ReleasesResult", ReleasesResult.CreateFailure("Fetch failed"), ApiErrorCode.NotFound, ReleasesResult.CreateFailure(ApiErrorCode.NotFound, "Missing") };
         yield return new object[] { "InstalledVersionsResult", InstalledVersionsResult.CreateFailure("Parse failed"), ApiErrorCode.Failure, InstalledVersionsResult.CreateFailure(ApiErrorCode.Failure, "Timeout") };
