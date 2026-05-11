@@ -249,7 +249,7 @@ Constants/
 
 | Interface | Source File | Key Methods | Implemented By |
 |-----------|-------------|-------------|----------------|
-| **IAuthenticationService** | `Contracts/IAuthenticationService.cs` | LoginAsync(), IsAuthenticatedAsync() | Ui.Services.AuthenticationService, Ui.Client.Services.AuthenticationService |
+| **IAuthenticationService** | `Contracts/IAuthenticationService.cs` | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() | Ui.Services.AuthenticationService, Ui.Client.Services.AuthenticationService |
 | **IDotnetVersionService** | `Contracts/IDotnetVersionService.cs` | GetInstalledVersionsAsync(), GetChannelsAsync() | Ui.Services.DotnetVersionService, Ui.Client.Services.DotnetVersionService |
 | **IFileSystemService** | `Contracts/IFileSystemService.cs` | GetSharedFoldersAsync(), GetDirectoryContentsAsync() | Ui.Services.FileSystemService, Ui.Client.Services.FileSystemService |
 | **IFrameworkManagementService** | `Contracts/IFrameworkManagementService.cs` | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services.FrameworkManagementService |
@@ -1016,7 +1016,7 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 1. **Synology DSM 7.2+**
    - x64 architecture (tested)
    - armv7/armv8 (built but untested)
-   - Package format: SPK (via Docker-based multi-arch builds)
+   - Package format: SPK
 
 2. **Deployment Path:** `/usr/local/Askyl.Dsm.WebHosting/`
 
