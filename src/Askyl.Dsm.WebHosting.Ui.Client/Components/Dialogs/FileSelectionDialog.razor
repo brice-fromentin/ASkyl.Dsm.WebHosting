@@ -23,7 +23,7 @@
     <FluentSplitter Orientation="Orientation.Horizontal" Panel1Size="30%" Panel1MinSize="20%" Panel1MaxSize="50%" Class="file-dialog-splitter">
         <Panel1>
             <div class="full-size file-dialog-tree">
-                <FluentTreeView @ref="TreeView" Items="@TreeItems" LazyLoadItems="true" @bind-SelectedItem="@SelectedTreeItem" OnSelectedChange="OnTreeItemSelectionChanged" />
+                <FluentTreeView Items="@TreeItems" LazyLoadItems="true" @bind-SelectedItem="@SelectedTreeItem" OnSelectedChange="OnTreeItemSelectionChanged" />
             </div>
         </Panel1>
         <Panel2>
@@ -92,7 +92,6 @@
     private IQueryable<FsEntry> _files = AutoDataGrid<FsEntry>.Empty();
     private string? _selectedPath;
     private FsEntry? _selectedFile;
-    private FluentTreeView? TreeView;
     private ITreeViewItem? SelectedTreeItem { get; set; }
 
     #endregion

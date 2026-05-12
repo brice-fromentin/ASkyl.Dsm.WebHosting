@@ -25,13 +25,5 @@ public sealed class ApiResultBool(bool success, string? message, bool value, Api
     /// <param name="message">Error message describing what went wrong.</param>
     public static ApiResultBool CreateFailure(string message)
         => new(false, message, false, ApiErrorCode.Failure);
-
-    /// <summary>
-    /// Creates a failure result with a specific error code.
-    /// </summary>
-    /// <param name="errorCode">The error code.</param>
-    /// <param name="message">Error message describing what went wrong.</param>
-    public static ApiResultBool CreateFailure(ApiErrorCode errorCode, string message)
-        => new(false, message, false, errorCode);
 }
 

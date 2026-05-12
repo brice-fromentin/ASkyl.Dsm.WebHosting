@@ -10,6 +10,8 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// </summary>
 public sealed class FileManagerService(ILogger<FileManagerService> logger, string rootPath = "") : IFileManagerService
 {
+    private readonly string _normalizedRootPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, rootPath));
+
     private static string SanitizePathSegment(string? name, string paramName, bool allowEmpty)
     {
         ArgumentNullException.ThrowIfNull(name, paramName);
@@ -39,13 +41,38 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
         return sanitized;
     }
 
-    /// <inheritdoc/>
-    public string BaseDirectory => AppContext.BaseDirectory;
+    private static string SanitizeSubdirectoryPath(string? name, string paramName)
+    {
+        ArgumentNullException.ThrowIfNull(name, paramName);
+
+        if (name.Length == 0)
+        {
+            throw new ArgumentException("Value cannot be empty", paramName);
+        }
+
+        if (name.Trim().Length == 0)
+        {
+            throw new ArgumentException("Value cannot be whitespace", paramName);
+        }
+
+        // Prevent directory traversal
+        var segments = name.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var segment in segments)
+        {
+            if (segment.Equals("..", StringComparison.OrdinalIgnoreCase) || segment.Equals(".", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Invalid path segment '{segment}' in '{name}'", paramName);
+            }
+        }
+
+        return name;
+    }
 
     /// <inheritdoc/>
     public void Initialize()
     {
-        logger.LogInformation("Initializing FileManager with base path: {BasePath}", String.IsNullOrEmpty(rootPath) ? BaseDirectory : Path.Combine(BaseDirectory, rootPath));
+        logger.LogInformation("Initializing FileManager with base path: {BasePath}", _normalizedRootPath);
 
         // Create default directories
         GetDirectory(InfrastructureConstants.Downloads);
@@ -58,7 +85,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     public string GetDirectory(string name)
     {
         var sanitized = SanitizePathSegment(name, nameof(name), true);
-        var path = Path.Combine(BaseDirectory, rootPath, sanitized);
+        var path = Path.Combine(_normalizedRootPath, sanitized);
 
         logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
         Directory.CreateDirectory(path);
@@ -69,8 +96,8 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public void DeleteDirectory(string name)
     {
-        var sanitized = SanitizePathSegment(name, nameof(name), false);
-        var path = Path.Combine(BaseDirectory, rootPath, sanitized);
+        var sanitized = SanitizeSubdirectoryPath(name, nameof(name));
+        var path = Path.Combine(_normalizedRootPath, sanitized);
 
         if (Directory.Exists(path))
         {

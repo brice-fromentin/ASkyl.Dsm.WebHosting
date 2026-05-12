@@ -5,30 +5,18 @@ namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 /// </summary>
 public static class LogDownloadRoutes
 {
-    #region Route Configuration
-
     /// <summary>
     /// Base route prefix for the Log Download controller (versioned).
     /// </summary>
     public const string ControllerBaseRoute = "api/v1/logdownload";
-
-    #endregion
-
-    #region Route Segments
 
     /// <summary>
     /// Route segment for log download endpoint.
     /// </summary>
     public const string LogsRoute = "logs";
 
-    #endregion
-
-    #region Computed Routes
-
     /// <summary>
     /// Full route for the log download endpoint.
     /// </summary>
     public static readonly string LogsFullRoute = String.Join("/", ControllerBaseRoute, LogsRoute);
-
-    #endregion
 }

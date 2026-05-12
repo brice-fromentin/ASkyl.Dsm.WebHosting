@@ -8,14 +8,6 @@ namespace Askyl.Dsm.WebHosting.Data.Contracts;
 public interface IDownloaderService
 {
     /// <summary>
-    /// Downloads the latest ASP.NET Core runtime release to the downloads directory.
-    /// </summary>
-    /// <param name="skipDownloadIfExists">If true, skips download if file already exists.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>The path to the downloaded file.</returns>
-    Task<string> DownloadToAsync(bool skipDownloadIfExists = false, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Downloads a specific version of ASP.NET Core runtime.
     /// </summary>
     /// <param name="version">The version to download (e.g., "8.0.5").</param>

@@ -41,12 +41,4 @@ public class ApiResult(bool success, string? message, ApiErrorCode errorCode = d
     /// <param name="message">Error message describing what went wrong.</param>
     public static ApiResult CreateFailure(string message)
         => new(false, message, ApiErrorCode.Failure);
-
-    /// <summary>
-    /// Creates a failure result with a specific error code.
-    /// </summary>
-    /// <param name="errorCode">The error code.</param>
-    /// <param name="message">Error message describing what went wrong.</param>
-    public static ApiResult CreateFailure(ApiErrorCode errorCode, string message)
-        => new(false, message, errorCode);
 }

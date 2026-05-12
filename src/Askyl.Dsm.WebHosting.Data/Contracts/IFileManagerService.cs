@@ -33,9 +33,4 @@ public interface IFileManagerService
     /// <param name="file">The file name.</param>
     /// <returns>The full path to the file.</returns>
     string GetFullName(string directory, string file);
-
-    /// <summary>
-    /// Gets the base directory for the application.
-    /// </summary>
-    string BaseDirectory { get; }
 }

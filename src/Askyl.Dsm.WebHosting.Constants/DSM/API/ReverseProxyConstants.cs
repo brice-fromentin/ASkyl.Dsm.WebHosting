@@ -5,14 +5,10 @@ namespace Askyl.Dsm.WebHosting.Constants.DSM.API;
 /// </summary>
 public static class ReverseProxyConstants
 {
-    #region Description Prefix
-
     /// <summary>
     /// Prefix added to reverse proxy descriptions to identify ADWH-managed proxies.
     /// </summary>
     public const string DescriptionPrefix = "ADWH - ";
-
-    #endregion
 
     #region Error Codes
 

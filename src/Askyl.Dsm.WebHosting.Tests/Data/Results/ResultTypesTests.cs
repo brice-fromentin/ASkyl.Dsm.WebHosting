@@ -45,18 +45,6 @@ public class ResultTypesTests
         Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
     }
 
-    [Fact]
-    public void ApiResult_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = ApiResult.CreateFailure(ApiErrorCode.NotFound, "Missing");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Missing", result.Message);
-        Assert.Equal(ApiErrorCode.NotFound, result.ErrorCode);
-    }
-
     #endregion
 
     #region ApiResultBool
@@ -98,18 +86,6 @@ public class ResultTypesTests
         Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
     }
 
-    [Fact]
-    public void ApiResultBool_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = ApiResultBool.CreateFailure(ApiErrorCode.Unauthorized, "Denied");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Equal(false, result.Value);
-        Assert.Equal(ApiErrorCode.Unauthorized, result.ErrorCode);
-    }
-
     #endregion
 
     #region AuthenticationResult
@@ -140,18 +116,6 @@ public class ResultTypesTests
         Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
     }
 
-    [Fact]
-    public void AuthenticationResult_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = AuthenticationResult.CreateFailure(ApiErrorCode.Unauthorized, "Locked out");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.False(result.IsAuthenticated);
-        Assert.Equal(ApiErrorCode.Unauthorized, result.ErrorCode);
-    }
-
     #endregion
 
     #region InstallationResult
@@ -180,18 +144,6 @@ public class ResultTypesTests
         Assert.Null(result.Version);
         Assert.Null(result.InstalledAt);
         Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
-    }
-
-    [Fact]
-    public void InstallationResult_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = InstallationResult.CreateFailure(ApiErrorCode.InvalidState, "Already installed");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Version);
-        Assert.Equal(ApiErrorCode.InvalidState, result.ErrorCode);
     }
 
     #endregion
@@ -235,28 +187,23 @@ public class ResultTypesTests
 
     public static IEnumerable<object[]> GetItemsFailureTestData()
     {
-        yield return new object[] { "SharedFoldersResult", SharedFoldersResult.CreateFailure("Disk error"), ApiErrorCode.NotFound, SharedFoldersResult.CreateFailure(ApiErrorCode.NotFound, "Missing") };
-        yield return new object[] { "DirectoryContentsResult", DirectoryContentsResult.CreateFailure("Permission denied"), ApiErrorCode.BadRequest, DirectoryContentsResult.CreateFailure(ApiErrorCode.BadRequest, "Invalid path") };
-        yield return new object[] { "ChannelsResult", ChannelsResult.CreateFailure("Network error"), ApiErrorCode.Failure, ChannelsResult.CreateFailure(ApiErrorCode.Failure, "Timeout") };
-        yield return new object[] { "ReleasesResult", ReleasesResult.CreateFailure("Fetch failed"), ApiErrorCode.NotFound, ReleasesResult.CreateFailure(ApiErrorCode.NotFound, "Missing") };
-        yield return new object[] { "InstalledVersionsResult", InstalledVersionsResult.CreateFailure("Parse failed"), ApiErrorCode.Failure, InstalledVersionsResult.CreateFailure(ApiErrorCode.Failure, "Timeout") };
-        yield return new object[] { "WebSiteInstancesResult", WebSiteInstancesResult.CreateFailure("Load failed"), ApiErrorCode.NotFound, WebSiteInstancesResult.CreateFailure(ApiErrorCode.NotFound, "Empty") };
+        yield return new object[] { "SharedFoldersResult", SharedFoldersResult.CreateFailure("Disk error") };
+        yield return new object[] { "DirectoryContentsResult", DirectoryContentsResult.CreateFailure("Permission denied") };
+        yield return new object[] { "ChannelsResult", ChannelsResult.CreateFailure("Network error") };
+        yield return new object[] { "ReleasesResult", ReleasesResult.CreateFailure("Fetch failed") };
+        yield return new object[] { "InstalledVersionsResult", InstalledVersionsResult.CreateFailure("Parse failed") };
+        yield return new object[] { "WebSiteInstancesResult", WebSiteInstancesResult.CreateFailure("Load failed") };
     }
 
     [Theory]
     [MemberData(nameof(GetItemsFailureTestData))]
     public void ItemsResults_CreateFailure_SetsExpectedProperties(
-        string _, object defaultFailureResult, ApiErrorCode expectedErrorCode, object customFailureResult)
+        string _, object defaultFailureResult)
     {
         // Default failure
         Assert.False(((dynamic)defaultFailureResult).Success);
         Assert.Null(((dynamic)defaultFailureResult).Value);
         Assert.Equal(ApiErrorCode.Failure, ((dynamic)defaultFailureResult).ErrorCode);
-
-        // Custom error code
-        Assert.False(((dynamic)customFailureResult).Success);
-        Assert.Null(((dynamic)customFailureResult).Value);
-        Assert.Equal(expectedErrorCode, ((dynamic)customFailureResult).ErrorCode);
     }
 
     #endregion
@@ -289,18 +236,6 @@ public class ResultTypesTests
         Assert.False(result.Success);
         Assert.Null(result.Value);
         Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
-    }
-
-    [Fact]
-    public void WebSiteInstanceResult_CreateFailure_WithErrorCode_SetsCustomCode()
-    {
-        // Act
-        var result = WebSiteInstanceResult.CreateFailure(ApiErrorCode.InvalidState, "Conflict");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Null(result.Value);
-        Assert.Equal(ApiErrorCode.InvalidState, result.ErrorCode);
     }
 
     #endregion
