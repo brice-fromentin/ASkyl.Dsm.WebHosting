@@ -9,6 +9,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreInformations;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
+using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
@@ -65,7 +66,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
     {
         if (!File.Exists(SystemDefaults.ConfigurationFileName))
         {
-            logger.LogCritical($"Configuration file \"{SystemDefaults.ConfigurationFileName}\" does not exists.");
+            logger.ConfigurationFileNotFound(SystemDefaults.ConfigurationFileName);
             return false;
         }
 
@@ -73,7 +74,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
         var settings = lines.Where(x => x.Contains('='))
                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", String.Empty));
 
-        logger.LogDebug("Configuration file loaded with {Count} parameters.", settings.Count);
+        logger.ConfigurationLoaded(settings.Count);
         _server = settings[SystemDefaults.KeyExternalHostIp];
 
         if (!Int32.TryParse(settings[SystemDefaults.KeyExternalHttpsPort], out _port))

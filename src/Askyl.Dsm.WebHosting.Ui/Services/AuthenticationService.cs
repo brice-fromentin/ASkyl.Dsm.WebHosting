@@ -2,6 +2,7 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Microsoft.AspNetCore.Http;
 
@@ -22,13 +23,13 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
 
         if (!await apiClient.ConnectAsync(model))
         {
-            logger.LogWarning("Login failed for user: {Login}", login);
+            logger.LoginFailed(login);
             return AuthenticationResult.CreateNotAuthenticated("Invalid credentials");
         }
 
         // Store DSM _sid in server-side session for persistence
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmSessionKey, apiClient.Sid);
-        logger.LogInformation("Login successful for user: {Login} - SID stored", login);
+        logger.LoginSuccessful(login);
         return AuthenticationResult.CreateAuthenticated();
     }
 
@@ -39,12 +40,12 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         {
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmSessionKey);
             await apiClient.DisconnectAsync();
-            logger.LogInformation("User logged out");
+            logger.UserLoggedOut();
             return ApiResult.CreateSuccess("Logout successful");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error during logout");
+            logger.LogoutError(ex);
             return ApiResult.CreateFailure($"Logout failed: {ex.Message}");
         }
     }

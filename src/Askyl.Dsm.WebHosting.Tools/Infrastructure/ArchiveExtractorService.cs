@@ -1,6 +1,7 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
@@ -38,7 +39,7 @@ public sealed class ArchiveExtractorService(IFileManagerService fileManager, ILo
 
                 if (doExclusion && Path.GetFileName(entryName).Equals(exclude, StringComparison.OrdinalIgnoreCase))
                 {
-                    logger.LogDebug("Skipping archive entry: {EntryName}", entryName);
+                    logger.SkippingArchiveEntry(entryName);
                     continue;
                 }
 
@@ -47,7 +48,7 @@ public sealed class ArchiveExtractorService(IFileManagerService fileManager, ILo
 
                 if (!absoluteTargetPath.StartsWith(targetDirectory, StringComparison.OrdinalIgnoreCase))
                 {
-                    logger.LogWarning("Archive entry '{EntryName}' attempts to escape target directory. Skipping.", entryName);
+                    logger.ArchiveEntryEscapeAttempt(entryName);
                     continue;
                 }
 
@@ -62,21 +63,21 @@ public sealed class ArchiveExtractorService(IFileManagerService fileManager, ILo
                 }
             }
 
-            logger.LogDebug("Successfully extracted archive: {InputFile} to {TargetDirectory}", inputFile, targetDirectory);
+            logger.ArchiveExtracted(inputFile, targetDirectory);
         }
         catch (InvalidDataException exception)
         {
-            logger.LogError(exception, "Failed to extract archive. The file may be corrupted or not in valid tar.gz format: {InputFile}", inputFile);
+            logger.ArchiveExtractionCorrupted(exception, inputFile);
             throw;
         }
         catch (UnauthorizedAccessException exception)
         {
-            logger.LogError(exception, "Permission denied when extracting archive to target directory: {TargetDirectory}", targetDirectory);
+            logger.ArchiveExtractionPermissionDenied(exception, targetDirectory);
             throw;
         }
         catch (IOException exception)
         {
-            logger.LogError(exception, "I/O error occurred while extracting archive: {InputFile}", inputFile);
+            logger.ArchiveExtractionIoError(exception, inputFile);
             throw;
         }
     }

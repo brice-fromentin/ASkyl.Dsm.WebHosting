@@ -6,6 +6,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Models.ReverseProxy;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.ReverseProxy;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Extensions;
 using Askyl.Dsm.WebHosting.Tools.Network;
 
@@ -22,14 +23,14 @@ public class ReverseProxyManagerService(
     /// </summary>
     public async Task CreateAsync(WebSiteConfiguration site)
     {
-        logger.LogInformation("Creating reverse proxy for site {SiteName}", site.Name);
+        logger.CreatingReverseProxy(site.Name);
 
         // Idempotency check: See if proxy already exists using composite key
         var existingProxy = await FindByCompositeKeyAsync(site);
 
         if (existingProxy is not null)
         {
-            logger.LogWarning("Reverse proxy already exists for site {SiteName} with UUID {Uuid}.", site.Name, existingProxy.UUID);
+            logger.ReverseProxyAlreadyExists(site.Name, (Guid)existingProxy.UUID);
             return;
         }
 
@@ -47,7 +48,7 @@ public class ReverseProxyManagerService(
 
         if (!response.IsValid())
         {
-            logger.LogError("Failed to create reverse proxy for site {SiteName}. API error code: {ApiErrorCode}", site.Name, response?.Error?.Code);
+            logger.FailedToCreateReverseProxy(site.Name, response?.Error?.Code);
             throw new InvalidOperationException($"Failed to create reverse proxy for site '{site.Name}'");
         }
 
@@ -56,11 +57,11 @@ public class ReverseProxyManagerService(
 
         if (createdProxy is null)
         {
-            logger.LogError("Reverse proxy creation succeeded but could not verify existence for site {SiteName}", site.Name);
+            logger.ReverseProxyCreationNotVerified(site.Name);
             throw new InvalidOperationException($"Reverse proxy creation succeeded but could not verify existence for site '{site.Name}'");
         }
 
-        logger.LogInformation("Reverse proxy created successfully for site {SiteName} with UUID {Uuid}", site.Name, createdProxy.UUID);
+        logger.ReverseProxyCreated(site.Name, (Guid)createdProxy.UUID);
     }
 
     /// <summary>
@@ -68,7 +69,7 @@ public class ReverseProxyManagerService(
     /// </summary>
     public async Task UpdateAsync(WebSiteConfiguration config)
     {
-        logger.LogInformation("Updating reverse proxy for site {SiteName}", config.Name);
+        logger.UpdatingReverseProxy(config.Name);
 
         // Find the proxy using composite key (backend port + frontend config)
         var proxy = await FindByCompositeKeyAsync(config) ?? throw new ReverseProxyNotFoundException($"Reverse proxy not found for site '{config.Name}'. You may need to recreate it.");
@@ -90,7 +91,7 @@ public class ReverseProxyManagerService(
             throw new InvalidOperationException($"Failed to update reverse proxy for site '{config.Name}'. API error code: {response?.Error?.Code}");
         }
 
-        logger.LogInformation("Reverse proxy updated successfully for site {SiteName}", config.Name);
+        logger.ReverseProxyUpdated(config.Name);
     }
 
     /// <summary>
@@ -108,11 +109,11 @@ public class ReverseProxyManagerService(
 
         if (proxy is null || !proxy.UUID.HasValue)
         {
-            logger.LogInformation("No reverse proxy found for site {SiteName}. Nothing to delete.", site.Name);
+            logger.NoReverseProxyToDelete(site.Name);
             return; // Graceful no-op
         }
 
-        logger.LogInformation("Deleting reverse proxy {Uuid} for site {SiteName}", proxy.UUID, site.Name);
+        logger.DeletingReverseProxy(proxy.UUID.Value, site.Name);
 
         try
         {
@@ -121,7 +122,7 @@ public class ReverseProxyManagerService(
         catch (Exception ex) when (IsNotFoundError(ex.Message))
         {
             // Already deleted externally - graceful handling
-            logger.LogWarning("Reverse proxy for site {SiteName} was already deleted.", site.Name);
+            logger.ReverseProxyAlreadyDeleted(site.Name);
             return; // Graceful no-op
         }
     }
@@ -176,7 +177,7 @@ public class ReverseProxyManagerService(
             throw new InvalidOperationException($"Failed to delete reverse proxy for site '{siteName}'. API error code: {deleteResponse?.Error?.Code}");
         }
 
-        logger.LogInformation("Deleted reverse proxy {Uuid} successfully", uuid);
+        logger.ReverseProxyDeleted(uuid);
     }
 
     /// <summary>

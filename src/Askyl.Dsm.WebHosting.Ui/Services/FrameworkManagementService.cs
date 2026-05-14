@@ -2,6 +2,7 @@ using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -18,7 +19,7 @@ public class FrameworkManagementService(
     {
         if (String.IsNullOrEmpty(version))
         {
-            logger.LogWarning("Install failed - Version is required");
+            logger.InstallFailedVersionRequired();
             return InstallationResult.CreateFailure("Version is required");
         }
 
@@ -33,12 +34,12 @@ public class FrameworkManagementService(
             // Force cache refresh to detect the new installation
             await dotnetVersionService.RefreshCacheAsync();
 
-            logger.LogInformation("ASP.NET Core {Version} installed successfully", version);
+            logger.FrameworkInstalled(version);
             return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been installed successfully.");
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error while installing ASP.NET Core {Version}", version);
+            logger.FrameworkInstallError(ex, version);
             return InstallationResult.CreateFailure($"Installation failed: {ex.Message}");
         }
     }
@@ -47,7 +48,7 @@ public class FrameworkManagementService(
     {
         if (String.IsNullOrEmpty(version))
         {
-            logger.LogWarning("Uninstall failed - Version is required");
+            logger.UninstallFailedVersionRequired();
             return InstallationResult.CreateFailure("Version is required");
         }
 
@@ -65,22 +66,22 @@ public class FrameworkManagementService(
             // Force cache refresh to detect the removal
             await dotnetVersionService.RefreshCacheAsync();
 
-            logger.LogInformation("ASP.NET Core {Version} uninstalled successfully", version);
+            logger.FrameworkUninstalled(version);
             return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been uninstalled successfully.");
         }
         catch (LastReleaseUninstallException ex)
         {
-            logger.LogWarning("Uninstall failed - {Message}", ex.Message);
+            logger.UninstallFailed(ex.Message);
             return InstallationResult.CreateFailure(ex.Message);
         }
         catch (MissingChannelConfigurationException ex)
         {
-            logger.LogWarning("Uninstall failed - {Message}", ex.Message);
+            logger.UninstallFailed(ex.Message);
             return InstallationResult.CreateFailure(ex.Message);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error while uninstalling ASP.NET Core {Version}", version);
+            logger.FrameworkUninstallError(ex, version);
             return InstallationResult.CreateFailure($"Uninstallation failed: {ex.Message}");
         }
     }

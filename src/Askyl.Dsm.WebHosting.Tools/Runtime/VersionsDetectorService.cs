@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -97,7 +98,7 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
 
             if (!File.Exists(dotnetPath))
             {
-                logger.LogWarning("dotnet executable not found at {DotnetPath}. Keeping existing cached data.", dotnetPath);
+                logger.DotnetExecutableNotFound(dotnetPath);
                 return;  // Can't refresh without dotnet executable
             }
 
@@ -106,17 +107,17 @@ public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorServ
             if (!String.IsNullOrEmpty(output))
             {
                 newFrameworks = ParseDotnetInfo(output);
-                logger.LogDebug("Successfully refreshed framework cache with {FrameworkCount} frameworks", newFrameworks.Count);
+                logger.FrameworkCacheRefreshed(newFrameworks.Count);
             }
             else
             {
-                logger.LogWarning("dotnet --info returned empty output. Keeping existing cached data.");
+                logger.DotnetInfoEmptyOutput();
                 return;  // Preserve existing cache on empty output
             }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to refresh framework cache. Keeping existing cached data.");
+            logger.FailedToRefreshFrameworkCache(ex);
             return;  // Preserve existing cached data on failure
         }
 

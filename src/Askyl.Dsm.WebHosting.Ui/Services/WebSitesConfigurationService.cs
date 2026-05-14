@@ -3,6 +3,7 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Threading;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -42,7 +43,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         if (_cachedConfiguration == null)
         {
             _cachedConfiguration = await LoadConfigurationAsync(cancellationToken);
-            logger.LogInformation("Configuration loaded and cached. Found {SiteCount} sites", _cachedConfiguration.Sites.Count);
+            logger.ConfigurationLoadedAndCached(_cachedConfiguration.Sites.Count);
         }
     }
 
@@ -70,7 +71,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
             throw new UnauthorizedAccessException($"Insufficient permissions to write to application directory: {baseDirectory}", ex);
         }
 
-        logger.LogDebug("Service initialization completed successfully. Base directory: {BaseDirectory}", baseDirectory);
+        logger.ServiceInitializationCompleted(baseDirectory);
         _initialized = true;
     }
 
@@ -82,7 +83,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
     {
         if (!File.Exists(_configurationFilePath))
         {
-            logger.LogInformation("Configuration file not found, creating empty collection");
+            logger.ConfigurationFileNotFound();
             return new();
         }
 
@@ -92,7 +93,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
 
             if (String.IsNullOrWhiteSpace(jsonContent))
             {
-                logger.LogWarning("Configuration file is empty, creating new collection");
+                logger.ConfigurationFileEmpty();
                 return new();
             }
 
@@ -100,23 +101,23 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
 
             if (collection is null)
             {
-                logger.LogWarning("Configuration deserialization returned null, creating new collection");
+                logger.ConfigurationDeserializationNull();
                 return new();
             }
 
-            logger.LogDebug("Configuration loaded successfully with {SiteCount} sites", collection.Sites.Count);
+            logger.ConfigurationLoadedSuccessfully(collection.Sites.Count);
             return collection;
         }
         catch (JsonException jsonEx)
         {
-            logger.LogError(jsonEx, "Configuration file is corrupted (invalid JSON). Backup created and new empty configuration initialized");
+            logger.ConfigurationCorrupted(jsonEx);
 
             await HandleCorruptedConfigurationAsync();
             return new();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to load configuration from {FilePath}", _configurationFilePath);
+            logger.FailedToLoadConfiguration(ex, _configurationFilePath);
             return new();
         }
     }
@@ -130,11 +131,11 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
 
             await File.WriteAllTextAsync(_configurationFilePath, jsonContent, cancellationToken);
 
-            logger.LogInformation("Configuration saved successfully to {FilePath}", _configurationFilePath);
+            logger.ConfigurationSaved(_configurationFilePath);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to save configuration to {FilePath}", _configurationFilePath);
+            logger.FailedToSaveConfiguration(ex, _configurationFilePath);
 
             throw;
         }
@@ -149,11 +150,11 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         {
             var backupPath = $"{_configurationFilePath}.corrupted.{DateTime.UtcNow:yyyyMMddHHmmss}.bak";
             File.Move(_configurationFilePath, backupPath);
-            logger.LogInformation("Corrupted configuration backed up to {BackupPath}", backupPath);
+            logger.ConfigurationBackedUp(backupPath);
         }
         catch (Exception backupEx)
         {
-            logger.LogWarning(backupEx, "Failed to create backup of corrupted configuration");
+            logger.FailedToCreateBackup(backupEx);
         }
     }
 

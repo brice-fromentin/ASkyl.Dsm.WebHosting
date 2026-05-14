@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Constants/Askyl.Dsm.WebHosting.Constants.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Data/Askyl.Dsm.WebHosting.Data.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Logging/Askyl.Dsm.WebHosting.Logging.csproj" />
   </ItemGroup>
 
   <ItemGroup>

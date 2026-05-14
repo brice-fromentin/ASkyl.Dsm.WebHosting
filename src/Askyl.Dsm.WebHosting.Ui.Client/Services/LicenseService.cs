@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Domain.Licensing;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
@@ -51,7 +52,7 @@ public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<Licens
         catch (Exception exception)
         {
             // Skip licenses that fail to load silently in production
-            logger.LogWarning(exception, "Failed to load license file: {FileName}", fileName);
+            logger.FailedToLoadLicenseFile(exception, fileName);
         }
 
         return null;
