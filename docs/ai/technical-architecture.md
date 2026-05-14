@@ -171,7 +171,7 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 ### 1. Askyl.Dsm.WebHosting.Constants
 
-**Purpose:** Centralized constants, defaults, and enums for the entire solution (~170+ constants)
+**Purpose:** Centralized constants, defaults, and enums for the entire solution
 
 **Complete Inventory:**
 
@@ -258,7 +258,7 @@ Constants/
 **Note:** `FindByCompositeKeyAsync()` is a private helper method in the implementation, not part of the public interface.
 | **IWebSitesConfigurationService** | `Contracts/IWebSitesConfigurationService.cs` | GetAllSitesAsync(), AddSiteAsync(), RemoveSiteAsync() | Ui.Services.WebSitesConfigurationService |
 | **IPlatformInfoService** | `Contracts/IPlatformInfoService.cs` | (Properties: ChannelVersion, CurrentArchitecture, CurrentOS) | Tools.Infrastructure.PlatformInfoService |
-| **IFileManagerService** | `Contracts/IFileManagerService.cs` | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName(), BaseDirectory property | Tools.Infrastructure.FileManagerService |
+| **IFileManagerService** | `Contracts/IFileManagerService.cs` | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName() | Tools.Infrastructure.FileManagerService |
 | **IArchiveExtractorService** | `Contracts/IArchiveExtractorService.cs` | Decompress(inputFile, exclude) | Tools.Infrastructure.ArchiveExtractorService |
 | **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), DownloadVersionToAsync(), GetAspNetCoreReleasesAsync() | Tools.Runtime.DownloaderService |
 | **IVersionsDetectorService** | `Contracts/IVersionsDetectorService.cs` | GetInstalledVersionsAsync(), IsChannelInstalled(), RefreshCacheAsync() | Tools.Runtime.VersionsDetectorService |
