@@ -44,7 +44,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - **Background Service:** WebSiteHostingService orchestrates website instances; per-site process lifecycle delegated to SiteLifecycleManager (SIGTERM graceful shutdown, force kill fallback)
 - **Cross-platform Process Termination:** `ProcessTerminator` sends SIGTERM on Unix/Linux/macOS (P/Invoke `libc.kill`) and CloseMainWindow on Windows — enables ~1-3 second graceful drain
 
-**Current Status (v0.5.4):**
+**Current Status:**
 
 - ✅ Blazor Server + Interactive WebAssembly hybrid rendering
 - ✅ DSM API integration (Authentication, FileStation, ReverseProxy)
