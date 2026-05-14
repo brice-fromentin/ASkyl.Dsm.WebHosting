@@ -2,14 +2,16 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
+using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.Deployment.DotNet.Releases;
+using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 
 /// <summary>
 /// Service for downloading and managing .NET runtime releases.
 /// </summary>
-public sealed class DownloaderService(IPlatformInfoService platformInfo, IFileManagerService fileManager) : IDownloaderService
+public sealed class DownloaderService(ILogger<DownloaderService> logger, IPlatformInfoService platformInfo, IFileManagerService fileManager) : IDownloaderService
 {
     /// <summary>
     /// Downloads a specific version of ASP.NET Core runtime.
@@ -145,10 +147,24 @@ public sealed class DownloaderService(IPlatformInfoService platformInfo, IFileMa
 
         if (skipDownloadIfExists && File.Exists(fullDestinationPath))
         {
+            logger.DownloadSkipped(fullDestinationPath);
             return fullDestinationPath;
         }
 
-        await file.DownloadAsync(fullDestinationPath).ConfigureAwait(false);
+        logger.DownloadStarted(file.FileName, fullDestinationPath);
+
+        try
+        {
+            await file.DownloadAsync(fullDestinationPath).ConfigureAwait(false);
+
+            var size = new FileInfo(fullDestinationPath).Length;
+            logger.DownloadCompleted(fullDestinationPath, size);
+        }
+        catch (Exception ex)
+        {
+            logger.DownloadFailed(ex, file.FileName);
+            throw;
+        }
 
         return fullDestinationPath;
     }

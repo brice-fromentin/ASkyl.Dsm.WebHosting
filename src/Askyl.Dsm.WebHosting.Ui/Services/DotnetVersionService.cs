@@ -2,6 +2,8 @@ using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -10,7 +12,10 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// This service is registered in Ui only (server-side) since it requires access to
 /// the file system for .NET installation detection.
 /// </summary>
-public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
+/// <param name="logger">Logger instance.</param>
+/// <param name="versionsDetector">Service for detecting installed .NET versions.</param>
+/// <param name="downloader">Service for downloading .NET runtimes.</param>
+public class DotnetVersionService(ILogger<DotnetVersionService> logger, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
 {
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
     {
@@ -21,6 +26,7 @@ public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDo
         }
         catch (Exception ex)
         {
+            logger.FailedToGetInstalledVersions(ex);
             return InstalledVersionsResult.CreateFailure($"Failed to get installed versions: {ex.Message}");
         }
     }
@@ -34,6 +40,7 @@ public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDo
         }
         catch (Exception ex)
         {
+            logger.FailedToCheckChannelInstalled(ex, channel);
             return ApiResultBool.CreateFailure($"Failed to check if channel '{channel}' is installed: {ex.Message}");
         }
     }
@@ -47,6 +54,7 @@ public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDo
         }
         catch (Exception ex)
         {
+            logger.FailedToCheckVersionInstalled(ex, version);
             return ApiResultBool.CreateFailure($"Failed to check if version '{version}' is installed: {ex.Message}");
         }
     }
@@ -64,6 +72,8 @@ public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDo
     {
         try
         {
+            logger.QueryingChannels();
+
             await GetInstalledVersionsAsync(cancellationToken);
 
             var channels = await downloader.GetAspNetCoreChannelsAsync(cancellationToken);
@@ -73,6 +83,7 @@ public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDo
         }
         catch (Exception ex)
         {
+            logger.FailedToGetChannels(ex);
             return ChannelsResult.CreateFailure($"Failed to get ASP.NET Core channels: {ex.Message}");
         }
     }
@@ -81,6 +92,8 @@ public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDo
     {
         try
         {
+            logger.QueryingReleases(channel);
+
             var releases = await downloader.GetAspNetCoreReleasesAsync(channel, cancellationToken);
 
             var releaseList = new List<AspNetRelease>();
@@ -96,6 +109,7 @@ public class DotnetVersionService(IVersionsDetectorService versionsDetector, IDo
         }
         catch (Exception ex)
         {
+            logger.FailedToGetReleases(ex, channel);
             return ReleasesResult.CreateFailure($"Failed to get releases for channel '{channel}': {ex.Message}");
         }
     }
