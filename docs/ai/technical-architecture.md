@@ -1,8 +1,8 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.7
+**Version:** 0.5.8
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 11, 2026 (Dead code sweep — removed 4 unused types, 2 unused NuGet packages, unused extension method, stale doc references)
+**Last Updated:** May 14, 2026 (LoggerMessage migration — all 126 logger calls migrated to source-generated extensions)
 
 ---
 
@@ -68,6 +68,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ⏳ TODO: Multi-language support
 - ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
+- ✅ **LoggerMessage migration** — 126 logger calls migrated to 137 source-generated `[LoggerMessage]` extension methods across 10 files; zero CA2254 warnings
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 
@@ -104,11 +105,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.7</Version>
-<AssemblyVersion>0.5.7.0</AssemblyVersion>
-<FileVersion>0.5.7.0</FileVersion>
-<InformationalVersion>0.5.7</InformationalVersion>
-<PackageVersion>0.5.7</PackageVersion>
+<Version>0.5.8</Version>
+<AssemblyVersion>0.5.8.0</AssemblyVersion>
+<FileVersion>0.5.8.0</FileVersion>
+<InformationalVersion>0.5.8</InformationalVersion>
+<PackageVersion>0.5.8</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>

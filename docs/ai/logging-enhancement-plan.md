@@ -142,20 +142,20 @@ Each file gets a dedicated event ID range to avoid collisions and make log corre
 
 | Task | Description | Status |
 |------|-------------|--------|
-| **T2.1** | Migrate `AuthenticationService.cs` — 4 calls → extension methods | ⬜ Not started |
-| **T2.2** | Migrate `FileSystemService.cs` — 13 calls → extension methods | ⬜ Not started |
-| **T2.3** | Migrate `FileManagerService.cs` — 6 calls → extension methods | ⬜ Not started |
-| **T2.4** | Migrate `LogDownloadService.cs` — 7 calls → extension methods | ⬜ Not started |
-| **T2.5** | Migrate `FrameworkManagementService.cs` — 8 calls → extension methods | ⬜ Not started |
-| **T2.6** | Migrate `SiteLifecycleManager.cs` — 17 calls → extension methods | ⬜ Not started |
-| **T2.7** | Migrate `ReverseProxyManagerService.cs` — 10 calls → extension methods | ⬜ Not started |
-| **T2.8** | Migrate `WebSiteHostingService.cs` — 33 calls → extension methods | ⬜ Not started |
-| **T2.9** | Migrate `WebSitesConfigurationService.cs` — 12 calls → extension methods | ⬜ Not started |
-| **T2.10** | Migrate `DsmApiClient.cs` — 2 calls → extension methods | ⬜ Not started |
-| **T2.11** | Migrate `ArchiveExtractorService.cs` — 6 calls → extension methods | ⬜ Not started |
-| **T2.12** | Migrate `VersionsDetectorService.cs` — 4 calls → extension methods | ⬜ Not started |
-| **T2.13** | Migrate `PlatformInfoService.cs` — 2 calls → extension methods | ⬜ Not started |
-| **T2.14** | Migrate `LicenseService.cs` (client) — 1 call → extension method | ⬜ Not started |
+| **T2.1** | Migrate `AuthenticationService.cs` — 4 calls → extension methods | ✅ Done |
+| **T2.2** | Migrate `FileSystemService.cs` — 13 calls → extension methods | ✅ Done |
+| **T2.3** | Migrate `FileManagerService.cs` — 6 calls → extension methods | ✅ Done |
+| **T2.4** | Migrate `LogDownloadService.cs` — 7 calls → extension methods | ✅ Done |
+| **T2.5** | Migrate `FrameworkManagementService.cs` — 8 calls → extension methods | ✅ Done |
+| **T2.6** | Migrate `SiteLifecycleManager.cs` — 17 calls → extension methods | ✅ Done |
+| **T2.7** | Migrate `ReverseProxyManagerService.cs` — 11 calls → extension methods | ✅ Done |
+| **T2.8** | Migrate `WebSiteHostingService.cs` — 34 calls → extension methods | ✅ Done |
+| **T2.9** | Migrate `WebSitesConfigurationService.cs` — 12 calls → extension methods | ✅ Done |
+| **T2.10** | Migrate `DsmApiClient.cs` — 2 calls → extension methods | ✅ Done |
+| **T2.11** | Migrate `ArchiveExtractorService.cs` — 6 calls → extension methods | ✅ Done |
+| **T2.12** | Migrate `VersionsDetectorService.cs` — 4 calls → extension methods | ✅ Done |
+| **T2.13** | Migrate `PlatformInfoService.cs` — 2 calls → extension methods | ✅ Done |
+| **T2.14** | Migrate `LicenseService.cs` (client) — 1 call → extension method | ✅ Done |
 
 ### Phase 3: Add Missing Logging
 
@@ -202,18 +202,18 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 
 ## Acceptance Criteria
 
-- [ ] All 123 `[LoggerMessage]` methods created and assigned event IDs
-- [ ] All 126 logger calls migrated to extension methods
-- [ ] Zero CA2254 warnings remaining
+- [x] All 137 `[LoggerMessage]` methods created and assigned event IDs
+- [x] All 126 logger calls migrated to extension methods
+- [x] Zero CA2254 warnings remaining
 - [ ] All services log key operations (start, success, failure, duration)
 - [ ] DSM API requests are logged with URL, status, duration
 - [ ] Application shutdown flushes all pending logs (`Log.CloseAndFlush()`)
 - [ ] Serilog output includes event ID and event type
-- [ ] Log levels are consistent (Debug/Information/Warning/Error/Critical)
-- [ ] Build passes with 0 errors, 0 warnings
-- [ ] All 181 tests pass
-- [ ] Format clean (`dotnet format`)
-- [ ] Markdown valid (`markdownlint`)
+- [x] Log levels are consistent (Debug/Information/Warning/Error/Critical)
+- [x] Build passes with 0 errors, 0 warnings
+- [ ] All tests pass
+- [x] Format clean (`dotnet format`)
+- [x] Markdown valid (`markdownlint`)
 
 ---
 
@@ -228,4 +228,5 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
   - `Warning` — recoverable issues (retry, fallback, degraded state)
   - `Error` — failures that require attention (operation failed, resource unavailable)
   - `Critical` — unrecoverable, application may stop functioning
-- **.NET 10 extension method flavor** — all `[LoggerMessage]` methods use `extension(ILogger logger)` blocks inside `public static class`, matching `HttpClientExtensions.cs` pattern
+- **Extension pattern** — all `[LoggerMessage]` methods use `public static partial class` with `this ILogger logger`
+  (not `extension(...)` blocks — the source generator requires a partial type)
