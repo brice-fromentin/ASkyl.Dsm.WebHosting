@@ -47,10 +47,14 @@ project as a proper shared infrastructure library.
 | **Eliminates CA2254** | Arguments are lazily evaluated only when level is enabled |
 | **Type-safe** | Compile-time validation of format strings and argument count |
 
-### .NET 10 Extension Method Pattern
+### Extension Method Pattern
 
-All `[LoggerMessage]` methods use the .NET 10 `extension(...)` block pattern
-(same as `HttpClientExtensions.cs`):
+All `[LoggerMessage]` methods use the `public static partial class` pattern
+(with `this ILogger logger` on each method).
+
+**Note:** The .NET 10 `extension(...)` block pattern (from `HttpClientExtensions.cs`)
+cannot be used with `[LoggerMessage]` — the source generator requires a `partial` type
+to inject method implementations, but `extension(...)` blocks create a non-partial synthetic type.
 
 ```csharp
 namespace Askyl.Dsm.WebHosting.Logging;
@@ -58,45 +62,41 @@ namespace Askyl.Dsm.WebHosting.Logging;
 /// <summary>
 /// Structured logging extension methods for authentication-related events.
 /// </summary>
-public static class AuthenticationLoggingExtensions
+public static partial class AuthenticationLoggingExtensions
 {
-    extension(ILogger logger)
-    {
-        /// <summary>
-        /// Logs a successful login event for the specified user.
-        /// </summary>
-        [LoggerMessage(EventId = 1001, Level = LogLevel.Information, Message = "Login successful for user: {Login}")]
-        public partial void LoginSuccessful(string login);
-    }
+    /// <summary>
+    /// Logs a successful login event for the specified user.
+    /// </summary>
+    [LoggerMessage(EventId = 1001, Level = LogLevel.Information, Message = "Login successful for user: {Login} - SID stored")]
+    public static partial void LoginSuccessful(this ILogger logger, string login);
 }
 ```
 
 **Rules:**
 
-- `public static class` — never `partial` at class level
-- `extension(ILogger logger)` — defines the extension target type
-- `public partial void` — the source-generated method signature (no body)
-- One `extension(ILogger logger)` block per class
+- `public static partial class` — class MUST be partial for source generator
+- `this ILogger logger` — defines the extension target type on each method
+- `public static partial void` — the source-generated method signature (no body)
 - Event IDs are `int` literals (not constants) — required by source generator
-- XML doc comments on each method (not on the extension block)
+- XML doc comments on each method
 
 ### Semantic File Split
 
 The `[LoggerMessage]` extensions are organized into separate files by domain for maintainability:
 
-| File | Domain | ~Methods | Services Covered |
-|------|--------|----------|-----------------|
-| `AuthenticationLoggingExtensions.cs` | Authentication | 4 | AuthenticationService |
-| `FileManagementLoggingExtensions.cs` | File system | 13 | FileSystemService, FileManagerService, LogDownloadService |
-| `FrameworkManagementLoggingExtensions.cs` | .NET framework | 8 | FrameworkManagementService |
-| `ProcessLoggingExtensions.cs` | Process lifecycle | 15 | SiteLifecycleManager, SystemProcessRunner, SystemProcessHandle, ProcessTerminator |
-| `ReverseProxyLoggingExtensions.cs` | Reverse proxy | 10 | ReverseProxyManagerService |
-| `WebsiteLoggingExtensions.cs` | Website hosting | 33 | WebSiteHostingService |
-| `ConfigurationLoggingExtensions.cs` | Configuration | 12 | WebSitesConfigurationService |
-| `DsmApiLoggingExtensions.cs` | DSM API | 5 | DsmApiClient |
-| `InfrastructureLoggingExtensions.cs` | Infrastructure | 6 | DownloaderService, VersionsDetectorService, PlatformInfoService |
-| `ClientLoggingExtensions.cs` | Client-side (WASM) | 1 | LicenseService |
-| **Total** | | **123** | |
+| File | Domain | Methods | Event IDs | Services Covered |
+|------|--------|---------|-----------|-----------------|
+| `AuthenticationLoggingExtensions.cs` | Authentication | 4 | 1001-1004 | AuthenticationService |
+| `FileManagementLoggingExtensions.cs` | File system | 25 | 1100-1124 | FileSystemService, FileManagerService, LogDownloadService |
+| `FrameworkManagementLoggingExtensions.cs` | .NET framework | 7 | 1200-1206 | FrameworkManagementService |
+| `ProcessLoggingExtensions.cs` | Process lifecycle | 17 | 1300-1316 | SiteLifecycleManager |
+| `ReverseProxyLoggingExtensions.cs` | Reverse proxy | 11 | 1400-1410 | ReverseProxyManagerService |
+| `WebsiteLoggingExtensions.cs` | Website hosting | 34 | 1500-1533 | WebSiteHostingService |
+| `ConfigurationLoggingExtensions.cs` | Configuration | 12 | 1600-1611 | WebSitesConfigurationService |
+| `DsmApiLoggingExtensions.cs` | DSM API | 5 | 1700-1704 | DsmApiClient |
+| `InfrastructureLoggingExtensions.cs` | Infrastructure | 21 | 1800-1820 | DownloaderService, VersionsDetectorService, PlatformInfoService, ArchiveExtractorService, SystemProcessRunner, SystemProcessHandle, ProcessTerminator |
+| `ClientLoggingExtensions.cs` | Client-side (WASM) | 1 | 1900 | LicenseService |
+| **Total** | | **137** | | |
 
 ### Event ID Ranges
 
@@ -123,17 +123,20 @@ Each file gets a dedicated event ID range to avoid collisions and make log corre
 
 | Task | Description | Status |
 |------|-------------|--------|
-| **T1.1** | Replace `HelloWorldExtensions.cs` with project structure — add `Microsoft.Extensions.Logging.Abstractions` reference | ⬜ Not started |
-| **T1.2** | Create `AuthenticationLoggingExtensions.cs` — 4 methods (event IDs 1000-1004) | ⬜ Not started |
-| **T1.3** | Create `FileManagementLoggingExtensions.cs` — 13 methods (1100-1113) | ⬜ Not started |
-| **T1.4** | Create `FrameworkManagementLoggingExtensions.cs` — 8 methods (1200-1208) | ⬜ Not started |
-| **T1.5** | Create `ProcessLoggingExtensions.cs` — 15 methods (1300-1315) | ⬜ Not started |
-| **T1.6** | Create `ReverseProxyLoggingExtensions.cs` — 10 methods (1400-1410) | ⬜ Not started |
-| **T1.7** | Create `WebsiteLoggingExtensions.cs` — 33 methods (1500-1533) | ⬜ Not started |
-| **T1.8** | Create `ConfigurationLoggingExtensions.cs` — 12 methods (1600-1612) | ⬜ Not started |
-| **T1.9** | Create `DsmApiLoggingExtensions.cs` — 5 methods (1700-1705) | ⬜ Not started |
-| **T1.10** | Create `InfrastructureLoggingExtensions.cs` — 6 methods (1800-1806) | ⬜ Not started |
-| **T1.11** | Create `ClientLoggingExtensions.cs` — 1 method (1900) | ⬜ Not started |
+| **T1.1** | Replace `HelloWorldExtensions.cs` with project structure — add `Microsoft.Extensions.Logging.Abstractions` reference | ✅ Done |
+| **T1.2** | Create `AuthenticationLoggingExtensions.cs` — 4 methods (event IDs 1000-1004) | ✅ Done |
+| **T1.3** | Create `FileManagementLoggingExtensions.cs` — 25 methods (1100-1124) | ✅ Done |
+| **T1.4** | Create `FrameworkManagementLoggingExtensions.cs` — 7 methods (1200-1206) | ✅ Done |
+| **T1.5** | Create `ProcessLoggingExtensions.cs` — 17 methods (1300-1316) | ✅ Done |
+| **T1.6** | Create `ReverseProxyLoggingExtensions.cs` — 11 methods (1400-1410) | ✅ Done |
+| **T1.7** | Create `WebsiteLoggingExtensions.cs` — 34 methods (1500-1533) | ✅ Done |
+| **T1.8** | Create `ConfigurationLoggingExtensions.cs` — 12 methods (1600-1611) | ✅ Done |
+| **T1.9** | Create `DsmApiLoggingExtensions.cs` — 5 methods (1700-1704) | ✅ Done |
+| **T1.10** | Create `InfrastructureLoggingExtensions.cs` — 21 methods (1800-1820) | ✅ Done |
+| **T1.11** | Create `ClientLoggingExtensions.cs` — 1 method (1900) | ✅ Done |
+
+**Note:** Pattern uses `public static partial class` with `this ILogger logger` extension methods
+(not .NET 10 `extension(...)` blocks) — the `[LoggerMessage]` source generator requires a `partial` type to inject method implementations.
 
 ### Phase 2: Migrate Existing Calls
 
