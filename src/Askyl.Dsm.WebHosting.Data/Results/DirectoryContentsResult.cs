@@ -26,12 +26,4 @@ public sealed class DirectoryContentsResult(bool success, string? message, List<
     /// <param name="message">Error message describing the failure.</param>
     public static DirectoryContentsResult CreateFailure(string message)
         => new(false, message, null, ApiErrorCode.Failure);
-
-    /// <summary>
-    /// Creates a failure result with a specific error code. The Value property will be null.
-    /// </summary>
-    /// <param name="errorCode">The API error code.</param>
-    /// <param name="message">Error message describing the failure.</param>
-    public static DirectoryContentsResult CreateFailure(ApiErrorCode errorCode, string message)
-        => new(false, message, null, errorCode);
 }

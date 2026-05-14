@@ -5,14 +5,10 @@ namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 /// </summary>
 public static class WebsiteHostingRoutes
 {
-    #region Route Configuration
-
     /// <summary>
     /// Base route prefix for the Website Hosting controller (versioned).
     /// </summary>
     public const string ControllerBaseRoute = "api/v1/websites";
-
-    #endregion
 
     #region Route Segments
 

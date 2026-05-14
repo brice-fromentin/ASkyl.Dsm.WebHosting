@@ -138,28 +138,6 @@ public class ResultSerializationTests
 
     #endregion
 
-    #region DirectoryFilesResult
-
-    [Fact]
-    public void DirectoryFilesResult_RoundTrip_DeserializesCorrectly()
-    {
-        // Arrange
-        var entries = new List<FsEntry> { new("/path/file.txt", "file.txt", false, "/real/file.txt", 1024, DateTime.UtcNow) };
-        var result = DirectoryFilesResult.CreateSuccess(entries);
-        var json = JsonSerializer.Serialize(result, JsonOptions);
-
-        // Act
-        var deserialized = JsonSerializer.Deserialize<DirectoryFilesResult>(json, JsonOptions);
-
-        // Assert
-        Assert.NotNull(deserialized);
-        Assert.True(deserialized.Success);
-        Assert.NotNull(deserialized.Value);
-        Assert.Single(deserialized.Value);
-    }
-
-    #endregion
-
     #region ChannelsResult
 
     [Fact]

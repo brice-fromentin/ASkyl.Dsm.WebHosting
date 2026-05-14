@@ -155,9 +155,9 @@
     /// <summary>
     /// Handles Enter key press to trigger form submission.
     /// </summary>
-    private async Task OnEnterKeyAsync() => await ConfirmAsync(new EditContext(Configuration));
+    private async Task OnEnterKeyAsync() => await ConfirmAsync();
 
-    private async Task ConfirmAsync(EditContext context)
+    private async Task ConfirmAsync()
     {
         try
         {

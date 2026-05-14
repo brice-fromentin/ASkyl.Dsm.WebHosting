@@ -8,8 +8,6 @@ public interface IWebSitesConfigurationService
 
     Task<IEnumerable<WebSiteConfiguration>> GetAllSitesAsync(CancellationToken cancellationToken = default);
 
-    Task<IEnumerable<WebSiteConfiguration>> GetSitesToStartAsync(CancellationToken cancellationToken = default);
-
     Task AddSiteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default);
 
     Task UpdateSiteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default);

@@ -45,7 +45,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
             if (directoryOnly)
             {
                 // Single API call for directories only - more efficient
-                var directoryFiles = await ExecuteFileStationListAsync(path, FileStationDefaults.PatternAll, FileStationDefaults.TypeDirectory); ;
+                var directoryFiles = await ExecuteFileStationListAsync(path, FileStationDefaults.PatternAll, FileStationDefaults.TypeDirectory);
 
                 logger.LogDebug("Retrieved {DirectoryCount} directories from {Path}", directoryFiles.Count, path);
 

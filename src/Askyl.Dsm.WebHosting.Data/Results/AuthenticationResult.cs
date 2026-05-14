@@ -31,12 +31,4 @@ public sealed class AuthenticationResult(bool success, string? message, ApiError
     /// <param name="message">Error message describing the authentication failure.</param>
     public static AuthenticationResult CreateNotAuthenticated(string message)
         => new(false, message, ApiErrorCode.Failure);
-
-    /// <summary>
-    /// Creates an authentication failure result with a specific error code.
-    /// </summary>
-    /// <param name="errorCode">The API error code.</param>
-    /// <param name="message">Error message describing the authentication failure.</param>
-    public static new AuthenticationResult CreateFailure(ApiErrorCode errorCode, string message)
-        => new(false, message, errorCode);
 }

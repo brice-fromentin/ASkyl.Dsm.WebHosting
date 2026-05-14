@@ -5,14 +5,10 @@ namespace Askyl.Dsm.WebHosting.Constants.WebApi;
 /// </summary>
 public static class RuntimeManagementRoutes
 {
-    #region Route Configuration
-
     /// <summary>
     /// Base route prefix for the Runtime Management controller (versioned).
     /// </summary>
     public const string ControllerBaseRoute = "api/v1/runtime";
-
-    #endregion
 
     #region Route Segments
 

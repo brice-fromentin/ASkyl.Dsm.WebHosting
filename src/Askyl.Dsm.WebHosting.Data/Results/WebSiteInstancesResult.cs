@@ -26,12 +26,4 @@ public sealed class WebSiteInstancesResult(bool success, string? message, List<W
     /// <param name="message">Error message describing the failure.</param>
     public static WebSiteInstancesResult CreateFailure(string message)
         => new(false, message, null, ApiErrorCode.Failure);
-
-    /// <summary>
-    /// Creates a failure result with a specific error code.
-    /// </summary>
-    /// <param name="errorCode">The error code.</param>
-    /// <param name="message">Error message describing the failure.</param>
-    public static WebSiteInstancesResult CreateFailure(ApiErrorCode errorCode, string message)
-        => new(false, message, null, errorCode);
 }

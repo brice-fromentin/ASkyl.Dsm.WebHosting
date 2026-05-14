@@ -544,7 +544,7 @@ After EVERY code modification, you MUST:
 3. **Framework-Specific Updates**
    - Blazor/FluentUI component updates
    - Serilog configuration changes
-   - Docker/Synology API modifications
+   - Synology API modifications
 
 4. **Best Practices Evolution**
    - New recommended patterns for C# 14+
@@ -553,7 +553,7 @@ After EVERY code modification, you MUST:
 
 **Search Strategy:**
 
-- Use `mcp_searxng_web_search` tool with specific queries like:
+- Use `web-search` tool with specific queries like:
   - "C# [LATEST] new features released"
   - ".NET [LATEST] latest updates [CURRENT DATE]"
   - "FluentUI Blazor recent changes"
@@ -568,7 +568,7 @@ After EVERY code modification, you MUST:
 - The UI project uses Interactive Server render mode with antiforgery protection
 - Logs are structured using Serilog with configuration‑based setup
 - The solution supports multiple CPU architectures (Debug/Release with Any CPU/x64/x86)
-- SPK packaging includes Docker‑based multi‑architecture builds for Synology compatibility
+- SPK packaging includes .NET multi‑architecture packages for Synology compatibility
 - When a build is needed, ALWAYS use the standardized build command (see Section 4)
 
 **For detailed project-specific architecture, see `docs/ai/technical-architecture.md`.**

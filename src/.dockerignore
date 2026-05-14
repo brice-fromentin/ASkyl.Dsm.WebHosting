@@ -1,7 +1,0 @@
-**/bin/
-**/logs/
-**/obj/
-spk-project/
-.vs/
-*.user
-*.suo

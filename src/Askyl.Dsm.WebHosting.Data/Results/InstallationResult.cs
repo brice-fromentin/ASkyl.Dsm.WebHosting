@@ -35,12 +35,4 @@ public sealed class InstallationResult(bool success, string? message, string? ve
     /// <param name="message">Error message describing the installation failure.</param>
     public static new InstallationResult CreateFailure(string message)
         => new(false, message, null, null, ApiErrorCode.Failure);
-
-    /// <summary>
-    /// Creates a failed installation result with a specific error code.
-    /// </summary>
-    /// <param name="errorCode">The API error code.</param>
-    /// <param name="message">Error message describing the installation failure.</param>
-    public static new InstallationResult CreateFailure(ApiErrorCode errorCode, string message)
-        => new(false, message, null, null, errorCode);
 }

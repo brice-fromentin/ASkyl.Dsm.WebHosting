@@ -1,8 +1,8 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.5
+**Version:** 0.5.7
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 8, 2026 (IProcessRunner abstraction — co-located interfaces in Tools, non-blocking Dispose, ConfigureAwait on command loop, 189 tests)
+**Last Updated:** May 11, 2026 (Dead code sweep — removed 4 unused types, 2 unused NuGet packages, unused extension method, stale doc references)
 
 ---
 
@@ -39,7 +39,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 
 - **Hybrid Rendering Mode:** Server-side authentication with WebAssembly interactive components
 - **Result Pattern:** Strongly-typed success/failure results instead of exceptions for control flow
-- **C# Records (init setters):** 41 DSM API model classes converted from source-generated clone methods to immutable records
+- **C# Records (init setters):** 22 DSM API model classes converted from source-generated clone methods to immutable records
 - **Centralized Constants:** All magic strings/numbers extracted to dedicated Constants project
 - **Background Service:** WebSiteHostingService orchestrates website instances; per-site process lifecycle delegated to SiteLifecycleManager (SIGTERM graceful shutdown, force kill fallback)
 - **Cross-platform Process Termination:** `ProcessTerminator` sends SIGTERM on Unix/Linux/macOS (P/Invoke `libc.kill`) and CloseMainWindow on Windows — enables ~1-3 second graceful drain
@@ -66,7 +66,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
   - ✅ Reduced timeouts: HttpClient (90→15s), Process (60→10s) — eliminates DSM reverse proxy 504 errors
 - ⏳ TODO: Certificate management for reverse proxy
 - ⏳ TODO: Multi-language support
-- ✅ Unit test implementation (189 tests, 10 phases complete — May 2026)
+- ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
@@ -82,7 +82,6 @@ Askyl.Dsm.WebHosting.slnx (Version 0.5.3)
 ├── Askyl.Dsm.WebHosting.Benchmarks         # Performance benchmarks (BenchmarkDotNet)
 ├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
 ├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
-├── Askyl.Dsm.WebHosting.DotnetInstaller    # .NET runtime installer utility
 ├── Askyl.Dsm.WebHosting.Logging            # Logging extensions (source-generated log methods)
 ├── Askyl.Dsm.WebHosting.Tools              # Utility tools & DSM API client
 ├── Askyl.Dsm.WebHosting.Tests              # Unit tests (xUnit, Moq, FluentAssertions)
@@ -105,11 +104,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.5</Version>
-<AssemblyVersion>0.5.5.0</AssemblyVersion>
-<FileVersion>0.5.5.0</FileVersion>
-<InformationalVersion>0.5.5</InformationalVersion>
-<PackageVersion>0.5.5</PackageVersion>
+<Version>0.5.7</Version>
+<AssemblyVersion>0.5.7.0</AssemblyVersion>
+<FileVersion>0.5.7.0</FileVersion>
+<InformationalVersion>0.5.7</InformationalVersion>
+<PackageVersion>0.5.7</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -126,8 +125,8 @@ All projects share common build settings from `Directory.Build.props`:
 
 **Analyzer Packages:**
 
-- **Roslynator.Analyzers** (v4.12.7) - Enhanced code style enforcement
-- **Roslynator.Formatting.Analyzers** (v4.12.7) - Formatting rules
+- **Roslynator.Analyzers** - Enhanced code style enforcement
+- **Roslynator.Formatting.Analyzers** - Formatting rules
 
 **.editorconfig Rule Severities (Updated April 3, 2026):**
 
@@ -148,24 +147,11 @@ All projects share common build settings from `Directory.Build.props`:
 All projects in the solution have `<Nullable>enable</Nullable>` enabled in their `.csproj` files:
 
 - **Purpose:** Compile-time null safety checking to prevent NullReferenceException
-- **Coverage:** All 10 projects (Ui, Ui.Client, Data, Tools, Constants, etc.)
+- **Coverage:** All 8 projects (Ui, Ui.Client, Data, Tools, Constants, etc.)
 - **Behavior with DI:** Blazor `@inject` directives and constructor-injected services do NOT require null-forgiving operators (`!`) because:
   - Dependency injection container always provides non-null instances
   - No compiler warnings are generated for injected services
   - Runtime guarantees service availability through DI lifecycle management
-
-**Example:**
-
-```csharp
-// ✅ No ! needed - Blazor DI guarantees non-null
-@inject ILogger<MyComponent> Logger
-
-// ✅ No ! needed - Constructor injection guarantees non-null  
-public class MyService(ILogger<MyService> logger)
-{
-    // Compiler knows 'logger' is non-null from DI container
-}
-```
 
 **Standardized Build Command:**
 
@@ -185,7 +171,7 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 ### 1. Askyl.Dsm.WebHosting.Constants
 
-**Purpose:** Centralized constants, defaults, and enums for the entire solution (27 source files, ~160+ constants)
+**Purpose:** Centralized constants, defaults, and enums for the entire solution
 
 **Complete Inventory:**
 
@@ -199,16 +185,15 @@ Constants/
 │   ├── LicenseConstants.cs                 # License file management
 │   ├── LogConstants.cs                     # Log directory and file paths
 │   └── WebSiteConstants.cs                 # Website config, process lifecycle, port validation
-├── DSM/                                    # Synology DSM-specific constants (8 files)
+├── DSM/                                    # Synology DSM-specific constants (7 files)
 │   ├── API/                                # API-related constants
 │   │   ├── ApiMethods.cs                   # CRUD operation names (Create, Get, List, etc.)
-│   │   ├── ApiNames.cs                     # 19 DSM API identifiers (SYNO.API.Auth, FileStation, etc.)
+│   │   ├── ApiNames.cs                     # 7 DSM API identifiers (SYNO.API.Auth, FileStation, etc.)
 │   │   ├── ApiVersions.cs                  # Version range constants (Min: 1, Max: 7)
 │   │   ├── ReverseProxyConstants.cs        # Proxy error codes and description prefix
 │   │   └── SerializationFormats.cs         # Enum: Form, Json
-│   ├── FileStation/                        # FileStation-specific constants (2 files)
-│   │   ├── FileStationDefaults.cs          # Listing patterns, compression settings, virtual folders
-│   │   └── PaginationDefaults.cs           # Offset (0), Limit (100)
+│   ├── FileStation/                        # FileStation-specific constants (1 file)
+│   │   └── FileStationDefaults.cs          # Listing patterns, sorting, file types
 │   └── System/                             # DSM system defaults (1 file)
 │       └── SystemDefaults.cs               # Config paths, external ports (5001 default)
 ├── JSON/                                   # JSON serialization settings (1 file)
@@ -220,7 +205,7 @@ Constants/
 │   ├── DotNetFrameworkTypes.cs             # Framework type strings (ASP.NET Core, SDK, Runtime)
 │   └── RuntimeConstants.cs                 # Architecture (x64/arm/arm64), OS (linux/osx/windows)
 ├── UI/                                     # User interface constants (2 files)
-│   ├── DialogConstants.cs                  # Dialog widths (auto, 60%, 75%, 80%)
+│   ├── DialogConstants.cs                  # Dialog widths (auto, 60%, 75%)
 │   └── FileSizeConstants.cs                # Byte calculations (KiB/MiB/GiB), formatting
 └── WebApi/                                 # API route definitions (6 files)
     ├── AuthenticationRoutes.cs             # /api/v1/authentication/* (login, logout, status)
@@ -228,9 +213,9 @@ Constants/
     ├── FrameworkManagementRoutes.cs        # /api/v1/frameworks/* (install, uninstall)
     ├── LogDownloadRoutes.cs                # /api/v1/logdownload/* (logs)
     ├── RuntimeManagementRoutes.cs          # /api/v1/runtime/* (versions, channels, releases)
-    └── WebsiteHostingRoutes.cs             # /api/v1/websites/* (all, add, update, remove, start, stop)
+    ├── WebsiteHostingRoutes.cs             # /api/v1/websites/* (all, add, update, remove, start, stop)
 
-**Note:** License API routes are handled client-side via `ILicenseService` (no server controller).
+**Note:** License handling is done client-side via `ILicenseService` (no server controller or route constants needed).
 ```
 
 **Key Constants by Category:**
@@ -239,8 +224,8 @@ Constants/
 |----------|---------------|-------|
 | **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), Session | ~35 |
 | **Websites** | Process timeouts, port range (1024-65535), environment vars, validation messages | ~25 |
-| **DSM APIs** | 19 API names, CRUD methods, version ranges, error codes | ~35 + 1 enum |
-| **FileStation** | Listing patterns, compression level (6), pagination (100 limit) | ~15 |
+| **DSM APIs** | 7 API names, CRUD methods, version ranges, error codes | ~35 + 1 enum |
+| **FileStation** | Listing patterns, sorting, pagination (100 limit) | ~15 |
 | **Network** | Cookie header ("Cookie"), SSID prefix ("_SSID="), localhost | 6 + 1 enum |
 | **Runtime** | Architecture IDs (x64/arm/arm64), OS IDs (linux/osx/windows) | ~15 |
 | **UI** | Dialog widths, file size units (KiB/MiB/GiB) | 9 |
@@ -262,21 +247,21 @@ Constants/
 
 | Interface | Source File | Key Methods | Implemented By |
 |-----------|-------------|-------------|----------------|
-| **IAuthenticationService** | `Contracts/IAuthenticationService.cs` | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() | Ui.Services.AuthenticationService |
-| **IDotnetVersionService** | `Contracts/IDotnetVersionService.cs` | GetInstalledVersionsAsync(), GetChannelsAsync(), GetReleasesWithStatusAsync() | Ui.Services.DotnetVersionService, Ui.Client.Services.DotnetVersionService |
-| **IFileSystemService** | `Contracts/IFileSystemService.cs` | GetSharedFoldersAsync(), GetDirectoryContentsAsync(), SetHttpGroupPermissionsAsync() | Ui.Services.FileSystemService, Ui.Client.Services.FileSystemService |
-| **IFrameworkManagementService** | `Contracts/IFrameworkManagementService.cs` | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services.FrameworkManagementService, Ui.Client.Services.FrameworkManagementService |
-| **ILogDownloadService** | `Contracts/ILogDownloadService.cs` | GetLogsArchiveAsync() | Ui.Services.LogDownloadService |
+| **IAuthenticationService** | `Contracts/IAuthenticationService.cs` | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() | Ui.Services.AuthenticationService, Ui.Client.Services.AuthenticationService |
+| **IDotnetVersionService** | `Contracts/IDotnetVersionService.cs` | GetInstalledVersionsAsync(), GetChannelsAsync() | Ui.Services.DotnetVersionService, Ui.Client.Services.DotnetVersionService |
+| **IFileSystemService** | `Contracts/IFileSystemService.cs` | GetSharedFoldersAsync(), GetDirectoryContentsAsync() | Ui.Services.FileSystemService, Ui.Client.Services.FileSystemService |
+| **IFrameworkManagementService** | `Contracts/IFrameworkManagementService.cs` | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services.FrameworkManagementService |
+| **ILogDownloadService** | `Contracts/ILogDownloadService.cs` | CreateLogZipStreamAsync() | Ui.Services.LogDownloadService |
 | **IReverseProxyManagerService** | `Contracts/IReverseProxyManagerService.cs` | CreateAsync(), UpdateAsync(), DeleteAsync() | Ui.Services.ReverseProxyManagerService |
-| **IWebSiteHostingService** | `Contracts/IWebSiteHostingService.cs` | GetAllWebsitesAsync(), AddWebsiteAsync(), UpdateWebsiteAsync() | Ui.Services.WebSiteHostingService, Ui.Client.Services.WebSiteHostingService |
+| **IWebSiteHostingService** | `Contracts/IWebSiteHostingService.cs` | GetAllWebsitesAsync(), AddWebsiteAsync() | Ui.Services.WebSiteHostingService, Ui.Client.Services.WebSiteHostingService |
 
 **Note:** `FindByCompositeKeyAsync()` is a private helper method in the implementation, not part of the public interface.
-| **IWebSitesConfigurationService** | `Contracts/IWebSitesConfigurationService.cs` | GetAllAsync(), SaveAsync(), DeleteAsync() | Ui.Services.WebSitesConfigurationService |
+| **IWebSitesConfigurationService** | `Contracts/IWebSitesConfigurationService.cs` | GetAllSitesAsync(), AddSiteAsync(), RemoveSiteAsync() | Ui.Services.WebSitesConfigurationService |
 | **IPlatformInfoService** | `Contracts/IPlatformInfoService.cs` | (Properties: ChannelVersion, CurrentArchitecture, CurrentOS) | Tools.Infrastructure.PlatformInfoService |
 | **IFileManagerService** | `Contracts/IFileManagerService.cs` | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName() | Tools.Infrastructure.FileManagerService |
 | **IArchiveExtractorService** | `Contracts/IArchiveExtractorService.cs` | Decompress(inputFile, exclude) | Tools.Infrastructure.ArchiveExtractorService |
-| **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), GetReleasesAsync() | Tools.Runtime.DownloaderService |
-| **IVersionsDetectorService** | `Contracts/IVersionsDetectorService.cs` | GetInstalledVersionsAsync(), RefreshCacheAsync() | Tools.Runtime.VersionsDetectorService |
+| **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), DownloadVersionToAsync(), GetAspNetCoreReleasesAsync() | Tools.Runtime.DownloaderService |
+| **IVersionsDetectorService** | `Contracts/IVersionsDetectorService.cs` | GetInstalledVersionsAsync(), IsChannelInstalled(), RefreshCacheAsync() | Tools.Runtime.VersionsDetectorService |
 
 **Structure:**
 
@@ -304,29 +289,37 @@ Data/
 │   ├── Licensing/                          # License information
 │   │   └── LicenseInfo.cs                  # License data model
 │   ├── Runtime/                            # .NET runtime information
-│   │   └── [Version models]                # Runtime version data
+│   │   ├── AspNetChannel.cs                # .NET channel info
+│   │   ├── AspNetCoreReleaseInfo.cs        # Release version details
+│   │   ├── AspNetRelease.cs                # Release metadata
+│   │   ├── FrameworkInfo.cs                # Framework metadata
+│   │   └── InstallFramework.cs             # Framework installation target
 │   └── WebSites/                           # Website management domain
 │       ├── ProcessInfo.cs                  # Process runtime snapshot (Id, IsResponding)
 │       ├── WebSiteConfiguration.cs         # Main config model
 │       ├── WebSiteInstance.cs              # Runtime instance
 │       ├── WebSiteRuntimeState.cs          # Immutable record for site state (Running/Stopped/NotResponding)
-│       └── WebSitesConfiguration.cs        # Persistent configuration store
+│       ├── WebSiteInstanceDetails.cs       # Website instance details for UI
+│       ├── WebSitesConfiguration.cs        # Persistent configuration store
+├── Attributes/                             # Custom attributes
+│   └── DsmParameterNameAttribute.cs        # DSM parameter name mapping
 ├── DsmApi/                                 # DSM API integration
 │   ├── Models/                             # Auto-generated response models
-│   │   ├── Core/                           # Authentication, system info
-│   │   ├── FileStation/                    # 25+ file operation definitions
+│   │   ├── Core/                           # Authentication, system info, ACL
+│   │   │   └── Acl/                        # ACL models (CoreAclSet, Rule, Permission, Inherit)
+│   │   ├── FileStation/                    # 9 file operation models
 │   │   └── ReverseProxy/                   # Proxy configuration models
 │   ├── Parameters/                         # Request parameter classes
 │   │   ├── Core/                           # Login/logout parameters
 │   │   ├── CoreAcl/                        # Access control parameters
 │   │   ├── CoreInformations/               # System info queries
-│   │   ├── FileStation/                    # 15+ file operation parameters
+│   │   ├── FileStation/                    # 2 file operation parameters
 │   │   ├── ReverseProxy/                   # Proxy CRUD operations
 │   │   ├── ApiParametersBase.cs            # Base parameter class
 │   │   ├── ApiParametersNone.cs            # No-parameters wrapper
 │   │   └── IApiParameters.cs               # Parameter interface
-│   └── Responses/                          # API response wrappers
-├── Exceptions/                             # Custom exception types
+│   └── Responses/                          # API response wrappers (8 files)
+├── Exceptions/                             # Custom exception types (4 files)
 └── Results/                                # Result pattern implementations
     ├── ApiResult.cs                        # Base success/failure result
     ├── ApiResultBool.cs                    # Boolean result wrapper
@@ -337,7 +330,6 @@ Data/
     ├── AuthenticationResult.cs             # Auth state with user info
     ├── ChannelsResult.cs                   # .NET channel information
     ├── DirectoryContentsResult.cs          # File system directory listing
-    ├── DirectoryFilesResult.cs             # File system files listing
     ├── InstallationResult.cs               # Framework installation status
     ├── InstalledVersionsResult.cs          # Installed .NET versions
     ├── ReleasesResult.cs                   # .NET release information
@@ -353,7 +345,7 @@ Data/
 - **Validation:** Data annotations with localized error messages from Constants
 - **Service Interfaces:** Clean separation between domain logic and UI implementation
 
-### 4. Askyl.Dsm.WebHosting.Tools
+### 3. Askyl.Dsm.WebHosting.Tools
 
 **Purpose:** Utility services, DSM API client, and runtime management tools
 
@@ -363,7 +355,6 @@ Data/
 Tools/
 ├── Extensions/                             # Extension methods
 │   ├── ApiResponseExtensions.cs            # Response mapping helpers
-│   ├── DsmToolsExtensions.cs               # DSM tools integration
 │   ├── HttpClientExtensions.cs             # HTTP client helpers
 │   └── UriExtensions.cs                    # URI manipulation helpers
 ├── Infrastructure/                         # Infrastructure utilities
@@ -390,9 +381,9 @@ The Tools project contains DI-based infrastructure services for platform detecti
 |---------|-----------|----------|--------------|--------------|-------------|
 | **PlatformInfoService** | `IPlatformInfoService` | Singleton | Platform detection, config loading | ILogger | `Tools/Infrastructure/PlatformInfoService.cs` |
 | **FileManagerService** | `IFileManagerService` | Scoped | Directory management, configurable root path | ILogger, string rootPath | `Tools/Infrastructure/FileManagerService.cs` |
-| **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz extraction | IFileManagerService | `Tools/Infrastructure/ArchiveExtractorService.cs` |
+| **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz extraction | IFileManagerService, ILogger | `Tools/Infrastructure/ArchiveExtractorService.cs` |
 | **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | IPlatformInfoService, IFileManagerService | `Tools/Runtime/DownloaderService.cs` |
-| **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | None (stateful singleton) | `Tools/Runtime/VersionsDetectorService.cs` |
+| **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | ILogger, ISemaphoreOwner | `Tools/Runtime/VersionsDetectorService.cs` |
 
 **Key Design Decisions:**
 
@@ -417,7 +408,7 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
 
 **Connection Flow:** See `DsmApiClient.cs` lines 85-120
 
-### 5. Askyl.Dsm.WebHosting.Ui
+### 4. Askyl.Dsm.WebHosting.Ui
 
 **Purpose:** Main Blazor hybrid application (Server + WebAssembly rendering)
 
@@ -431,7 +422,6 @@ Ui/
 │   ├── AuthenticationController.cs         # Login/logout/status endpoints
 │   ├── FileManagementController.cs         # File system operations
 │   ├── FrameworkManagementController.cs    # Framework installation
-│   ├── HelloWorldController.cs             # Test endpoint controller
 │   ├── LogDownloadController.cs            # Log file retrieval
 │   ├── RuntimeManagementController.cs      # .NET version detection
 │   └── WebsiteHostingController.cs         # Website CRUD + lifecycle
@@ -455,14 +445,6 @@ Ui/
 **Program.cs Configuration:**
 
 See `Ui/Program.cs` for full implementation. Key registration patterns:
-
-**Service Registration Summary:**
-
-| Lifetime | Services | Notes |
-|----------|----------|-------|
-| **Singleton** | DsmApiClient, IPlatformInfoService, IVersionsDetectorService, WebSiteHostingService, IFileSystemService, IReverseProxyManagerService | Stateful services, caching, background service, singleton wrappers |
-| **Scoped (Factory)** | IFileManagerService | Factory lambda injects ILogger + configures root path |
-| **Scoped** | IArchiveExtractorService, IDownloaderService, IAuthenticationService, IDotnetVersionService, IFrameworkManagementService, ILogDownloadService | Request-bound services |
 
 **Key Configuration Points:**
 
@@ -490,7 +472,7 @@ See `Ui/Program.cs` for full implementation. Key registration patterns:
 - Sub-path support via `UsePathBase("/adwh")` for reverse proxy deployment
 - DI-based infrastructure services with optimized lifetimes (Singleton/Scoped hierarchy)
 
-### 6. Askyl.Dsm.WebHosting.Ui.Client
+### 5. Askyl.Dsm.WebHosting.Ui.Client
 
 **Purpose:** Blazor WebAssembly client library (shared components and HTTP service proxies)
 
@@ -501,13 +483,9 @@ Ui.Client/
 ├── Components/                             # Reusable Blazor components
 │   ├── Controls/                           # Custom UI controls (4 components)
 │   │   ├── AutoDataGrid.razor              # Generic data grid with sorting, reload button, row click/double-click
-│   │   │   └── Parameters: Items(IQueryable<T>), ChildContent, OnReload, OnRowClick(T), OnRowDoubleClick(T)
 │   │   ├── LoadingOverlay.razor            # Full-screen overlay for IWorkingState components
-│   │   │   └── Parameters: WorkingStateComponent(IWorkingState), Opacity(0.4)
 │   │   ├── RealTimeNumberField.razor       # Numeric input with real-time binding and validation
-│   │   │   └── Parameters: Value/ValueChanged(int), Label, Autofocus, AfterCallback
 │   │   └── RealTimeTextField.razor         # Text/password input with real-time binding
-│   │       └── Parameters: Value/ValueChanged(string), Label, TextFieldType, Name, AfterCallback
 │   ├── Dialogs/                            # FluentUI dialog wrappers (5 dialogs)
 │   │   ├── AspNetReleasesDialog.razor      # Channel selection, version grid, install/uninstall actions
 │   │   │   └── Services: IDotnetVersionService, IFrameworkManagementService
@@ -538,12 +516,11 @@ Ui.Client/
 │   ├── DotnetVersionService.cs             # GET /api/runtime-management/{versions,channels,releases}
 │   ├── FileSystemService.cs                # GET /api/file-management/{shared-folders,directory-contents}
 │   ├── FrameworkManagementService.cs       # POST /api/framework-management/{install,uninstall}
-│   ├── LicenseService.cs                   # Parallel HTTP fetches from wwwroot/licenses/
+│   ├── LicenseService.cs                   # Parallel HTTP fetches from server licenses/ path
 │   ├── TreeContentService.cs               # Convert FsEntry to TreeViewItem with lazy loading callbacks
 │   └── WebSiteHostingService.cs            # GET/POST/DELETE /api/website-hosting/{all,add,update,remove,start,stop}
 ├── wwwroot/                                # Client-side static assets
-│   ├── appsettings.json                    # Client Serilog config (BrowserConsole sink)
-│   └── licenses/                           # Third-party license files (Application.txt, FluentUI Blazor.txt, NET.txt, Serilog.txt)
+│   └── appsettings.json                    # Client Serilog config (BrowserConsole sink)
 ├── _Imports.razor                          # Global using directives (System.Net.Http, Microsoft.FluentUI, Icons namespaces)
 ├── Program.cs                              # WASM entry point (service registration, HttpClient configuration)
 └── Routes.razor                            # Router with AppAssembly route discovery, MainLayout default
@@ -579,7 +556,7 @@ Ui.Client/
 6. **JavaScript Interop Usage:**
    - Single usage in FileSelectionDialog: `JSRuntime.InvokeVoidAsync("selectChildItem", filePath, parentPath)`
    - Purpose: Navigate tree view to child directory after double-clicking folder in grid
-   - JavaScript function defined in wwwroot/js/app.js (external file)
+   - JavaScript function defined in wwwroot/js/tree-navigation.js (external file)
 
 **Service Registration (Program.cs):**
 
@@ -602,50 +579,9 @@ builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
 });
 ```
 
-### 7. Askyl.Dsm.WebHosting.DotnetInstaller
-
-**Purpose:** Standalone console utility for .NET runtime installation on Synology NAS
-
-**Implementation:** See `DotnetInstaller/Program.cs` - manually instantiates infrastructure services without full DI container:
-
-- Creates ILogger instances via LoggerFactory with console provider
-- Instantiates PlatformInfoService, FileManagerService (with root path = "")
-- Initializes FileManager to create default directories
-- Creates DownloaderService and ArchiveExtractorService with dependencies
-- Calls `downloader.DownloadToAsync(true, CancellationToken.None)` then `archiveExtractor.Decompress(fileName)`
-
-**Key Features:**
-
-- Standalone executable (no UI dependencies)
-- Manual DI instantiation for console application scenario
-- Automatic download from Microsoft .NET release repositories
-- Architecture detection via PlatformInfoService for correct binary selection
-- Extraction utilities for gzip + tar.gz archives via ArchiveExtractorService
-- File system initialization with configurable root path
-- CancellationToken support for cooperative cancellation
-
-### 8. Askyl.Dsm.WebHosting.Benchmarks
+### 6. Askyl.Dsm.WebHosting.Benchmarks
 
 **Purpose:** Performance benchmarking with BenchmarkDotNet
-
-**Benchmarks:**
-
-```csharp
-[MemoryDiagnoser]
-public class StringBuilderBenchmark
-{
-    [Benchmark] public void UrlInterpolatedString()      // Baseline: interpolated strings
-    [Benchmark] public void UrlBuilder()                 // StringBuilder approach
-    [Benchmark] public void ParametersInterpolatedString()
-    [Benchmark] public void ParametersBuilder()          // Recommended for complex URLs
-}
-
-[MemoryDiagnoser]
-public class UriBuilderBenchmark
-{
-    // URI building performance tests
-}
-```
 
 **Key Features:**
 
@@ -654,24 +590,9 @@ public class UriBuilderBenchmark
 - **Real-world scenarios** (URL building, parameter encoding)
 - **BenchmarkDotNet 0.15.8** for accurate performance measurements
 
-### 9. Askyl.Dsm.WebHosting.Logging
+### 7. Askyl.Dsm.WebHosting.Logging
 
 **Purpose:** Logging extensions with source-generated logger methods
-
-**Implementation:**
-
-```csharp
-namespace Askyl.Dsm.WebHosting.Logging.HelloWorld;
-
-public static partial class HelloWorldExtensions
-{
-    [LoggerMessage(
-        EventId = 1,
-        Level = LogLevel.Information,
-        Message = "Dice roll: {Die1} and {Die2}, sum: {Sum}")]
-    public static partial void LogDiceRoll(this ILogger logger, int die1, int die2, int sum);
-}
-```
 
 **Key Features:**
 
@@ -725,26 +646,6 @@ Scoped (Per HTTP request)
 
 ### 2. Result Pattern
 
-**Implementation:**
-
-```csharp
-// Base result types
-public class ApiResult { /* Success, Message */ }
-public class ApiResultData<T> : ApiResult { /* Data */ }
-public class ApiResultItems<T> : ApiResult { /* Items collection */ }
-
-// Usage example
-public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration)
-{
-    if (!permissionResult.Success)
-    {
-        return WebSiteInstanceResult.CreateFailure($"Failed: {permissionResult.Message}");
-    }
-    
-    return WebSiteInstanceResult.CreateSuccess(instance);
-}
-```
-
 **Benefits:**
 
 - Eliminates exception-based control flow
@@ -793,103 +694,6 @@ SiteLifecycleManager (Per-instance, Thread-safe)
 ├── Async WaitForExitAsync with linked cancellation token + configurable timeout
 ├── Force kill fallback if process doesn't exit gracefully
 └── Thread-safe operations via Channel-based command queue (eliminates TOCTOU races)
-```
-
-**WebSiteHostingService Implementation:**
-
-```csharp
-public class WebSiteHostingService(
-    ILogger<WebSiteHostingService> logger,
-    IWebSitesConfigurationService configService,
-    IFileSystemService fileSystemService,
-    IReverseProxyManagerService reverseProxyManager)
-    : BackgroundService, IWebSiteHostingService
-{
-    private readonly ConcurrentDictionary<Guid, WebSiteInstance> _instances = new();
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        // Load configurations from JSON on startup
-        var configs = await configService.GetAllAsync();
-
-        // Reinitialize instances (processes not restarted)
-        foreach (var config in configs)
-        {
-            await AddInstanceAsync(config);
-        }
-
-        // Monitor and manage lifecycle until stopping
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            await Task.Delay(1000, stoppingToken);
-        }
-    }
-}
-```
-
-**SiteLifecycleManager Implementation (Channel-based command queue):**
-
-```csharp
-public sealed class SiteLifecycleManager : IDisposable
-{
-    private readonly Channel<LifecycleCommand> _channel =
-        Channel.CreateBounded<LifecycleCommand>(16);
-    private readonly Task _loopTask = ProcessSiteCommandsAsync();
-    private IProcessHandle? _process; // abstracted via IProcessRunner
-    private volatile bool _isDisposing;
-
-    public async Task<ApiResult> StartAsync()
-    {
-        if (_isDisposing) return ApiResult.CreateFailure("Site configuration is being updated");
-        var tcs = new TaskCompletionSource<ApiResult>();
-        _channel.Writer.TryWrite(new StartCommand(tcs));
-        return await tcs.Task;
-    }
-
-    public async Task<ApiResult> StopAsync(CancellationToken cancellationToken = default)
-    {
-        if (_isDisposing) return ApiResult.CreateFailure("Site configuration is being updated");
-        var tcs = new TaskCompletionSource<ApiResult>();
-        _channel.Writer.TryWrite(new StopCommand(tcs, cancellationToken));
-        return await tcs.Task;
-    }
-
-    public async Task<WebSiteRuntimeState> GetRuntimeStateAsync(
-        CancellationToken cancellationToken = default)
-    {
-        if (_isDisposing) return WebSiteRuntimeState.Stopped;
-        var tcs = new TaskCompletionSource<WebSiteRuntimeState>();
-        _channel.Writer.TryWrite(new GetStateCommand(tcs));
-        return await tcs.Task.WaitAsync(cancellationToken);
-    }
-
-    // DisposeCommand queues after pending commands, drains, kills process if running
-    public void Dispose()
-    {
-        if (_isDisposing) return;
-        _isDisposing = true;
-        _channel.Writer.TryWrite(new DisposeCommand());
-        _channel.Writer.Complete();
-        _loopTask.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
-    }
-
-    // Single consumer loop — all state mutation happens here
-    private async Task ProcessSiteCommandsAsync()
-    {
-        await foreach (var command in _channel.Reader.ReadAllAsync())
-        {
-            switch (command)
-            {
-                case StartCommand start: start.Result.SetResult(ProcessStartCommand()); break;
-                case StopCommand stop: stop.Result.SetResult(await ProcessStopCommand(stop.Token)); break;
-                case GetStateCommand state: state.Result.SetResult(BuildRuntimeState()); break;
-                case DisposeCommand: await ProcessDisposeCommand(); return;
-            }
-        }
-    }
-
-    // Private command types (Start, Stop, GetState, Dispose)
-}
 ```
 
 **Key Features:**
@@ -959,66 +763,9 @@ public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
 
 ### Core Domain Models
 
-#### WebSiteConfiguration
-
-```csharp
-public sealed class WebSiteConfiguration
-{
-    // General
-    public Guid Id { get; set; }
-    public string Name { get; set; }
-    
-    // Application Path
-    public string ApplicationPath { get; set; }           // User-friendly path
-    public string ApplicationRealPath { get; set; }       // Resolved absolute path
-    
-    // Networking
-    public int InternalPort { get; set; }                 // 1024-65535
-    public string HostName { get; set; }                  // e.g., "myapp.local"
-    public int PublicPort { get; set; }                   // 443 default
-    public ProtocolType Protocol { get; set; }            // HTTPS default
-    
-    // Runtime
-    public string Environment { get; set; }               // "Production" default
-    public Dictionary<string, string> AdditionalEnvironmentVariables { get; set; }
-    
-    // Behavior
-    public bool IsEnabled { get; set; }                   // true
-    public bool AutoStart { get; set; }                   // true
-    public bool EnableHSTS { get; set; }                  // true
-}
-```
-
-#### WebSiteInstance
-
-```csharp
-public sealed class WebSiteInstance
-{
-    public Guid Id => Configuration.Id;
-    public WebSiteConfiguration Configuration { get; set; }
-
-    // Runtime state (not serialized)
-    [JsonIgnore]
-    public ProcessInfo? Process { get; set; }
-
-    // Serialized state
-    public bool IsRunning { get; set; }
-
-    // Computed property
-    public string State => Process?.IsResponding == true ? "Running" :
-                           Process == null ? (IsRunning ? "Running" : "Stopped") : "Not Responding";
-}
-```
-
-#### ProcessInfo
-
-```csharp
-/// <summary>
-/// Snapshot of process state at a point in time.
-/// Does not hold a live Process reference to avoid serialization staleness.
-/// </summary>
-public record ProcessInfo(int Id, bool IsResponding);
-```
+- **WebSiteConfiguration** — main config model (name, path, port, SSL, environment variables)
+- **WebSiteInstance** — runtime instance wrapping configuration + process lifecycle
+- **ProcessInfo** — immutable process snapshot (Id, IsResponding)
 
 **Key Design Decisions:**
 
@@ -1053,68 +800,9 @@ public record ProcessInfo(int Id, bool IsResponding);
 
 ### Key Operation: Setting HTTP Group Permissions
 
-```csharp
-public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool recursive)
-{
-    var parameters = new CoreAclSetParameters
-    {
-        Path = path,
-        GroupId = 100,  // http group
-        Recursive = recursive
-    };
-    
-    return await _dsmApiClient.ExecuteAsync<ApiResult>(parameters);
-}
-```
-
-#### ReverseProxy Management
-
-**IEquatable Implementation (April 2026):**
-
-All ReverseProxy models implement `IEquatable<T>` with business-key equality:
-
-| Model | Equality Logic | Source File |
-|-------|----------------|-------------|
-| **ReverseProxy** | Composite key: `Backend.Port + Frontend.Fqdn + Frontend.Port + Frontend.Protocol` | `Data/DsmApi/Models/ReverseProxy/ReverseProxy.cs` |
-| **ReverseProxyBackend** | All properties: `Fqdn + Port + Protocol` | `Data/DsmApi/Models/ReverseProxy/ReverseProxyBackend.cs` |
-| **ReverseProxyFrontend** | All properties: `Fqdn + Port + Protocol + Https + Acl` | `Data/DsmApi/Models/ReverseProxy/ReverseProxyFrontend.cs` |
-| **ReverseProxyHttps** | Single property: `HSTS` flag | `Data/DsmApi/Models/ReverseProxy/ReverseProxyHttps.cs` |
-| **ReverseProxyCustomHeader** | All header properties | `Data/DsmApi/Models/ReverseProxy/ReverseProxyCustomHeader.cs` |
-
-**Key Design Decision:** `ReverseProxy.Equals()` compares only the composite key fields
-(backend port + frontend configuration), ignoring Description, UUID, and timeout settings.
-This matches the business requirement that these four fields uniquely identify a proxy.
-
-**Composite Key Strategy:**
-
-Instead of storing UUIDs (which can desynchronize), use configuration-based lookup with IEquatable:
-
-```csharp
-private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config)
-{
-    var allProxies = await GetAllReverseProxiesAsync();
-
-    // Leverages IEquatable<ReverseProxy> for clean, encapsulated comparison logic
-    var searchTemplate = new ReverseProxy
-    {
-        Backend = new(null, config.InternalPort, 0),
-        Frontend = new(config.HostName, config.PublicPort, (int)config.Protocol, new())
-    };
-
-    return allProxies.FirstOrDefault(p => p.Equals(searchTemplate));
-}
-```
-
-**Benefits of IEquatable Approach:**
-
-1. **Encapsulation:** Comparison logic centralized in `ReverseProxy.Equals()` - if business rules change, only one file needs updating
-2. **Readability:** Intent is clear from method name (`p.Equals(searchTemplate)` vs scattered property comparisons)
-3. **Maintainability:** No risk of inconsistency between multiple comparison locations
-4. **Performance:** Negligible allocation cost (small POCO objects) compared to async API call; modern .NET GC handles short-lived allocations efficiently
-5. **Always reflects actual DSM state** - No synchronization issues
-6. **Idempotent create operations** - Safe to retry without duplicates
-
----
+Uses `SYNO.Core.ACL` API to grant `http` group read/execute permissions on website deployment directories.
+Called automatically after framework installation to ensure the reverse proxy can access deployed files.
+See `DsmApiClient.cs` for full ACL implementation.
 
 ## UI Architecture
 
@@ -1139,8 +827,6 @@ builder.Services.AddRazorComponents()
 ```text
 App.razor (Root)
 └── MainLayout.razor
-    ├── HeaderBar.razor (User info, logout)
-    ├── NavigationMenu.razor (Navigation)
     └── Page Content
         ├── Home.razor (Dashboard with website grid)
         ├── Login.razor (Authentication)
@@ -1298,166 +984,6 @@ public async Task<ApiResult> StartSiteAsync(WebSiteInstance instance)
 
 ---
 
-## Infrastructure Services Architecture
-
-### Overview
-
-The solution uses DI-based infrastructure services for platform detection, file management, archive extraction, .NET runtime downloads, and version detection. All services follow clean interface contracts.
-
-These services are registered in the dependency injection container with appropriate lifetimes (Singleton or Scoped) to ensure optimal resource usage and thread safety.
-
-### Infrastructure Services Summary
-
-| Service | Interface | Lifetime | Key Features | Dependencies | Source File |
-|---------|-----------|----------|--------------|--------------|-------------|
-| **PlatformInfoService** | `IPlatformInfoService` | Singleton | Platform detection, configuration loading | ILogger | `Tools/Infrastructure/PlatformInfoService.cs` |
-| **FileManagerService** | `IFileManagerService` | Scoped | Directory management, configurable root path | ILogger, string rootPath | `Tools/Infrastructure/FileManagerService.cs` |
-| **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz archive extraction | IFileManagerService | `Tools/Infrastructure/ArchiveExtractorService.cs` |
-| **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation support | IPlatformInfoService, IFileManagerService | `Tools/Runtime/DownloaderService.cs` |
-| **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Version detection with smart caching | None (stateful singleton) | `Tools/Runtime/VersionsDetectorService.cs` |
-
-### Service Lifetime Strategy
-
-**Singleton Services (Stateful):**
-
-- PlatformInfoService: Platform information loaded once at application startup
-- VersionsDetectorService: Maintains cache of expensive `dotnet --info` output across requests for optimal performance
-
-**Scoped Services (Request-bound):**
-
-- FileManagerService: Configured per-request with root path via factory lambda pattern (see `Ui/Program.cs` line 52)
-- ArchiveExtractorService: Depends on Scoped FileManagerService for directory operations
-- DownloaderService: Supports per-request cancellation tokens, depends on Scoped FileManagerService
-
-### Smart Caching Implementation
-
-VersionsDetectorService implements lazy initialization with explicit cache refresh. See `Tools/Runtime/VersionsDetectorService.cs`:
-
-- **Lines 28-40:** GetInstalledVersionsAsync() - returns cached data after first call
-- **Lines 42-55:** RefreshCacheAsync() - re-executes dotnet --info process to update cache
-
-**Benefits:**
-
-- Fast subsequent calls after initial cache population (no process spawning)
-- Explicit cache control via `RefreshCacheAsync()` called after install/uninstall operations (see `Ui/Services/FrameworkManagementService.cs` lines 35, 67)
-- Thread-safe singleton with single writer during initialization, multiple readers afterward
-
-### CancellationToken Support
-
-DownloaderService supports cooperative cancellation throughout all async operations. See `Tools/Runtime/DownloaderService.cs`:
-
-- All public methods accept optional `CancellationToken cancellationToken = default` parameter
-- Cooperative cancellation checks via `cancellationToken.ThrowIfCancellationRequested()` before expensive external API calls
-- End-to-end cancellation flow: UI → Controller → Service layer → DownloaderService
-
-### Factory Pattern for Configuration
-
-FileManagerService uses factory lambda to inject logger and configure root path. See `Ui/Program.cs` line 52:
-
-**Benefits:**
-
-- Dependency injection of ILogger for structured logging
-- Configuration of root path at registration time (ApplicationConstants.RuntimesRootPath)
-- Different instances can manage different directory trees if needed
-
-### Testability
-
-All infrastructure services are fully testable via interface abstractions. Example mock setup pattern:
-
-```csharp
-var mockVersionsDetector = new Mock<IVersionsDetectorService>();
-mockVersionsDetector.Setup(v => v.GetInstalledVersionsAsync())
-    .ReturnsAsync(Task.FromResult(new List<FrameworkInfo> { /* test data */ }));
-```
-
-See interface definitions in `Data/Contracts/` folder for full contract specifications.
-
-### Threading Utilities
-
-**SemaphoreLock Implementation:**
-
-Location: `Tools/Threading/SemaphoreLock.cs`
-
-Purpose: Async semaphore-based locking with interface-based ownership pattern for thread-safe operations
-
-Key Features:
-
-- **ISemaphoreOwner interface** - Forces explicit semaphore ownership declaration (similar to IWorkingState pattern)
-- **Static AcquireAsync method** - Accepts ISemaphoreOwner instead of raw SemaphoreSlim
-- **Optional onAcquired callback** - Executes initialization logic after acquiring lock
-- **Automatic release via using statement** - Ensures lock is always released (even on exceptions)
-- **CancellationToken support** - Cooperative cancellation during wait
-- Prevents race conditions in concurrent scenarios
-- Used in `WebSitesConfigurationService` for lazy-loaded configuration cache
-- ~~Previously used in `SiteLifecycleManager`~~ — replaced with channel-based command queue (May 2026)
-
-Interface Definition:
-
-```csharp
-/// <summary>
-/// Interface for components that own a semaphore for thread-safe operations.
-/// Similar to IWorkingState pattern - forces explicit ownership declaration.
-/// </summary>
-public interface ISemaphoreOwner
-{
-    /// <summary>
-    /// Gets the semaphore used for synchronization.
-    /// </summary>
-    SemaphoreSlim Semaphore { get; }
-}
-```
-
-Usage Pattern:
-
-```csharp
-// Client implements ISemaphoreOwner interface with dedicated region
-public class WebSitesConfigurationService : IWebSitesConfigurationService, ISemaphoreOwner
-{
-    #region ISemaphoreOwner Implementation
-
-    public SemaphoreSlim Semaphore { get; } = new(1, 1);
-
-    #endregion
-
-    #region Fields
-
-    private readonly string _configurationFilePath = ...;
-    private WebSitesConfiguration? _cachedConfiguration;
-
-    #endregion
-
-    public async Task<WebSiteConfiguration?> GetSiteAsync(Guid siteId)
-    {
-        using (await SemaphoreLock.AcquireAsync(this, EnsureLoadedAsync))
-        {
-            return _cachedConfiguration!.Sites.FirstOrDefault(s => s.Id == siteId);
-        }
-    }
-
-    // Initialization callback (executed after lock acquired, before using block)
-    private async Task EnsureLoadedAsync()
-    {
-        if (_cachedConfiguration != null)
-        {
-            return;
-        }
-
-        _cachedConfiguration = await LoadFromDiskAsync();
-    }
-}
-```
-
-**Benefits of This Pattern:**
-
-1. **Explicit ownership** - Interface forces client to declare semaphore ownership clearly
-2. **Consistent API design** - Matches `IWorkingState`/`WorkingState` pattern in codebase
-3. **Clean syntax** - `using` statement ensures deterministic disposal
-4. **Lazy initialization** - `onAcquired` callback loads data only when first needed
-5. **Thread-safe** - Only one thread can acquire lock and initialize at a time
-6. **Exception-safe** - Lock released automatically even if exception occurs
-
----
-
 ## Build & Deployment
 
 ### Build Configuration
@@ -1486,7 +1012,7 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 1. **Synology DSM 7.2+**
    - x64 architecture (tested)
    - armv7/armv8 (built but untested)
-   - Package format: SPK (via Docker-based multi-arch builds)
+   - Package format: SPK
 
 2. **Deployment Path:** `/usr/local/Askyl.Dsm.WebHosting/`
 
@@ -1606,6 +1132,7 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.5.7 | May 11, 2026 | Dead code sweep: removed `ApiGenericResponse`, `PaginationDefaults`, `LicenseRoutes`, `DirectoryFilesResult`, `DsmToolsExtensions`; removed NuGet packages `Microsoft.AspNetCore.Mvc.Versioning` and `Microsoft.FluentUI.AspNetCore.Components.Emoji`; preserved `EmptyResponse` as standalone type (used by `DsmApiClient`); cleaned stale references in Constants tree diagram and Tools Extensions listing |
 | 0.5.4 | May 1, 2026 | Replaced custom `CloneGenerator` source generator with C# records (`init` setters) — 41 classes converted, `GenerateCloneAttribute`/`IGenericCloneable<T>` removed, `ApiParametersBase<T>` simplified (no cloning needed with immutability); SiteLifecycleManager hardening: lifecycle manager recreation on config update (stale config fix), removed vestigial `.Clone()` calls (Interactive WASM has no shared memory), removed `ProcessTimeoutSeconds` (inlined 10s constant), added `IOException` to `StopAsync` exception filter, `ProcessInfo` converted to snapshot record, parallel startup in `StartEligibleSitesAsync`, `CancellationToken` forwarding in `StopAllSitesAsync` and `GetRuntimeStateAsync`, removed dead null check and misleading `CancellationToken` from `StartAsync`; **post-review fixes**: `RemoveInstanceAsync` restructured to remove persistent config before in-memory state (prevents orphaned configs on failure), `StopAllSitesAsync` wraps `Dispose()` in `finally` (prevents `SemaphoreSlim` leak on exception), `StartAsync` disposes stale `_process` handle before restart (prevents handle leak on crash-restart cycles); **SiteLifecycleManager concurrency rewrite**: replaced `SemaphoreSlim` + `ISemaphoreOwner` with `Channel<LifecycleCommand>` + single consumer loop — eliminates TOCTOU races, no `ObjectDisposedException` boilerplate, safe disposal via queued `DisposeCommand`, `ConfigurationRequiresRestart` uses order-independent dictionary comparison |
 | 0.5.4 | April 29, 2026 | SIGTERM process termination fix: added `ProcessTerminator` utility (cross-platform SIGTERM via P/Invoke), replaced blocking `WaitForExit` with async `WaitForExitAsync`, reduced timeouts (HttpClient 90→15s, Process 60→10s) — eliminates DSM reverse proxy 504 errors |
 | 0.5.4 | April 25, 2026 | Synchronized with codebase: added `SiteLifecycleManager` two-tier process architecture (graceful shutdown, force kill fallback), documented `DirectoryFilesResult`, `WebSiteRuntimeState`, `DotnetInfoParserConstants`; removed version column from Technical Stack table; cleaned up stale empty directory references |
@@ -1613,9 +1140,3 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 | 0.5.3 | March 2026 | Architecture documentation update, version bump |
 | 0.5.2 | Earlier | Initial architecture documentation |
 | ... | ... | Previous versions |
-
----
-
-**Document Maintained By:** AI Assistant (Qwen Code)
-**Last Review Date:** May 1, 2026
-**Next Review Date:** TBD (after major feature implementation)

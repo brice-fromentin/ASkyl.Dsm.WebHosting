@@ -11,15 +11,6 @@ namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 /// </summary>
 public sealed class DownloaderService(IPlatformInfoService platformInfo, IFileManagerService fileManager) : IDownloaderService
 {
-    public async Task<string> DownloadToAsync(bool skipDownloadIfExists = false, CancellationToken cancellationToken = default)
-    {
-        var product = await GetProductAsync(platformInfo.ChannelVersion, true, cancellationToken).ConfigureAwait(false);
-        var release = await GetLatestReleaseAsync(product, cancellationToken).ConfigureAwait(false);
-        var fileName = await DownloadReleaseToAsync(release, InfrastructureConstants.Downloads, skipDownloadIfExists, cancellationToken).ConfigureAwait(false);
-
-        return fileName;
-    }
-
     /// <summary>
     /// Downloads a specific version of ASP.NET Core runtime.
     /// </summary>

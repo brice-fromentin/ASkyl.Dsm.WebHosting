@@ -177,14 +177,6 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         }
     }
 
-    public async Task<IEnumerable<WebSiteConfiguration>> GetSitesToStartAsync(CancellationToken cancellationToken = default)
-    {
-        using (await SemaphoreLock.AcquireAsync(this, () => EnsureInitializedAndLoadedAsync(cancellationToken), cancellationToken))
-        {
-            return [.. _cachedConfiguration!.Sites.Where(site => site.IsEnabled && site.AutoStart)];
-        }
-    }
-
     #endregion
 
     #region Site Modification
