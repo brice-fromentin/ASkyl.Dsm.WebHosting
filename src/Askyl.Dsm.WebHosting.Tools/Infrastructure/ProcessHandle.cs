@@ -41,7 +41,7 @@ public interface IProcessHandle : IDisposable
 /// </summary>
 /// <param name="logger">Logger instance.</param>
 /// <param name="process">The underlying process.</param>
-internal sealed class SystemProcessHandle(ILogger<SystemProcessRunner> logger, Process process) : IProcessHandle
+internal sealed class SystemProcessHandle(ILogger<ILogSystemProcessHandle> logger, Process process) : IProcessHandle
 {
     private bool _isDisposed;
 

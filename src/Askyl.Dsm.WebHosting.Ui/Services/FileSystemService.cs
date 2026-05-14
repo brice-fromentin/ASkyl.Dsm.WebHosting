@@ -16,7 +16,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Server-side implementation of IFileSystemService for Synology DSM FileStation API operations.
 /// Returns simple FileSystemItem data objects; UI-specific rendering is handled by the client layer.
 /// </summary>
-public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService> logger) : Data.Contracts.IFileSystemService
+public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemService> logger) : Data.Contracts.IFileSystemService
 {
     public async Task<SharedFoldersResult> GetSharedFoldersAsync()
     {

@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
@@ -45,7 +46,7 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddSingleton<IPlatformInfoService, PlatformInfoService>();
 
 // Register file manager service with configured root path for runtimes
-builder.Services.AddScoped<IFileManagerService>(sp => new FileManagerService(sp.GetRequiredService<ILogger<FileManagerService>>(), ApplicationConstants.RuntimesRootPath));
+builder.Services.AddScoped<IFileManagerService>(sp => new FileManagerService((ILogger<Askyl.Dsm.WebHosting.Logging.ILogFileManagerService>)sp.GetRequiredService<ILogger<ILogFileManagerService>>(), ApplicationConstants.RuntimesRootPath));
 
 // Register archive extractor service (Scoped - depends on Scoped IFileManagerService)
 builder.Services.AddScoped<IArchiveExtractorService, ArchiveExtractorService>();

@@ -13,7 +13,7 @@ using Askyl.Dsm.WebHosting.Tools.Network;
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
 public class ReverseProxyManagerService(
-    ILogger<ReverseProxyManagerService> logger,
+    ILogger<ILogReverseProxyManagerService> logger,
     DsmApiClient dsmApiClient) : IReverseProxyManagerService
 {
     #region Public API

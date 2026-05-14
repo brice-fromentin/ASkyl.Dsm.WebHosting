@@ -20,13 +20,13 @@ public sealed class PlatformInfoService : IPlatformInfoService
         Windows
     }
 
-    private readonly ILogger<PlatformInfoService> _logger;
+    private readonly ILogger<ILogPlatformInfoService> _logger;
 
     public string ChannelVersion { get; private set; } = null!; // Initialized in constructor, will throw if config missing
     public string CurrentArchitecture { get; private set; } = String.Empty;
     public string CurrentOS { get; private set; } = String.Empty;
 
-    public PlatformInfoService(ILogger<PlatformInfoService> logger)
+    public PlatformInfoService(ILogger<ILogPlatformInfoService> logger)
     {
         _logger = logger;
         InitializePlatformInfo();

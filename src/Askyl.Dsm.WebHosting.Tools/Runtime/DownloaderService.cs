@@ -11,7 +11,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 /// <summary>
 /// Service for downloading and managing .NET runtime releases.
 /// </summary>
-public sealed class DownloaderService(ILogger<DownloaderService> logger, IPlatformInfoService platformInfo, IFileManagerService fileManager) : IDownloaderService
+public sealed class DownloaderService(ILogger<ILogDownloaderService> logger, IPlatformInfoService platformInfo, IFileManagerService fileManager) : IDownloaderService
 {
     /// <summary>
     /// Downloads a specific version of ASP.NET Core runtime.

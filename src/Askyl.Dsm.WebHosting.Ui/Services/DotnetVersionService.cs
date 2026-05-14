@@ -15,7 +15,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="logger">Logger instance.</param>
 /// <param name="versionsDetector">Service for detecting installed .NET versions.</param>
 /// <param name="downloader">Service for downloading .NET runtimes.</param>
-public class DotnetVersionService(ILogger<DotnetVersionService> logger, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
+public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
 {
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
     {

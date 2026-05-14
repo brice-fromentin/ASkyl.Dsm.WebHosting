@@ -9,7 +9,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// Injectable file manager service for managing application directories and files.
 /// Replaces the static FileManager class with DI-based implementation.
 /// </summary>
-public sealed class FileManagerService(ILogger<FileManagerService> logger, string rootPath = "") : IFileManagerService
+public sealed class FileManagerService(ILogger<ILogFileManagerService> logger, string rootPath = "") : IFileManagerService
 {
     private readonly string _normalizedRootPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, rootPath));
 

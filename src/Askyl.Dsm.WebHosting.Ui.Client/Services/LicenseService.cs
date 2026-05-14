@@ -11,7 +11,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// </summary>
 /// <param name="httpClientFactory">HttpClientFactory to create the named client.</param>
 /// <param name="logger">Logger instance for error reporting.</param>
-public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<LicenseService> logger) : ILicenseService
+public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<ILogLicenseService> logger) : ILicenseService
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 

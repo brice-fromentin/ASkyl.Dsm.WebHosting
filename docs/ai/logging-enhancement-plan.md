@@ -59,6 +59,9 @@ to inject method implementations, but `extension(...)` blocks create a non-parti
 ```csharp
 namespace Askyl.Dsm.WebHosting.Logging;
 
+/// <summary>Category marker for ILogger&lt;T&gt; — no implementation required.</summary>
+public interface ILogAuthenticationService { }
+
 /// <summary>
 /// Structured logging extension methods for authentication-related events.
 /// </summary>
@@ -68,14 +71,15 @@ public static partial class AuthenticationLoggingExtensions
     /// Logs a successful login event for the specified user.
     /// </summary>
     [LoggerMessage(EventId = 1001, Level = LogLevel.Information, Message = "Login successful for user: {Login} - SID stored")]
-    public static partial void LoginSuccessful(this ILogger logger, string login);
+    public static partial void LoginSuccessful(this ILogger<ILogAuthenticationService> logger, string login);
 }
 ```
 
 **Rules:**
 
 - `public static partial class` — class MUST be partial for source generator
-- `this ILogger logger` — defines the extension target type on each method
+- `public interface ILogXxx { }` — namespace-level marker interface for `ILogger<T>` categorization
+- `this ILogger<ILogXxx> logger` — defines the specialized extension target type on each method
 - `public static partial void` — the source-generated method signature (no body)
 - Event IDs are `int` literals (not constants) — required by source generator
 - XML doc comments on each method
@@ -102,10 +106,9 @@ The `[LoggerMessage]` extensions are organized into separate files **per service
 | `PlatformInfoLoggingExtensions.cs` | Infrastructure | 2 | 1810-1811 | PlatformInfoService |
 | `DownloaderLoggingExtensions.cs` | Infrastructure | 4 | 1812-1815 | DownloaderService |
 | `ProcessRunnerLoggingExtensions.cs` | Infrastructure | 1 | 1816 | SystemProcessRunner |
-| `ProcessHandleLoggingExtensions.cs` | Infrastructure | 2 | 1817-1818 | SystemProcessHandle |
-| `ProcessTerminatorLoggingExtensions.cs` | Infrastructure | 3 | 1819-1821 | ProcessTerminator |
+| `ProcessHandleLoggingExtensions.cs` | Infrastructure | 5 | 1817-1821 | SystemProcessHandle |
 | `ClientLoggingExtensions.cs` | Client-side (WASM) | 1 | 1900 | LicenseService |
-| **Total** | | **144** | | |
+| **Total** | | **145** | | |
 
 ### Event ID Ranges
 
@@ -195,9 +198,9 @@ Each file gets a dedicated event ID range to avoid collisions and make log corre
 - `DotnetVersionService` (server-side) — Logs detection failures, channel queries, and release lookups (event IDs 1207-1213 in `FrameworkManagementLoggingExtensions.cs`)
 - Event IDs updated: `DownloaderService` 1812-1815, `SystemProcessRunner` 1816, `SystemProcessHandle` 1817-1818, `ProcessTerminator` 1819-1821
 
-### Phase 4: Specialized `ILogger<TService>` Refactoring
+### Phase 4: Specialized `ILogger<T>` with Namespace-Level Category Interfaces
 
-**Objective:** Replace generic `this ILogger logger` parameters with specialized `this ILogger<TService> logger` for better log categorization and DI integration.
+**Objective:** Replace generic `this ILogger logger` parameters with specialized `this ILogger<ICategory> logger` for better log categorization and DI integration.
 
 **Why specialized `ILogger<T>`:**
 
@@ -206,72 +209,63 @@ Each file gets a dedicated event ID range to avoid collisions and make log corre
 - Aligns with .NET DI conventions (`ILogger<TCategoryName>`)
 - Better log aggregation and correlation in production
 
-**Approach:**
+**Approach — Namespace-Level Category Interfaces:**
 
-1. Ensure all service interfaces exist in `Data/Contracts/` (already done for 13/19)
-2. Add missing interfaces to `Data/Contracts/`
-3. Add project reference: `Logging` → `Data` (safe — no circular dependency)
-4. Update all extension method signatures: `ILogger` → `ILogger<TService>`
-5. Update all service implementations to inject `ILogger<TService>` (most already do)
+Each `[LoggerMessage]` extension file declares a namespace-level empty marker interface
+used **only** as an `ILogger<T>` category name. This keeps the Logging project
+as a leaf node with **zero project references**. The interface at namespace level
+allows services to reference it directly (e.g., `ILogAuthenticationService`) without
+qualifying through the extension class name.
 
-**Interfaces already in `Data/Contracts/`** (13):
+```csharp
+namespace Askyl.Dsm.WebHosting.Logging;
 
-| Interface | Logging Extension |
-|-----------|------------------|
-| `IAuthenticationService` | `AuthenticationLoggingExtensions.cs` |
-| `IFileSystemService` | `FileSystemServiceLoggingExtensions.cs` |
-| `IFileManagerService` | `FileManagerServiceLoggingExtensions.cs` |
-| `ILogDownloadService` | `LogDownloadServiceLoggingExtensions.cs` |
-| `IFrameworkManagementService` | `FrameworkManagementLoggingExtensions.cs` |
-| `IDotnetVersionService` | `DotnetVersionServiceLoggingExtensions.cs` |
-| `IPlatformInfoService` | `PlatformInfoLoggingExtensions.cs` |
-| `IReverseProxyManagerService` | `ReverseProxyLoggingExtensions.cs` |
-| `IWebSiteHostingService` | `WebsiteLoggingExtensions.cs` |
-| `IWebSitesConfigurationService` | `ConfigurationLoggingExtensions.cs` |
-| `IDownloaderService` | `DownloaderLoggingExtensions.cs` |
-| `IVersionsDetectorService` | `VersionsDetectorLoggingExtensions.cs` |
-| `IArchiveExtractorService` | `ArchiveExtractorLoggingExtensions.cs` |
+/// <summary>Category marker for ILogger&lt;T&gt; — no implementation required.</summary>
+public interface ILogAuthenticationService { }
 
-**Interfaces to move/create in `Data/Contracts/`** (6):
+public static partial class AuthenticationLoggingExtensions
+{
+    [LoggerMessage(EventId = 1001, Level = LogLevel.Warning, Message = "Login failed for user: {Login}")]
+    public static partial void LoginFailed(
+        this ILogger<ILogAuthenticationService> logger, string login);
+}
+```
 
-| Interface | Current Location | Move to | Logging Extension |
-|-----------|-----------------|---------|-------------------|
-| `IProcessRunner` | `Tools/Infrastructure/ProcessRunner.cs` | `Data/Contracts/` | `ProcessRunnerLoggingExtensions.cs` |
-| `IProcessHandle` | `Tools/Infrastructure/ProcessHandle.cs` | `Data/Contracts/` | `ProcessHandleLoggingExtensions.cs` |
-| `ILicenseService` | `Ui.Client/Interfaces/` | `Data/Contracts/` | `ClientLoggingExtensions.cs` |
-| `IDsmApiClient` | (none — concrete class only) | `Data/Contracts/` | `DsmApiLoggingExtensions.cs` |
-| `ISiteLifecycleManager` | (none — concrete class only) | `Data/Contracts/` | `ProcessLoggingExtensions.cs` |
-| `IProcessTerminator` | (none — static class) | N/A (use `IProcessRunner`) | `ProcessTerminatorLoggingExtensions.cs` |
+Services inject the interface type directly:
 
-**Note:** `ProcessTerminator` is a static class — logging is handled by `SystemProcessHandle` (uses `ILogger<IProcessRunner>`).
+```csharp
+public class AuthenticationService(
+    ILogger<ILogAuthenticationService> logger, ...)
+```
+
+**No project reference changes needed** — Logging stays leaf-node (zero references).
 
 | Task | Description | Status |
 |------|-------------|--------|
-| **T4.1** | Move `IProcessRunner` interface to `Data/Contracts/` | ⬜ Not started |
-| **T4.2** | Move `IProcessHandle` interface to `Data/Contracts/` | ⬜ Not started |
-| **T4.3** | Move `ILicenseService` interface to `Data/Contracts/` | ⬜ Not started |
-| **T4.4** | Create `IDsmApiClient` interface in `Data/Contracts/` | ⬜ Not started |
-| **T4.5** | Create `ISiteLifecycleManager` interface in `Data/Contracts/` | ⬜ Not started |
-| **T4.6** | Add project reference `Logging` → `Data` | ⬜ Not started |
-| **T4.7** | Update all 19 extension files — change `this ILogger` to `this ILogger<TService>` | ⬜ Not started |
-| **T4.8** | Update all service implementations — verify `ILogger<TService>` injection | ⬜ Not started |
-| **T4.9** | Update `SystemProcessHandle` — use `ILogger<IProcessRunner>` instead of `ILogger<SystemProcessRunner>` | ⬜ Not started |
+| **T4.1** | Add `ILogXxx` interface + update all methods in `AuthenticationLoggingExtensions.cs` | ✅ Done |
+| **T4.2** | Add `ILogXxx` interface + update all methods in `FileSystemServiceLoggingExtensions.cs` | ✅ Done |
+| **T4.3** | Add `ILogXxx` interface + update all methods in `FileManagerServiceLoggingExtensions.cs` | ✅ Done |
+| **T4.4** | Add `ILogXxx` interface + update all methods in `LogDownloadServiceLoggingExtensions.cs` | ✅ Done |
+| **T4.5** | Add `ILogXxx` interface + update all methods in `FrameworkManagementLoggingExtensions.cs` | ✅ Done |
+| **T4.6** | Add `ILogXxx` interface + update all methods in `DotnetVersionServiceLoggingExtensions.cs` | ✅ Done |
+| **T4.7** | Add `ILogXxx` interface + update all methods in `ProcessLoggingExtensions.cs` | ✅ Done |
+| **T4.8** | Add `ILogXxx` interface + update all methods in `ReverseProxyLoggingExtensions.cs` | ✅ Done |
+| **T4.9** | Add `ILogXxx` interface + update all methods in `WebsiteLoggingExtensions.cs` | ✅ Done |
+| **T4.10** | Add `ILogXxx` interface + update all methods in `ConfigurationLoggingExtensions.cs` | ✅ Done |
+| **T4.11** | Add `ILogXxx` interface + update all methods in `DsmApiLoggingExtensions.cs` | ✅ Done |
+| **T4.12** | Add `ILogXxx` interface + update all methods in `ArchiveExtractorLoggingExtensions.cs` | ✅ Done |
+| **T4.13** | Add `ILogXxx` interface + update all methods in `VersionsDetectorLoggingExtensions.cs` | ✅ Done |
+| **T4.14** | Add `ILogXxx` interface + update all methods in `PlatformInfoLoggingExtensions.cs` | ✅ Done |
+| **T4.15** | Add `ILogXxx` interface + update all methods in `DownloaderLoggingExtensions.cs` | ✅ Done |
+| **T4.16** | Add `ILogXxx` interface + update all methods in `ProcessRunnerLoggingExtensions.cs` | ✅ Done |
+| **T4.17** | Consolidate process termination methods into `ProcessHandleLoggingExtensions.cs` (removed `ProcessTerminatorLoggingExtensions.cs`) | ✅ Done |
+| **T4.18** | Add `ILogXxx` interface + update all methods in `ClientLoggingExtensions.cs` | ✅ Done |
+| **T4.19** | Update all service implementations — change `ILogger<T>` type argument to namespace-level interface | ✅ Done |
 
-**Dependency Graph After Change:**
-
-```text
-Constants (leaf node)
-  ↑
-Data (references: Constants)
-  ↑
-Logging (references: Data)
-  ↑
-Tools (references: Constants, Data, Logging)
-  ↑
-Ui (references: Constants, Data, Logging, Tools, Ui.Client)
-```
-
-**No circular dependency** — Data is a leaf node (only references Constants), Logging references Data, and all consumers reference Logging.
+**Note:** `ProcessTerminatorLoggingExtensions.cs` was removed — its 3 methods
+(`SigTermSent`, `SigKillSent`, `FailedToTerminateProcess`) were consolidated
+into `ProcessHandleLoggingExtensions.cs` since `SystemProcessHandle` is the
+sole caller for all process termination logging.
 
 ### Phase 5: DSM API Request/Response Logging
 
@@ -308,7 +302,7 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 
 ## Acceptance Criteria
 
-- [x] All 137 `[LoggerMessage]` methods created and assigned event IDs
+- [x] All 145 `[LoggerMessage]` methods created and assigned event IDs
 - [x] All 126 logger calls migrated to extension methods
 - [x] Zero CA2254 warnings remaining
 - [ ] All services log key operations (start, success, failure, duration)
@@ -320,6 +314,7 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 - [ ] All tests pass
 - [x] Format clean (`dotnet format`)
 - [x] Markdown valid (`markdownlint`)
+- [x] All services use specialized `ILogger<ILogXxx>` for log categorization
 
 ---
 
@@ -334,5 +329,10 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
   - `Warning` — recoverable issues (retry, fallback, degraded state)
   - `Error` — failures that require attention (operation failed, resource unavailable)
   - `Critical` — unrecoverable, application may stop functioning
-- **Extension pattern** — all `[LoggerMessage]` methods use `public static partial class` with `this ILogger logger`
+- **Extension pattern** — all `[LoggerMessage]` methods use `public static partial class` with `this ILogger<ILogXxx> logger`
   (not `extension(...)` blocks — the source generator requires a partial type)
+- **Namespace-level category interfaces** — each extension file declares `public interface ILogXxx { }` at namespace level for `ILogger<T>` categorization
+  (no project reference changes needed — Logging remains a leaf node with zero references)
+- **ProcessHandle consolidation** — `ProcessTerminatorLoggingExtensions.cs` was removed;
+  its methods were consolidated into `ProcessHandleLoggingExtensions.cs`
+  (event IDs 1817-1821) since `SystemProcessHandle` is the sole caller

@@ -13,7 +13,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Orchestrates instance management by delegating to SiteLifecycleManager for process operations.
 /// </summary>
 public class WebSiteHostingService(
-    ILogger<WebSiteHostingService> logger,
+    ILogger<ILogWebSiteHostingService> logger,
     ILoggerFactory loggerFactory,
     IProcessRunner processRunner,
     IWebSitesConfigurationService configService,
@@ -247,7 +247,7 @@ public class WebSiteHostingService(
             var instance = new WebSiteInstanceDetails(site);
             _instances[instance.Id] = instance;
 
-            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), processRunner, site);
+            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, site);
             _lifecycleManagers[instance.Id] = lifecycleManager;
 
             logger.InstanceCreated(site.Name);
@@ -279,7 +279,7 @@ public class WebSiteHostingService(
         var instance = new WebSiteInstanceDetails(configuration);
         _instances[instance.Id] = instance;
 
-        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), processRunner, configuration);
+        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, configuration);
         _lifecycleManagers[instance.Id] = lifecycleManager;
 
         logger.InstanceAdded(configuration.Name);
@@ -316,7 +316,7 @@ public class WebSiteHostingService(
         }
 
         existingInstance.Configuration = newConfiguration;
-        _lifecycleManagers[instance.Id] = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), processRunner, newConfiguration);
+        _lifecycleManagers[instance.Id] = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, newConfiguration);
 
         logger.InstanceUpdated(newConfiguration.Name);
 

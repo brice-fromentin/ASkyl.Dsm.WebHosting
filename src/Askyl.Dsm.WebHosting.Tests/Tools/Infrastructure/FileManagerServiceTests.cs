@@ -1,4 +1,5 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -25,7 +26,7 @@ public class FileManagerServiceTests : IDisposable
 
     private FileManagerService CreateService(string rootPath = "")
     {
-        var logger = new Mock<ILogger<FileManagerService>>();
+        var logger = new Mock<ILogger<ILogFileManagerService>>();
         return new(logger.Object, rootPath);
     }
 

@@ -13,7 +13,7 @@ public class FrameworkManagementService(
     IDownloaderService downloader,
     IFileManagerService fileManager,
     IArchiveExtractorService archiveExtractor,
-    ILogger<FrameworkManagementService> logger) : IFrameworkManagementService
+    ILogger<ILogFrameworkManagementService> logger) : IFrameworkManagementService
 {
     public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel, CancellationToken cancellationToken = default)
     {

@@ -13,7 +13,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 /// Service that detects installed .NET framework versions by executing dotnet --info.
 /// Implements ISemaphoreOwner for thread-safe cache initialization.
 /// </summary>
-public sealed partial class VersionsDetectorService(ILogger<VersionsDetectorService> logger) : IVersionsDetectorService, ISemaphoreOwner
+public sealed partial class VersionsDetectorService(ILogger<ILogVersionsDetectorService> logger) : IVersionsDetectorService, ISemaphoreOwner
 {
     #region ISemaphoreOwner Implementation
 

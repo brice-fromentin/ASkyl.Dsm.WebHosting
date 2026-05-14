@@ -9,7 +9,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// <summary>
 /// Service that extracts compressed archive files (tar.gz format).
 /// </summary>
-public sealed class ArchiveExtractorService(IFileManagerService fileManager, ILogger<ArchiveExtractorService> logger) : IArchiveExtractorService
+public sealed class ArchiveExtractorService(IFileManagerService fileManager, ILogger<ILogArchiveExtractorService> logger) : IArchiveExtractorService
 {
     /// <inheritdoc/>
     public void Decompress(string inputFile, string? exclude = null)

@@ -16,7 +16,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// </summary>
 public sealed class SiteLifecycleManager : IDisposable
 {
-    private readonly ILogger<SiteLifecycleManager> _logger;
+    private readonly ILogger<ILogSiteLifecycleManager> _logger;
     private readonly IProcessRunner _processRunner;
     private readonly WebSiteConfiguration _configuration;
     private readonly Channel<LifecycleCommand> _channel = Channel.CreateBounded<LifecycleCommand>(new BoundedChannelOptions(16)
@@ -29,7 +29,7 @@ public sealed class SiteLifecycleManager : IDisposable
     private IProcessHandle? _process;
     private volatile bool _isDisposing;
 
-    public SiteLifecycleManager(ILogger<SiteLifecycleManager> logger, IProcessRunner processRunner, WebSiteConfiguration configuration)
+    public SiteLifecycleManager(ILogger<ILogSiteLifecycleManager> logger, IProcessRunner processRunner, WebSiteConfiguration configuration)
     {
         _logger = logger;
         _processRunner = processRunner;

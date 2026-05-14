@@ -8,7 +8,7 @@ using Askyl.Dsm.WebHosting.Tools.Threading;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
-public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> logger) : IWebSitesConfigurationService, ISemaphoreOwner
+public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationService> logger) : IWebSitesConfigurationService, ISemaphoreOwner
 {
     #region ISemaphoreOwner Implementation
 

@@ -14,7 +14,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="apiClient">The DSM API client for making authentication calls.</param>
 /// <param name="httpContextAccessor">Access to current HTTP context for session management.</param>
 /// <param name="logger">Logger for tracking authentication operations.</param>
-public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor httpContextAccessor, ILogger<AuthenticationService> logger) : IAuthenticationService
+public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor httpContextAccessor, ILogger<ILogAuthenticationService> logger) : IAuthenticationService
 {
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
