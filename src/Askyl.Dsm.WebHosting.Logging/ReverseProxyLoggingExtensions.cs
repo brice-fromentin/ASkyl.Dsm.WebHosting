@@ -19,7 +19,7 @@ public static partial class ReverseProxyLoggingExtensions
     /// Logs that a reverse proxy already exists for the site (idempotency).
     /// </summary>
     [LoggerMessage(EventId = 1401, Level = LogLevel.Warning, Message = "Reverse proxy already exists for site {SiteName} with UUID {Uuid}.")]
-    public static partial void ReverseProxyAlreadyExists(this ILogger logger, string siteName, Guid uuid);
+    public static partial void ReverseProxyAlreadyExists(this ILogger logger, string siteName, Guid? uuid);
 
     /// <summary>
     /// Logs failure to create a reverse proxy with API error code.
@@ -37,7 +37,7 @@ public static partial class ReverseProxyLoggingExtensions
     /// Logs successful reverse proxy creation with UUID.
     /// </summary>
     [LoggerMessage(EventId = 1404, Level = LogLevel.Information, Message = "Reverse proxy created successfully for site {SiteName} with UUID {Uuid}")]
-    public static partial void ReverseProxyCreated(this ILogger logger, string siteName, Guid uuid);
+    public static partial void ReverseProxyCreated(this ILogger logger, string siteName, Guid? uuid);
 
     #endregion
 
@@ -69,7 +69,7 @@ public static partial class ReverseProxyLoggingExtensions
     /// Logs deletion of a reverse proxy by UUID.
     /// </summary>
     [LoggerMessage(EventId = 1408, Level = LogLevel.Information, Message = "Deleting reverse proxy {Uuid} for site {SiteName}")]
-    public static partial void DeletingReverseProxy(this ILogger logger, Guid uuid, string siteName);
+    public static partial void DeletingReverseProxy(this ILogger logger, Guid? uuid, string siteName);
 
     /// <summary>
     /// Logs that the reverse proxy was already deleted externally.
@@ -81,7 +81,7 @@ public static partial class ReverseProxyLoggingExtensions
     /// Logs successful reverse proxy deletion.
     /// </summary>
     [LoggerMessage(EventId = 1410, Level = LogLevel.Information, Message = "Deleted reverse proxy {Uuid} successfully")]
-    public static partial void ReverseProxyDeleted(this ILogger logger, Guid uuid);
+    public static partial void ReverseProxyDeleted(this ILogger logger, Guid? uuid);
 
     #endregion
 }

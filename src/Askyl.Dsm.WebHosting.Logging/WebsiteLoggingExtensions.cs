@@ -13,13 +13,13 @@ public static partial class WebsiteLoggingExtensions
     /// Logs permission setting failure during website addition.
     /// </summary>
     [LoggerMessage(EventId = 1500, Level = LogLevel.Error, Message = "Permission setting failed for '{SiteName}': {ErrorMessage}")]
-    public static partial void PermissionSettingFailedAdd(this ILogger logger, string siteName, string errorMessage);
+    public static partial void PermissionSettingFailedAdd(this ILogger logger, string siteName, string? errorMessage);
 
     /// <summary>
     /// Logs reverse proxy creation failure during website addition.
     /// </summary>
     [LoggerMessage(EventId = 1501, Level = LogLevel.Error, Message = "Reverse proxy creation failed for '{SiteName}': {ErrorMessage}")]
-    public static partial void ReverseProxyCreationFailedAdd(this ILogger logger, string siteName, string errorMessage);
+    public static partial void ReverseProxyCreationFailedAdd(this ILogger logger, string siteName, string? errorMessage);
 
     /// <summary>
     /// Logs error during website addition.
@@ -41,13 +41,13 @@ public static partial class WebsiteLoggingExtensions
     /// Logs permission setting failure during website update.
     /// </summary>
     [LoggerMessage(EventId = 1504, Level = LogLevel.Error, Message = "Permission setting failed for '{SiteName}': {ErrorMessage}")]
-    public static partial void PermissionSettingFailedUpdate(this ILogger logger, string siteName, string errorMessage);
+    public static partial void PermissionSettingFailedUpdate(this ILogger logger, string siteName, string? errorMessage);
 
     /// <summary>
     /// Logs reverse proxy update failure during website update.
     /// </summary>
     [LoggerMessage(EventId = 1505, Level = LogLevel.Error, Message = "Reverse proxy update failed for '{SiteName}': {ErrorMessage}")]
-    public static partial void ReverseProxyUpdateFailed(this ILogger logger, string siteName, string errorMessage);
+    public static partial void ReverseProxyUpdateFailed(this ILogger logger, string siteName, string? errorMessage);
 
     /// <summary>
     /// Logs error during website update.
@@ -165,13 +165,13 @@ public static partial class WebsiteLoggingExtensions
     /// Logs failure to stop site before deletion.
     /// </summary>
     [LoggerMessage(EventId = 1522, Level = LogLevel.Warning, Message = "Failed to stop site before deletion: {ErrorMessage}")]
-    public static partial void FailedToStopBeforeDeletion(this ILogger logger, string errorMessage);
+    public static partial void FailedToStopBeforeDeletion(this ILogger logger, string? errorMessage);
 
     /// <summary>
     /// Logs reverse proxy deletion failure (non-blocking).
     /// </summary>
     [LoggerMessage(EventId = 1523, Level = LogLevel.Warning, Message = "Reverse proxy deletion failed for '{SiteName}' (site will be removed anyway): {ErrorMessage}")]
-    public static partial void ReverseProxyDeletionFailed(this ILogger logger, string siteName, string errorMessage);
+    public static partial void ReverseProxyDeletionFailed(this ILogger logger, string siteName, string? errorMessage);
 
     /// <summary>
     /// Logs instance removal for a site.

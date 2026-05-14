@@ -30,7 +30,7 @@ public class ReverseProxyManagerService(
 
         if (existingProxy is not null)
         {
-            logger.ReverseProxyAlreadyExists(site.Name, (Guid)existingProxy.UUID);
+            logger.ReverseProxyAlreadyExists(site.Name, existingProxy.UUID);
             return;
         }
 
@@ -61,7 +61,7 @@ public class ReverseProxyManagerService(
             throw new InvalidOperationException($"Reverse proxy creation succeeded but could not verify existence for site '{site.Name}'");
         }
 
-        logger.ReverseProxyCreated(site.Name, (Guid)createdProxy.UUID);
+        logger.ReverseProxyCreated(site.Name, createdProxy.UUID);
     }
 
     /// <summary>
@@ -113,11 +113,11 @@ public class ReverseProxyManagerService(
             return; // Graceful no-op
         }
 
-        logger.DeletingReverseProxy(proxy.UUID.Value, site.Name);
+        logger.DeletingReverseProxy(proxy.UUID, site.Name);
 
         try
         {
-            await DeleteByUuidAsync(proxy.UUID.Value, site.Name);
+            await DeleteByUuidAsync((Guid)proxy.UUID, site.Name);
         }
         catch (Exception ex) when (IsNotFoundError(ex.Message))
         {
