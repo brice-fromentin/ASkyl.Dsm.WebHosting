@@ -51,14 +51,9 @@ public static class ApplicationConstants
     #region Application Paths & Routing
 
     /// <summary>
-    /// The sub-path alias for the application.
-    /// </summary>
-    public const string ApplicationSubPath = "adwh";
-
-    /// <summary>
     /// The sub-path for the application URL, used for routing.
     /// </summary>
-    public const string ApplicationUrlSubPath = "/" + ApplicationSubPath;
+    public const string ApplicationUrlSubPath = "/adwh";
 
     /// <summary>
     /// The home page path.

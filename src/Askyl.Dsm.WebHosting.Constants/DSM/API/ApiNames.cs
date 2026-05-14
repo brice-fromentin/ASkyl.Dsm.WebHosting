@@ -59,14 +59,9 @@ public static class ApiNames
     #region Required APIs Collection
 
     /// <summary>
-    /// Collection of required APIs that must be available for the application to function.
-    /// </summary>
-    public static readonly string[] RequiredApis = [Auth, FileStationInfo, FileStationList, CoreAcl, AppPortalReverseProxy];
-
-    /// <summary>
     /// Comma-separated list of required API names for API handshake requests.
     /// </summary>
-    public static readonly string RequiredApisJoined = String.Join(",", RequiredApis);
+    public static readonly string RequiredApisJoined = $"{Auth},{FileStationInfo},{FileStationList},{CoreAcl},{AppPortalReverseProxy}";
 
     #endregion
 }
