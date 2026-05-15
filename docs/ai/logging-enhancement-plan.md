@@ -271,9 +271,15 @@ sole caller for all process termination logging.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| **T5.1** | Add logging to `DsmApiClient.ExecuteAsync()` — URL, method, status code, duration | ⬜ Not started |
-| **T5.2** | Add logging for authentication failures and session expiration | ⬜ Not started |
-| **T5.3** | Add logging for API errors (non-success responses with error codes) | ⬜ Not started |
+| **T5.1** | Add logging to `DsmApiClient.ExecuteAsync()` — URL, method, status code, duration | ✅ Done |
+| **T5.2** | Add logging for authentication failures and session expiration | ✅ Done |
+| **T5.3** | Add logging for API errors (non-success responses with error codes) | ✅ Done |
+
+**Implementation Notes:**
+
+- `ExecutePostAsync` — Logs every HTTP request via `logger.ApiRequest("POST", url, statusCode, duration)` using `Stopwatch` for timing
+- `AuthenticateAsync` — Logs auth failure via `logger.AuthenticationFailed(errorMessage)` with error reason from response
+- `ExecuteAsync<R>` — Logs API-level errors (HTTP 200 but `Success: false`) via `logger.ApiError(reason, errorCode)` using reflection to access `ApiResponseBase<T>` properties on the generic type `R`
 
 ### Phase 6: Serilog Configuration Enhancements
 
@@ -306,7 +312,7 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 - [x] All 126 logger calls migrated to extension methods
 - [x] Zero CA2254 warnings remaining
 - [ ] All services log key operations (start, success, failure, duration)
-- [ ] DSM API requests are logged with URL, status, duration
+- [x] DSM API requests are logged with URL, status, duration
 - [ ] Application shutdown flushes all pending logs (`Log.CloseAndFlush()`)
 - [ ] Serilog output includes event ID and event type
 - [x] Log levels are consistent (Debug/Information/Warning/Error/Critical)

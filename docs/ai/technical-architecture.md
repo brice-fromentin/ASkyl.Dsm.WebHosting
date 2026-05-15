@@ -2,7 +2,7 @@
 
 **Version:** 0.5.8
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 14, 2026 (LoggerMessage migration — all 126 logger calls migrated to source-generated extensions)
+**Last Updated:** May 15, 2026 (Phase 5 DSM API logging, `IApiResponse` interface, compile-time generic constraints)
 
 ---
 
@@ -68,7 +68,8 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ⏳ TODO: Multi-language support
 - ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
-- ✅ **LoggerMessage migration** — 126 logger calls migrated to 137 source-generated `[LoggerMessage]` extension methods across 10 files; zero CA2254 warnings
+- ✅ **LoggerMessage migration** — 126 logger calls migrated to 145 source-generated `[LoggerMessage]` extension methods across 19 files; zero CA2254 warnings
+- ✅ **DSM API logging** — request timing, authentication failures, and API errors logged via `[LoggerMessage]` extensions; compile-time `IApiResponse` constraint replaces reflection
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 
@@ -403,9 +404,19 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
 - Session management with SID validation and restoration
 - Automatic serialization based on `IApiParameters.SerializationFormat`
 - Strategy pattern for Form vs JSON serialization
-- Error handling with structured logging via Serilog
+- Compile-time generic constraint `where R : IApiResponse` on `ExecuteAsync<R>` — enables compile-time access to `Success`/`Error` properties (no reflection)
+- Structured logging with `[LoggerMessage]` extensions:
+  - HTTP request timing (method, URL, status code, duration in milliseconds)
+  - Authentication failure logging with error reason from response
+  - API error logging for `Success: false` responses (error code + reason)
 - HttpClient factory integration for proper lifecycle management
 - All infrastructure services testable via interface abstractions
+
+**`IApiResponse` Interface:**
+
+Defined in `Data/DsmApi/Responses/ApiResponseBase.cs`. All DSM API response types implement `IApiResponse` via `ApiResponseBase<T>`.
+
+This enables compile-time access to `Success` and `Error` properties — replacing reflection with type-safe error handling.
 
 **Connection Flow:** See `DsmApiClient.cs` lines 85-120
 
