@@ -282,6 +282,7 @@ public sealed class SiteLifecycleManager : IDisposable
         {
             if (!process.HasExited)
             {
+                _logger.ProcessWaitTimeout(_configuration.Name, process.Id, timeoutSeconds * 1000L);
                 await ForceKillProcessAsync(process, cancellationToken);
             }
         }

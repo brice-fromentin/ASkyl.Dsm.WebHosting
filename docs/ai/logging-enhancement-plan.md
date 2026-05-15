@@ -17,12 +17,14 @@ project as a proper shared infrastructure library.
 
 | Component | Status |
 |-----------|--------|
-| **Logging project** | Placeholder — single unused "HelloWorld" demo extension |
-| **Serilog (server)** | File sink (rolling daily), Console in dev, min level `Information` |
+| **Logging project** | ✅ Complete — 17 extension files, 215 `[LoggerMessage]` methods |
+| **Serilog (server)** | ✅ Enhanced — `{EventId}` in template, `CloseAndFlush()` on shutdown, `WithActivity` enricher |
 | **Serilog (client)** | BrowserConsole sink, min level `Debug` |
-| **Logger calls** | 126 total calls, 123 unique templates |
-| **CA2254 warnings** | ~76 calls trigger "expensive argument evaluation" warning |
-| **LogDownloadService** | Archives package/debug/app logs to ZIP |
+| **Server-side logger calls** | ✅ 126 calls migrated to extension methods |
+| **Client-side logger calls** | ❌ 25 direct calls remain in Blazor `.razor` components |
+| **UI service logger calls** | ❌ 1 direct call remains in `WebSiteHostingService.cs` (Ui project) |
+| **CA2254 warnings** | ✅ Zero — eliminated by `[LoggerMessage]` migration |
+| **LogDownloadService** | ✅ Migrated — 7 calls → extension methods |
 
 ### CA2254 Breakdown
 
@@ -90,42 +92,51 @@ The `[LoggerMessage]` extensions are organized into separate files **per service
 
 | File | Domain | Methods | Event IDs | Service Covered |
 |------|--------|---------|-----------|-----------------|
-| `AuthenticationLoggingExtensions.cs` | Authentication | 4 | 1001-1004 | AuthenticationService |
-| `FileSystemServiceLoggingExtensions.cs` | File system | 12 | 1100-1111 | FileSystemService |
-| `FileManagerServiceLoggingExtensions.cs` | File system | 6 | 1112-1117 | FileManagerService |
-| `LogDownloadServiceLoggingExtensions.cs` | File system | 7 | 1118-1124 | LogDownloadService |
-| `FrameworkManagementLoggingExtensions.cs` | .NET framework | 7 | 1200-1206 | FrameworkManagementService |
-| `DotnetVersionServiceLoggingExtensions.cs` | .NET framework | 7 | 1207-1213 | DotnetVersionService |
-| `ProcessLoggingExtensions.cs` | Process lifecycle | 17 | 1300-1316 | SiteLifecycleManager |
-| `ReverseProxyLoggingExtensions.cs` | Reverse proxy | 11 | 1400-1410 | ReverseProxyManagerService |
-| `WebsiteLoggingExtensions.cs` | Website hosting | 34 | 1500-1533 | WebSiteHostingService |
-| `ConfigurationLoggingExtensions.cs` | Configuration | 12 | 1600-1611 | WebSitesConfigurationService |
-| `DsmApiLoggingExtensions.cs` | DSM API | 5 | 1700-1704 | DsmApiClient |
-| `ArchiveExtractorLoggingExtensions.cs` | Infrastructure | 6 | 1800-1805 | ArchiveExtractorService |
-| `VersionsDetectorLoggingExtensions.cs` | Infrastructure | 4 | 1806-1809 | VersionsDetectorService |
-| `PlatformInfoLoggingExtensions.cs` | Infrastructure | 2 | 1810-1811 | PlatformInfoService |
-| `DownloaderLoggingExtensions.cs` | Infrastructure | 4 | 1812-1815 | DownloaderService |
-| `ProcessRunnerLoggingExtensions.cs` | Infrastructure | 1 | 1816 | SystemProcessRunner |
-| `ProcessHandleLoggingExtensions.cs` | Infrastructure | 5 | 1817-1821 | SystemProcessHandle |
-| `ClientLoggingExtensions.cs` | Client-side (WASM) | 1 | 1900 | LicenseService |
-| **Total** | | **145** | | |
+| `AuthenticationLoggingExtensions.cs` | Authentication | 8 | 1000001-1000008 | AuthenticationService |
+| `FileSystemServiceLoggingExtensions.cs` | File system | 12 | 1100001-1100012 | FileSystemService |
+| `FileManagerServiceLoggingExtensions.cs` | File system | 6 | 1200001-1200006 | FileManagerService |
+| `LogDownloadServiceLoggingExtensions.cs` | File system | 7 | 1300001-1300007 | LogDownloadService |
+| `FrameworkManagementLoggingExtensions.cs` | .NET framework | 11 | 1400001-1400011 | FrameworkManagementService |
+| `DotnetVersionServiceLoggingExtensions.cs` | .NET framework | 9 | 1500001-1500009 | DotnetVersionService |
+| `ProcessLoggingExtensions.cs` | Process lifecycle | 22 | 1600001-1600022 | SiteLifecycleManager |
+| `ReverseProxyLoggingExtensions.cs` | Reverse proxy | 16 | 1700001-1700016 | ReverseProxyManagerService |
+| `WebsiteLoggingExtensions.cs` | Website hosting | 44 | 1800001-1800044 | WebSiteHostingService |
+| `ConfigurationLoggingExtensions.cs` | Configuration | 18 | 1900001-1900018 | WebSitesConfigurationService |
+| `DsmApiLoggingExtensions.cs` | DSM API | 12 | 2000001-2000012 | DsmApiClient |
+| `ArchiveExtractorLoggingExtensions.cs` | Infrastructure | 8 | 2100001-2100008 | ArchiveExtractorService |
+| `VersionsDetectorLoggingExtensions.cs` | Infrastructure | 4 | 2200001-2200004 | VersionsDetectorService |
+| `PlatformInfoLoggingExtensions.cs` | Infrastructure | 2 | 2300001-2300002 | PlatformInfoService |
+| `DownloaderLoggingExtensions.cs` | Infrastructure | 5 | 2400001-2400005 | DownloaderService |
+| `ProcessRunnerLoggingExtensions.cs` | Infrastructure | 1 | 2500001 | SystemProcessRunner |
+| `ProcessHandleLoggingExtensions.cs` | Infrastructure | 5 | 2600001-2600005 | SystemProcessHandle |
+| `ClientLoggingExtensions.cs` | Client-side (WASM) | 1 | 2700001 | LicenseService |
+| **Total** | | **215** | | |
 
 ### Event ID Ranges
 
-Each file gets a dedicated event ID range to avoid collisions and make log correlation easier:
+Each **service** gets a dedicated 100K range at 1M spacing to prevent cross-service collisions
+(e.g., FrameworkManagement and DotnetVersion no longer share the same numbering space):
 
-| Range | Domain |
-|-------|--------|
-| `1000-1099` | Authentication |
-| `1100-1199` | File management |
-| `1200-1299` | Framework management |
-| `1300-1399` | Process lifecycle |
-| `1400-1499` | Reverse proxy |
-| `1500-1599` | Website hosting |
-| `1600-1699` | Configuration |
-| `1700-1799` | DSM API |
-| `1800-1899` | Infrastructure |
-| `1900-1999` | Client-side |
+| Base | Service | Range |
+|------|---------|-------|
+| `1000000` | AuthenticationService | `1000001–1000008` |
+| `1100000` | FileSystemService | `1100001–1100012` |
+| `1200000` | FileManagerService | `1200001–1200006` |
+| `1300000` | LogDownloadService | `1300001–1300007` |
+| `1400000` | FrameworkManagementService | `1400001–1400011` |
+| `1500000` | DotnetVersionService | `1500001–1500009` |
+| `1600000` | SiteLifecycleManager | `1600001–1600022` |
+| `1700000` | ReverseProxyManagerService | `1700001–1700016` |
+| `1800000` | WebSiteHostingService | `1800001–1800044` |
+| `1900000` | WebSitesConfigurationService | `1900001–1900018` |
+| `2000000` | DsmApiClient | `2000001–2000012` |
+| `2100000` | ArchiveExtractorService | `2100001–2100008` |
+| `2200000` | VersionsDetectorService | `2200001–2200004` |
+| `2300000` | PlatformInfoService | `2300001–2300002` |
+| `2400000` | DownloaderService | `2400001–2400005` |
+| `2500000` | SystemProcessRunner | `2500001` |
+| `2600000` | SystemProcessHandle | `2600001–2600005` |
+| `2700000` | LicenseService (client) | `2700001` |
 
 ---
 
@@ -297,16 +308,54 @@ sole caller for all process termination logging.
 
 ---
 
+### Phase 7: Blazor UI Component Logging (Remaining Direct Calls)
+
+**Objective:** Migrate remaining 26 direct `ILogger` calls in client-side Blazor `.razor` components and the Ui service to `[LoggerMessage]` extension methods.
+
+**Remaining calls by file:**
+
+| File | Project | Calls | Log Levels |
+|------|---------|-------|------------|
+| `Home.razor` | Ui.Client | 15 | 5× Information, 5× Warning, 5× Error |
+| `AspNetReleasesDialog.razor` | Ui.Client | 4 | 4× Error |
+| `FileSelectionDialog.razor` | Ui.Client | 4 | 3× Error, 1× Debug |
+| `DotnetVersionsDialog.razor` | Ui.Client | 1 | 1× Error |
+| `WebSiteConfigurationDialog.razor` | Ui.Client | 1 | 1× Error |
+| `WebSiteHostingService.cs` | Ui | 1 | 1× Information |
+
+| Task | Description | Status |
+|------|-------------|--------|
+| **T7.1** | Extend `ClientLoggingExtensions.cs` — add `ILogHome` category + 15 methods for `Home.razor` | ⬜ Pending |
+| **T7.2** | Extend `ClientLoggingExtensions.cs` — add `ILogAspNetReleasesDialog` category + 4 methods | ⬜ Pending |
+| **T7.3** | Extend `ClientLoggingExtensions.cs` — add `ILogFileSelectionDialog` category + 4 methods | ⬜ Pending |
+| **T7.4** | Extend `ClientLoggingExtensions.cs` — add `ILogDotnetVersionsDialog` category + 1 method | ⬜ Pending |
+| **T7.5** | Extend `ClientLoggingExtensions.cs` — add `ILogWebSiteConfigurationDialog` category + 1 method | ⬜ Pending |
+| **T7.6** | Create `UiWebSiteHostingLoggingExtensions.cs` — add `ILogUiWebSiteHostingService` + 1 method | ⬜ Pending |
+| **T7.7** | Migrate `Home.razor` — replace 15 direct calls with extension method calls | ⬜ Pending |
+| **T7.8** | Migrate `AspNetReleasesDialog.razor` — replace 4 direct calls | ⬜ Pending |
+| **T7.9** | Migrate `FileSelectionDialog.razor` — replace 4 direct calls | ⬜ Pending |
+| **T7.10** | Migrate `DotnetVersionsDialog.razor` — replace 1 direct call | ⬜ Pending |
+| **T7.11** | Migrate `WebSiteConfigurationDialog.razor` — replace 1 direct call | ⬜ Pending |
+| **T7.12** | Migrate `WebSiteHostingService.cs` (Ui) — replace 1 direct call | ⬜ Pending |
+
+**Implementation Notes:**
+
+- Client-side components use `ILogger` injected via `[Inject]` — need to switch to `ILogger<ILogXxx>` specialized types
+- `.razor` files use `Logger` field directly in `@code` blocks — extension methods will be called as `Logger.MethodName(args)`
+- Consider consolidating all client-side extensions into a single `ClientLoggingExtensions.cs` file with multiple category interfaces
+- Event ID base for client UI: `2700000` (existing `LicenseService` uses `2700001`), new components get sub-ranges
+
 ## Execution Order
 
 The recommended execution order is:
 
-1. **Phase 1** — Build the `[LoggerMessage]` extension files (foundation)
-2. **Phase 2** — Migrate existing calls one service at a time (verify build/tests after each)
-3. **Phase 3** — Add logging to services that currently have none
-4. **Phase 4** — Refactor to specialized `ILogger<TService>` (improves log categorization)
-5. **Phase 5** — Add DSM API request/response logging (benefits from Phase 4)
-6. **Phase 6** — Polish Serilog configuration and shutdown handling
+1. **Phase 1** — Build the `[LoggerMessage]` extension files (foundation) ✅ Done
+2. **Phase 2** — Migrate existing server-side calls one service at a time ✅ Done
+3. **Phase 3** — Add logging to services that currently have none ✅ Done
+4. **Phase 4** — Refactor to specialized `ILogger<TService>` (improves log categorization) ✅ Done
+5. **Phase 5** — Add DSM API request/response logging (benefits from Phase 4) ✅ Done
+6. **Phase 6** — Polish Serilog configuration and shutdown handling ✅ Done
+7. **Phase 7** — Migrate client-side Blazor component logging ⬜ Pending
 
 Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T2.1-T2.2 in one commit).
 
@@ -314,8 +363,9 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 
 ## Acceptance Criteria
 
-- [x] All 145 `[LoggerMessage]` methods created and assigned event IDs
-- [x] All 126 logger calls migrated to extension methods
+- [x] All 215 `[LoggerMessage]` methods created and assigned event IDs (server-side)
+- [x] All 126 server-side logger calls migrated to extension methods
+- [ ] All 26 client-side logger calls migrated to extension methods
 - [x] Zero CA2254 warnings remaining
 - [ ] All services log key operations (start, success, failure, duration)
 - [x] DSM API requests are logged with URL, status, duration
@@ -323,17 +373,17 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 - [x] Serilog output includes event ID and event type
 - [x] Log levels are consistent (Debug/Information/Warning/Error/Critical)
 - [x] Build passes with 0 errors, 0 warnings
-- [ ] All tests pass
+- [x] All tests pass (181 tests)
 - [x] Format clean (`dotnet format`)
 - [x] Markdown valid (`markdownlint`)
-- [x] All services use specialized `ILogger<ILogXxx>` for log categorization
+- [x] All server-side services use specialized `ILogger<ILogXxx>` for log categorization
 
 ---
 
 ## Notes
 
 - **DsmApi classes are external contracts** — do not modify DsmApi model/response classes during this work
-- **Client-side (WASM) logging** — minimal scope (1 existing call); focus server-side first
+- **Client-side (WASM) logging** — 26 direct calls remain in Blazor `.razor` components (Phase 7); initial plan only covered 1 call in `LicenseService`
 - **Event IDs are semantically significant** — they allow filtering and correlation in log aggregation tools
 - **Log levels guidance:**
   - `Debug` — method entry/exit, variable state, intermediate results

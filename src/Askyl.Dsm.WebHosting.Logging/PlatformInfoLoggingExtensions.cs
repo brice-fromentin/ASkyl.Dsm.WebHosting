@@ -13,12 +13,12 @@ public static partial class PlatformInfoLoggingExtensions
     /// <summary>
     /// Logs detected CPU architecture.
     /// </summary>
-    [LoggerMessage(EventId = 1810, Level = LogLevel.Information, Message = "Detected architecture = {Architecture}")]
+    [LoggerMessage(EventId = 2300001, Level = LogLevel.Information, Message = "Detected architecture = {Architecture}")]
     public static partial void DetectedArchitecture(this ILogger<ILogPlatformInfoService> logger, string architecture);
 
     /// <summary>
     /// Logs detected operating system.
     /// </summary>
-    [LoggerMessage(EventId = 1811, Level = LogLevel.Information, Message = "Detected OS = {OperatingSystem}")]
+    [LoggerMessage(EventId = 2300002, Level = LogLevel.Information, Message = "Detected OS = {OperatingSystem}")]
     public static partial void DetectedOS(this ILogger<ILogPlatformInfoService> logger, string operatingSystem);
 }

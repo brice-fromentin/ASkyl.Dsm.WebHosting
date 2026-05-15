@@ -23,6 +23,8 @@ public class ReverseProxyManagerService(
     /// </summary>
     public async Task CreateAsync(WebSiteConfiguration site)
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
         logger.CreatingReverseProxy(site.Name);
 
         // Idempotency check: See if proxy already exists using composite key
@@ -62,6 +64,7 @@ public class ReverseProxyManagerService(
         }
 
         logger.ReverseProxyCreated(site.Name, createdProxy.UUID);
+        logger.CreateDuration(stopwatch.ElapsedMilliseconds, site.Name);
     }
 
     /// <summary>
@@ -69,6 +72,8 @@ public class ReverseProxyManagerService(
     /// </summary>
     public async Task UpdateAsync(WebSiteConfiguration config)
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
         logger.UpdatingReverseProxy(config.Name);
 
         // Find the proxy using composite key (backend port + frontend config)
@@ -88,10 +93,13 @@ public class ReverseProxyManagerService(
 
         if (!response.IsValid())
         {
-            throw new InvalidOperationException($"Failed to update reverse proxy for site '{config.Name}'. API error code: {response?.Error?.Code}");
+            var exception = new InvalidOperationException($"Failed to update reverse proxy for site '{config.Name}'. API error code: {response?.Error?.Code}");
+            logger.FailedToUpdateReverseProxy(exception, config.Name);
+            throw exception;
         }
 
         logger.ReverseProxyUpdated(config.Name);
+        logger.UpdateDuration(stopwatch.ElapsedMilliseconds, config.Name);
     }
 
     /// <summary>
@@ -99,6 +107,8 @@ public class ReverseProxyManagerService(
     /// </summary>
     public async Task DeleteAsync(WebSiteConfiguration site)
     {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
         if (site is null)
         {
             throw new ArgumentNullException(nameof(site));
@@ -118,12 +128,18 @@ public class ReverseProxyManagerService(
         try
         {
             await DeleteByUuidAsync((Guid)proxy.UUID, site.Name);
+            logger.DeleteDuration(stopwatch.ElapsedMilliseconds, site.Name);
         }
         catch (Exception ex) when (IsNotFoundError(ex.Message))
         {
             // Already deleted externally - graceful handling
             logger.ReverseProxyAlreadyDeleted(site.Name);
             return; // Graceful no-op
+        }
+        catch (Exception ex)
+        {
+            logger.FailedToDeleteReverseProxy(ex, proxy.UUID, site.Name);
+            throw;
         }
     }
 

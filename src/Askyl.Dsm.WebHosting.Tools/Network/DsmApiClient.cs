@@ -40,12 +40,18 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
     /// </summary>
     public async Task DisconnectAsync()
     {
+        logger.Disconnecting();
+
         _sid = String.Empty;
         _httpClient.DefaultRequestHeaders.Remove(NetworkConstants.CookieHeader);
+
+        logger.Disconnected();
     }
 
     public async Task<bool> ConnectAsync(LoginCredentials model)
     {
+        logger.Connecting(_server, _port);
+
         if (!await ReadSettingsAsync())
         {
             return false;
@@ -60,6 +66,8 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
         {
             return false;
         }
+
+        logger.Connected();
 
         return true;
     }
@@ -89,16 +97,21 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
 
     private async Task<bool> HandShakeAsync()
     {
+        logger.HandshakeStarting();
+
         var parameters = new InformationsQueryParameters(ApiInformations);
 
         var result = await ExecuteAsync<ApiInformationResponse>(parameters);
 
         if (result is null || !result.Success || result.Data is null || result.Data.Count == 0)
         {
+            logger.HandshakeFailure();
             return false;
         }
 
         ApiInformations.Replace(result.Data);
+
+        logger.HandshakeSuccess();
 
         return true;
     }

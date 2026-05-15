@@ -620,30 +620,32 @@ builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
 
 **EventId Management:**
 
-All `[LoggerMessage]` attributes use inline `int` literals (per Microsoft convention). EventId ranges are documented in `Constants/Logging/LogEventIds.cs` as a central registry for collision prevention:
+All `[LoggerMessage]` attributes use inline `int` literals (per Microsoft convention).
+EventId ranges are documented in `Constants/Logging/LogEventIds.cs`.
+Each service owns a dedicated 100K range at 1M spacing to prevent cross-service collisions:
 
-| Range | Domain | Extension File | Service(s) |
-|-------|--------|----------------|------------|
-| `1000–1099` | Authentication | `AuthenticationLoggingExtensions.cs` | AuthenticationService |
-| `1100–1111` | FileSystemService | `FileSystemServiceLoggingExtensions.cs` | FileSystemService |
-| `1112–1117` | FileManagerService | `FileManagerServiceLoggingExtensions.cs` | FileManagerService |
-| `1118–1124` | LogDownloadService | `LogDownloadServiceLoggingExtensions.cs` | LogDownloadService |
-| `1200–1206` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` | FrameworkManagementService |
-| `1207–1213` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` | DotnetVersionService |
-| `1300–1316` | Process lifecycle | `ProcessLoggingExtensions.cs` | SiteLifecycleManager |
-| `1400–1410` | Reverse proxy | `ReverseProxyLoggingExtensions.cs` | ReverseProxyManagerService |
-| `1500–1533` | Website hosting | `WebsiteLoggingExtensions.cs` | WebSiteHostingService |
-| `1600–1611` | Configuration | `ConfigurationLoggingExtensions.cs` | WebSitesConfigurationService |
-| `1700–1704` | DSM API | `DsmApiLoggingExtensions.cs` | DsmApiClient |
-| `1800–1805` | ArchiveExtractorService | `ArchiveExtractorLoggingExtensions.cs` | ArchiveExtractorService |
-| `1806–1809` | VersionsDetectorService | `VersionsDetectorLoggingExtensions.cs` | VersionsDetectorService |
-| `1810–1811` | PlatformInfoService | `PlatformInfoLoggingExtensions.cs` | PlatformInfoService |
-| `1812–1815` | DownloaderService | `DownloaderLoggingExtensions.cs` | DownloaderService |
-| `1816` | SystemProcessRunner | `ProcessRunnerLoggingExtensions.cs` | SystemProcessRunner |
-| `1817–1821` | SystemProcessHandle | `ProcessHandleLoggingExtensions.cs` | SystemProcessHandle (incl. ProcessTerminator) |
-| `1900` | Client-side (WASM) | `ClientLoggingExtensions.cs` | LicenseService |
+| Range | Service | Extension File |
+|-------|---------|----------------|
+| `1000001–1000008` | AuthenticationService | `AuthenticationLoggingExtensions.cs` |
+| `1100001–1100012` | FileSystemService | `FileSystemServiceLoggingExtensions.cs` |
+| `1200001–1200006` | FileManagerService | `FileManagerServiceLoggingExtensions.cs` |
+| `1300001–1300007` | LogDownloadService | `LogDownloadServiceLoggingExtensions.cs` |
+| `1400001–1400011` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` |
+| `1500001–1500009` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` |
+| `1600001–1600022` | SiteLifecycleManager | `ProcessLoggingExtensions.cs` |
+| `1700001–1700016` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` |
+| `1800001–1800044` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` |
+| `1900001–1900018` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` |
+| `2000001–2000012` | DsmApiClient | `DsmApiLoggingExtensions.cs` |
+| `2100001–2100008` | ArchiveExtractorService | `ArchiveExtractorLoggingExtensions.cs` |
+| `2200001–2200004` | VersionsDetectorService | `VersionsDetectorLoggingExtensions.cs` |
+| `2300001–2300002` | PlatformInfoService | `PlatformInfoLoggingExtensions.cs` |
+| `2400001–2400005` | DownloaderService | `DownloaderLoggingExtensions.cs` |
+| `2500001` | SystemProcessRunner | `ProcessRunnerLoggingExtensions.cs` |
+| `2600001–2600005` | SystemProcessHandle | `ProcessHandleLoggingExtensions.cs` |
+| `2700001` | LicenseService (client) | `ClientLoggingExtensions.cs` |
 
-**Total:** 145 `[LoggerMessage]` methods across 19 extension files, zero CA2254 warnings.
+**Total:** 215 `[LoggerMessage]` methods across 19 extension files, zero CA2254 warnings.
 
 **Serilog Configuration:**
 
