@@ -3,6 +3,7 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Logging
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Controls
 
 @implements IDialogContentComponent
@@ -10,7 +11,7 @@
 
 @inject IDialogService DialogService
 @inject IWebSiteHostingService HostingService
-@inject ILogger<WebSiteConfigurationDialog> Logger
+@inject ILogger<ILogWebSiteConfigurationDialog> Logger
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -184,7 +185,7 @@
         catch (Exception ex)
         {
             var action = IsEditMode ? "updating" : "creating";
-            Logger.LogError(ex, "Error {Action} website", action);
+            Logger.ErrorModifyingWebsite(ex, action);
             await DialogService.ShowErrorAsync($"Error {action} website: {ex.Message}");
         }
     }

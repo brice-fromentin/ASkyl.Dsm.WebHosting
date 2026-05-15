@@ -503,7 +503,7 @@ public class WebSiteHostingService(
         try
         {
             await reverseProxyManager.DeleteAsync(configuration);
-            logger.LogInformation("Reverse proxy rule deleted for '{SiteName}'", configuration.Name);
+            logger.ReverseProxyRuleDeleted(configuration.Name);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex)

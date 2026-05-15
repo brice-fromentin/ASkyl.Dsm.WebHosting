@@ -2,12 +2,13 @@
 @using Askyl.Dsm.WebHosting.Constants.Runtime
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Logging
 
 @implements IDialogContentComponent
 
 @inject IDotnetVersionService DotnetVersionService
 @inject IToastService ToastService
-@inject ILogger<DotnetVersionsDialog> Logger
+@inject ILogger<ILogDotnetVersionsDialog> Logger
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">.NET Versions</FluentLabel>
@@ -96,7 +97,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error while searching for global .NET version");
+            Logger.ErrorSearchingDotnetVersion(ex);
             ErrorMessage = $"Error while searching for global .NET version: {ex.Message}";
             DotnetVersions = [];
         }

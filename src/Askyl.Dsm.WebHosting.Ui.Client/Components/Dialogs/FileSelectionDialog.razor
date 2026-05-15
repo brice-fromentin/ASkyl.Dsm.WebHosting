@@ -3,6 +3,7 @@
 @using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Logging
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -11,7 +12,7 @@
 @inject IFileSystemService FileSystemService
 @inject ITreeContentService TreeContentService
 @inject IJSRuntime JSRuntime
-@inject ILogger<FileSelectionDialog> Logger
+@inject ILogger<ILogFileSelectionDialog> Logger
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -133,7 +134,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to load shared folders");
+            Logger.FailedToLoadSharedFolders(ex);
             await ShowErrorAsync(ex.Message);
             TreeItems = [];
         }
@@ -148,7 +149,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to load child directories for path {Path}", path);
+            Logger.FailedToLoadChildDirectories(ex, path);
             return [];
         }
     }
@@ -194,7 +195,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to load directory contents for path {Path}", selectedPath);
+            Logger.FailedToLoadDirectoryContents(ex, selectedPath);
             await HandleDirectoryLoadErrorAsync($"{ApplicationConstants.FailedToLoadDirectoryContentsErrorMessage}: {ex.Message}");
         }
     }
@@ -212,7 +213,7 @@
 
     private async Task OnFileDoubleClick(FsEntry file)
     {
-        Logger.LogDebug("File double-clicked: {FileName} (IsDirectory: {IsDirectory})", file.Name, file.IsDirectory);
+        Logger.FileDoubleClicked(file.Name, file.IsDirectory);
 
         if (file.IsDirectory)
         {

@@ -95,10 +95,25 @@ static class LogEventIds
 
     #endregion
 
-    #region Client-side (WASM) — 2700000–2700999
+    #region Client-side (WASM) — 7000000–7900000
 
-    /// <summary>LicenseService (client) — ID 2700001.</summary>
-    public const int ClientBase = 2700000;
+    /// <summary>LicenseService (client) — ID 7000001.</summary>
+    public const int ClientBase = 7000000;
+
+    /// <summary>Home page — IDs 7100001–7100015.</summary>
+    public const int HomeBase = 7100000;
+
+    /// <summary>AspNetReleasesDialog — IDs 7200001–7200004.</summary>
+    public const int AspNetReleasesDialogBase = 7200000;
+
+    /// <summary>FileSelectionDialog — IDs 7300001–7300004.</summary>
+    public const int FileSelectionDialogBase = 7300000;
+
+    /// <summary>DotnetVersionsDialog — ID 7400001.</summary>
+    public const int DotnetVersionsDialogBase = 7400000;
+
+    /// <summary>WebSiteConfigurationDialog — ID 7500001.</summary>
+    public const int WebSiteConfigurationDialogBase = 7500000;
 
     #endregion
 }

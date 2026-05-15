@@ -21,8 +21,8 @@ project as a proper shared infrastructure library.
 | **Serilog (server)** | ✅ Enhanced — `{EventId}` in template, `CloseAndFlush()` on shutdown, `WithActivity` enricher |
 | **Serilog (client)** | BrowserConsole sink, min level `Debug` |
 | **Server-side logger calls** | ✅ 126 calls migrated to extension methods |
-| **Client-side logger calls** | ❌ 25 direct calls remain in Blazor `.razor` components |
-| **UI service logger calls** | ❌ 1 direct call remains in `WebSiteHostingService.cs` (Ui project) |
+| **Client-side logger calls** | ✅ 25 calls migrated to extension methods |
+| **UI service logger calls** | ✅ 1 call migrated to extension method |
 | **CA2254 warnings** | ✅ Zero — eliminated by `[LoggerMessage]` migration |
 | **LogDownloadService** | ✅ Migrated — 7 calls → extension methods |
 
@@ -109,8 +109,8 @@ The `[LoggerMessage]` extensions are organized into separate files **per service
 | `DownloaderLoggingExtensions.cs` | Infrastructure | 5 | 2400001-2400005 | DownloaderService |
 | `ProcessRunnerLoggingExtensions.cs` | Infrastructure | 1 | 2500001 | SystemProcessRunner |
 | `ProcessHandleLoggingExtensions.cs` | Infrastructure | 5 | 2600001-2600005 | SystemProcessHandle |
-| `ClientLoggingExtensions.cs` | Client-side (WASM) | 1 | 2700001 | LicenseService |
-| **Total** | | **215** | | |
+| `ClientLoggingExtensions.cs` | Client-side (WASM) | 25 | 7000001, 7100001-7100015, 7200001-7200004, 7300001-7300004, 7400001, 7500001 | LicenseService, Home, dialogs |
+| **Total** | | **240** | | |
 
 ### Event ID Ranges
 
@@ -136,7 +136,12 @@ Each **service** gets a dedicated 100K range at 1M spacing to prevent cross-serv
 | `2400000` | DownloaderService | `2400001–2400005` |
 | `2500000` | SystemProcessRunner | `2500001` |
 | `2600000` | SystemProcessHandle | `2600001–2600005` |
-| `2700000` | LicenseService (client) | `2700001` |
+| `7000000` | LicenseService (client) | `7000001` |
+| `7100000` | Home page (client) | `7100001–7100015` |
+| `7200000` | AspNetReleasesDialog (client) | `7200001–7200004` |
+| `7300000` | FileSelectionDialog (client) | `7300001–7300004` |
+| `7400000` | DotnetVersionsDialog (client) | `7400001` |
+| `7500000` | WebSiteConfigurationDialog (client) | `7500001` |
 
 ---
 
@@ -325,18 +330,18 @@ sole caller for all process termination logging.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| **T7.1** | Extend `ClientLoggingExtensions.cs` — add `ILogHome` category + 15 methods for `Home.razor` | ⬜ Pending |
-| **T7.2** | Extend `ClientLoggingExtensions.cs` — add `ILogAspNetReleasesDialog` category + 4 methods | ⬜ Pending |
-| **T7.3** | Extend `ClientLoggingExtensions.cs` — add `ILogFileSelectionDialog` category + 4 methods | ⬜ Pending |
-| **T7.4** | Extend `ClientLoggingExtensions.cs` — add `ILogDotnetVersionsDialog` category + 1 method | ⬜ Pending |
-| **T7.5** | Extend `ClientLoggingExtensions.cs` — add `ILogWebSiteConfigurationDialog` category + 1 method | ⬜ Pending |
-| **T7.6** | Create `UiWebSiteHostingLoggingExtensions.cs` — add `ILogUiWebSiteHostingService` + 1 method | ⬜ Pending |
-| **T7.7** | Migrate `Home.razor` — replace 15 direct calls with extension method calls | ⬜ Pending |
-| **T7.8** | Migrate `AspNetReleasesDialog.razor` — replace 4 direct calls | ⬜ Pending |
-| **T7.9** | Migrate `FileSelectionDialog.razor` — replace 4 direct calls | ⬜ Pending |
-| **T7.10** | Migrate `DotnetVersionsDialog.razor` — replace 1 direct call | ⬜ Pending |
-| **T7.11** | Migrate `WebSiteConfigurationDialog.razor` — replace 1 direct call | ⬜ Pending |
-| **T7.12** | Migrate `WebSiteHostingService.cs` (Ui) — replace 1 direct call | ⬜ Pending |
+| **T7.1** | Extend `ClientLoggingExtensions.cs` — add `ILogHome` category + 15 methods for `Home.razor` | ✅ Done |
+| **T7.2** | Extend `ClientLoggingExtensions.cs` — add `ILogAspNetReleasesDialog` category + 4 methods | ✅ Done |
+| **T7.3** | Extend `ClientLoggingExtensions.cs` — add `ILogFileSelectionDialog` category + 4 methods | ✅ Done |
+| **T7.4** | Extend `ClientLoggingExtensions.cs` — add `ILogDotnetVersionsDialog` category + 1 method | ✅ Done |
+| **T7.5** | Extend `ClientLoggingExtensions.cs` — add `ILogWebSiteConfigurationDialog` category + 1 method | ✅ Done |
+| **T7.6** | Reuse existing `ReverseProxyRuleDeleted` in `WebsiteLoggingExtensions.cs` (ID 1800033) | ✅ Done |
+| **T7.7** | Migrate `Home.razor` — replace 15 direct calls with extension method calls | ✅ Done |
+| **T7.8** | Migrate `AspNetReleasesDialog.razor` — replace 4 direct calls | ✅ Done |
+| **T7.9** | Migrate `FileSelectionDialog.razor` — replace 4 direct calls | ✅ Done |
+| **T7.10** | Migrate `DotnetVersionsDialog.razor` — replace 1 direct call | ✅ Done |
+| **T7.11** | Migrate `WebSiteConfigurationDialog.razor` — replace 1 direct call | ✅ Done |
+| **T7.12** | Migrate `WebSiteHostingService.cs` (Ui) — replace 1 direct call | ✅ Done |
 
 **Implementation Notes:**
 
@@ -355,7 +360,7 @@ The recommended execution order is:
 4. **Phase 4** — Refactor to specialized `ILogger<TService>` (improves log categorization) ✅ Done
 5. **Phase 5** — Add DSM API request/response logging (benefits from Phase 4) ✅ Done
 6. **Phase 6** — Polish Serilog configuration and shutdown handling ✅ Done
-7. **Phase 7** — Migrate client-side Blazor component logging ⬜ Pending
+7. **Phase 7** — Migrate client-side Blazor component logging ✅ Done
 
 Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T2.1-T2.2 in one commit).
 
@@ -363,9 +368,9 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 
 ## Acceptance Criteria
 
-- [x] All 215 `[LoggerMessage]` methods created and assigned event IDs (server-side)
+- [x] All 240 `[LoggerMessage]` methods created and assigned event IDs (server + client)
 - [x] All 126 server-side logger calls migrated to extension methods
-- [ ] All 26 client-side logger calls migrated to extension methods
+- [x] All 26 client-side logger calls migrated to extension methods
 - [x] Zero CA2254 warnings remaining
 - [ ] All services log key operations (start, success, failure, duration)
 - [x] DSM API requests are logged with URL, status, duration
@@ -383,7 +388,7 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 ## Notes
 
 - **DsmApi classes are external contracts** — do not modify DsmApi model/response classes during this work
-- **Client-side (WASM) logging** — 26 direct calls remain in Blazor `.razor` components (Phase 7); initial plan only covered 1 call in `LicenseService`
+- **Client-side (WASM) logging** — 26 calls migrated in Phase 7 (5 Blazor dialogs + Home page + 1 Ui service); initial plan only covered 1 call in `LicenseService`
 - **Event IDs are semantically significant** — they allow filtering and correlation in log aggregation tools
 - **Log levels guidance:**
   - `Debug` — method entry/exit, variable state, intermediate results
