@@ -2,7 +2,7 @@
 
 **Version:** 0.5.8
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 15, 2026 (Phase 5 DSM API logging, `IApiResponse` interface, compile-time generic constraints)
+**Last Updated:** May 15, 2026 (Phases 5+6 — DSM API logging, `IApiResponse`, Serilog template, graceful flush, ActivityId correlation)
 
 ---
 
@@ -70,6 +70,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
 - ✅ **LoggerMessage migration** — 126 logger calls migrated to 145 source-generated `[LoggerMessage]` extension methods across 19 files; zero CA2254 warnings
 - ✅ **DSM API logging** — request timing, authentication failures, and API errors logged via `[LoggerMessage]` extensions; compile-time `IApiResponse` constraint replaces reflection
+- ✅ **Serilog configuration** — output template with `{EventId}`, `Log.CloseAndFlush()` on graceful shutdown, `WithActivity` enricher for correlation tracking
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 

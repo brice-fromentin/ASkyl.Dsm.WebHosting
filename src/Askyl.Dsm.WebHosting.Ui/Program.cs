@@ -6,6 +6,7 @@ using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
+using Microsoft.Extensions.Hosting;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
@@ -109,5 +110,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveWebAssemblyRenderMode()
                              .AddAdditionalAssemblies(typeof(Askyl.Dsm.WebHosting.Ui.Client._Imports).Assembly);
+
+app.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping.Register(() => Log.CloseAndFlush());
 
 app.Run();

@@ -285,9 +285,15 @@ sole caller for all process termination logging.
 
 | Task | Description | Status |
 |------|-------------|--------|
-| **T6.1** | Add `{EventId}` and `{EventType}` to Serilog output template | ⬜ Not started |
-| **T6.2** | Add `Log.CloseAndFlush()` on graceful shutdown in `Program.cs` | ⬜ Not started |
-| **T6.3** | Add Serilog `WithActivityId()` enricher for correlation | ⬜ Not started |
+| **T6.1** | Add `{EventId}` and `{EventType}` to Serilog output template | ✅ Done |
+| **T6.2** | Add `Log.CloseAndFlush()` on graceful shutdown in `Program.cs` | ✅ Done |
+| **T6.3** | Add Serilog `WithActivity` enricher for correlation | ✅ Done |
+
+**Implementation Notes:**
+
+- Output template: `{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [EventId:{EventId}] {Message:lj}{NewLine}{Exception}`
+- `Log.CloseAndFlush()` registered via `IHostApplicationLifetime.ApplicationStopping` hook — single line in `Program.cs`
+- `WithActivity` enricher (built into Serilog.AspNetCore 8.0+) — adds `ActivityId`, `ActivityTraceId`, `ActivitySpanId` to log context. No additional NuGet package required.
 
 ---
 
@@ -313,8 +319,8 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 - [x] Zero CA2254 warnings remaining
 - [ ] All services log key operations (start, success, failure, duration)
 - [x] DSM API requests are logged with URL, status, duration
-- [ ] Application shutdown flushes all pending logs (`Log.CloseAndFlush()`)
-- [ ] Serilog output includes event ID and event type
+- [x] Application shutdown flushes all pending logs (`Log.CloseAndFlush()`)
+- [x] Serilog output includes event ID and event type
 - [x] Log levels are consistent (Debug/Information/Warning/Error/Critical)
 - [x] Build passes with 0 errors, 0 warnings
 - [ ] All tests pass
