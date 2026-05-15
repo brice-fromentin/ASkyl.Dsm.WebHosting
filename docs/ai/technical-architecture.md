@@ -207,8 +207,10 @@ Constants/
 ├── Runtime/                                # .NET runtime definitions (2 files)
 │   ├── DotNetFrameworkTypes.cs             # Framework type strings (ASP.NET Core, SDK, Runtime)
 │   └── RuntimeConstants.cs                 # Architecture (x64/arm/arm64), OS (linux/osx/windows)
+├── Logging/                                # Logging event ID registry (1 file)
+│   └── LogEventIds.cs                      # EventId range bases for [LoggerMessage] extensions (documentation only)
 ├── UI/                                     # User interface constants (2 files)
-│   ├── DialogConstants.cs                  # Dialog widths (auto, 60%, 75%)
+│   ├── DialogConstants.cs                  # Dialog widths (auto, 0.6, 0.75)
 │   └── FileSizeConstants.cs                # Byte calculations (KiB/MiB/GiB), formatting
 └── WebApi/                                 # API route definitions (6 files)
     ├── AuthenticationRoutes.cs             # /api/v1/authentication/* (login, logout, status)
@@ -613,6 +615,41 @@ builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
 - **Extension method pattern** for clean logger API
 - **Structured logging** support with named parameters
 - **Zero-allocation logging** for performance-critical paths
+- **Namespace-level category interfaces** — empty marker interfaces (e.g., `ILogAuthenticationService`) for `ILogger<T>` categorization, keeping Logging as a leaf node with zero project references
+- **Specialized `ILogger<T>`** — each service injects `ILogger<ILogXxx>` for automatic log categorization by service name
+
+**EventId Management:**
+
+All `[LoggerMessage]` attributes use inline `int` literals (per Microsoft convention). EventId ranges are documented in `Constants/Logging/LogEventIds.cs` as a central registry for collision prevention:
+
+| Range | Domain | Extension File | Service(s) |
+|-------|--------|----------------|------------|
+| `1000–1099` | Authentication | `AuthenticationLoggingExtensions.cs` | AuthenticationService |
+| `1100–1111` | FileSystemService | `FileSystemServiceLoggingExtensions.cs` | FileSystemService |
+| `1112–1117` | FileManagerService | `FileManagerServiceLoggingExtensions.cs` | FileManagerService |
+| `1118–1124` | LogDownloadService | `LogDownloadServiceLoggingExtensions.cs` | LogDownloadService |
+| `1200–1206` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` | FrameworkManagementService |
+| `1207–1213` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` | DotnetVersionService |
+| `1300–1316` | Process lifecycle | `ProcessLoggingExtensions.cs` | SiteLifecycleManager |
+| `1400–1410` | Reverse proxy | `ReverseProxyLoggingExtensions.cs` | ReverseProxyManagerService |
+| `1500–1533` | Website hosting | `WebsiteLoggingExtensions.cs` | WebSiteHostingService |
+| `1600–1611` | Configuration | `ConfigurationLoggingExtensions.cs` | WebSitesConfigurationService |
+| `1700–1704` | DSM API | `DsmApiLoggingExtensions.cs` | DsmApiClient |
+| `1800–1805` | ArchiveExtractorService | `ArchiveExtractorLoggingExtensions.cs` | ArchiveExtractorService |
+| `1806–1809` | VersionsDetectorService | `VersionsDetectorLoggingExtensions.cs` | VersionsDetectorService |
+| `1810–1811` | PlatformInfoService | `PlatformInfoLoggingExtensions.cs` | PlatformInfoService |
+| `1812–1815` | DownloaderService | `DownloaderLoggingExtensions.cs` | DownloaderService |
+| `1816` | SystemProcessRunner | `ProcessRunnerLoggingExtensions.cs` | SystemProcessRunner |
+| `1817–1821` | SystemProcessHandle | `ProcessHandleLoggingExtensions.cs` | SystemProcessHandle (incl. ProcessTerminator) |
+| `1900` | Client-side (WASM) | `ClientLoggingExtensions.cs` | LicenseService |
+
+**Total:** 145 `[LoggerMessage]` methods across 19 extension files, zero CA2254 warnings.
+
+**Serilog Configuration:**
+
+- Output template: `{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [EventId:{EventId}] {Message:lj}{NewLine}{Exception}`
+- Graceful flush: `Log.CloseAndFlush()` registered via `ApplicationStopping` lifetime hook
+- Activity correlation: `WithActivity` enricher adds `ActivityId`, `ActivityTraceId`, `ActivitySpanId` to log context
 
 ---
 
