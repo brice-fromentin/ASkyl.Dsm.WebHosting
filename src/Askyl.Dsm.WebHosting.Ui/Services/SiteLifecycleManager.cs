@@ -5,6 +5,7 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -158,6 +159,10 @@ public sealed class SiteLifecycleManager : IDisposable
 
     private ApiResult ProcessStartCommand()
     {
+        using var timer = new OperationTimer(elapsed => _logger.StartDuration(_configuration.Name, elapsed));
+
+        _logger.StartAttempt(_configuration.Name);
+
         if (_process?.HasExited == false)
         {
             _logger.SiteAlreadyRunning(_configuration.Name);
@@ -190,6 +195,10 @@ public sealed class SiteLifecycleManager : IDisposable
 
     private async Task<ApiResult> ProcessStopCommand(CancellationToken cancellationToken)
     {
+        using var timer = new OperationTimer(elapsed => _logger.StopDuration(_configuration.Name, elapsed));
+
+        _logger.StopAttempt(_configuration.Name);
+
         if (_process?.HasExited != false)
         {
             _logger.SiteAlreadyStopped(_configuration.Name);
@@ -283,7 +292,7 @@ public sealed class SiteLifecycleManager : IDisposable
             if (!process.HasExited)
             {
                 _logger.ProcessWaitTimeout(_configuration.Name, process.Id, timeoutSeconds * 1000L);
-                await ForceKillProcessAsync(process, cancellationToken);
+                await ForceKillProcessAsync((IProcessHandle)process, cancellationToken);
             }
         }
     }

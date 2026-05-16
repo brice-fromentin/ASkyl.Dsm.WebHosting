@@ -75,7 +75,7 @@ builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 builder.Services.AddSingleton<IReverseProxyManagerService, ReverseProxyManagerService>();
 builder.Services.AddSingleton<IWebSitesConfigurationService, WebSitesConfigurationService>();
 builder.Services.AddSingleton<WebSiteHostingService>();
-builder.Services.AddSingleton<IWebSiteHostingService>(sp => sp.GetRequiredService<WebSiteHostingService>());
+builder.Services.AddSingleton<IWebSiteHostingService>(sp => (IWebSiteHostingService)sp.GetRequiredService<WebSiteHostingService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<WebSiteHostingService>());
 
 var app = builder.Build();

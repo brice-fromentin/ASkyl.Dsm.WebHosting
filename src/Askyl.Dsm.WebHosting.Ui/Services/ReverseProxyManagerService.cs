@@ -7,6 +7,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.ReverseProxy;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Extensions;
 using Askyl.Dsm.WebHosting.Tools.Network;
 
@@ -23,7 +24,7 @@ public class ReverseProxyManagerService(
     /// </summary>
     public async Task CreateAsync(WebSiteConfiguration site)
     {
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        using var timer = new OperationTimer(elapsed => logger.CreateDuration(elapsed, site.Name));
 
         logger.CreatingReverseProxy(site.Name);
 
@@ -64,7 +65,6 @@ public class ReverseProxyManagerService(
         }
 
         logger.ReverseProxyCreated(site.Name, createdProxy.UUID);
-        logger.CreateDuration(stopwatch.ElapsedMilliseconds, site.Name);
     }
 
     /// <summary>
@@ -72,7 +72,7 @@ public class ReverseProxyManagerService(
     /// </summary>
     public async Task UpdateAsync(WebSiteConfiguration config)
     {
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        using var timer = new OperationTimer(elapsed => logger.UpdateDuration(elapsed, config.Name));
 
         logger.UpdatingReverseProxy(config.Name);
 
@@ -99,7 +99,6 @@ public class ReverseProxyManagerService(
         }
 
         logger.ReverseProxyUpdated(config.Name);
-        logger.UpdateDuration(stopwatch.ElapsedMilliseconds, config.Name);
     }
 
     /// <summary>
@@ -107,8 +106,6 @@ public class ReverseProxyManagerService(
     /// </summary>
     public async Task DeleteAsync(WebSiteConfiguration site)
     {
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
         if (site is null)
         {
             throw new ArgumentNullException(nameof(site));
@@ -123,24 +120,26 @@ public class ReverseProxyManagerService(
             return; // Graceful no-op
         }
 
+        using var timer = new OperationTimer(elapsed => logger.DeleteDuration(elapsed, site.Name));
+
         logger.DeletingReverseProxy(proxy.UUID, site.Name);
 
         try
         {
             await DeleteByUuidAsync((Guid)proxy.UUID, site.Name);
-            logger.DeleteDuration(stopwatch.ElapsedMilliseconds, site.Name);
         }
         catch (Exception ex) when (IsNotFoundError(ex.Message))
         {
             // Already deleted externally - graceful handling
             logger.ReverseProxyAlreadyDeleted(site.Name);
-            return; // Graceful no-op
+            return; // Graceful no-op — duration logged on scope exit
         }
         catch (Exception ex)
         {
             logger.FailedToDeleteReverseProxy(ex, proxy.UUID, site.Name);
-            throw;
+            throw; // Duration logged on scope exit
         }
+        // Duration logged on scope exit
     }
 
     #endregion

@@ -3,6 +3,7 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -22,6 +23,10 @@ public class FrameworkManagementService(
             logger.InstallFailedVersionRequired();
             return InstallationResult.CreateFailure("Version is required");
         }
+
+        using var timer = new OperationTimer(elapsed => logger.InstallDuration(elapsed, version));
+
+        logger.InstallStarting(version);
 
         try
         {
@@ -51,6 +56,10 @@ public class FrameworkManagementService(
             logger.UninstallFailedVersionRequired();
             return InstallationResult.CreateFailure("Version is required");
         }
+
+        using var timer = new OperationTimer(elapsed => logger.UninstallDuration(elapsed, version));
+
+        logger.UninstallStarting(version);
 
         try
         {

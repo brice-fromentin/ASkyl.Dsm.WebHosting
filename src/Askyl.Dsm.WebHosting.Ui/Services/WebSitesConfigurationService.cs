@@ -4,6 +4,7 @@ using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Threading;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -184,6 +185,10 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
 
     public async Task AddSiteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default)
     {
+        using var timer = new OperationTimer(elapsed => logger.AddSiteDuration(elapsed, site.Name));
+
+        logger.AddSiteStarting(site.Name);
+
         using (await SemaphoreLock.AcquireAsync(this, () => EnsureInitializedAndLoadedAsync(cancellationToken), cancellationToken))
         {
             if (_cachedConfiguration!.Sites.Any(s => s.Name == site.Name))
@@ -194,12 +199,16 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
             site.Id = Guid.NewGuid();
             _cachedConfiguration.Sites.Add(site);
 
-            await SaveConfigurationAsync(_cachedConfiguration, cancellationToken);
+            await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
         }
     }
 
     public async Task UpdateSiteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default)
     {
+        using var timer = new OperationTimer(elapsed => logger.UpdateSiteDuration(elapsed, site.Name));
+
+        logger.UpdateSiteStarting(site.Name);
+
         using (await SemaphoreLock.AcquireAsync(this, () => EnsureInitializedAndLoadedAsync(cancellationToken), cancellationToken))
         {
             var existingSiteIndex = _cachedConfiguration!.Sites.FindIndex(s => s.Id == site.Id);
@@ -216,7 +225,7 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
 
             _cachedConfiguration.Sites[existingSiteIndex] = site;
 
-            await SaveConfigurationAsync(_cachedConfiguration, cancellationToken);
+            await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
         }
     }
 
@@ -226,9 +235,13 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
         {
             var site = _cachedConfiguration!.Sites.FirstOrDefault(s => s.Id == siteId) ?? throw new InvalidOperationException($"Site with Id '{siteId}' not found");
 
+            using var timer = new OperationTimer(elapsed => logger.RemoveSiteDuration(elapsed, site.Name));
+
+            logger.RemoveSiteStarting(site.Name);
+
             _cachedConfiguration.Sites.Remove(site);
 
-            await SaveConfigurationAsync(_cachedConfiguration, cancellationToken);
+            await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
         }
     }
 

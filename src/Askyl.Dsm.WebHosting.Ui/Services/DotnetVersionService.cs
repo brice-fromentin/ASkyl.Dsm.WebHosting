@@ -3,6 +3,7 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -65,6 +66,9 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
     /// </summary>
     public async Task RefreshCacheAsync()
     {
+        using var timer = new OperationTimer(elapsed => logger.RefreshCacheDuration(elapsed));
+
+        logger.RefreshCacheStarting();
         await versionsDetector.RefreshCacheAsync();
     }
 

@@ -4,6 +4,7 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -56,6 +57,10 @@ public class WebSiteHostingService(
     /// </summary>
     public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration)
     {
+        using var timer = new OperationTimer(elapsed => logger.AddWebsiteDuration(elapsed, configuration.Name));
+
+        logger.AddWebsiteStarting(configuration.Name);
+
         try
         {
             // STEP 1: Set HTTP group permissions BEFORE adding website (CRITICAL - must succeed)
@@ -101,6 +106,10 @@ public class WebSiteHostingService(
             logger.InstanceNotFoundUpdate(configuration.Name);
             return WebSiteInstanceResult.CreateFailure($"Instance not found for website '{configuration.Name}'");
         }
+
+        using var timer = new OperationTimer(elapsed => logger.UpdateWebsiteDuration(elapsed, configuration.Name));
+
+        logger.UpdateWebsiteStarting(configuration.Name);
 
         try
         {
@@ -154,6 +163,10 @@ public class WebSiteHostingService(
             return ApiResult.CreateFailure($"Site with ID '{id}' not found");
         }
 
+        using var timer = new OperationTimer(elapsed => logger.StartWebsiteDuration(elapsed, instance.Configuration.Name));
+
+        logger.StartWebsiteStarting(instance.Configuration.Name);
+
         if (!_lifecycleManagers.TryGetValue(id, out var lifecycleManager))
         {
             logger.LifecycleManagerNotFoundStart(id);
@@ -181,6 +194,10 @@ public class WebSiteHostingService(
             logger.CannotStopSiteNotFound(id);
             return ApiResult.CreateFailure($"Site with ID '{id}' not found");
         }
+
+        using var timer = new OperationTimer(elapsed => logger.StopWebsiteDuration(elapsed, instance.Configuration.Name));
+
+        logger.StopWebsiteStarting(instance.Configuration.Name);
 
         if (!_lifecycleManagers.TryGetValue(id, out var lifecycleManager))
         {
@@ -350,6 +367,10 @@ public class WebSiteHostingService(
         }
 
         var siteName = instance.Configuration.Name;
+
+        using var timer = new OperationTimer(elapsed => logger.RemoveWebsiteDuration(elapsed, siteName));
+
+        logger.RemoveWebsiteStarting(siteName);
 
         try
         {

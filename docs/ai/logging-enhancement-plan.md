@@ -17,11 +17,11 @@ project as a proper shared infrastructure library.
 
 | Component | Status |
 |-----------|--------|
-| **Logging project** | ✅ Complete — 17 extension files, 215 `[LoggerMessage]` methods |
+| **Logging project** | ✅ Complete — 18 extension files, 240 `[LoggerMessage]` methods |
 | **Serilog (server)** | ✅ Enhanced — `{EventId}` in template, `CloseAndFlush()` on shutdown, `WithActivity` enricher |
 | **Serilog (client)** | BrowserConsole sink, min level `Debug` |
 | **Server-side logger calls** | ✅ 126 calls migrated to extension methods |
-| **Client-side logger calls** | ✅ 25 calls migrated to extension methods |
+| **Client-side logger calls** | ✅ 26 calls migrated to extension methods |
 | **UI service logger calls** | ✅ 1 call migrated to extension method |
 | **CA2254 warnings** | ✅ Zero — eliminated by `[LoggerMessage]` migration |
 | **LogDownloadService** | ✅ Migrated — 7 calls → extension methods |
@@ -169,7 +169,7 @@ Each **service** gets a dedicated 100K range at 1M spacing to prevent cross-serv
 | **T1.16** | Create `DownloaderLoggingExtensions.cs` — 4 methods (1812-1815) | ✅ Done |
 | **T1.17** | Create `ProcessRunnerLoggingExtensions.cs` — 1 method (1816) | ✅ Done |
 | **T1.18** | Create `ProcessHandleLoggingExtensions.cs` — 2 methods (1817-1818) | ✅ Done |
-| **T1.19** | Create `ProcessTerminatorLoggingExtensions.cs` — 3 methods (1819-1821) | ✅ Done |
+| **T1.19** | Create `ProcessTerminatorLoggingExtensions.cs` — 3 methods (1819-1821) — later consolidated into `ProcessHandleLoggingExtensions.cs` (T4.17) | ✅ Done |
 | **T1.20** | Create `ClientLoggingExtensions.cs` — 1 method (1900) | ✅ Done |
 
 **Note:** Pattern uses `public static partial class` with `this ILogger logger` extension methods
@@ -210,9 +210,10 @@ Each **service** gets a dedicated 100K range at 1M spacing to prevent cross-serv
 - `DownloaderService` — Logs download start (file name + destination), completion (with file size), skip (file exists), and failure
 - `SystemProcessRunner` — Logs process spawn (file name, arguments, working directory)
 - `SystemProcessHandle` — Logs SIGTERM/SIGKILL sent, process exit (with exit code), and termination failures
-- `ProcessTerminator` — Static class; logging handled by `SystemProcessHandle` wrapper (logs before/after calling `ProcessTerminator.SendGracefulShutdownSignal`)
+- `ProcessTerminator` — Static class; logging handled by `SystemProcessHandle` wrapper. Methods later consolidated
+  into `ProcessHandleLoggingExtensions.cs` (T4.17).
 - `DotnetVersionService` (server-side) — Logs detection failures, channel queries, and release lookups (event IDs 1207-1213 in `FrameworkManagementLoggingExtensions.cs`)
-- Event IDs updated: `DownloaderService` 1812-1815, `SystemProcessRunner` 1816, `SystemProcessHandle` 1817-1818, `ProcessTerminator` 1819-1821
+- Event IDs updated: `DownloaderService` 1812-1815, `SystemProcessRunner` 1816, `SystemProcessHandle` 1817-1821 (includes consolidated ProcessTerminator methods)
 
 ### Phase 4: Specialized `ILogger<T>` with Namespace-Level Category Interfaces
 
@@ -345,10 +346,13 @@ sole caller for all process termination logging.
 
 **Implementation Notes:**
 
-- Client-side components use `ILogger` injected via `[Inject]` — need to switch to `ILogger<ILogXxx>` specialized types
-- `.razor` files use `Logger` field directly in `@code` blocks — extension methods will be called as `Logger.MethodName(args)`
-- Consider consolidating all client-side extensions into a single `ClientLoggingExtensions.cs` file with multiple category interfaces
-- Event ID base for client UI: `2700000` (existing `LicenseService` uses `2700001`), new components get sub-ranges
+- Client-side components switched from `ILogger` to `ILogger<ILogXxx>` specialized types injected via `[Inject]`
+- `.razor` files use `Logger` field directly in `@code` blocks — extension methods called as `Logger.MethodName(args)`
+- All client-side extensions consolidated into a single `ClientLoggingExtensions.cs` file with multiple category interfaces
+- Event ID base for client UI: `7000000` range with 10K slots per component:
+  LicenseService `7000000`, Home `7100000`, AspNetReleasesDialog `7200000`,
+  FileSelectionDialog `7300000`, DotnetVersionsDialog `7400000`,
+  WebSiteConfigurationDialog `7500000`
 
 ## Execution Order
 
@@ -372,13 +376,13 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 - [x] All 126 server-side logger calls migrated to extension methods
 - [x] All 26 client-side logger calls migrated to extension methods
 - [x] Zero CA2254 warnings remaining
-- [ ] All services log key operations (start, success, failure, duration)
+- [x] All services log key operations (start, success, failure, duration)
 - [x] DSM API requests are logged with URL, status, duration
 - [x] Application shutdown flushes all pending logs (`Log.CloseAndFlush()`)
 - [x] Serilog output includes event ID and event type
 - [x] Log levels are consistent (Debug/Information/Warning/Error/Critical)
 - [x] Build passes with 0 errors, 0 warnings
-- [x] All tests pass (181 tests)
+- [x] All tests pass (194 tests)
 - [x] Format clean (`dotnet format`)
 - [x] Markdown valid (`markdownlint`)
 - [x] All server-side services use specialized `ILogger<ILogXxx>` for log categorization
@@ -403,3 +407,10 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 - **ProcessHandle consolidation** — `ProcessTerminatorLoggingExtensions.cs` was removed;
   its methods were consolidated into `ProcessHandleLoggingExtensions.cs`
   (event IDs 1817-1821) since `SystemProcessHandle` is the sole caller
+- **OperationTimer** — `Askyl.Dsm.WebHosting.Tools.Diagnostics.OperationTimer` is a value-type
+  (`struct`) that starts a `Stopwatch` on construction and invokes a callback with elapsed
+  milliseconds on disposal. Use with `using var` to guarantee duration capture on all exit paths
+  (success, exception, early return). Replaced manual `Stopwatch.StartNew()` boilerplate in
+  ReverseProxyManagerService, FrameworkManagementService, WebSiteHostingService,
+  SiteLifecycleManager, DownloaderService, DotnetVersionService, and WebSitesConfigurationService.
+  DsmApiClient retains inline `Stopwatch` (single HTTP call, duration passed to `ApiRequest` method)

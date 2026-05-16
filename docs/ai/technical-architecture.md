@@ -71,6 +71,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ✅ **LoggerMessage migration** — 126 logger calls migrated to 145 source-generated `[LoggerMessage]` extension methods across 19 files; zero CA2254 warnings
 - ✅ **DSM API logging** — request timing, authentication failures, and API errors logged via `[LoggerMessage]` extensions; compile-time `IApiResponse` constraint replaces reflection
 - ✅ **Serilog configuration** — output template with `{EventId}`, `Log.CloseAndFlush()` on graceful shutdown, `WithActivity` enricher for correlation tracking
+- ✅ **OperationTimer** — value-type disposable timer for scope-based duration logging across all services; replaced manual `Stopwatch` boilerplate with single-line `using var` pattern
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 
@@ -371,6 +372,8 @@ Tools/
 │   └── ProcessTerminator.cs                # Cross-platform process termination (SIGTERM/CloseMainWindow)
 ├── Network/                                # Network communication
 │   └── DsmApiClient.cs                     # Centralized DSM API client
+├── Diagnostics/                            # Diagnostic utilities
+│   └── OperationTimer.cs                   # Disposable scope timer (Stopwatch + callback on Dispose)
 ├── Runtime/                                # .NET runtime management (DI-based)
     ├── DownloaderService.cs                # Binary download utility (implements IDownloaderService)
     └── VersionsDetectorService.cs          # Version detection with smart caching (implements IVersionsDetectorService)
@@ -781,6 +784,49 @@ public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
 - Adapts to different DSM API requirements
 - Clean separation of serialization logic
 - Easy to extend with new formats
+
+### 7. Disposable Scope Pattern (OperationTimer)
+
+**`OperationTimer`** — value-type (`struct`) disposable timer in `Tools/Diagnostics/OperationTimer.cs`.
+
+Starts a `Stopwatch` on construction and invokes a callback with elapsed milliseconds on disposal. Enables scope-based duration logging without manual start/stop boilerplate.
+
+```csharp
+// Single-line usage — timer starts on construction, callback fires on Dispose
+using var timer = new OperationTimer(elapsed => logger.FrameworkInstalledDuration(elapsed, version));
+
+// ... method body ...
+
+// When method returns (success or exception), timer.Dispose() invokes the callback
+```
+
+**Key Features:**
+
+- **Value type** — zero heap allocation; not `readonly` struct (requires mutable `_disposed` flag)
+- **Dispose idempotency** — callback fires exactly once regardless of how many times `Dispose()` is called
+- **Exception-safe** — `using var` ensures callback fires on both success paths and exception paths
+- **Elapsed property** — exposes `ElapsedMilliseconds` for inline access without disposing
+
+**Usage Across Services:**
+
+| Service | Methods with OperationTimer |
+|-----------|-----------|
+| ReverseProxyManagerService | Create, Update, Delete |
+| FrameworkManagementService | Install, Uninstall |
+| WebSiteHostingService | Add, Update, Start, Stop, Remove |
+| SiteLifecycleManager | ProcessStartCommand, ProcessStopCommand |
+| DownloaderService | DownloadReleaseToAsync |
+| DotnetVersionService | RefreshCacheAsync |
+| WebSitesConfigurationService | AddSite, UpdateSite, RemoveSite |
+
+**Note:** DsmApiClient retains inline `Stopwatch` (single HTTP call, duration passed directly to `ApiRequest` method).
+
+**Benefits:**
+
+- Eliminates repetitive `Stopwatch.StartNew()` / `Stop()` / `logger.Xxx(elapsed)` boilerplate
+- Single-line declaration makes intent clear (measure this method's duration)
+- Exception-safe — duration logged even when method throws
+- Combines with `SemaphoreLock` for locked + timed scopes
 
 ---
 
