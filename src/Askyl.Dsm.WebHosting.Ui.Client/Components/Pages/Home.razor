@@ -11,13 +11,14 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Authentication
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Logging
 @using Askyl.Dsm.WebHosting.Ui.Client.Interfaces
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 
 @inject IDialogService DialogService
 @inject IAuthenticationService AuthService
 @inject IWebSiteHostingService WebsiteHostingService
-@inject ILogger<Home> Logger
+@inject ILogger<ILogHome> Logger
 @inject NavigationManager navigation
 @inject IToastService ToastService
 
@@ -110,18 +111,18 @@
             
             if (!result.Success || result.Value is null)
             {
-                Logger.LogWarning("Failed to load websites: {Message}", result.Message ?? "Unknown error");
+                Logger.FailedToLoadWebsites(result.Message ?? "Unknown error");
                 Instances = [];
                 ShowSafeErrorToast($"Failed to load websites: {result.Message}");
                 return;
             }
 
             Instances = result.Value;
-            Logger.LogInformation("Loaded {WebsiteCount} website instances", Instances.Count);
+            Logger.LoadedWebsites(Instances.Count);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading websites");
+            Logger.ErrorLoadingWebsites(ex);
             Instances = [];
             ShowSafeErrorToast($"Failed to load websites: {ex.Message}");
         }
@@ -171,18 +172,18 @@
 
             if (!deleteResult.Success)
             {
-                Logger.LogWarning("Failed to delete website: {ErrorMessage}", deleteResult.Message);
+                Logger.FailedToDeleteWebsite(deleteResult.Message ?? "Unknown error");
                 ShowSafeErrorToast(deleteResult.Message ?? "Failed to delete website");
                 return;
             }
 
-            Logger.LogInformation("Website '{WebsiteName}' deleted successfully", selectedName);
+            Logger.WebsiteDeleted(selectedName);
             Instances.RemoveAll(i => i.Id == selectedId);
             SelectedInstance = null;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error deleting website");
+            Logger.ErrorDeletingWebsite(ex);
             ShowSafeErrorToast($"Error deleting website: {ex.Message}");
         }
     }
@@ -224,17 +225,17 @@
 
             if (!result.Success)
             {
-                Logger.LogWarning("Failed to start website: {ErrorMessage}", result.Message);
+                Logger.FailedToStartWebsite(result.Message ?? "Unknown error");
                 ShowSafeErrorToast(result.Message ?? "Failed to start website");
                 return;
             }
 
-            Logger.LogInformation("Website '{WebsiteName}' started successfully", selectedName);
+            Logger.WebsiteStarted(selectedName);
             await LoadInstancesAsync();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error starting website");
+            Logger.ErrorStartingWebsite(ex);
             ShowSafeErrorToast($"Error starting website: {ex.Message}");
         }
     }
@@ -257,17 +258,17 @@
 
             if (!result.Success)
             {
-                Logger.LogWarning("Failed to stop website: {ErrorMessage}", result.Message);
+                Logger.FailedToStopWebsite(result.Message ?? "Unknown error");
                 ShowSafeErrorToast(result.Message ?? "Failed to stop website");
                 return;
             }
 
-            Logger.LogInformation("Website '{WebsiteName}' stopped successfully", selectedName);
+            Logger.WebsiteStopped(selectedName);
             await LoadInstancesAsync();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error stopping website");
+            Logger.ErrorStoppingWebsite(ex);
             ShowSafeErrorToast($"Error stopping website: {ex.Message}");
         }
     }
@@ -293,17 +294,17 @@
 
             if (!result.Success)
             {
-                Logger.LogWarning("Logout failed: {ErrorMessage}", result.Message);
+                Logger.LogoutFailed(result.Message ?? "Unknown error");
                 ShowSafeErrorToast(result.Message ?? "Failed to logout");
                 return;
             }
 
-            Logger.LogInformation("User logged out successfully");
+            Logger.LoggedOut();
             navigation.NavigateTo(ApplicationConstants.LoginPagePath);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error during logout");
+            Logger.ErrorDuringLogout(ex);
             ShowSafeErrorToast($"Error during logout: {ex.Message}");
         }
     }

@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using Askyl.Dsm.WebHosting.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
@@ -37,7 +39,9 @@ public interface IProcessHandle : IDisposable
 /// Wraps <see cref="Process"/> to implement <see cref="IProcessHandle"/>.
 /// Delegates graceful shutdown to <see cref="ProcessTerminator"/>.
 /// </summary>
-internal sealed class SystemProcessHandle(Process process) : IProcessHandle
+/// <param name="logger">Logger instance.</param>
+/// <param name="process">The underlying process.</param>
+internal sealed class SystemProcessHandle(ILogger<ILogSystemProcessHandle> logger, Process process) : IProcessHandle
 {
     private bool _isDisposed;
 
@@ -46,14 +50,36 @@ internal sealed class SystemProcessHandle(Process process) : IProcessHandle
 
     public void SendGracefulShutdownSignal()
     {
-        ProcessTerminator.SendGracefulShutdownSignal(process);
+        if (process.HasExited)
+        {
+            return;
+        }
+
+        logger.SigTermSent(process.Id);
+
+        try
+        {
+            ProcessTerminator.SendGracefulShutdownSignal(process);
+        }
+        catch (Exception ex)
+        {
+            logger.FailedToTerminateProcess(ex, process.Id);
+            throw;
+        }
     }
 
     public async Task WaitForExitAsync(CancellationToken cancellationToken)
-        => await process.WaitForExitAsync(cancellationToken);
+    {
+        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+
+        logger.ProcessExited(process.Id, process.ExitCode);
+    }
 
     public void Kill()
-        => process.Kill();
+    {
+        logger.SigKillSent(process.Id);
+        process.Kill();
+    }
 
     public void Dispose()
     {

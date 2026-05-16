@@ -1,10 +1,12 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
+using Microsoft.Extensions.Hosting;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
@@ -45,7 +47,7 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddSingleton<IPlatformInfoService, PlatformInfoService>();
 
 // Register file manager service with configured root path for runtimes
-builder.Services.AddScoped<IFileManagerService>(sp => new FileManagerService(sp.GetRequiredService<ILogger<FileManagerService>>(), ApplicationConstants.RuntimesRootPath));
+builder.Services.AddScoped<IFileManagerService>(sp => new FileManagerService(sp.GetRequiredService<ILogger<ILogFileManagerService>>(), ApplicationConstants.RuntimesRootPath));
 
 // Register archive extractor service (Scoped - depends on Scoped IFileManagerService)
 builder.Services.AddScoped<IArchiveExtractorService, ArchiveExtractorService>();
@@ -73,7 +75,7 @@ builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 builder.Services.AddSingleton<IReverseProxyManagerService, ReverseProxyManagerService>();
 builder.Services.AddSingleton<IWebSitesConfigurationService, WebSitesConfigurationService>();
 builder.Services.AddSingleton<WebSiteHostingService>();
-builder.Services.AddSingleton<IWebSiteHostingService>(sp => sp.GetRequiredService<WebSiteHostingService>());
+builder.Services.AddSingleton<IWebSiteHostingService>(sp => (IWebSiteHostingService)sp.GetRequiredService<WebSiteHostingService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<WebSiteHostingService>());
 
 var app = builder.Build();
@@ -108,5 +110,7 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveWebAssemblyRenderMode()
                              .AddAdditionalAssemblies(typeof(Askyl.Dsm.WebHosting.Ui.Client._Imports).Assembly);
+
+app.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping.Register(() => Log.CloseAndFlush());
 
 app.Run();

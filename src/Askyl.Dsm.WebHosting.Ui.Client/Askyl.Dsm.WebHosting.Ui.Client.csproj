@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.7" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.8" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.14.1" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.14.1" />
     <PackageReference Include="Roslynator.Analyzers" Version="4.15.0" />
@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Constants/Askyl.Dsm.WebHosting.Constants.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Data/Askyl.Dsm.WebHosting.Data.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Logging/Askyl.Dsm.WebHosting.Logging.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Tools/Askyl.Dsm.WebHosting.Tools.csproj" />
   </ItemGroup>
 

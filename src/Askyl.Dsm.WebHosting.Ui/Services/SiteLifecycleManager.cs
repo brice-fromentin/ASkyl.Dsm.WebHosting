@@ -4,6 +4,8 @@ using System.Threading.Channels;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -15,7 +17,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// </summary>
 public sealed class SiteLifecycleManager : IDisposable
 {
-    private readonly ILogger<SiteLifecycleManager> _logger;
+    private readonly ILogger<ILogSiteLifecycleManager> _logger;
     private readonly IProcessRunner _processRunner;
     private readonly WebSiteConfiguration _configuration;
     private readonly Channel<LifecycleCommand> _channel = Channel.CreateBounded<LifecycleCommand>(new BoundedChannelOptions(16)
@@ -28,7 +30,7 @@ public sealed class SiteLifecycleManager : IDisposable
     private IProcessHandle? _process;
     private volatile bool _isDisposing;
 
-    public SiteLifecycleManager(ILogger<SiteLifecycleManager> logger, IProcessRunner processRunner, WebSiteConfiguration configuration)
+    public SiteLifecycleManager(ILogger<ILogSiteLifecycleManager> logger, IProcessRunner processRunner, WebSiteConfiguration configuration)
     {
         _logger = logger;
         _processRunner = processRunner;
@@ -44,7 +46,7 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (_isDisposing)
         {
-            _logger.LogWarning("Cannot start site '{SiteName}': lifecycle manager is disposing", _configuration.Name);
+            _logger.CannotStartSiteDisposing(_configuration.Name);
             return ApiResult.CreateFailure("Site configuration is being updated");
         }
 
@@ -65,7 +67,7 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (_isDisposing)
         {
-            _logger.LogWarning("Cannot stop site '{SiteName}': lifecycle manager is disposing", _configuration.Name);
+            _logger.CannotStopSiteDisposing(_configuration.Name);
             return ApiResult.CreateFailure("Site configuration is being updated");
         }
 
@@ -157,9 +159,13 @@ public sealed class SiteLifecycleManager : IDisposable
 
     private ApiResult ProcessStartCommand()
     {
+        using var timer = new OperationTimer(elapsed => _logger.StartDuration(_configuration.Name, elapsed));
+
+        _logger.StartAttempt(_configuration.Name);
+
         if (_process?.HasExited == false)
         {
-            _logger.LogWarning("Site '{SiteName}' is already running", _configuration.Name);
+            _logger.SiteAlreadyRunning(_configuration.Name);
             return ApiResult.CreateFailure($"Site '{_configuration.Name}' is already running");
         }
 
@@ -168,7 +174,7 @@ public sealed class SiteLifecycleManager : IDisposable
 
         if (!File.Exists(_configuration.ApplicationRealPath))
         {
-            _logger.LogError("Application binary not found: {ApplicationPath}", _configuration.ApplicationRealPath);
+            _logger.ApplicationBinaryNotFound(_configuration.ApplicationRealPath);
             return ApiResult.CreateFailure($"Application binary not found: {_configuration.ApplicationRealPath}");
         }
 
@@ -177,21 +183,25 @@ public sealed class SiteLifecycleManager : IDisposable
             var startInfo = CreateProcessStartInfo();
             _process = _processRunner.Start(startInfo);
 
-            _logger.LogInformation("Site '{SiteName}' started with PID {ProcessId}", _configuration.Name, _process.Id);
+            _logger.SiteStarted(_configuration.Name, _process.Id);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start site: {SiteName}", _configuration.Name);
+            _logger.FailedToStartSite(ex, _configuration.Name);
             return ApiResult.CreateFailure($"Failed to start site: {ex.Message}");
         }
     }
 
     private async Task<ApiResult> ProcessStopCommand(CancellationToken cancellationToken)
     {
+        using var timer = new OperationTimer(elapsed => _logger.StopDuration(_configuration.Name, elapsed));
+
+        _logger.StopAttempt(_configuration.Name);
+
         if (_process?.HasExited != false)
         {
-            _logger.LogWarning("Site '{SiteName}' is already stopped (idempotent operation)", _configuration.Name);
+            _logger.SiteAlreadyStopped(_configuration.Name);
             DisposeStaleProcess();
             return ApiResult.CreateSuccess();
         }
@@ -202,17 +212,17 @@ public sealed class SiteLifecycleManager : IDisposable
         try
         {
             await StopProcessAsync(processToStop, cancellationToken);
-            _logger.LogInformation("Site '{SiteName}' stopped successfully", _configuration.Name);
+            _logger.SiteStopped(_configuration.Name);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or Win32Exception)
         {
-            _logger.LogWarning(ex, "Site '{SiteName}' process no longer exists.", _configuration.Name);
+            _logger.SiteProcessNotFound(ex, _configuration.Name);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to stop site: {SiteName}", _configuration.Name);
+            _logger.FailedToStopSite(ex, _configuration.Name);
             return ApiResult.CreateFailure($"Failed to stop site: {ex.Message}");
         }
     }
@@ -231,11 +241,11 @@ public sealed class SiteLifecycleManager : IDisposable
 
     private async Task ProcessDisposeCommand()
     {
-        _logger.LogInformation("Disposing lifecycle manager for site '{SiteName}'", _configuration.Name);
+        _logger.DisposingLifecycleManager(_configuration.Name);
 
         if (_process?.HasExited == false)
         {
-            _logger.LogWarning("Force killing process during dispose for site '{SiteName}'", _configuration.Name);
+            _logger.ForceKillingProcessOnDispose(_configuration.Name);
             try
             {
                 _process.Kill();
@@ -243,7 +253,7 @@ public sealed class SiteLifecycleManager : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to kill process during dispose for site '{SiteName}'", _configuration.Name);
+                _logger.FailedToKillProcessOnDispose(ex, _configuration.Name);
             }
         }
 
@@ -261,14 +271,14 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (process?.HasExited != false)
         {
-            _logger.LogWarning("Site '{SiteName}' process was already dead. Cleaning up state.", _configuration.Name);
+            _logger.ProcessAlreadyDead(_configuration.Name);
             return;
         }
 
         process.SendGracefulShutdownSignal();
 
         int timeoutSeconds = _configuration.ProcessTimeoutSeconds;
-        _logger.LogInformation("Site '{SiteName}' sent SIGTERM (timeout {Timeout}s)", _configuration.Name, timeoutSeconds);
+        _logger.SentSigTerm(_configuration.Name, timeoutSeconds);
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(timeoutSeconds * 1000);
@@ -281,6 +291,7 @@ public sealed class SiteLifecycleManager : IDisposable
         {
             if (!process.HasExited)
             {
+                _logger.ProcessWaitTimeout(_configuration.Name, process.Id, timeoutSeconds * 1000L);
                 await ForceKillProcessAsync(process, cancellationToken);
             }
         }
@@ -291,7 +302,7 @@ public sealed class SiteLifecycleManager : IDisposable
     /// </summary>
     private async Task ForceKillProcessAsync(IProcessHandle process, CancellationToken cancellationToken)
     {
-        _logger.LogWarning("Site '{SiteName}' did not stop gracefully. Force killing process.", _configuration.Name);
+        _logger.DidNotStopGracefully(_configuration.Name);
 
         try
         {
@@ -300,7 +311,7 @@ public sealed class SiteLifecycleManager : IDisposable
         }
         catch (Exception killEx)
         {
-            _logger.LogError(killEx, "Failed to force kill process for site '{SiteName}'. Process may still be running.", _configuration.Name);
+            _logger.FailedToForceKill(killEx, _configuration.Name);
         }
     }
 

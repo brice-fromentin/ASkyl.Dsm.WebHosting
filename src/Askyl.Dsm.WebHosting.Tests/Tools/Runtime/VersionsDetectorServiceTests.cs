@@ -1,4 +1,5 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -11,7 +12,7 @@ public class VersionsDetectorServiceTests
 
     public VersionsDetectorServiceTests()
     {
-        var logger = new Mock<ILogger<VersionsDetectorService>>();
+        var logger = new Mock<ILogger<ILogVersionsDetectorService>>();
         _service = new(logger.Object);
     }
 

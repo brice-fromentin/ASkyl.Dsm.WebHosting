@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using Microsoft.Extensions.Logging;
@@ -14,7 +15,7 @@ namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 /// </summary>
 public class SiteLifecycleManagerTests : IDisposable
 {
-    private readonly Mock<ILogger<SiteLifecycleManager>> _logger;
+    private readonly Mock<ILogger<ILogSiteLifecycleManager>> _logger;
     private readonly FakeProcessRunner _processRunner;
     private readonly FakeProcessHandle _processHandle;
     private readonly WebSiteConfiguration _configuration;
@@ -24,7 +25,7 @@ public class SiteLifecycleManagerTests : IDisposable
 
     public SiteLifecycleManagerTests()
     {
-        _logger = new Mock<ILogger<SiteLifecycleManager>>();
+        _logger = new Mock<ILogger<ILogSiteLifecycleManager>>();
         _processRunner = new FakeProcessRunner();
         _processHandle = new FakeProcessHandle();
         _startedProcesses = _processRunner.StartedProcesses;

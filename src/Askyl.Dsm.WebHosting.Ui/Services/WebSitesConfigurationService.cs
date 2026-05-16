@@ -3,11 +3,13 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
+using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Threading;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
-public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> logger) : IWebSitesConfigurationService, ISemaphoreOwner
+public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationService> logger) : IWebSitesConfigurationService, ISemaphoreOwner
 {
     #region ISemaphoreOwner Implementation
 
@@ -42,7 +44,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         if (_cachedConfiguration == null)
         {
             _cachedConfiguration = await LoadConfigurationAsync(cancellationToken);
-            logger.LogInformation("Configuration loaded and cached. Found {SiteCount} sites", _cachedConfiguration.Sites.Count);
+            logger.ConfigurationLoadedAndCached(_cachedConfiguration.Sites.Count);
         }
     }
 
@@ -70,7 +72,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
             throw new UnauthorizedAccessException($"Insufficient permissions to write to application directory: {baseDirectory}", ex);
         }
 
-        logger.LogDebug("Service initialization completed successfully. Base directory: {BaseDirectory}", baseDirectory);
+        logger.ServiceInitializationCompleted(baseDirectory);
         _initialized = true;
     }
 
@@ -82,7 +84,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
     {
         if (!File.Exists(_configurationFilePath))
         {
-            logger.LogInformation("Configuration file not found, creating empty collection");
+            logger.ConfigurationFileNotFound();
             return new();
         }
 
@@ -92,7 +94,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
 
             if (String.IsNullOrWhiteSpace(jsonContent))
             {
-                logger.LogWarning("Configuration file is empty, creating new collection");
+                logger.ConfigurationFileEmpty();
                 return new();
             }
 
@@ -100,23 +102,23 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
 
             if (collection is null)
             {
-                logger.LogWarning("Configuration deserialization returned null, creating new collection");
+                logger.ConfigurationDeserializationNull();
                 return new();
             }
 
-            logger.LogDebug("Configuration loaded successfully with {SiteCount} sites", collection.Sites.Count);
+            logger.ConfigurationLoadedSuccessfully(collection.Sites.Count);
             return collection;
         }
         catch (JsonException jsonEx)
         {
-            logger.LogError(jsonEx, "Configuration file is corrupted (invalid JSON). Backup created and new empty configuration initialized");
+            logger.ConfigurationCorrupted(jsonEx);
 
             await HandleCorruptedConfigurationAsync();
             return new();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to load configuration from {FilePath}", _configurationFilePath);
+            logger.FailedToLoadConfiguration(ex, _configurationFilePath);
             return new();
         }
     }
@@ -130,11 +132,11 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
 
             await File.WriteAllTextAsync(_configurationFilePath, jsonContent, cancellationToken);
 
-            logger.LogInformation("Configuration saved successfully to {FilePath}", _configurationFilePath);
+            logger.ConfigurationSaved(_configurationFilePath);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to save configuration to {FilePath}", _configurationFilePath);
+            logger.FailedToSaveConfiguration(ex, _configurationFilePath);
 
             throw;
         }
@@ -149,11 +151,11 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         {
             var backupPath = $"{_configurationFilePath}.corrupted.{DateTime.UtcNow:yyyyMMddHHmmss}.bak";
             File.Move(_configurationFilePath, backupPath);
-            logger.LogInformation("Corrupted configuration backed up to {BackupPath}", backupPath);
+            logger.ConfigurationBackedUp(backupPath);
         }
         catch (Exception backupEx)
         {
-            logger.LogWarning(backupEx, "Failed to create backup of corrupted configuration");
+            logger.FailedToCreateBackup(backupEx);
         }
     }
 
@@ -183,6 +185,10 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
 
     public async Task AddSiteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default)
     {
+        using var timer = new OperationTimer(elapsed => logger.AddSiteDuration(elapsed, site.Name));
+
+        logger.AddSiteStarting(site.Name);
+
         using (await SemaphoreLock.AcquireAsync(this, () => EnsureInitializedAndLoadedAsync(cancellationToken), cancellationToken))
         {
             if (_cachedConfiguration!.Sites.Any(s => s.Name == site.Name))
@@ -193,12 +199,16 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
             site.Id = Guid.NewGuid();
             _cachedConfiguration.Sites.Add(site);
 
-            await SaveConfigurationAsync(_cachedConfiguration, cancellationToken);
+            await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
         }
     }
 
     public async Task UpdateSiteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default)
     {
+        using var timer = new OperationTimer(elapsed => logger.UpdateSiteDuration(elapsed, site.Name));
+
+        logger.UpdateSiteStarting(site.Name);
+
         using (await SemaphoreLock.AcquireAsync(this, () => EnsureInitializedAndLoadedAsync(cancellationToken), cancellationToken))
         {
             var existingSiteIndex = _cachedConfiguration!.Sites.FindIndex(s => s.Id == site.Id);
@@ -215,7 +225,7 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
 
             _cachedConfiguration.Sites[existingSiteIndex] = site;
 
-            await SaveConfigurationAsync(_cachedConfiguration, cancellationToken);
+            await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
         }
     }
 
@@ -225,9 +235,13 @@ public class WebSitesConfigurationService(ILogger<WebSitesConfigurationService> 
         {
             var site = _cachedConfiguration!.Sites.FirstOrDefault(s => s.Id == siteId) ?? throw new InvalidOperationException($"Site with Id '{siteId}' not found");
 
+            using var timer = new OperationTimer(elapsed => logger.RemoveSiteDuration(elapsed, site.Name));
+
+            logger.RemoveSiteStarting(site.Name);
+
             _cachedConfiguration.Sites.Remove(site);
 
-            await SaveConfigurationAsync(_cachedConfiguration, cancellationToken);
+            await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
         }
     }
 

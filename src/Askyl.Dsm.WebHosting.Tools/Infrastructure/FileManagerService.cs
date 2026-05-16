@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
@@ -8,7 +9,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// Injectable file manager service for managing application directories and files.
 /// Replaces the static FileManager class with DI-based implementation.
 /// </summary>
-public sealed class FileManagerService(ILogger<FileManagerService> logger, string rootPath = "") : IFileManagerService
+public sealed class FileManagerService(ILogger<ILogFileManagerService> logger, string rootPath = "") : IFileManagerService
 {
     private readonly string _normalizedRootPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, rootPath));
 
@@ -72,13 +73,13 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
     /// <inheritdoc/>
     public void Initialize()
     {
-        logger.LogInformation("Initializing FileManager with base path: {BasePath}", _normalizedRootPath);
+        logger.FileManagerInitializing(_normalizedRootPath);
 
         // Create default directories
         GetDirectory(InfrastructureConstants.Downloads);
         GetDirectory(InfrastructureConstants.TempDirectory);
 
-        logger.LogInformation("FileManager initialized successfully");
+        logger.FileManagerInitialized();
     }
 
     /// <inheritdoc/>
@@ -87,7 +88,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
         var sanitized = SanitizePathSegment(name, nameof(name), true);
         var path = Path.Combine(_normalizedRootPath, sanitized);
 
-        logger.LogDebug("Ensuring directory exists: {DirectoryPath}", path);
+        logger.EnsuringDirectoryExists(path);
         Directory.CreateDirectory(path);
 
         return path;
@@ -101,12 +102,12 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
 
         if (Directory.Exists(path))
         {
-            logger.LogInformation("Deleting directory: {DirectoryPath}", path);
+            logger.DeletingDirectory(path);
             Directory.Delete(path, true);
         }
         else
         {
-            logger.LogDebug("Directory does not exist, skipping deletion: {DirectoryPath}", path);
+            logger.DirectoryNotFoundSkippingDeletion(path);
         }
     }
 
@@ -117,7 +118,7 @@ public sealed class FileManagerService(ILogger<FileManagerService> logger, strin
         var path = GetDirectory(directory);
         var fullPath = Path.Combine(path, sanitizedFile);
 
-        logger.LogDebug("Getting full file path: {FullPath}", fullPath);
+        logger.GettingFullPath(fullPath);
         return fullPath;
     }
 }

@@ -3,6 +3,8 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -12,7 +14,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Orchestrates instance management by delegating to SiteLifecycleManager for process operations.
 /// </summary>
 public class WebSiteHostingService(
-    ILogger<WebSiteHostingService> logger,
+    ILogger<ILogWebSiteHostingService> logger,
     ILoggerFactory loggerFactory,
     IProcessRunner processRunner,
     IWebSitesConfigurationService configService,
@@ -55,6 +57,10 @@ public class WebSiteHostingService(
     /// </summary>
     public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration)
     {
+        using var timer = new OperationTimer(elapsed => logger.AddWebsiteDuration(elapsed, configuration.Name));
+
+        logger.AddWebsiteStarting(configuration.Name);
+
         try
         {
             // STEP 1: Set HTTP group permissions BEFORE adding website (CRITICAL - must succeed)
@@ -62,7 +68,7 @@ public class WebSiteHostingService(
 
             if (!permissionResult.Success)
             {
-                logger.LogError("Permission setting failed for '{SiteName}': {ErrorMessage}", configuration.Name, permissionResult.Message);
+                logger.PermissionSettingFailedAdd(configuration.Name, permissionResult.Message);
                 return WebSiteInstanceResult.CreateFailure($"Failed to set permissions: {permissionResult.Message}");
             }
 
@@ -71,7 +77,7 @@ public class WebSiteHostingService(
 
             if (!proxyResult.Success)
             {
-                logger.LogError("Reverse proxy creation failed for '{SiteName}': {ErrorMessage}", configuration.Name, proxyResult.Message);
+                logger.ReverseProxyCreationFailedAdd(configuration.Name, proxyResult.Message);
                 return WebSiteInstanceResult.CreateFailure($"Failed to create reverse proxy: {proxyResult.Message}");
             }
 
@@ -85,7 +91,7 @@ public class WebSiteHostingService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error adding website: {SiteName}", configuration.Name);
+            logger.ErrorAddingWebsite(ex, configuration.Name);
             return WebSiteInstanceResult.CreateFailure($"Failed to add website: {ex.Message}");
         }
     }
@@ -97,9 +103,13 @@ public class WebSiteHostingService(
     {
         if (!_instances.TryGetValue(configuration.Id, out var existingInstance))
         {
-            logger.LogError("Instance not found for site: {SiteName}", configuration.Name);
+            logger.InstanceNotFoundUpdate(configuration.Name);
             return WebSiteInstanceResult.CreateFailure($"Instance not found for website '{configuration.Name}'");
         }
+
+        using var timer = new OperationTimer(elapsed => logger.UpdateWebsiteDuration(elapsed, configuration.Name));
+
+        logger.UpdateWebsiteStarting(configuration.Name);
 
         try
         {
@@ -108,7 +118,7 @@ public class WebSiteHostingService(
 
             if (!permissionResult.Success)
             {
-                logger.LogError("Permission setting failed for '{SiteName}': {ErrorMessage}", configuration.Name, permissionResult.Message);
+                logger.PermissionSettingFailedUpdate(configuration.Name, permissionResult.Message);
                 return WebSiteInstanceResult.CreateFailure($"Failed to set permissions: {permissionResult.Message}");
             }
 
@@ -117,7 +127,7 @@ public class WebSiteHostingService(
 
             if (!proxyResult.Success)
             {
-                logger.LogError("Reverse proxy update failed for '{SiteName}': {ErrorMessage}", configuration.Name, proxyResult.Message);
+                logger.ReverseProxyUpdateFailed(configuration.Name, proxyResult.Message);
                 return WebSiteInstanceResult.CreateFailure($"Failed to update reverse proxy: {proxyResult.Message}");
             }
 
@@ -131,7 +141,7 @@ public class WebSiteHostingService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error updating website: {SiteName}", configuration.Name);
+            logger.ErrorUpdatingWebsite(ex, configuration.Name);
             return WebSiteInstanceResult.CreateFailure($"Failed to update website: {ex.Message}");
         }
     }
@@ -149,13 +159,17 @@ public class WebSiteHostingService(
     {
         if (!_instances.TryGetValue(id, out var instance))
         {
-            logger.LogWarning("Cannot start site: site with ID {InstanceId} not found", id);
+            logger.CannotStartSiteNotFound(id);
             return ApiResult.CreateFailure($"Site with ID '{id}' not found");
         }
 
+        using var timer = new OperationTimer(elapsed => logger.StartWebsiteDuration(elapsed, instance.Configuration.Name));
+
+        logger.StartWebsiteStarting(instance.Configuration.Name);
+
         if (!_lifecycleManagers.TryGetValue(id, out var lifecycleManager))
         {
-            logger.LogError("Lifecycle manager not found for site: {SiteId}", id);
+            logger.LifecycleManagerNotFoundStart(id);
             return ApiResult.CreateFailure("Internal error: lifecycle manager not found");
         }
 
@@ -177,13 +191,17 @@ public class WebSiteHostingService(
     {
         if (!_instances.TryGetValue(id, out var instance))
         {
-            logger.LogWarning("Cannot stop site: site with ID {InstanceId} not found", id);
+            logger.CannotStopSiteNotFound(id);
             return ApiResult.CreateFailure($"Site with ID '{id}' not found");
         }
 
+        using var timer = new OperationTimer(elapsed => logger.StopWebsiteDuration(elapsed, instance.Configuration.Name));
+
+        logger.StopWebsiteStarting(instance.Configuration.Name);
+
         if (!_lifecycleManagers.TryGetValue(id, out var lifecycleManager))
         {
-            logger.LogError("Lifecycle manager not found for site: {SiteId}", id);
+            logger.LifecycleManagerNotFoundStop(id);
             return ApiResult.CreateFailure("Internal error: lifecycle manager not found");
         }
 
@@ -204,7 +222,7 @@ public class WebSiteHostingService(
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        logger.LogInformation("WebSite hosting service starting");
+        logger.HostingServiceStarting();
 
         await InitializeAllInstancesAsync();
         await StartEligibleSitesAsync();
@@ -214,7 +232,7 @@ public class WebSiteHostingService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("WebSite hosting service started");
+        logger.HostingServiceStarted();
 
         try
         {
@@ -228,7 +246,7 @@ public class WebSiteHostingService(
 
     public override async Task StopAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("Stopping all websites");
+        logger.StoppingAllWebsites();
         await StopAllSitesAsync(stoppingToken);
         await base.StopAsync(stoppingToken);
     }
@@ -246,13 +264,13 @@ public class WebSiteHostingService(
             var instance = new WebSiteInstanceDetails(site);
             _instances[instance.Id] = instance;
 
-            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), processRunner, site);
+            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, site);
             _lifecycleManagers[instance.Id] = lifecycleManager;
 
-            logger.LogInformation("Instance created for site: {SiteName}", site.Name);
+            logger.InstanceCreated(site.Name);
         }
 
-        logger.LogInformation("All instances initialized: {Count} sites", _instances.Count);
+        logger.AllInstancesInitialized(_instances.Count);
     }
 
     private async Task StartEligibleSitesAsync()
@@ -265,7 +283,7 @@ public class WebSiteHostingService(
         var failures = results.Where(r => !r.Success).ToList();
         if (failures.Count != 0)
         {
-            logger.LogWarning("{Count} site(s) failed to start: {Failures}", failures.Count, String.Join(", ", failures.Select(f => f.Message)));
+            logger.SitesFailedToStart(failures.Count, String.Join(", ", failures.Select(f => f.Message)));
         }
     }
 
@@ -278,10 +296,10 @@ public class WebSiteHostingService(
         var instance = new WebSiteInstanceDetails(configuration);
         _instances[instance.Id] = instance;
 
-        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), processRunner, configuration);
+        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, configuration);
         _lifecycleManagers[instance.Id] = lifecycleManager;
 
-        logger.LogInformation("Instance added for site: {SiteName}", configuration.Name);
+        logger.InstanceAdded(configuration.Name);
 
         if (configuration.IsEnabled && configuration.AutoStart)
         {
@@ -295,7 +313,7 @@ public class WebSiteHostingService(
     {
         if (!_instances.TryGetValue(instance.Id, out var existingInstance))
         {
-            logger.LogError("Instance of site: {SiteName} not found.", newConfiguration.Name);
+            logger.InstanceNotFoundDuringUpdate(newConfiguration.Name);
             throw new ArgumentException("Instance not found.", nameof(instance));
         }
 
@@ -304,7 +322,7 @@ public class WebSiteHostingService(
 
         if (wasRunning && (!newConfiguration.IsEnabled || ConfigurationRequiresRestart(oldConfiguration, newConfiguration)))
         {
-            logger.LogInformation("Stopping site: {SiteName} (disabled or restart required)", newConfiguration.Name);
+            logger.StoppingSiteDisabledOrRestart(newConfiguration.Name);
             await StopWebsiteAsync(existingInstance.Id);
         }
 
@@ -315,9 +333,9 @@ public class WebSiteHostingService(
         }
 
         existingInstance.Configuration = newConfiguration;
-        _lifecycleManagers[instance.Id] = new SiteLifecycleManager(loggerFactory.CreateLogger<SiteLifecycleManager>(), processRunner, newConfiguration);
+        _lifecycleManagers[instance.Id] = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, newConfiguration);
 
-        logger.LogInformation("Instance updated for site: {SiteName}", newConfiguration.Name);
+        logger.InstanceUpdated(newConfiguration.Name);
 
         if (newConfiguration.IsEnabled && (wasRunning || newConfiguration.AutoStart))
         {
@@ -344,11 +362,15 @@ public class WebSiteHostingService(
     {
         if (!_instances.TryGetValue(instanceId, out var instance))
         {
-            logger.LogWarning("Cannot remove instance: instance {InstanceId} not found", instanceId);
+            logger.CannotRemoveInstanceNotFound(instanceId);
             return ApiResult.CreateFailure("Instance not found");
         }
 
         var siteName = instance.Configuration.Name;
+
+        using var timer = new OperationTimer(elapsed => logger.RemoveWebsiteDuration(elapsed, siteName));
+
+        logger.RemoveWebsiteStarting(siteName);
 
         try
         {
@@ -361,7 +383,7 @@ public class WebSiteHostingService(
 
                     if (!stopResult.Success && stopResult.ErrorCode != ApiErrorCode.NotFound)
                     {
-                        logger.LogWarning("Failed to stop site before deletion: {ErrorMessage}", stopResult.Message);
+                        logger.FailedToStopBeforeDeletion(stopResult.Message);
                         // Continue with cleanup anyway
                     }
                 }
@@ -372,7 +394,7 @@ public class WebSiteHostingService(
 
             if (!proxyDeleteResult.Success)
             {
-                logger.LogWarning("Reverse proxy deletion failed for '{SiteName}' (site will be removed anyway): {ErrorMessage}", siteName, proxyDeleteResult.Message);
+                logger.ReverseProxyDeletionFailed(siteName, proxyDeleteResult.Message);
             }
 
             // Remove configuration (persistent storage) — MUST succeed before removing from memory
@@ -386,12 +408,12 @@ public class WebSiteHostingService(
                 lifecycleManager.Dispose();
             }
 
-            logger.LogInformation("Instance removed for site: {SiteName}", siteName);
+            logger.InstanceRemoved(siteName);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to remove site: {SiteName}", siteName);
+            logger.FailedToRemoveSite(ex, siteName);
             return ApiResult.CreateFailure($"Failed to remove site: {ex.Message}");
         }
     }
@@ -442,14 +464,14 @@ public class WebSiteHostingService(
     {
         if (String.IsNullOrEmpty(configuration.ApplicationRealPath))
         {
-            logger.LogWarning("No application real path configured for '{SiteName}', skipping permission setting", configuration.Name);
+            logger.NoApplicationRealPath(configuration.Name);
             return ApiResult.CreateFailure("No application path configured");
         }
 
         // Determine if the target is a directory (if ApplicationPath ends with .dll, set permissions on parent directory)
         var isDirectory = !configuration.ApplicationRealPath.EndsWith(WebSiteConstants.DllFileExtension, StringComparison.OrdinalIgnoreCase);
 
-        logger.LogDebug("Setting HTTP group permissions for '{SiteName}' at path: {Path} (IsDirectory: {IsDirectory})", configuration.Name, configuration.ApplicationRealPath, isDirectory);
+        logger.SettingHttpGroupPermissions(configuration.Name, configuration.ApplicationRealPath, isDirectory);
 
         return await fileSystemService.SetHttpGroupPermissionsAsync(configuration.ApplicationRealPath, isDirectory);
     }
@@ -466,12 +488,12 @@ public class WebSiteHostingService(
         try
         {
             await reverseProxyManager.CreateAsync(configuration);
-            logger.LogInformation("Reverse proxy rule created for site '{SiteName}'", configuration.Name);
+            logger.ReverseProxyRuleCreated(configuration.Name);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to create reverse proxy rule for '{SiteName}'", configuration.Name);
+            logger.FailedToCreateReverseProxyRule(ex, configuration.Name);
             return ApiResult.CreateFailure($"Failed to create reverse proxy: {ex.Message}");
         }
     }
@@ -484,12 +506,12 @@ public class WebSiteHostingService(
         try
         {
             await reverseProxyManager.UpdateAsync(configuration);
-            logger.LogInformation("Reverse proxy rule updated for '{SiteName}'", configuration.Name);
+            logger.ReverseProxyRuleUpdated(configuration.Name);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to update reverse proxy rule for '{SiteName}'", configuration.Name);
+            logger.FailedToUpdateReverseProxyRule(ex, configuration.Name);
             return ApiResult.CreateFailure($"Failed to update reverse proxy: {ex.Message}");
         }
     }
@@ -502,12 +524,12 @@ public class WebSiteHostingService(
         try
         {
             await reverseProxyManager.DeleteAsync(configuration);
-            logger.LogInformation("Reverse proxy rule deleted for '{SiteName}'", configuration.Name);
+            logger.ReverseProxyRuleDeleted(configuration.Name);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to delete reverse proxy rule for '{SiteName}'", configuration.Name);
+            logger.FailedToDeleteReverseProxyRule(ex, configuration.Name);
             return ApiResult.CreateFailure($"Failed to delete reverse proxy: {ex.Message}");
         }
     }

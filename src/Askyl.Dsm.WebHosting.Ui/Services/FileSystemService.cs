@@ -7,6 +7,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.FileStation;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Network;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -15,30 +16,30 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Server-side implementation of IFileSystemService for Synology DSM FileStation API operations.
 /// Returns simple FileSystemItem data objects; UI-specific rendering is handled by the client layer.
 /// </summary>
-public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService> logger) : Data.Contracts.IFileSystemService
+public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemService> logger) : Data.Contracts.IFileSystemService
 {
     public async Task<SharedFoldersResult> GetSharedFoldersAsync()
     {
-        logger.LogDebug("Retrieving shared folders from DSM FileStation API");
+        logger.RetrievingSharedFolders();
 
         try
         {
             var sharedFolders = await ExecuteFileStationListShareAsync();
 
-            logger.LogInformation("Retrieved {Count} shared folders", sharedFolders.Count);
+            logger.RetrievedSharedFolders(sharedFolders.Count);
 
             return SharedFoldersResult.CreateSuccess([.. sharedFolders.Select(CreateFsEntry)]);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error retrieving shared folders");
+            logger.ErrorRetrievingSharedFolders(ex);
             return SharedFoldersResult.CreateFailure($"Failed to retrieve shared folders: {ex.Message}");
         }
     }
 
     public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly)
     {
-        logger.LogDebug("Retrieving directory contents for path: {Path}, DirectoryOnly: {DirectoryOnly}", path, directoryOnly);
+        logger.RetrievingDirectoryContents(path, directoryOnly);
 
         try
         {
@@ -47,7 +48,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
                 // Single API call for directories only - more efficient
                 var directoryFiles = await ExecuteFileStationListAsync(path, FileStationDefaults.PatternAll, FileStationDefaults.TypeDirectory);
 
-                logger.LogDebug("Retrieved {DirectoryCount} directories from {Path}", directoryFiles.Count, path);
+                logger.RetrievedDirectories(directoryFiles.Count, path);
 
                 return DirectoryContentsResult.CreateSuccess([.. directoryFiles.Select(CreateFsEntry)]);
             }
@@ -62,31 +63,31 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
 
             List<FsEntry> allContents = [.. directories.Concat(files).Select(CreateFsEntry)];
 
-            logger.LogDebug("Retrieved {DirectoryCount} directories and {FileCount} files from {Path}", directories.Count, files.Count, path);
+            logger.RetrievedDirectoriesAndFiles(directories.Count, files.Count, path);
 
             return DirectoryContentsResult.CreateSuccess(allContents);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error retrieving directory contents for {Path}", path);
+            logger.ErrorRetrievingDirectory(ex, path);
             return DirectoryContentsResult.CreateFailure($"Failed to retrieve directory contents: {ex.Message}");
         }
     }
 
     public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory)
     {
-        logger.LogDebug("Setting HTTP group permissions for virtual path: {Path}", path);
+        logger.SettingHttpGroupPermissions(path);
 
         // Validate path to prevent path traversal attacks
         if (!IsPathValid(path))
         {
-            logger.LogWarning("Path validation failed: {Path}", path);
+            logger.PathValidationFailed(path);
             return ApiResult.CreateFailure("Invalid path: path traversal not allowed");
         }
 
         var targetPath = isDirectory ? path : Path.GetDirectoryName(path) ?? path;
 
-        logger.LogDebug("Target path: {TargetPath}, IsDirectory: {IsDirectory}", targetPath, isDirectory);
+        logger.TargetPathInfo(targetPath, isDirectory);
 
         var aclSet = new CoreAclSet
         {
@@ -136,11 +137,11 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<FileSystemService
 
         if (response?.Success != true || response.Data?.TaskId is null)
         {
-            logger.LogError("Failed to set ACL permissions for {Path}: Success={Success}, ErrorCode={ErrorCode}", path, response?.Success, response?.Error?.Code);
+            logger.FailedToSetAclPermissions(path, response?.Success, response?.Error?.Code);
             return ApiResult.CreateFailure($"Failed to set ACL permissions for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}");
         }
 
-        logger.LogInformation("ACL permissions set successfully for {Path}, TaskId: {TaskId}", path, response.Data.TaskId);
+        logger.AclPermissionsSet(path, response.Data.TaskId);
         return ApiResult.CreateSuccess();
     }
 

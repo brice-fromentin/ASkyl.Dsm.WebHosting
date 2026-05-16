@@ -1,6 +1,7 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -51,7 +52,7 @@ public class ArchiveExtractorServiceTests : IDisposable
     {
         var fileManager = new Mock<IFileManagerService>();
         fileManager.Setup(f => f.GetDirectory(String.Empty)).Returns(_tempExtract);
-        var logger = new Mock<ILogger<ArchiveExtractorService>>();
+        var logger = new Mock<ILogger<ILogArchiveExtractorService>>();
         return new(fileManager.Object, logger.Object);
     }
 

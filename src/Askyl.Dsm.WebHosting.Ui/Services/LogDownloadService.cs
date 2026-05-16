@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Logging;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -7,12 +8,12 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Server-side implementation of ILogDownloadService for creating log archive streams.
 /// Gathers logs from package logs directory, debug log file, and application logs directory.
 /// </summary>
-public class LogDownloadService(ILogger<LogDownloadService> logger) : Data.Contracts.ILogDownloadService
+public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.Contracts.ILogDownloadService
 {
     public async Task<Stream> CreateLogZipStreamAsync()
     {
         var baseDirectory = AppContext.BaseDirectory;
-        logger.LogDebug("Creating log archive stream (BaseDirectory: {BaseDirectory})", baseDirectory);
+        logger.CreatingLogArchiveStream(baseDirectory);
 
         var memoryStream = new MemoryStream();
 
@@ -25,11 +26,11 @@ public class LogDownloadService(ILogger<LogDownloadService> logger) : Data.Contr
             if (File.Exists(LogConstants.DebugLogFilePath))
             {
                 await AddFileToArchiveAsync(archive, LogConstants.DebugLogFilePath, "debug-logs/adwh-debug.log");
-                logger.LogDebug("Added debug log file: {DebugLogFilePath}", LogConstants.DebugLogFilePath);
+                logger.AddedDebugLogFile(LogConstants.DebugLogFilePath);
             }
             else
             {
-                logger.LogWarning("Debug log file not found at path: {DebugLogFilePath}", LogConstants.DebugLogFilePath);
+                logger.DebugLogNotFound(LogConstants.DebugLogFilePath);
             }
 
             // Add application logs directory if it exists
@@ -39,7 +40,7 @@ public class LogDownloadService(ILogger<LogDownloadService> logger) : Data.Contr
 
         memoryStream.Position = 0;
 
-        logger.LogInformation("Created log archive stream with size {Size} bytes", memoryStream.Length);
+        logger.CreatedLogArchiveStream(memoryStream.Length);
 
         return memoryStream;
     }
@@ -49,11 +50,11 @@ public class LogDownloadService(ILogger<LogDownloadService> logger) : Data.Contr
         if (Directory.Exists(directoryPath))
         {
             await AddDirectoryToArchiveAsync(archive, directoryPath, entryPrefix);
-            logger.LogDebug("Added {LogName} from directory: {DirectoryPath} (BaseDirectory: {BaseDirectory})", logName, directoryPath, baseDirectory);
+            logger.AddedAppLog(logName, directoryPath, baseDirectory);
         }
         else
         {
-            logger.LogWarning("{LogName} directory not found at path: {DirectoryPath} (BaseDirectory: {BaseDirectory})", logName, directoryPath, baseDirectory);
+            logger.AppLogDirectoryNotFound(logName, directoryPath, baseDirectory);
         }
     }
 
@@ -79,6 +80,6 @@ public class LogDownloadService(ILogger<LogDownloadService> logger) : Data.Contr
 
         await fileStream.CopyToAsync(entryStream);
 
-        logger.LogDebug("Added file to archive: {EntryName}", entryName);
+        logger.AddedFileToArchive(entryName);
     }
 }

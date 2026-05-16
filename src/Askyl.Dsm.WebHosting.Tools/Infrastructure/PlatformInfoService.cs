@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -19,13 +20,13 @@ public sealed class PlatformInfoService : IPlatformInfoService
         Windows
     }
 
-    private readonly ILogger<PlatformInfoService> _logger;
+    private readonly ILogger<ILogPlatformInfoService> _logger;
 
     public string ChannelVersion { get; private set; } = null!; // Initialized in constructor, will throw if config missing
     public string CurrentArchitecture { get; private set; } = String.Empty;
     public string CurrentOS { get; private set; } = String.Empty;
 
-    public PlatformInfoService(ILogger<PlatformInfoService> logger)
+    public PlatformInfoService(ILogger<ILogPlatformInfoService> logger)
     {
         _logger = logger;
         InitializePlatformInfo();
@@ -53,12 +54,12 @@ public sealed class PlatformInfoService : IPlatformInfoService
         // Detect architecture
         var osArchitecture = RuntimeInformation.OSArchitecture;
         CurrentArchitecture = MapArchitectureToOsString(osArchitecture);
-        _logger.LogInformation("Detected architecture = {Architecture}", CurrentArchitecture);
+        _logger.DetectedArchitecture(CurrentArchitecture);
 
         // Detect operating system
         var platform = DetectPlatform();
         CurrentOS = MapPlatformToOsString(platform, allowAllPlatforms: IsDebugMode());
-        _logger.LogInformation("Detected OS = {OperatingSystem}", CurrentOS);
+        _logger.DetectedOS(CurrentOS);
     }
 
     private static string MapArchitectureToOsString(Architecture architecture)

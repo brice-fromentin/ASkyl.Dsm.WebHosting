@@ -1,0 +1,78 @@
+using Microsoft.Extensions.Logging;
+
+namespace Askyl.Dsm.WebHosting.Logging;
+
+/// <summary>Category marker for ILogger&lt;T&gt; — no implementation required.</summary>
+public interface ILogFrameworkManagementService { }
+
+/// <summary>
+/// Structured logging extension methods for .NET framework management events.
+/// </summary>
+public static partial class FrameworkManagementLoggingExtensions
+{
+    /// <summary>
+    /// Logs a failed install attempt due to missing version parameter.
+    /// </summary>
+    [LoggerMessage(EventId = 1400001, Level = LogLevel.Warning, Message = "Install failed - Version is required")]
+    public static partial void InstallFailedVersionRequired(this ILogger<ILogFrameworkManagementService> logger);
+
+    /// <summary>
+    /// Logs successful ASP.NET Core installation.
+    /// </summary>
+    [LoggerMessage(EventId = 1400002, Level = LogLevel.Information, Message = "ASP.NET Core {Version} installed successfully")]
+    public static partial void FrameworkInstalled(this ILogger<ILogFrameworkManagementService> logger, string version);
+
+    /// <summary>
+    /// Logs an error during ASP.NET Core installation.
+    /// </summary>
+    [LoggerMessage(EventId = 1400003, Level = LogLevel.Error, Message = "Error while installing ASP.NET Core {Version}")]
+    public static partial void FrameworkInstallError(this ILogger<ILogFrameworkManagementService> logger, Exception ex, string version);
+
+    /// <summary>
+    /// Logs a failed uninstall attempt due to missing version parameter.
+    /// </summary>
+    [LoggerMessage(EventId = 1400004, Level = LogLevel.Warning, Message = "Uninstall failed - Version is required")]
+    public static partial void UninstallFailedVersionRequired(this ILogger<ILogFrameworkManagementService> logger);
+
+    /// <summary>
+    /// Logs successful ASP.NET Core uninstallation.
+    /// </summary>
+    [LoggerMessage(EventId = 1400005, Level = LogLevel.Information, Message = "ASP.NET Core {Version} uninstalled successfully")]
+    public static partial void FrameworkUninstalled(this ILogger<ILogFrameworkManagementService> logger, string version);
+
+    /// <summary>
+    /// Logs an uninstall failure with specific error message.
+    /// </summary>
+    [LoggerMessage(EventId = 1400006, Level = LogLevel.Warning, Message = "Uninstall failed - {Message}")]
+    public static partial void UninstallFailed(this ILogger<ILogFrameworkManagementService> logger, string message);
+
+    /// <summary>
+    /// Logs an error during ASP.NET Core uninstallation.
+    /// </summary>
+    [LoggerMessage(EventId = 1400007, Level = LogLevel.Error, Message = "Error while uninstalling ASP.NET Core {Version}")]
+    public static partial void FrameworkUninstallError(this ILogger<ILogFrameworkManagementService> logger, Exception ex, string version);
+
+    /// <summary>
+    /// Logs the start of an ASP.NET Core installation.
+    /// </summary>
+    [LoggerMessage(EventId = 1400008, Level = LogLevel.Information, Message = "Installing ASP.NET Core {Version}")]
+    public static partial void InstallStarting(this ILogger<ILogFrameworkManagementService> logger, string version);
+
+    /// <summary>
+    /// Logs the start of an ASP.NET Core uninstallation.
+    /// </summary>
+    [LoggerMessage(EventId = 1400009, Level = LogLevel.Information, Message = "Uninstalling ASP.NET Core {Version}")]
+    public static partial void UninstallStarting(this ILogger<ILogFrameworkManagementService> logger, string version);
+
+    /// <summary>
+    /// Logs the duration of an ASP.NET Core installation.
+    /// </summary>
+    [LoggerMessage(EventId = 1400010, Level = LogLevel.Debug, Message = "Install completed in {Duration}ms for ASP.NET Core {Version}")]
+    public static partial void InstallDuration(this ILogger<ILogFrameworkManagementService> logger, long duration, string version);
+
+    /// <summary>
+    /// Logs the duration of an ASP.NET Core uninstallation.
+    /// </summary>
+    [LoggerMessage(EventId = 1400011, Level = LogLevel.Debug, Message = "Uninstall completed in {Duration}ms for ASP.NET Core {Version}")]
+    public static partial void UninstallDuration(this ILogger<ILogFrameworkManagementService> logger, long duration, string version);
+}

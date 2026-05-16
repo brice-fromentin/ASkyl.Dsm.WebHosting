@@ -2,6 +2,7 @@
 @using Askyl.Dsm.WebHosting.Constants.Runtime
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Logging
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Controls
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 
@@ -12,7 +13,7 @@
 @inject IDotnetVersionService DotnetVersionService
 @inject IFrameworkManagementService ManagementService
 @inject IToastService ToastService
-@inject ILogger<AspNetReleasesDialog> Logger
+@inject ILogger<ILogAspNetReleasesDialog> Logger
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -138,7 +139,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to load .NET channels");
+            Logger.FailedToLoadChannels(ex);
             await ShowErrorAsync(ex.Message);
             Channels.Clear();
             SelectedChannel = null;
@@ -171,7 +172,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to load releases for channel {Channel}", channel?.ProductVersion);
+            Logger.FailedToLoadReleases(ex, channel?.ProductVersion);
             await ShowErrorAsync(ex.Message);
             Releases = AutoDataGrid<AspNetRelease>.Empty();
         }
@@ -212,7 +213,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Installation error for framework {Version}", SelectedItem?.Version);
+            Logger.InstallationError(ex, SelectedItem?.Version);
             await DialogService.ShowErrorAsync($"Installation error: {ex.Message}");
         }
     }
@@ -251,7 +252,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Uninstallation error for framework {Version}", SelectedItem?.Version);
+            Logger.UninstallationError(ex, SelectedItem?.Version);
             await DialogService.ShowErrorAsync($"Uninstallation error: {ex.Message}");
         }
     }

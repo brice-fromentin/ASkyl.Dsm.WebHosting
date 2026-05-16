@@ -242,19 +242,11 @@ public async Task<Result> CreateWebsiteAsync(
     CancellationToken cancellationToken)
 ```
 
-**Logging Statements (MANUAL CHECK REQUIRED):**
-ALWAYS use single-line format for consistency and easier log scanning:
-
-```csharp
-// ✅ Correct - always single line
-logger.LogInformation("Reverse proxy created successfully for site {SiteName} with UUID {Uuid}", site.Name, proxy.UUID);
-
-// ❌ Wrong - multi-line logging not allowed
-logger.LogInformation(
-    "Reverse proxy created successfully for site {SiteName} with UUID {Uuid}",
-    site.Name, proxy.UUID
-);
-```
+**Logging (MANDATORY — see Section 6.7):**
+All logging MUST use `[LoggerMessage]` source-generated extension methods.
+Never call `logger.LogInformation(...)`, `logger.LogError(...)`, etc. directly.
+Services inject `ILogger<ILogXxx>` category interfaces.
+Consult `Constants/Logging/LogEventIds.cs` for EventId ranges before adding new log methods.
 
 **Blank Line Rules (MANUAL CHECK REQUIRED):**
 
@@ -330,6 +322,34 @@ The following rules are automatically enforced by `dotnet format`:
 - Use named constants or enums instead of hard‑coded values
 - If a constant does not exist, add it to the appropriate constants file first
 
+### 6.7 Logging Standards
+
+**ALL logging must use `[LoggerMessage]` source-generated extension methods.** Direct calls to `ILogger.LogInformation()`, `ILogger.LogError()`, etc. are forbidden.
+
+**Rules:**
+
+- **No direct ILogger calls** — Never write `logger.LogInformation("...")`, `logger.LogError("...")`, etc.
+- **Use extension methods** — Call the extension method on the logger: `logger.LoginFailed(login)`
+- **Specialized `ILogger<T>`** — Services inject `ILogger<ILogXxx>` (namespace-level category interface from the Logging project), not bare `ILogger`
+- **EventId assignment** — Consult `Constants/Logging/LogEventIds.cs` for the correct range base before adding new `[LoggerMessage]` methods
+- **Extension file location** — All `[LoggerMessage]` methods live in `Askyl.Dsm.WebHosting.Logging/` — one file per service domain
+- **XML doc comments** — Every `[LoggerMessage]` method must have a `<summary>` XML doc comment
+
+```csharp
+// ✅ Correct — extension method call
+logger.LoginFailed(login);
+
+// ❌ Wrong — direct ILogger call
+logger.LogWarning("Login failed for user: {Login}", login);
+```
+
+**When adding new log methods:**
+
+1. Identify the service's EventId range in `Constants/Logging/LogEventIds.cs`
+2. Find the next available ID in the corresponding extension file
+3. Add the `[LoggerMessage]` method with XML doc comment
+4. Update `LogEventIds.cs` range comment if the range extends
+
 ---
 
 ## 7. COMPLIANCE ENFORCEMENT
@@ -352,10 +372,10 @@ These require manual verification BEFORE responding:
    - Have ALL hardcoded numbers been replaced by constants?
    - Search for all string literals and numeric literals in modified code
 
-2. **Single-Line Logging Format**
-   - Are ALL logging statements on a single line?
-   - Example: `logger.LogInformation("Message with {Param}", param);`
-   - Multi-line logging is NOT allowed (even if it compiles)
+2. **Logger Call Compliance**
+   - Are ALL log calls using `[LoggerMessage]` extension methods (e.g., `logger.LoginFailed(login)`)?
+   - Are there ZERO direct calls to `logger.LogInformation()`, `logger.LogError()`, `logger.LogWarning()`, etc.?
+   - Do services inject `ILogger<ILogXxx>` (not bare `ILogger`)?
 
 3. **Control Flow Blank Lines**
    - Is there a blank line BEFORE control flow statements (unless first in scope or after comment)?
@@ -451,14 +471,14 @@ After EVERY code modification, you MUST:
 
 - [ ] Read "Compliance Enforcement" section
 - [ ] Identify required constants (no magic strings/numbers)
-- [ ] Plan single-line logging format
+- [ ] Identify correct `[LoggerMessage]` extension method (or plan new one)
 - [ ] Review control flow blank line requirements
 - [ ] Review Git Safety Rules if git operations are needed
 
 ### During Writing
 
 - [ ] Use constants from `Askyl.Dsm.WebHosting.Constants` (create if needed)
-- [ ] Write all logger calls on a single line
+- [ ] Use `[LoggerMessage]` extension methods (no direct `ILogger` calls)
 - [ ] Add blank lines before/after control flow (not inside blocks)
 - [ ] Method declarations with ≤ 4 params on one line (unless > 200 chars)
 - [ ] Comments ONLY in English
@@ -471,7 +491,7 @@ After EVERY code modification, you MUST:
 - [ ] Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet` (for C# changes)
 - [ ] Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx` (for C# changes)
 - [ ] Verify no magic strings remain (MANUAL CHECK)
-- [ ] Verify single-line logging (MANUAL CHECK)
+- [ ] Verify no direct `ILogger` calls remain (MANUAL CHECK — use `[LoggerMessage]` extensions only)
 - [ ] Verify control flow blank lines (MANUAL CHECK)
 - [ ] Verify method declarations with ≤ 4 params are on one line (unless > 200 chars) (MANUAL CHECK)
 - [ ] Validate English-only comments
@@ -483,7 +503,7 @@ After EVERY code modification, you MUST:
 - [ ] Format command executed (`dotnet format`) - for C# code
 - [ ] Build command executed with `/nr:false` flag - for C# code
 - [ ] No magic strings/numbers in code (MANUAL)
-- [ ] Single-line logging format (MANUAL)
+- [ ] No direct `ILogger` calls — all logging via `[LoggerMessage]` extensions (MANUAL)
 - [ ] Control flow blank lines correct (MANUAL)
 - [ ] Method declarations with ≤ 4 params on one line (unless > 200 chars) (MANUAL)
 - [ ] Markdown validation passed (`markdownlint`) - for .md files

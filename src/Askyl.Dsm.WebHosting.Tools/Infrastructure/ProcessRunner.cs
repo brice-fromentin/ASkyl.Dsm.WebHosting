@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using Askyl.Dsm.WebHosting.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
@@ -18,12 +20,17 @@ public interface IProcessRunner
 /// <summary>
 /// Production implementation of <see cref="IProcessRunner"/> that spawns real OS processes.
 /// </summary>
-public sealed class SystemProcessRunner : IProcessRunner
+/// <param name="logger">Logger instance.</param>
+/// <param name="loggerFactory">Logger factory for creating child loggers.</param>
+public sealed class SystemProcessRunner(ILogger<ILogSystemProcessRunner> logger, ILoggerFactory loggerFactory) : IProcessRunner
 {
     public IProcessHandle Start(ProcessStartInfo startInfo)
     {
+        var workingDirectory = startInfo.WorkingDirectory ?? String.Empty;
         var process = Process.Start(startInfo) ?? throw new InvalidOperationException($"Failed to start process: {startInfo.FileName} {startInfo.Arguments}");
 
-        return new SystemProcessHandle(process);
+        logger.ProcessSpawned(startInfo.FileName, startInfo.Arguments ?? String.Empty, workingDirectory);
+
+        return new SystemProcessHandle(loggerFactory.CreateLogger<ILogSystemProcessHandle>(), process);
     }
 }

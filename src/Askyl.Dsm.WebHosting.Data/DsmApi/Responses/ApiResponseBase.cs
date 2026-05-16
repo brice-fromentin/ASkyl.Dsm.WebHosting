@@ -2,7 +2,17 @@ using System.Text.Json.Serialization;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 
-public class ApiResponseBase<T> where T : class, new()
+/// <summary>
+/// Marker interface for all API response types — provides compile-time access to Success and Error.
+/// </summary>
+public interface IApiResponse
+{
+    bool Success { get; }
+
+    ApiError? Error { get; }
+}
+
+public class ApiResponseBase<T> : IApiResponse where T : class, new()
 {
     [JsonPropertyName("data")]
     public T? Data { get; set; }

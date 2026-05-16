@@ -25,7 +25,6 @@ This project has also the following goals :
 
     Micro
         - Manage uninstall correctly when versions of Microsoft.NETCore.App & Microsoft.AspNetCore.App are not the same (seen in 9.0.0 rc 2).
-        - Enhance logs for the installation and package life-cycle
         - ...
     
     Technical

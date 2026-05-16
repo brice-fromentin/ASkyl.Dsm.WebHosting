@@ -1,8 +1,8 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.7
+**Version:** 0.5.8
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 11, 2026 (Dead code sweep — removed 4 unused types, 2 unused NuGet packages, unused extension method, stale doc references)
+**Last Updated:** May 16, 2026 (Logging reorganization — Server/Client folder structure, client-side logging extensions, OperationTimer, ILoggerFactory in SystemProcessRunner)
 
 ---
 
@@ -44,7 +44,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - **Background Service:** WebSiteHostingService orchestrates website instances; per-site process lifecycle delegated to SiteLifecycleManager (SIGTERM graceful shutdown, force kill fallback)
 - **Cross-platform Process Termination:** `ProcessTerminator` sends SIGTERM on Unix/Linux/macOS (P/Invoke `libc.kill`) and CloseMainWindow on Windows — enables ~1-3 second graceful drain
 
-**Current Status (v0.5.4):**
+**Current Status:**
 
 - ✅ Blazor Server + Interactive WebAssembly hybrid rendering
 - ✅ DSM API integration (Authentication, FileStation, ReverseProxy)
@@ -68,6 +68,10 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ⏳ TODO: Multi-language support
 - ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
+- ✅ **LoggerMessage migration** — 126 logger calls migrated to 145 source-generated `[LoggerMessage]` extension methods across 19 files; zero CA2254 warnings
+- ✅ **DSM API logging** — request timing, authentication failures, and API errors logged via `[LoggerMessage]` extensions; compile-time `IApiResponse` constraint replaces reflection
+- ✅ **Serilog configuration** — output template with `{EventId}`, `Log.CloseAndFlush()` on graceful shutdown, `WithActivity` enricher for correlation tracking
+- ✅ **OperationTimer** — value-type disposable timer for scope-based duration logging across all services; replaced manual `Stopwatch` boilerplate with single-line `using var` pattern
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 
@@ -104,11 +108,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.7</Version>
-<AssemblyVersion>0.5.7.0</AssemblyVersion>
-<FileVersion>0.5.7.0</FileVersion>
-<InformationalVersion>0.5.7</InformationalVersion>
-<PackageVersion>0.5.7</PackageVersion>
+<Version>0.5.8</Version>
+<AssemblyVersion>0.5.8.0</AssemblyVersion>
+<FileVersion>0.5.8.0</FileVersion>
+<InformationalVersion>0.5.8</InformationalVersion>
+<PackageVersion>0.5.8</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -204,8 +208,10 @@ Constants/
 ├── Runtime/                                # .NET runtime definitions (2 files)
 │   ├── DotNetFrameworkTypes.cs             # Framework type strings (ASP.NET Core, SDK, Runtime)
 │   └── RuntimeConstants.cs                 # Architecture (x64/arm/arm64), OS (linux/osx/windows)
+├── Logging/                                # Logging event ID registry (1 file)
+│   └── LogEventIds.cs                      # EventId range bases for [LoggerMessage] extensions (documentation only)
 ├── UI/                                     # User interface constants (2 files)
-│   ├── DialogConstants.cs                  # Dialog widths (auto, 60%, 75%)
+│   ├── DialogConstants.cs                  # Dialog widths (auto, 0.6, 0.75)
 │   └── FileSizeConstants.cs                # Byte calculations (KiB/MiB/GiB), formatting
 └── WebApi/                                 # API route definitions (6 files)
     ├── AuthenticationRoutes.cs             # /api/v1/authentication/* (login, logout, status)
@@ -366,6 +372,8 @@ Tools/
 │   └── ProcessTerminator.cs                # Cross-platform process termination (SIGTERM/CloseMainWindow)
 ├── Network/                                # Network communication
 │   └── DsmApiClient.cs                     # Centralized DSM API client
+├── Diagnostics/                            # Diagnostic utilities
+│   └── OperationTimer.cs                   # Disposable scope timer (Stopwatch + callback on Dispose)
 ├── Runtime/                                # .NET runtime management (DI-based)
     ├── DownloaderService.cs                # Binary download utility (implements IDownloaderService)
     └── VersionsDetectorService.cs          # Version detection with smart caching (implements IVersionsDetectorService)
@@ -384,6 +392,32 @@ The Tools project contains DI-based infrastructure services for platform detecti
 | **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz extraction | IFileManagerService, ILogger | `Tools/Infrastructure/ArchiveExtractorService.cs` |
 | **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | IPlatformInfoService, IFileManagerService | `Tools/Runtime/DownloaderService.cs` |
 | **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | ILogger, ISemaphoreOwner | `Tools/Runtime/VersionsDetectorService.cs` |
+| **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes, creates SystemProcessHandle | ILogger, ILoggerFactory | `Tools/Infrastructure/ProcessRunner.cs` |
+| **SystemProcessHandle** | `IProcessHandle` | Transient (per-process) | Wraps `Process` for testability, graceful shutdown | `ILogger<ILogSystemProcessHandle>` | `Tools/Infrastructure/ProcessHandle.cs` |
+
+**Process Lifecycle Services:**
+
+The `SystemProcessRunner` requires `ILoggerFactory` to create child loggers for `SystemProcessHandle` instances.
+
+This is because `ILogger<ILogSystemProcessRunner>` and `ILogger<ILogSystemProcessHandle>` are distinct closed generic types — an invalid cast would throw `InvalidCastException` at runtime.
+
+The runner uses `loggerFactory.CreateLogger<ILogSystemProcessHandle>()` to produce correctly-typed loggers for each spawned process.
+
+> **Why `ILoggerFactory`?** — `ILogger<T>` is a closed generic type.
+> Casting `ILogger<ILogSystemProcessRunner>` to `ILogger<ILogSystemProcessHandle>` throws `InvalidCastException` at runtime.
+> The factory creates the correct logger type.
+
+```csharp
+// SystemProcessRunner requires ILoggerFactory to create correctly-typed child loggers
+return new SystemProcessHandle(
+    loggerFactory.CreateLogger<ILogSystemProcessHandle>(), process);
+```
+
+```text
+SystemProcessRunner (ILoggerFactory)
+    └── Creates SystemProcessHandle per spawned process
+            └── Logs process events via ILogger<ILogSystemProcessHandle>
+```
 
 **Key Design Decisions:**
 
@@ -402,9 +436,19 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
 - Session management with SID validation and restoration
 - Automatic serialization based on `IApiParameters.SerializationFormat`
 - Strategy pattern for Form vs JSON serialization
-- Error handling with structured logging via Serilog
+- Compile-time generic constraint `where R : IApiResponse` on `ExecuteAsync<R>` — enables compile-time access to `Success`/`Error` properties (no reflection)
+- Structured logging with `[LoggerMessage]` extensions:
+  - HTTP request timing (method, URL, status code, duration in milliseconds)
+  - Authentication failure logging with error reason from response
+  - API error logging for `Success: false` responses (error code + reason)
 - HttpClient factory integration for proper lifecycle management
 - All infrastructure services testable via interface abstractions
+
+**`IApiResponse` Interface:**
+
+Defined in `Data/DsmApi/Responses/ApiResponseBase.cs`. All DSM API response types implement `IApiResponse` via `ApiResponseBase<T>`.
+
+This enables compile-time access to `Success` and `Error` properties — replacing reflection with type-safe error handling.
 
 **Connection Flow:** See `DsmApiClient.cs` lines 85-120
 
@@ -600,6 +644,90 @@ builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
 - **Extension method pattern** for clean logger API
 - **Structured logging** support with named parameters
 - **Zero-allocation logging** for performance-critical paths
+- **Namespace-level category interfaces** — empty marker interfaces (e.g., `ILogAuthenticationService`) for `ILogger<T>` categorization, keeping Logging as a leaf node with zero project references
+- **Specialized `ILogger<T>`** — each service injects `ILogger<ILogXxx>` for automatic log categorization by service name
+- **Server/Client folder separation** — `Server/` contains extensions for server-side services; `Client/` contains extensions for WebAssembly client-side components
+
+**Project Structure:**
+
+```text
+Logging/
+├── Server/                                 # Server-side logging extensions
+│   ├── Authentication/                     # AuthenticationService
+│   │   └── AuthenticationLoggingExtensions.cs
+│   ├── DsmApi/                             # DsmApiClient
+│   │   └── DsmApiLoggingExtensions.cs
+│   ├── FileManagement/                     # FileStation-related services
+│   │   ├── FileManagerServiceLoggingExtensions.cs
+│   │   ├── FileSystemServiceLoggingExtensions.cs
+│   │   └── LogDownloadServiceLoggingExtensions.cs
+│   ├── Framework/                          # .NET framework services
+│   │   ├── DotnetVersionServiceLoggingExtensions.cs
+│   │   └── FrameworkManagementLoggingExtensions.cs
+│   ├── Infrastructure/                     # Infrastructure services
+│   │   ├── ArchiveExtractorLoggingExtensions.cs
+│   │   ├── DownloaderLoggingExtensions.cs
+│   │   ├── PlatformInfoLoggingExtensions.cs
+│   │   └── VersionsDetectorLoggingExtensions.cs
+│   ├── ProcessLifecycle/                   # Process management
+│   │   ├── ProcessHandleLoggingExtensions.cs
+│   │   ├── ProcessLoggingExtensions.cs
+│   │   └── ProcessRunnerLoggingExtensions.cs
+│   ├── ReverseProxy/                       # Reverse proxy management
+│   │   └── ReverseProxyLoggingExtensions.cs
+│   └── WebsiteHosting/                     # Website hosting services
+│       ├── ConfigurationLoggingExtensions.cs
+│       └── WebsiteLoggingExtensions.cs
+└── Client/                                 # Client-side (WASM) logging extensions
+    └── ClientLoggingExtensions.cs          # Home, dialogs, license service
+```
+
+**EventId Management:**
+
+All `[LoggerMessage]` attributes use inline `int` literals (per Microsoft convention).
+EventId ranges are documented in `Constants/Logging/LogEventIds.cs`.
+Each service owns a dedicated 100K range at 1M spacing to prevent cross-service collisions:
+
+| Range | Service | Extension File | Folder |
+|-------|---------|----------------|--------|
+| `1000001–1000008` | AuthenticationService | `AuthenticationLoggingExtensions.cs` | `Server/Authentication/` |
+| `1100001–1100012` | FileSystemService | `FileSystemServiceLoggingExtensions.cs` | `Server/FileManagement/` |
+| `1200001–1200006` | FileManagerService | `FileManagerServiceLoggingExtensions.cs` | `Server/FileManagement/` |
+| `1300001–1300007` | LogDownloadService | `LogDownloadServiceLoggingExtensions.cs` | `Server/FileManagement/` |
+| `1400001–1400011` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` | `Server/Framework/` |
+| `1500001–1500009` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` | `Server/Framework/` |
+| `1600001–1600022` | SiteLifecycleManager | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1700001–1700016` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` | `Server/ReverseProxy/` |
+| `1800001–1800044` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` | `Server/WebsiteHosting/` |
+| `1900001–1900018` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` | `Server/WebsiteHosting/` |
+| `2000001–2000012` | DsmApiClient | `DsmApiLoggingExtensions.cs` | `Server/DsmApi/` |
+| `2100001–2100008` | ArchiveExtractorService | `ArchiveExtractorLoggingExtensions.cs` | `Server/Infrastructure/` |
+| `2200001–2200004` | VersionsDetectorService | `VersionsDetectorLoggingExtensions.cs` | `Server/Infrastructure/` |
+| `2300001–2300002` | PlatformInfoService | `PlatformInfoLoggingExtensions.cs` | `Server/Infrastructure/` |
+| `2400001–2400005` | DownloaderService | `DownloaderLoggingExtensions.cs` | `Server/Infrastructure/` |
+| `2500001` | SystemProcessRunner | `ProcessRunnerLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `2600001–2600005` | SystemProcessHandle | `ProcessHandleLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+
+**Client-Side Logging (WebAssembly):**
+
+Client-side components use `ClientLoggingExtensions.cs` for structured logging in the WebAssembly runtime.
+
+| Range | Service | Category Marker |
+|-------|---------|-----------------|
+| `7000001` | LicenseService | `ILogLicenseService` |
+| `7100001–7100015` | Home page | `ILogHome` |
+| `7200001–7200003` | DotnetVersionsDialog | `ILogDotnetVersionsDialog` |
+| `7300001–7300003` | AspNetReleasesDialog | `ILogAspNetReleasesDialog` |
+| `7400001–7400003` | WebSiteConfigurationDialog | `ILogWebSiteConfigurationDialog` |
+| `7500001–7500003` | FileSelectionDialog | `ILogFileSelectionDialog` |
+
+**Total:** 436 `[LoggerMessage]` methods across 23 extension files (19 server + 1 client), zero CA2254 warnings.
+
+**Serilog Configuration:**
+
+- Output template: `{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [EventId:{EventId}] {Message:lj}{NewLine}{Exception}`
+- Graceful flush: `Log.CloseAndFlush()` registered via `ApplicationStopping` lifetime hook
+- Activity correlation: `WithActivity` enricher adds `ActivityId`, `ActivityTraceId`, `ActivitySpanId` to log context
 
 ---
 
@@ -729,6 +857,49 @@ public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
 - Adapts to different DSM API requirements
 - Clean separation of serialization logic
 - Easy to extend with new formats
+
+### 7. Disposable Scope Pattern (OperationTimer)
+
+**`OperationTimer`** — value-type (`struct`) disposable timer in `Tools/Diagnostics/OperationTimer.cs`.
+
+Starts a `Stopwatch` on construction and invokes a callback with elapsed milliseconds on disposal. Enables scope-based duration logging without manual start/stop boilerplate.
+
+```csharp
+// Single-line usage — timer starts on construction, callback fires on Dispose
+using var timer = new OperationTimer(elapsed => logger.FrameworkInstalledDuration(elapsed, version));
+
+// ... method body ...
+
+// When method returns (success or exception), timer.Dispose() invokes the callback
+```
+
+**Key Features:**
+
+- **Value type** — zero heap allocation; not `readonly` struct (requires mutable `_disposed` flag)
+- **Dispose idempotency** — callback fires exactly once regardless of how many times `Dispose()` is called
+- **Exception-safe** — `using var` ensures callback fires on both success paths and exception paths
+- **Elapsed property** — exposes `ElapsedMilliseconds` for inline access without disposing
+
+**Usage Across Services:**
+
+| Service | Methods with OperationTimer |
+|-----------|-----------|
+| ReverseProxyManagerService | Create, Update, Delete |
+| FrameworkManagementService | Install, Uninstall |
+| WebSiteHostingService | Add, Update, Start, Stop, Remove |
+| SiteLifecycleManager | ProcessStartCommand, ProcessStopCommand |
+| DownloaderService | DownloadReleaseToAsync |
+| DotnetVersionService | RefreshCacheAsync |
+| WebSitesConfigurationService | AddSite, UpdateSite, RemoveSite |
+
+**Note:** DsmApiClient retains inline `Stopwatch` (single HTTP call, duration passed directly to `ApiRequest` method).
+
+**Benefits:**
+
+- Eliminates repetitive `Stopwatch.StartNew()` / `Stop()` / `logger.Xxx(elapsed)` boilerplate
+- Single-line declaration makes intent clear (measure this method's duration)
+- Exception-safe — duration logged even when method throws
+- Combines with `SemaphoreLock` for locked + timed scopes
 
 ---
 

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Net;
 using System.Text.Json;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
@@ -9,11 +11,12 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreInformations;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
+using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
 
-public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiClient> logger)
+public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmApiClient> logger)
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
@@ -37,12 +40,18 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
     /// </summary>
     public async Task DisconnectAsync()
     {
+        logger.Disconnecting();
+
         _sid = String.Empty;
         _httpClient.DefaultRequestHeaders.Remove(NetworkConstants.CookieHeader);
+
+        logger.Disconnected();
     }
 
     public async Task<bool> ConnectAsync(LoginCredentials model)
     {
+        logger.Connecting(_server, _port);
+
         if (!await ReadSettingsAsync())
         {
             return false;
@@ -58,6 +67,8 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
             return false;
         }
 
+        logger.Connected();
+
         return true;
     }
 
@@ -65,7 +76,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
     {
         if (!File.Exists(SystemDefaults.ConfigurationFileName))
         {
-            logger.LogCritical($"Configuration file \"{SystemDefaults.ConfigurationFileName}\" does not exists.");
+            logger.ConfigurationFileNotFound(SystemDefaults.ConfigurationFileName);
             return false;
         }
 
@@ -73,7 +84,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
         var settings = lines.Where(x => x.Contains('='))
                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", String.Empty));
 
-        logger.LogDebug("Configuration file loaded with {Count} parameters.", settings.Count);
+        logger.ConfigurationLoaded(settings.Count);
         _server = settings[SystemDefaults.KeyExternalHostIp];
 
         if (!Int32.TryParse(settings[SystemDefaults.KeyExternalHttpsPort], out _port))
@@ -86,16 +97,21 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
 
     private async Task<bool> HandShakeAsync()
     {
+        logger.HandshakeStarting();
+
         var parameters = new InformationsQueryParameters(ApiInformations);
 
         var result = await ExecuteAsync<ApiInformationResponse>(parameters);
 
         if (result is null || !result.Success || result.Data is null || result.Data.Count == 0)
         {
+            logger.HandshakeFailure();
             return false;
         }
 
         ApiInformations.Replace(result.Data);
+
+        logger.HandshakeSuccess();
 
         return true;
     }
@@ -115,6 +131,8 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
 
         if (response?.Success != true || response.Data is null)
         {
+            var errorMessage = response?.Error?.Errors?.Reason ?? "Authentication failed";
+            logger.AuthenticationFailed(errorMessage);
             return false;
         }
 
@@ -127,6 +145,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
     #region HTTP Request calls
 
     public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
+        where R : IApiResponse
     {
         var url = parameters.BuildUrl(_server, _port);
         var result = parameters.SerializationFormat switch
@@ -139,28 +158,46 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<DsmApiCl
                 => throw new NotSupportedException($"SerializationFormat : {parameters.SerializationFormat} not supported.")
         };
 
+        LogApiErrorIfFailed(result, logger);
+
         return result;
     }
 
     public async Task<ApiResponseBase<EmptyResponse>?> ExecuteSimpleAsync(IApiParameters parameters)
         => await ExecuteAsync<ApiResponseBase<EmptyResponse>>(parameters);
 
+    private static void LogApiErrorIfFailed<R>(R? result, ILogger<ILogDsmApiClient> logger)
+        where R : IApiResponse
+    {
+        if (result is { Success: false, Error: { } error })
+        {
+            logger.ApiError(error.Errors?.Reason ?? "Unknown error", error.Code);
+        }
+    }
+
     private async Task<R?> ExecuteFormAsync<R>(string url, IApiParameters parameters)
+        where R : IApiResponse
         => await ExecutePostAsync<R>(url, parameters.ToForm());
 
     private async Task<R?> ExecuteJsonAsync<R>(string url, IApiParameters parameters)
+        where R : IApiResponse
         => await ExecutePostAsync<R>(url, parameters.ToJson());
 
     private async Task<R?> ExecutePostAsync<R>(string url, StringContent content)
+        where R : IApiResponse
     {
-        var message = await _httpClient.PostAsync(url, content);
+        var stopwatch = Stopwatch.StartNew();
+        var response = await _httpClient.PostAsync(url, content);
+        stopwatch.Stop();
 
-        if (message.StatusCode != System.Net.HttpStatusCode.OK)
+        logger.ApiRequest("POST", url, (int)response.StatusCode, stopwatch.ElapsedMilliseconds);
+
+        var text = await response.Content.ReadAsStringAsync();
+
+        if (response.StatusCode != HttpStatusCode.OK)
         {
             return default;
         }
-
-        var text = await message.Content.ReadAsStringAsync();
 
         return JsonSerializer.Deserialize<R>(text);
     }
