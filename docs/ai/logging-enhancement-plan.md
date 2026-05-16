@@ -17,7 +17,7 @@ project as a proper shared infrastructure library.
 
 | Component | Status |
 |-----------|--------|
-| **Logging project** | ✅ Complete — 18 extension files, 240 `[LoggerMessage]` methods |
+| **Logging project** | ✅ Complete — 18 extension files, 216 `[LoggerMessage]` methods |
 | **Serilog (server)** | ✅ Enhanced — `{EventId}` in template, `CloseAndFlush()` on shutdown, `WithActivity` enricher |
 | **Serilog (client)** | BrowserConsole sink, min level `Debug` |
 | **Server-side logger calls** | ✅ 126 calls migrated to extension methods |
@@ -109,8 +109,8 @@ The `[LoggerMessage]` extensions are organized into separate files **per service
 | `DownloaderLoggingExtensions.cs` | Infrastructure | 5 | 2400001-2400005 | DownloaderService |
 | `ProcessRunnerLoggingExtensions.cs` | Infrastructure | 1 | 2500001 | SystemProcessRunner |
 | `ProcessHandleLoggingExtensions.cs` | Infrastructure | 5 | 2600001-2600005 | SystemProcessHandle |
-| `ClientLoggingExtensions.cs` | Client-side (WASM) | 25 | 7000001, 7100001-7100015, 7200001-7200004, 7300001-7300004, 7400001, 7500001 | LicenseService, Home, dialogs |
-| **Total** | | **240** | | |
+| `ClientLoggingExtensions.cs` | Client-side (WASM) | 26 | 7000001, 7100001-7100015, 7200001-7200004, 7300001-7300004, 7400001, 7500001 | LicenseService, Home, dialogs |
+| **Total** | | **216** | | |
 
 ### Event ID Ranges
 
@@ -372,7 +372,7 @@ Each phase can be committed independently. Phase 2 tasks can be batched (e.g., T
 
 ## Acceptance Criteria
 
-- [x] All 240 `[LoggerMessage]` methods created and assigned event IDs (server + client)
+- [x] All 216 `[LoggerMessage]` methods created and assigned event IDs (server + client)
 - [x] All 126 server-side logger calls migrated to extension methods
 - [x] All 26 client-side logger calls migrated to extension methods
 - [x] Zero CA2254 warnings remaining

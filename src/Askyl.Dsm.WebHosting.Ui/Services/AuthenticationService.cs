@@ -3,6 +3,7 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Microsoft.AspNetCore.Http;
 
@@ -19,6 +20,10 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
     {
+        using var timer = new OperationTimer(elapsed => logger.LoginDuration(elapsed, login));
+
+        logger.LoginStarting(login);
+
         var model = new LoginCredentials(login, password, otpCode);
 
         if (!await apiClient.ConnectAsync(model))
@@ -36,6 +41,10 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// <inheritdoc/>
     public async Task<ApiResult> LogoutAsync()
     {
+        using var timer = new OperationTimer(elapsed => logger.LogoutDuration(elapsed));
+
+        logger.LogoutStarting();
+
         try
         {
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmSessionKey);
