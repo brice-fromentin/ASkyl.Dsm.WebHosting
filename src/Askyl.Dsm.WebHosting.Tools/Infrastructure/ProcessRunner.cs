@@ -21,7 +21,8 @@ public interface IProcessRunner
 /// Production implementation of <see cref="IProcessRunner"/> that spawns real OS processes.
 /// </summary>
 /// <param name="logger">Logger instance.</param>
-public sealed class SystemProcessRunner(ILogger<ILogSystemProcessRunner> logger) : IProcessRunner
+/// <param name="loggerFactory">Logger factory for creating child loggers.</param>
+public sealed class SystemProcessRunner(ILogger<ILogSystemProcessRunner> logger, ILoggerFactory loggerFactory) : IProcessRunner
 {
     public IProcessHandle Start(ProcessStartInfo startInfo)
     {
@@ -30,6 +31,6 @@ public sealed class SystemProcessRunner(ILogger<ILogSystemProcessRunner> logger)
 
         logger.ProcessSpawned(startInfo.FileName, startInfo.Arguments ?? String.Empty, workingDirectory);
 
-        return new SystemProcessHandle((ILogger<ILogSystemProcessHandle>)logger, process);
+        return new SystemProcessHandle(loggerFactory.CreateLogger<ILogSystemProcessHandle>(), process);
     }
 }

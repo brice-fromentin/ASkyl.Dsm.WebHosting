@@ -72,11 +72,6 @@ internal sealed class SystemProcessHandle(ILogger<ILogSystemProcessHandle> logge
     {
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 
-        if (!process.HasExited)
-        {
-            return;
-        }
-
         logger.ProcessExited(process.Id, process.ExitCode);
     }
 

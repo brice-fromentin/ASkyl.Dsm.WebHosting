@@ -192,12 +192,12 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
 
         logger.ApiRequest("POST", url, (int)response.StatusCode, stopwatch.ElapsedMilliseconds);
 
+        var text = await response.Content.ReadAsStringAsync();
+
         if (response.StatusCode != HttpStatusCode.OK)
         {
             return default;
         }
-
-        var text = await response.Content.ReadAsStringAsync();
 
         return JsonSerializer.Deserialize<R>(text);
     }
