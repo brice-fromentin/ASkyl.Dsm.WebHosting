@@ -5,14 +5,11 @@
 @using System.Net
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Askyl.Dsm.WebHosting.Constants.Application
-@using Askyl.Dsm.WebHosting.Constants.Network
 @using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Constants.WebApi
-@using Askyl.Dsm.WebHosting.Data.Domain.Authentication
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Logging
-@using Askyl.Dsm.WebHosting.Ui.Client.Interfaces
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 
 @inject IDialogService DialogService
@@ -108,7 +105,7 @@
         try
         {
             var result = await WebsiteHostingService.GetAllWebsitesAsync();
-            
+
             if (!result.Success || result.Value is null)
             {
                 Logger.FailedToLoadWebsites(result.Message ?? "Unknown error");
@@ -339,14 +336,15 @@
         _ = await dialog.Result;
     }
 
-    private DialogParameters CreateDialogParameters(string width) => new() 
-        { 
-            Width = width, 
-            Modal = true, 
-            TrapFocus = false, 
-            PreventScroll = true, 
-            PreventDismissOnOverlayClick = true 
-        };
+    private DialogParameters CreateDialogParameters(string width) => new()
+    {
+        Width = width,
+        Modal = true,
+        TrapFocus = false,
+        PreventScroll = true,
+        PreventDismissOnOverlayClick = true
+    };
 
     #endregion
+
 }
