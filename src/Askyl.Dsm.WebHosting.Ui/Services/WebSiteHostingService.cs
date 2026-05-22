@@ -536,9 +536,14 @@ public class WebSiteHostingService(
         var result = WebSiteInstanceResult.CreateSuccess(instance);
         var runtimeInfo = assemblyRuntimeDetector.Detect(configuration.ApplicationRealPath);
 
-        if (runtimeInfo is { IsCompatible: false })
+        if (runtimeInfo is not null)
         {
-            result.WarningMessage = runtimeInfo.MissingMessage;
+            instance.RequiredFramework = runtimeInfo.Channel;
+
+            if (!runtimeInfo.IsCompatible)
+            {
+                result.WarningMessage = runtimeInfo.MissingMessage;
+            }
         }
 
         return result;

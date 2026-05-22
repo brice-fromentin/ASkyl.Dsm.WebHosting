@@ -75,6 +75,12 @@
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 
+    /// <summary>
+    /// Gets or sets the product version of the channel to pre-select (e.g., "9.0").
+    /// </summary>
+    [Parameter]
+    public string? Content { get; set; }
+
     private List<AspNetChannel> Channels { get; set; } = [];
 
     private IQueryable<AspNetRelease> Releases { get; set; } = AutoDataGrid<AspNetRelease>.Empty();
@@ -134,7 +140,11 @@
             }
 
             Channels = channelsResult.Value ?? [];
-            await OnChannelChanged(SelectedChannel ?? Channels.FirstOrDefault());
+
+            var initialChannel = Channels.FirstOrDefault(c => c.ProductVersion == Content)
+                ?? SelectedChannel
+                ?? Channels.FirstOrDefault();
+            await OnChannelChanged(initialChannel);
         }
         catch (Exception ex)
         {
