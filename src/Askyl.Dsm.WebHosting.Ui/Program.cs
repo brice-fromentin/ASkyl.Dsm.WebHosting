@@ -6,7 +6,6 @@ using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
-using Microsoft.Extensions.Hosting;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
@@ -57,6 +56,9 @@ builder.Services.AddScoped<IDownloaderService, DownloaderService>();
 
 // Register versions detector service (Singleton - caches expensive dotnet --info output)
 builder.Services.AddSingleton<IVersionsDetectorService, VersionsDetectorService>();
+
+// Register assembly runtime detector (Singleton - depends on IVersionsDetectorService)
+builder.Services.AddSingleton<IAssemblyRuntimeDetector, AssemblyRuntimeDetector>();
 
 // Register process runner (Singleton - stateless process spawning abstraction)
 builder.Services.AddSingleton<IProcessRunner, SystemProcessRunner>();

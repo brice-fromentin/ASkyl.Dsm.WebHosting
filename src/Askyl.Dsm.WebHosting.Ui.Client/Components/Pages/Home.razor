@@ -59,10 +59,11 @@
     </FluentButton>
 </FluentToolbar>
 
-<AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr">
+<AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr 1fr">
     <ChildContent>
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Name" Property="@(i => i.Configuration.Name)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Path" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Framework" Property="@(i => GetFrameworkDisplay(i))" Sortable="false" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="Internal Port" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="State" Property="@(i => i.State)" Sortable="true" />
     </ChildContent>
@@ -140,6 +141,16 @@
     private async Task EditWebSite(WebSiteInstance instance) => await EditWebSite();
 
     private void HandleInstanceSelected(WebSiteInstance instance) => SelectedInstance = instance;
+
+    private static string GetFrameworkDisplay(WebSiteInstance instance)
+    {
+        if (String.IsNullOrEmpty(instance.RequiredFramework))
+        {
+            return "—";
+        }
+
+        return instance.RequiredFramework;
+    }
 
     private async Task DeleteWebSite()
     {

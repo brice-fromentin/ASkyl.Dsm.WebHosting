@@ -1,8 +1,10 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.8
+**Version:** 0.5.9
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 16, 2026 (Logging reorganization — Server/Client folder structure, client-side logging extensions, OperationTimer, ILoggerFactory in SystemProcessRunner)
+**Last Updated:** May 22, 2026 (Runtime detection — `*.runtimeconfig.json` parsing, framework compatibility
+validation, Home grid framework column, ProcessLoggingExtensions sub-range renumbering,
+`SiteEntry` pair class, `RequiredFramework` moved to instance-only)
 
 ---
 
@@ -72,6 +74,11 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ✅ **DSM API logging** — request timing, authentication failures, and API errors logged via `[LoggerMessage]` extensions; compile-time `IApiResponse` constraint replaces reflection
 - ✅ **Serilog configuration** — output template with `{EventId}`, `Log.CloseAndFlush()` on graceful shutdown, `WithActivity` enricher for correlation tracking
 - ✅ **OperationTimer** — value-type disposable timer for scope-based duration logging across all services; replaced manual `Stopwatch` boilerplate with single-line `using var` pattern
+- ✅ **Runtime detection** (May 22, 2026) — `AssemblyRuntimeDetector` parses `*.runtimeconfig.json` to detect
+  required .NET version; blocks site start if incompatible; framework column on Home grid;
+  `RequiredFramework` on instance only (not persisted)
+- ✅ **ProcessLoggingExtensions** renumbered with sub-range spacing (1600xxx–1604xxx) to allow inserting log messages per region
+- ✅ **SiteEntry pair class** — `WebSiteHostingService` uses `ConcurrentDictionary<Guid, SiteEntry>` pairing instance + lifecycle manager; eliminates parallel dictionary synchronization
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 
@@ -268,6 +275,7 @@ Constants/
 | **IArchiveExtractorService** | `Contracts/IArchiveExtractorService.cs` | Decompress(inputFile, exclude) | Tools.Infrastructure.ArchiveExtractorService |
 | **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), DownloadVersionToAsync(), GetAspNetCoreReleasesAsync() | Tools.Runtime.DownloaderService |
 | **IVersionsDetectorService** | `Contracts/IVersionsDetectorService.cs` | GetInstalledVersionsAsync(), IsChannelInstalled(), RefreshCacheAsync() | Tools.Runtime.VersionsDetectorService |
+| **IAssemblyRuntimeDetector** | `Contracts/IAssemblyRuntimeDetector.cs` | Detect() | Tools.Runtime.AssemblyRuntimeDetector |
 
 **Structure:**
 
@@ -286,7 +294,8 @@ Data/
 │   ├── IFileManagerService.cs              # File management (Scoped, configurable root)
 │   ├── IArchiveExtractorService.cs         # Archive extraction (Scoped)
 │   ├── IDownloaderService.cs               # .NET downloads with cancellation (Scoped)
-│   └── IVersionsDetectorService.cs         # Version detection with smart caching (Singleton)
+│   ├── IVersionsDetectorService.cs         # Version detection with smart caching (Singleton)
+│   └── IAssemblyRuntimeDetector.cs         # Runtime detection from *.runtimeconfig.json (Singleton)
 ├── Domain/                                 # Domain models
 │   ├── Authentication/                     # Auth-related models
 │   │   └── LoginCredentials.cs             # Login credentials
@@ -298,12 +307,13 @@ Data/
 │   │   ├── AspNetChannel.cs                # .NET channel info
 │   │   ├── AspNetCoreReleaseInfo.cs        # Release version details
 │   │   ├── AspNetRelease.cs                # Release metadata
+│   │   ├── AssemblyRuntimeInfo.cs          # Detected runtime info (channel, compatibility, error message)
 │   │   ├── FrameworkInfo.cs                # Framework metadata
 │   │   └── InstallFramework.cs             # Framework installation target
 │   └── WebSites/                           # Website management domain
 │       ├── ProcessInfo.cs                  # Process runtime snapshot (Id, IsResponding)
-│       ├── WebSiteConfiguration.cs         # Main config model
-│       ├── WebSiteInstance.cs              # Runtime instance
+│       ├── WebSiteConfiguration.cs         # Main config model (settings only — no runtime state)
+│       ├── WebSiteInstance.cs              # Runtime instance (owns RequiredFramework — not persisted)
 │       ├── WebSiteRuntimeState.cs          # Immutable record for site state (Running/Stopped/NotResponding)
 │       ├── WebSiteInstanceDetails.cs       # Website instance details for UI
 │       ├── WebSitesConfiguration.cs        # Persistent configuration store
@@ -376,7 +386,8 @@ Tools/
 │   └── OperationTimer.cs                   # Disposable scope timer (Stopwatch + callback on Dispose)
 ├── Runtime/                                # .NET runtime management (DI-based)
     ├── DownloaderService.cs                # Binary download utility (implements IDownloaderService)
-    └── VersionsDetectorService.cs          # Version detection with smart caching (implements IVersionsDetectorService)
+    ├── VersionsDetectorService.cs          # Version detection with smart caching (implements IVersionsDetectorService)
+    └── AssemblyRuntimeDetector.cs          # Runtime detection from *.runtimeconfig.json (implements IAssemblyRuntimeDetector)
 └── Threading/                              # Async coordination utilities
     └── SemaphoreLock.cs                    # Semaphore-based async locking utility
 ```
@@ -477,8 +488,8 @@ Ui/
 │   ├── FrameworkManagementService.cs       # Framework installation
 │   ├── LogDownloadService.cs               # Log file retrieval
 │   ├── ReverseProxyManagerService.cs       # Proxy CRUD operations
-│   ├── SiteLifecycleManager.cs             # Per-site process management (start/stop, graceful shutdown, force kill)
-│   ├── WebSiteHostingService.cs            # Website orchestration (delegates process lifecycle to SiteLifecycleManager)
+│   ├── SiteLifecycleManager.cs             # Per-site process management (start/stop, graceful shutdown, force kill, framework validation on start)
+│   ├── WebSiteHostingService.cs            # Website orchestration (framework detection on init, delegates lifecycle to SiteLifecycleManager, SiteEntry pairs instance + manager)
 │   └── WebSitesConfigurationService.cs     # Configuration persistence
 ├── wwwroot/                                # Static assets (CSS, JS, images)
 ├── appsettings.json                        # Production configuration
@@ -696,7 +707,12 @@ Each service owns a dedicated 100K range at 1M spacing to prevent cross-service 
 | `1300001–1300007` | LogDownloadService | `LogDownloadServiceLoggingExtensions.cs` | `Server/FileManagement/` |
 | `1400001–1400011` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` | `Server/Framework/` |
 | `1500001–1500009` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` | `Server/Framework/` |
-| `1600001–1600022` | SiteLifecycleManager | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1600001–1600007` | SiteLifecycleManager (start/stop) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1601001–1601004` | SiteLifecycleManager (site stop) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1602001–1602003` | SiteLifecycleManager (dispose) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1603001–1603004` | SiteLifecycleManager (graceful shutdown) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1604001–1604005` | SiteLifecycleManager (duration) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `2250001–2250005` | AssemblyRuntimeDetector | `AssemblyRuntimeDetectorLoggingExtensions.cs` | `Server/Infrastructure/` |
 | `1700001–1700016` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` | `Server/ReverseProxy/` |
 | `1800001–1800044` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` | `Server/WebsiteHosting/` |
 | `1900001–1900018` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` | `Server/WebsiteHosting/` |
@@ -809,13 +825,16 @@ IFileSystemService                FileSystemService            │
 
 ```text
 WebSiteHostingService (BackgroundService, Singleton)
-├── Orchestrates website instances via ConcurrentDictionary<Guid, WebSiteInstance>
+├── Orchestrates website instances via ConcurrentDictionary<Guid, SiteEntry>
+├── SiteEntry pairs WebSiteInstance + SiteLifecycleManager (eliminates parallel dictionary sync)
 ├── Loads configurations from JSON on startup
+├── Detects required framework on init (sets RequiredFramework on instance — not persisted)
 ├── Manages instance lifecycle (add/update/remove)
 └── Delegates per-site process management to SiteLifecycleManager
 
 SiteLifecycleManager (Per-instance, Thread-safe)
 ├── Starts/stops .NET web application processes via IProcessRunner abstraction (unit-testable)
+├── Validates framework compatibility on start (blocks if incompatible)
 ├── IProcessHandle? replaces direct Process? reference — delegates to SystemProcessHandle
 ├── Configures environment variables (ASPNETCORE_URLS, ASPNETCORE_ENVIRONMENT, custom vars)
 ├── Graceful shutdown with ProcessTerminator.SendGracefulShutdownSignal() (SIGTERM on Unix, CloseMainWindow on Windows)
@@ -832,9 +851,12 @@ SiteLifecycleManager (Per-instance, Thread-safe)
 - **Cross-platform graceful shutdown** — ProcessTerminator sends SIGTERM on Unix (via P/Invoke `libc.kill`) or CloseMainWindow on Windows; ASP.NET Core child processes drain in ~1-3 seconds
 - **Async process wait** — WaitForExitAsync with linked cancellation token replaces blocking WaitForExit(timeoutMs)
 - **Force kill fallback** — If process doesn't exit within timeout, Process.Kill() is called as last resort
-- **Thread-safe operations** — `ConcurrentDictionary` for instance management; Channel-based command serialization in SiteLifecycleManager (eliminates TOCTOU races)
+- **Thread-safe operations** — `ConcurrentDictionary<Guid, SiteEntry>` for instance management
+  (eliminates parallel dictionary sync); Channel-based command serialization in SiteLifecycleManager
+  (eliminates TOCTOU races)
 - **Idempotent stop** — Calling `StopAsync()` when already stopped returns success without error
 - **Safe disposal** — `DisposeCommand` queues after all pending commands; `Dispose()` blocks until loop drains
+- **Framework detection** — `IAssemblyRuntimeDetector.Detect()` called on init (sets `RequiredFramework` on instance) and on start (blocks if incompatible)
 
 ### 6. Strategy Pattern (Serialization)
 

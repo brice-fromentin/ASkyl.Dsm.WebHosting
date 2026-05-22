@@ -19,12 +19,25 @@ public class WebSiteHostingService(
     IProcessRunner processRunner,
     IWebSitesConfigurationService configService,
     IFileSystemService fileSystemService,
-    IReverseProxyManagerService reverseProxyManager) : BackgroundService, IWebSiteHostingService
+    IReverseProxyManagerService reverseProxyManager,
+    IAssemblyRuntimeDetector assemblyRuntimeDetector) : BackgroundService, IWebSiteHostingService
 {
     #region Fields
 
-    private readonly ConcurrentDictionary<Guid, WebSiteInstanceDetails> _instances = new();
-    private readonly ConcurrentDictionary<Guid, SiteLifecycleManager> _lifecycleManagers = new();
+    private readonly ConcurrentDictionary<Guid, SiteEntry> _sites = new();
+
+    #endregion
+
+    #region Nested Types
+
+    /// <summary>
+    /// Pairs a website instance with its lifecycle manager, eliminating parallel dictionary synchronization.
+    /// </summary>
+    private sealed class SiteEntry(WebSiteInstanceDetails instance, SiteLifecycleManager lifecycleManager)
+    {
+        public WebSiteInstanceDetails Instance { get; } = instance;
+        public SiteLifecycleManager LifecycleManager { get; set; } = lifecycleManager;
+    }
 
     #endregion
 
@@ -38,15 +51,11 @@ public class WebSiteHostingService(
     {
         var instances = new List<WebSiteInstance>();
 
-        foreach (var instance in _instances.Values)
+        foreach (var entry in _sites.Values)
         {
-            if (_lifecycleManagers.TryGetValue(instance.Id, out var lifecycleManager))
-            {
-                var runtimeState = await lifecycleManager.GetRuntimeStateAsync();
-                UpdateInstanceRuntimeState(instance, runtimeState);
-            }
-
-            instances.Add(instance); // Serialized as base type — Process excluded
+            var runtimeState = await entry.LifecycleManager.GetRuntimeStateAsync();
+            UpdateInstanceRuntimeState(entry.Instance, runtimeState);
+            instances.Add(entry.Instance); // Serialized as base type — Process excluded
         }
 
         return WebSiteInstancesResult.CreateSuccess(instances);
@@ -101,11 +110,13 @@ public class WebSiteHostingService(
     /// </summary>
     public async Task<WebSiteInstanceResult> UpdateWebsiteAsync(WebSiteConfiguration configuration)
     {
-        if (!_instances.TryGetValue(configuration.Id, out var existingInstance))
+        if (!_sites.TryGetValue(configuration.Id, out var entry))
         {
             logger.InstanceNotFoundUpdate(configuration.Name);
             return WebSiteInstanceResult.CreateFailure($"Instance not found for website '{configuration.Name}'");
         }
+
+        var existingInstance = entry.Instance;
 
         using var timer = new OperationTimer(elapsed => logger.UpdateWebsiteDuration(elapsed, configuration.Name));
 
@@ -135,7 +146,7 @@ public class WebSiteHostingService(
             await configService.UpdateSiteAsync(configuration);
 
             // STEP 4: Update instance
-            await UpdateInstanceAsync(existingInstance, configuration);
+            await UpdateInstanceAsync(entry, configuration);
 
             return WebSiteInstanceResult.CreateSuccess(existingInstance);
         }
@@ -157,28 +168,22 @@ public class WebSiteHostingService(
     /// </summary>
     public async Task<ApiResult> StartWebsiteAsync(Guid id)
     {
-        if (!_instances.TryGetValue(id, out var instance))
+        if (!_sites.TryGetValue(id, out var entry))
         {
             logger.CannotStartSiteNotFound(id);
             return ApiResult.CreateFailure($"Site with ID '{id}' not found");
         }
 
-        using var timer = new OperationTimer(elapsed => logger.StartWebsiteDuration(elapsed, instance.Configuration.Name));
+        using var timer = new OperationTimer(elapsed => logger.StartWebsiteDuration(elapsed, entry.Instance.Configuration.Name));
 
-        logger.StartWebsiteStarting(instance.Configuration.Name);
+        logger.StartWebsiteStarting(entry.Instance.Configuration.Name);
 
-        if (!_lifecycleManagers.TryGetValue(id, out var lifecycleManager))
-        {
-            logger.LifecycleManagerNotFoundStart(id);
-            return ApiResult.CreateFailure("Internal error: lifecycle manager not found");
-        }
-
-        var result = await lifecycleManager.StartAsync();
+        var result = await entry.LifecycleManager.StartAsync();
 
         if (result.Success)
         {
-            var runtimeState = await lifecycleManager.GetRuntimeStateAsync();
-            UpdateInstanceRuntimeState(instance, runtimeState);
+            var runtimeState = await entry.LifecycleManager.GetRuntimeStateAsync();
+            UpdateInstanceRuntimeState(entry.Instance, runtimeState);
         }
 
         return result;
@@ -189,28 +194,22 @@ public class WebSiteHostingService(
     /// </summary>
     public async Task<ApiResult> StopWebsiteAsync(Guid id)
     {
-        if (!_instances.TryGetValue(id, out var instance))
+        if (!_sites.TryGetValue(id, out var entry))
         {
             logger.CannotStopSiteNotFound(id);
             return ApiResult.CreateFailure($"Site with ID '{id}' not found");
         }
 
-        using var timer = new OperationTimer(elapsed => logger.StopWebsiteDuration(elapsed, instance.Configuration.Name));
+        using var timer = new OperationTimer(elapsed => logger.StopWebsiteDuration(elapsed, entry.Instance.Configuration.Name));
 
-        logger.StopWebsiteStarting(instance.Configuration.Name);
+        logger.StopWebsiteStarting(entry.Instance.Configuration.Name);
 
-        if (!_lifecycleManagers.TryGetValue(id, out var lifecycleManager))
-        {
-            logger.LifecycleManagerNotFoundStop(id);
-            return ApiResult.CreateFailure("Internal error: lifecycle manager not found");
-        }
-
-        var result = await lifecycleManager.StopAsync();
+        var result = await entry.LifecycleManager.StopAsync();
 
         if (result.Success)
         {
-            var runtimeState = await lifecycleManager.GetRuntimeStateAsync();
-            UpdateInstanceRuntimeState(instance, runtimeState);
+            var runtimeState = await entry.LifecycleManager.GetRuntimeStateAsync();
+            UpdateInstanceRuntimeState(entry.Instance, runtimeState);
         }
 
         return result;
@@ -262,23 +261,29 @@ public class WebSiteHostingService(
         foreach (var site in allSites)
         {
             var instance = new WebSiteInstanceDetails(site);
-            _instances[instance.Id] = instance;
 
-            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, site);
-            _lifecycleManagers[instance.Id] = lifecycleManager;
+            // Detect framework from assembly
+            if (!String.IsNullOrEmpty(site.ApplicationRealPath))
+            {
+                var runtimeInfo = assemblyRuntimeDetector.Detect(site.ApplicationRealPath);
+                instance.RequiredFramework = runtimeInfo?.Channel;
+            }
+
+            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, assemblyRuntimeDetector, site);
+            _sites[instance.Id] = new SiteEntry(instance, lifecycleManager);
 
             logger.InstanceCreated(site.Name);
         }
 
-        logger.AllInstancesInitialized(_instances.Count);
+        logger.AllInstancesInitialized(_sites.Count);
     }
 
     private async Task StartEligibleSitesAsync()
     {
         var results = await Task.WhenAll(
-            _instances.Values
-                .Where(i => i.Configuration.IsEnabled && i.Configuration.AutoStart)
-                .Select(i => StartWebsiteAsync(i.Id)));
+            _sites.Values
+                .Where(e => e.Instance.Configuration.IsEnabled && e.Instance.Configuration.AutoStart)
+                .Select(e => StartWebsiteAsync(e.Instance.Id)));
 
         var failures = results.Where(r => !r.Success).ToList();
         if (failures.Count != 0)
@@ -294,10 +299,8 @@ public class WebSiteHostingService(
     public async Task<WebSiteInstance> AddInstanceAsync(WebSiteConfiguration configuration)
     {
         var instance = new WebSiteInstanceDetails(configuration);
-        _instances[instance.Id] = instance;
-
-        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, configuration);
-        _lifecycleManagers[instance.Id] = lifecycleManager;
+        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, assemblyRuntimeDetector, configuration);
+        _sites[instance.Id] = new SiteEntry(instance, lifecycleManager);
 
         logger.InstanceAdded(configuration.Name);
 
@@ -309,13 +312,9 @@ public class WebSiteHostingService(
         return instance;
     }
 
-    public async Task UpdateInstanceAsync(WebSiteInstanceDetails instance, WebSiteConfiguration newConfiguration)
+    private async Task UpdateInstanceAsync(SiteEntry entry, WebSiteConfiguration newConfiguration)
     {
-        if (!_instances.TryGetValue(instance.Id, out var existingInstance))
-        {
-            logger.InstanceNotFoundDuringUpdate(newConfiguration.Name);
-            throw new ArgumentException("Instance not found.", nameof(instance));
-        }
+        var existingInstance = entry.Instance;
 
         var wasRunning = existingInstance.IsRunning;
         var oldConfiguration = existingInstance.Configuration;
@@ -327,13 +326,9 @@ public class WebSiteHostingService(
         }
 
         // Recreate lifecycle manager with new configuration to avoid stale config
-        if (_lifecycleManagers.TryRemove(instance.Id, out var oldManager))
-        {
-            oldManager.Dispose();
-        }
-
+        entry.LifecycleManager.Dispose();
         existingInstance.Configuration = newConfiguration;
-        _lifecycleManagers[instance.Id] = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, newConfiguration);
+        entry.LifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, assemblyRuntimeDetector, newConfiguration);
 
         logger.InstanceUpdated(newConfiguration.Name);
 
@@ -360,12 +355,13 @@ public class WebSiteHostingService(
 
     public async Task<ApiResult> RemoveInstanceAsync(Guid instanceId)
     {
-        if (!_instances.TryGetValue(instanceId, out var instance))
+        if (!_sites.TryGetValue(instanceId, out var entry))
         {
             logger.CannotRemoveInstanceNotFound(instanceId);
             return ApiResult.CreateFailure("Instance not found");
         }
 
+        var instance = entry.Instance;
         var siteName = instance.Configuration.Name;
 
         using var timer = new OperationTimer(elapsed => logger.RemoveWebsiteDuration(elapsed, siteName));
@@ -375,17 +371,14 @@ public class WebSiteHostingService(
         try
         {
             // Stop lifecycle manager if running (without removing from dictionary yet)
-            if (_lifecycleManagers.TryGetValue(instanceId, out var lifecycleManager))
+            if (instance.IsRunning)
             {
-                if (instance.IsRunning)
-                {
-                    var stopResult = await lifecycleManager.StopAsync();
+                var stopResult = await entry.LifecycleManager.StopAsync();
 
-                    if (!stopResult.Success && stopResult.ErrorCode != ApiErrorCode.NotFound)
-                    {
-                        logger.FailedToStopBeforeDeletion(stopResult.Message);
-                        // Continue with cleanup anyway
-                    }
+                if (!stopResult.Success && stopResult.ErrorCode != ApiErrorCode.NotFound)
+                {
+                    logger.FailedToStopBeforeDeletion(stopResult.Message);
+                    // Continue with cleanup anyway
                 }
             }
 
@@ -401,12 +394,8 @@ public class WebSiteHostingService(
             await configService.RemoveSiteAsync(instance.Configuration.Id);
 
             // Safe to remove from memory now — persistent config is gone
-            _ = _instances.TryRemove(instanceId, out _);
-
-            if (_lifecycleManagers.TryRemove(instanceId, out lifecycleManager))
-            {
-                lifecycleManager.Dispose();
-            }
+            _ = _sites.TryRemove(instanceId, out var removedEntry);
+            removedEntry?.LifecycleManager.Dispose();
 
             logger.InstanceRemoved(siteName);
             return ApiResult.CreateSuccess();
@@ -434,23 +423,22 @@ public class WebSiteHostingService(
 
     private async Task StopAllSitesAsync(CancellationToken cancellationToken)
     {
-        var stopTasks = _lifecycleManagers.Values.Select(
-            async m =>
+        var stopTasks = _sites.Values.Select(
+            async entry =>
             {
                 try
                 {
-                    await m.StopAsync(cancellationToken);
+                    await entry.LifecycleManager.StopAsync(cancellationToken);
                 }
                 finally
                 {
-                    m.Dispose();
+                    entry.LifecycleManager.Dispose();
                 }
             })
             .ToList();
         await Task.WhenAll(stopTasks);
 
-        _lifecycleManagers.Clear();
-        _instances.Clear();
+        _sites.Clear();
     }
 
     #endregion

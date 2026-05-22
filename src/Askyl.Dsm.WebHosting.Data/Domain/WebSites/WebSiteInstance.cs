@@ -36,4 +36,10 @@ public class WebSiteInstance
     /// Gets a human-readable state description.
     /// </summary>
     public string State => IsRunning ? "Running" : "Stopped";
+
+    /// <summary>
+    /// Gets or sets the required .NET framework channel detected from the assembly (e.g., "8.0").
+    /// This is a runtime-derived property, not persisted in configuration.
+    /// </summary>
+    public string? RequiredFramework { get; set; }
 }

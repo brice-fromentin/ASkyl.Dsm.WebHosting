@@ -69,22 +69,10 @@ public static partial class WebsiteLoggingExtensions
     public static partial void CannotStartSiteNotFound(this ILogger<ILogWebSiteHostingService> logger, Guid instanceId);
 
     /// <summary>
-    /// Logs that lifecycle manager was not found for site start.
-    /// </summary>
-    [LoggerMessage(EventId = 1800009, Level = LogLevel.Error, Message = "Lifecycle manager not found for site: {SiteId}")]
-    public static partial void LifecycleManagerNotFoundStart(this ILogger<ILogWebSiteHostingService> logger, Guid siteId);
-
-    /// <summary>
     /// Logs that site cannot be stopped (not found).
     /// </summary>
     [LoggerMessage(EventId = 1800010, Level = LogLevel.Warning, Message = "Cannot stop site: site with ID {InstanceId} not found")]
     public static partial void CannotStopSiteNotFound(this ILogger<ILogWebSiteHostingService> logger, Guid instanceId);
-
-    /// <summary>
-    /// Logs that lifecycle manager was not found for site stop.
-    /// </summary>
-    [LoggerMessage(EventId = 1800011, Level = LogLevel.Error, Message = "Lifecycle manager not found for site: {SiteId}")]
-    public static partial void LifecycleManagerNotFoundStop(this ILogger<ILogWebSiteHostingService> logger, Guid siteId);
 
     #endregion
 

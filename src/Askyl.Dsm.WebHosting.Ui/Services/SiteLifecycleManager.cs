@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading.Channels;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
@@ -19,6 +20,7 @@ public sealed class SiteLifecycleManager : IDisposable
 {
     private readonly ILogger<ILogSiteLifecycleManager> _logger;
     private readonly IProcessRunner _processRunner;
+    private readonly IAssemblyRuntimeDetector _assemblyRuntimeDetector;
     private readonly WebSiteConfiguration _configuration;
     private readonly Channel<LifecycleCommand> _channel = Channel.CreateBounded<LifecycleCommand>(new BoundedChannelOptions(16)
     {
@@ -30,10 +32,15 @@ public sealed class SiteLifecycleManager : IDisposable
     private IProcessHandle? _process;
     private volatile bool _isDisposing;
 
-    public SiteLifecycleManager(ILogger<ILogSiteLifecycleManager> logger, IProcessRunner processRunner, WebSiteConfiguration configuration)
+    public SiteLifecycleManager(
+        ILogger<ILogSiteLifecycleManager> logger,
+        IProcessRunner processRunner,
+        IAssemblyRuntimeDetector assemblyRuntimeDetector,
+        WebSiteConfiguration configuration)
     {
         _logger = logger;
         _processRunner = processRunner;
+        _assemblyRuntimeDetector = assemblyRuntimeDetector;
         _configuration = configuration;
         _loopTask = ProcessSiteCommandsAsync();
     }
@@ -176,6 +183,14 @@ public sealed class SiteLifecycleManager : IDisposable
         {
             _logger.ApplicationBinaryNotFound(_configuration.ApplicationRealPath);
             return ApiResult.CreateFailure($"Application binary not found: {_configuration.ApplicationRealPath}");
+        }
+
+        // Detect and validate framework compatibility
+        var runtimeInfo = _assemblyRuntimeDetector.Detect(_configuration.ApplicationRealPath);
+        if (runtimeInfo is { IsCompatible: false })
+        {
+            _logger.SiteStartBlockedIncompatible(runtimeInfo.MissingMessage ?? "Incompatible framework");
+            return ApiResult.CreateFailure(runtimeInfo.MissingMessage ?? "Incompatible framework");
         }
 
         try

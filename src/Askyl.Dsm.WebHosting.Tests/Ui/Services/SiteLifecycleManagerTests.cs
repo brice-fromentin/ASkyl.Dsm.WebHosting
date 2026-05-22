@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
@@ -18,6 +20,7 @@ public class SiteLifecycleManagerTests : IDisposable
     private readonly Mock<ILogger<ILogSiteLifecycleManager>> _logger;
     private readonly FakeProcessRunner _processRunner;
     private readonly FakeProcessHandle _processHandle;
+    private readonly Mock<IAssemblyRuntimeDetector> _detector;
     private readonly WebSiteConfiguration _configuration;
     private readonly List<ProcessStartInfo> _startedProcesses;
     private readonly string _tempDir;
@@ -28,6 +31,7 @@ public class SiteLifecycleManagerTests : IDisposable
         _logger = new Mock<ILogger<ILogSiteLifecycleManager>>();
         _processRunner = new FakeProcessRunner();
         _processHandle = new FakeProcessHandle();
+        _detector = new Mock<IAssemblyRuntimeDetector>();
         _startedProcesses = _processRunner.StartedProcesses;
         _tempDir = Path.Combine(Path.GetTempPath(), $"asl_wh_{Guid.NewGuid():N}");
         _tempDll = Path.Combine(_tempDir, "MyApp.dll");
@@ -53,7 +57,7 @@ public class SiteLifecycleManagerTests : IDisposable
 
     private SiteLifecycleManager CreateManager()
     {
-        return new SiteLifecycleManager(_logger.Object, _processRunner, _configuration);
+        return new SiteLifecycleManager(_logger.Object, _processRunner, _detector.Object, _configuration);
     }
 
     public void Dispose()
@@ -430,6 +434,65 @@ public class SiteLifecycleManagerTests : IDisposable
         public void Dispose()
         {
         }
+    }
+
+    #endregion
+
+    #region Framework detection
+
+    [Fact]
+    public async Task StartAsync_IncompatibleFramework_ReturnsFailure()
+    {
+        // Arrange
+        _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath))
+            .Returns(new AssemblyRuntimeInfo(
+                "9.0", false, "Requires .NET 9.0, but this runtime is not installed"));
+        var manager = CreateManager();
+
+        // Act
+        var result = await manager.StartAsync();
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Requires .NET 9.0", result.Message);
+        Assert.Empty(_startedProcesses);
+
+        manager.Dispose();
+    }
+
+    [Fact]
+    public async Task StartAsync_CompatibleFramework_StartsSuccessfully()
+    {
+        // Arrange
+        _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath))
+            .Returns(new AssemblyRuntimeInfo("8.0", true, null));
+        var manager = CreateManager();
+
+        // Act
+        var result = await manager.StartAsync();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Single(_startedProcesses);
+
+        manager.Dispose();
+    }
+
+    [Fact]
+    public async Task StartAsync_DetectionFallsThrough_AllowsStart()
+    {
+        // Arrange - detection returns null (non-.NET file)
+        _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath)).Returns((AssemblyRuntimeInfo?)null);
+        var manager = CreateManager();
+
+        // Act
+        var result = await manager.StartAsync();
+
+        // Assert - should still start (no blocking)
+        Assert.True(result.Success);
+        Assert.Single(_startedProcesses);
+
+        manager.Dispose();
     }
 
     #endregion
