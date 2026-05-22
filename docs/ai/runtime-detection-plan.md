@@ -18,8 +18,9 @@ Users select any `.dll`/`.exe` and discover a missing runtime only at startup vi
 | Flow | Previous Behavior |
 |------|-----------------|
 | **Startup** (`SiteLifecycleManager.ProcessStartCommand`) | Only checked `File.Exists(ApplicationRealPath)` — no runtime validation. Ran `dotnet <dll>` and failed at `Process.Start()` if runtime was missing. |
-| **Configuration** (`WebSiteConfigurationDialog`) | `FileSelectionDialog` filtered to `.dll/.exe` only (server-side). No TFM detection, no compatibility feedback. |
+| **Configuration** (`WebSiteConfigurationDialog`) | `FileSelectionDialog` filtered to `.dll/.exe` only (server-side). No TFM detection, no compatibility feedback on add/update. |
 | **Home page grid** | Showed Name, Path, Port, State — no framework column |
+| **Add/Update save** | `WebSiteHostingService.AddWebsiteAsync` / `UpdateWebsiteAsync` persisted config without checking runtime compatibility |
 
 ---
 
@@ -133,6 +134,132 @@ Display logic:
 - "8.0" (if detected)
 - "—" (if not detected)
 
+### Phase 5 — Dialog Feedback on Add/Update (Option B) ✅
+
+**Problem:** Users add/update a website and only discover runtime incompatibility when attempting to start the site.
+
+**Approach (Option B — Post-save warning):** After successfully saving the website configuration, the server detects
+the framework and returns a warning message if the runtime is incompatible. The dialog displays this warning
+before closing, letting the user address the issue immediately.
+
+**Why Option B (not inline detection):**
+
+| Criteria | Option A (inline after path pick) | Option B (post-save warning) |
+|----------|-----------------------------------|------------------------------|
+| New API endpoint | Required | ❌ None — reuses existing `Add`/`Update` |
+| Client-side state | Path binding + status + loading spinner | Simple post-save check |
+| Files touched | ~6 | ~3 |
+| UX value | Detects before save | Detects after save (save is instant anyway) |
+| Complexity | Higher | ✅ Lower |
+
+**Flow:**
+
+```text
+ConfirmAsync():
+  1. HostingService.AddWebsiteAsync(Configuration)
+  2. if result.Success:
+       if result.WarningMessage != null:
+         DialogService.ShowWarningAsync(result.WarningMessage)
+       Dialog.CloseAsync()
+```
+
+**Server-side change:**
+
+`WebSiteHostingService.AddWebsiteAsync()` and `UpdateWebsiteAsync()` — after all setup steps,
+call `assemblyRuntimeDetector.Detect(configuration.ApplicationRealPath)`. If incompatible,
+attach `MissingMessage` to result as a warning (operation still succeeds — site is created, just can't start).
+
+**Model change:**
+
+`WebSiteInstanceResult` gets a `WarningMessage` property — allows returning success + warning
+simultaneously (distinct from error/failure).
+
+### Phase 6 — Direct Install from Warning Dialog (Future) 🔲
+
+**Problem:** After the warning is shown, the user must manually navigate to the ASP.NET releases dialog,
+find the right channel, and select a version to install. The warning dialog is a simple FluentUI alert
+with no action button — it's a dead end.
+
+**Goal:** Offer the user a one-click path from the warning to installing the missing runtime,
+with the correct channel pre-selected in the install dialog.
+
+**Desired flow:**
+
+```text
+ConfirmAsync():
+  1. HostingService.AddWebsiteAsync(Configuration)
+  2. if result.Success && result.WarningMessage != null:
+       Show custom confirmation: "The website requires .NET 9.0 which is not installed. Install now?"
+       - "Install" → opens AspNetReleasesDialog with channel "9.0" pre-selected
+       - "Later"  → closes config dialog
+  3. else:
+       Dialog.CloseAsync()
+```
+
+**Data available:** After save, `result.Value.RequiredFramework` contains the channel string (e.g., `"9.0"`),
+populated by the server-side detection in `CreateResultWithWarning()`.
+
+**Changes required:**
+
+| File | Change | Purpose |
+|------|--------|---------|
+| `AspNetReleasesDialog.razor` | Add `[Parameter] string? InitialChannel` | Accept pre-selected channel from caller |
+| `AspNetReleasesDialog.razor` | Modify `OnParametersSetAsync` / `LoadChannelsAsync` | Match `InitialChannel` against loaded channels before falling back to first channel |
+| `WebSiteConfigurationDialog.razor` | Replace `ShowWarningAsync` with custom confirmation dialog | Offer "Install" / "Later" buttons |
+| `WebSiteConfigurationDialog.razor` | Open `AspNetReleasesDialog` with `InitialChannel` on "Install" | Pre-select the missing channel |
+
+**`AspNetReleasesDialog` changes:**
+
+Current `OnParametersSetAsync` always selects first channel:
+
+```csharp
+Channels = channelsResult.Value ?? [];
+await OnChannelChanged(SelectedChannel ?? Channels.FirstOrDefault());
+```
+
+Modified to match against `InitialChannel`:
+
+```csharp
+Channels = channelsResult.Value ?? [];
+var initial = Channels.FirstOrDefault(c => c.ProductVersion == InitialChannel)
+            ?? SelectedChannel
+            ?? Channels.FirstOrDefault();
+await OnChannelChanged(initial);
+```
+
+**Opening the dialog with parameters:**
+
+Current `Home.razor` opens `AspNetReleasesDialog` without content:
+
+```csharp
+await ShowDialogAsync<AspNetReleasesDialog>(DialogConstants.WidthAuto);
+```
+
+The `ShowDialogAsync<TComponent>(content, parameters)` overload exists in FluentUI for passing `[Parameter]` data
+(as used by `WebSiteConfigurationDialog` which receives `WebSiteInstance` as `Content`).
+
+To pass `InitialChannel`, the dialog needs a content parameter. Two options:
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| Pass `string?` channel directly as Content | Simple, matches single value | Overloads `Content` for a string; may conflict with FluentUI conventions |
+| Add dedicated `[Parameter]` + pass via `DialogParameters` extension | Clean separation | FluentUI `ShowDialogAsync` doesn't support arbitrary parameters beyond `Content` and `DialogParameters` |
+
+**Recommended approach:** Use the `Content` pattern — pass the channel string as the dialog content, add a
+`[Parameter] string? Content` property, and read `Content` as `InitialChannel` in `OnParametersSetAsync`.
+
+**Custom confirmation dialog:**
+
+The `ShowWarningAsync` is a FluentUI built-in — cannot be customized with buttons.
+Need to create a lightweight confirmation component (or reuse `ShowConfirmationAsync`) that presents:
+
+- Message: `"The website requires .NET {Channel} which is not installed. Install now?"`
+- Buttons: "Install" (Accent), "Later" (Neutral)
+- On "Install": open `AspNetReleasesDialog` with `InitialChannel` set
+
+**Risk:** Low — additive changes, no existing behavior affected. The `InitialChannel` parameter is optional;
+existing callers (`Home.razor`) continue to work unchanged.
+
 ---
 
 ## Actual Artifacts
@@ -146,7 +273,9 @@ Display logic:
 | `WebSiteConfiguration.cs` | No change (framework is runtime state, not persisted) | Data |
 | `WebSiteInstance.cs` | Added `RequiredFramework` property (runtime state, not persisted) | Data |
 | `SiteLifecycleManager.cs` | Inject + detect on start | Ui |
-| `WebSiteHostingService.cs` | Detect on init, `SiteEntry` pair class replaces parallel dictionaries | Ui |
+| `WebSiteHostingService.cs` | Detect on init + add/update, `SiteEntry` pair class replaces parallel dictionaries | Ui |
+| `WebSiteInstanceResult.cs` | Added `WarningMessage` property for success + warning | Data |
+| `WebSiteConfigurationDialog.razor` | Shows warning dialog after save if runtime incompatible | Ui.Client |
 | `Program.cs` | Register DI | Ui |
 | `Home.razor` | Added framework column | Ui.Client |
 | `ProcessLoggingExtensions.cs` | Added `SiteStartBlockedIncompatible`, renumbered with sub-ranges | Logging |

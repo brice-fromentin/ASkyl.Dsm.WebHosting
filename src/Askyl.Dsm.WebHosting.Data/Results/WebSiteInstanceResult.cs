@@ -13,6 +13,11 @@ public sealed class WebSiteInstanceResult(bool success, string? message, WebSite
     private WebSiteInstanceResult() : this(false, null, default!, ApiErrorCode.Failure) { }
 
     /// <summary>
+    /// Gets or sets an optional warning message (e.g., runtime incompatibility) when the operation succeeded.
+    /// </summary>
+    public string? WarningMessage { get; set; }
+
+    /// <summary>
     /// Creates a successful result with the website instance.
     /// </summary>
     /// <param name="value">The website instance.</param>

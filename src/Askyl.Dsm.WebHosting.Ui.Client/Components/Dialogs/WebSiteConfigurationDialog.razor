@@ -180,6 +180,11 @@
                 return;
             }
 
+            if (!String.IsNullOrEmpty(result.WarningMessage))
+            {
+                await DialogService.ShowWarningAsync(result.WarningMessage);
+            }
+
             await Dialog.CloseAsync();
         }
         catch (Exception ex)

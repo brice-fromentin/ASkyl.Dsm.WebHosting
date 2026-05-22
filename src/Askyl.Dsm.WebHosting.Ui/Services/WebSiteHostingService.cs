@@ -96,7 +96,8 @@ public class WebSiteHostingService(
             // STEP 4: Create instance
             var instance = await AddInstanceAsync(configuration);
 
-            return WebSiteInstanceResult.CreateSuccess(instance);
+            // STEP 5: Detect framework and warn if incompatible
+            return CreateResultWithWarning(instance, configuration);
         }
         catch (Exception ex)
         {
@@ -148,7 +149,8 @@ public class WebSiteHostingService(
             // STEP 4: Update instance
             await UpdateInstanceAsync(entry, configuration);
 
-            return WebSiteInstanceResult.CreateSuccess(existingInstance);
+            // STEP 5: Detect framework and warn if incompatible
+            return CreateResultWithWarning(existingInstance, configuration);
         }
         catch (Exception ex)
         {
@@ -520,6 +522,26 @@ public class WebSiteHostingService(
             logger.FailedToDeleteReverseProxyRule(ex, configuration.Name);
             return ApiResult.CreateFailure($"Failed to delete reverse proxy: {ex.Message}");
         }
+    }
+
+    #endregion
+
+    #region Helpers
+
+    /// <summary>
+    /// Creates a success result with a warning message if the assembly runtime is incompatible.
+    /// </summary>
+    private WebSiteInstanceResult CreateResultWithWarning(WebSiteInstance instance, WebSiteConfiguration configuration)
+    {
+        var result = WebSiteInstanceResult.CreateSuccess(instance);
+        var runtimeInfo = assemblyRuntimeDetector.Detect(configuration.ApplicationRealPath);
+
+        if (runtimeInfo is { IsCompatible: false })
+        {
+            result.WarningMessage = runtimeInfo.MissingMessage;
+        }
+
+        return result;
     }
 
     #endregion
