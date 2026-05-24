@@ -100,6 +100,16 @@ else
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+// Security headers
+app.Use((context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", SecurityHeaders.XContentTypeOptions);
+    context.Response.Headers.Append("X-Frame-Options", SecurityHeaders.XFrameOptions);
+    context.Response.Headers.Append("Referrer-Policy", SecurityHeaders.ReferrerPolicy);
+    context.Response.Headers.Append("Content-Security-Policy", SecurityHeaders.ContentSecurityPolicy);
+    return next();
+});
+
 // Session middleware must be before antiforgery and controllers
 app.UseSession();
 

@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
@@ -39,6 +40,13 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
 
     public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly)
     {
+        // Validate path to prevent path traversal attacks
+        if (!IsPathValid(path))
+        {
+            logger.PathValidationFailed(path);
+            return DirectoryContentsResult.CreateFailure(ValidationConstants.PathTraversalDetected);
+        }
+
         logger.RetrievingDirectoryContents(path, directoryOnly);
 
         try
@@ -82,7 +90,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (!IsPathValid(path))
         {
             logger.PathValidationFailed(path);
-            return ApiResult.CreateFailure("Invalid path: path traversal not allowed");
+            return ApiResult.CreateFailure(ValidationConstants.PathTraversalDetected);
         }
 
         var targetPath = isDirectory ? path : Path.GetDirectoryName(path) ?? path;

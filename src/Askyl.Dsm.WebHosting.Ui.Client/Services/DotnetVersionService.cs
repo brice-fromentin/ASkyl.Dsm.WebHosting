@@ -50,4 +50,9 @@ public class DotnetVersionService(IHttpClientFactory httpClientFactory) : IDotne
         // Client-side: Just reload versions which will get fresh data from server
         await GetInstalledVersionsAsync(CancellationToken.None);
     }
+
+    public bool IsValidVersionFormat(string version)
+    {
+        throw new NotImplementedException();
+    }
 }

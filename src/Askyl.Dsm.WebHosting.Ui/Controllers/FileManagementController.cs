@@ -1,6 +1,7 @@
 using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Ui.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Askyl.Dsm.WebHosting.Ui.Controllers;
@@ -10,6 +11,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Controllers;
 /// </summary>
 [ApiController]
 [Route(FileManagementRoutes.ControllerBaseRoute)]
+[AuthorizeSession]
 public class FileManagementController(IFileSystemService fileSystemService) : ControllerBase
 {
     /// <summary>
