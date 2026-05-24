@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
@@ -96,8 +97,10 @@ public class WebSiteHostingService(
             // STEP 4: Create instance
             var instance = await AddInstanceAsync(configuration);
 
-            // STEP 5: Detect framework and warn if incompatible
-            return CreateResultWithWarning(instance, configuration);
+            // STEP 5: Detect framework from assembly and warn if incompatible
+            var result = AttachRuntimeInfo(instance, configuration.ApplicationRealPath);
+
+            return result;
         }
         catch (Exception ex)
         {
@@ -149,8 +152,8 @@ public class WebSiteHostingService(
             // STEP 4: Update instance
             await UpdateInstanceAsync(entry, configuration);
 
-            // STEP 5: Detect framework and warn if incompatible
-            return CreateResultWithWarning(existingInstance, configuration);
+            // STEP 5: Detect framework from assembly and warn if incompatible
+            return AttachRuntimeInfo(existingInstance, configuration.ApplicationRealPath);
         }
         catch (Exception ex)
         {
@@ -529,21 +532,24 @@ public class WebSiteHostingService(
     #region Helpers
 
     /// <summary>
-    /// Creates a success result with a warning message if the assembly runtime is incompatible.
+    /// Detects the required .NET runtime from the assembly and attaches a warning if incompatible or undetectable.
     /// </summary>
-    private WebSiteInstanceResult CreateResultWithWarning(WebSiteInstance instance, WebSiteConfiguration configuration)
+    private WebSiteInstanceResult AttachRuntimeInfo(WebSiteInstance instance, string applicationPath)
     {
         var result = WebSiteInstanceResult.CreateSuccess(instance);
-        var runtimeInfo = assemblyRuntimeDetector.Detect(configuration.ApplicationRealPath);
+        var runtimeInfo = assemblyRuntimeDetector.Detect(applicationPath);
 
-        if (runtimeInfo is not null)
+        if (runtimeInfo is null)
         {
-            instance.RequiredFramework = runtimeInfo.Channel;
+            result.WarningMessage = RuntimeConstants.RuntimeDetectionFailedWarningMessage;
+            return result;
+        }
 
-            if (!runtimeInfo.IsCompatible)
-            {
-                result.WarningMessage = runtimeInfo.MissingMessage;
-            }
+        instance.RequiredFramework = runtimeInfo.Channel;
+
+        if (!runtimeInfo.IsCompatible)
+        {
+            result.WarningMessage = runtimeInfo.MissingMessage;
         }
 
         return result;

@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
@@ -70,7 +71,7 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         var path = Path.Combine(_tempDir, "App.dll");
         File.WriteAllText(path, "fake dll");
         WriteRuntimeConfig(path, "8.0");
-        _versionsDetector.Setup(v => v.IsChannelInstalled("8.0", "ASP.NET Core")).Returns(true);
+        _versionsDetector.Setup(v => v.IsChannelInstalled("8.0", DotNetFrameworkTypes.AspNetCore)).Returns(true);
 
         // Act
         var result = _detector.Detect(path);
@@ -89,7 +90,7 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         var path = Path.Combine(_tempDir, "App.dll");
         File.WriteAllText(path, "fake dll");
         WriteRuntimeConfig(path, "9.0");
-        _versionsDetector.Setup(v => v.IsChannelInstalled("9.0", "ASP.NET Core")).Returns(false);
+        _versionsDetector.Setup(v => v.IsChannelInstalled("9.0", DotNetFrameworkTypes.AspNetCore)).Returns(false);
 
         // Act
         var result = _detector.Detect(path);
@@ -102,21 +103,54 @@ public class AssemblyRuntimeDetectorTests : IDisposable
     }
 
     [Fact]
-    public void Detect_DifferentChannels_DetectsCorrectly()
+    public void Detect_MalformedJson_ReturnsNull()
     {
         // Arrange
         var path = Path.Combine(_tempDir, "App.dll");
         File.WriteAllText(path, "fake dll");
-        WriteRuntimeConfig(path, "6.0");
-        _versionsDetector.Setup(v => v.IsChannelInstalled("6.0", "ASP.NET Core")).Returns(false);
+        var directory = Path.GetDirectoryName(path) ?? string.Empty;
+        var configPath = Path.Combine(directory, "App.runtimeconfig.json");
+        File.WriteAllText(configPath, "{ invalid json content");
 
         // Act
         var result = _detector.Detect(path);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("6.0", result.Channel);
-        Assert.False(result.IsCompatible);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void Detect_MissingRuntimeOptionsKey_ReturnsNull()
+    {
+        // Arrange
+        var path = Path.Combine(_tempDir, "App.dll");
+        File.WriteAllText(path, "fake dll");
+        var directory = Path.GetDirectoryName(path) ?? string.Empty;
+        var configPath = Path.Combine(directory, "App.runtimeconfig.json");
+        File.WriteAllText(configPath, """{"otherKey": "value"}""");
+
+        // Act
+        var result = _detector.Detect(path);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void Detect_TfmWithoutVersionDigits_ReturnsNull()
+    {
+        // Arrange
+        var path = Path.Combine(_tempDir, "App.dll");
+        File.WriteAllText(path, "fake dll");
+        var directory = Path.GetDirectoryName(path) ?? string.Empty;
+        var configPath = Path.Combine(directory, "App.runtimeconfig.json");
+        File.WriteAllText(configPath, """{"runtimeOptions": {"tfm": "net"}}""");
+
+        // Act
+        var result = _detector.Detect(path);
+
+        // Assert
+        Assert.Null(result);
     }
 
     [Fact]
@@ -126,7 +160,7 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         var path = Path.Combine(_tempDir, "App.dll");
         File.WriteAllText(path, "fake dll");
         WriteTfmOnlyRuntimeConfig(path, "net8.0");
-        _versionsDetector.Setup(v => v.IsChannelInstalled("8.0", "ASP.NET Core")).Returns(true);
+        _versionsDetector.Setup(v => v.IsChannelInstalled("8.0", DotNetFrameworkTypes.AspNetCore)).Returns(true);
 
         // Act
         var result = _detector.Detect(path);

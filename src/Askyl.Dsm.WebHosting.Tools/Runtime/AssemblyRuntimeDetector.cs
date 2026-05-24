@@ -27,19 +27,13 @@ public sealed partial class AssemblyRuntimeDetector(
     /// <inheritdoc/>
     public AssemblyRuntimeInfo? Detect(string assemblyPath)
     {
-        if (!File.Exists(assemblyPath))
-        {
-            return null;
-        }
-
         try
         {
-            var directory = Path.GetDirectoryName(assemblyPath) ?? throw new InvalidOperationException($"Assembly path has no directory component: {assemblyPath}");
-            var runtimeConfigPath = FindRuntimeConfigPath(directory);
+            var runtimeConfigPath = FindRuntimeConfigPath(assemblyPath);
 
             if (runtimeConfigPath is null)
             {
-                logger.NoRuntimeConfigFile(assemblyPath, directory);
+                logger.NoRuntimeConfigFile(assemblyPath);
                 logger.CouldNotDetectFramework(assemblyPath);
                 return null;
             }
@@ -72,11 +66,11 @@ public sealed partial class AssemblyRuntimeDetector(
         }
     }
 
-    private static string? FindRuntimeConfigPath(string directory)
+    private static string? FindRuntimeConfigPath(string assemblyPath)
     {
-        var configFiles = Directory.EnumerateFiles(directory, "*.runtimeconfig.json");
+        var configPath = Path.ChangeExtension(assemblyPath, ".runtimeconfig.json");
 
-        return configFiles.FirstOrDefault();
+        return File.Exists(configPath) ? configPath : null;
     }
 
     private static string? ExtractFrameworkVersion(string runtimeConfigPath)

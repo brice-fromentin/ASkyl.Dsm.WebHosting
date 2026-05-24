@@ -37,6 +37,6 @@ public static partial class AssemblyRuntimeDetectorLoggingExtensions
     /// <summary>
     /// Logs that no *.runtimeconfig.json was found in the assembly directory.
     /// </summary>
-    [LoggerMessage(EventId = 2250005, Level = LogLevel.Debug, Message = "No *.runtimeconfig.json found in directory {Directory} for assembly {AssemblyPath}")]
-    public static partial void NoRuntimeConfigFile(this ILogger<ILogAssemblyRuntimeDetector> logger, string assemblyPath, string directory);
+    [LoggerMessage(EventId = 2250005, Level = LogLevel.Debug, Message = "No *.runtimeconfig.json found in directory for assembly {AssemblyPath}")]
+    public static partial void NoRuntimeConfigFile(this ILogger<ILogAssemblyRuntimeDetector> logger, string assemblyPath);
 }

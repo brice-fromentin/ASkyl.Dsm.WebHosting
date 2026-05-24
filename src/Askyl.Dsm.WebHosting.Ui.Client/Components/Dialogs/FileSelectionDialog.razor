@@ -100,7 +100,7 @@
     #region IWorkingState Implementation
 
     public bool IsWorking { get; set; }
-    public string Message { get; set; } = "";
+    public string Message { get; set; } = String.Empty;
 
     public void NotifyStateChanged() => StateHasChanged();
 
