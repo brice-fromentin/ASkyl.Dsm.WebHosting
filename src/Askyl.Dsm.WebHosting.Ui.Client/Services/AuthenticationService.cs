@@ -35,4 +35,9 @@ public class AuthenticationService(IHttpClientFactory httpClientFactory) : IAuth
         var httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
         return await httpClient.GetJsonOrDefaultAsync<ApiResultBool>(AuthenticationRoutes.StatusFullRoute, () => ApiResultBool.CreateFailure("Failed to check authentication status"));
     }
+
+    public Task<bool> IsSessionValidAsync()
+    {
+        throw new NotImplementedException();
+    }
 }

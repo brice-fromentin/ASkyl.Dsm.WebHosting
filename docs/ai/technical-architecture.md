@@ -2,9 +2,9 @@
 
 **Version:** 0.5.9
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 22, 2026 (Runtime detection — `*.runtimeconfig.json` parsing, framework compatibility
-validation, Home grid framework column, ProcessLoggingExtensions sub-range renumbering,
-`SiteEntry` pair class, `RequiredFramework` moved to instance-only)
+**Last Updated:** May 25, 2026 (Session validation against DSM server,
+`SYNO.Core.User.get` probe with 1-minute TTL cache, `DsmUsernameKey` session storage,
+`IsAuthenticatedAsync` consolidated, DSM API directory restructuring — Models/Parameters/Responses)
 
 ---
 
@@ -79,6 +79,11 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
   `RequiredFramework` on instance only (not persisted)
 - ✅ **ProcessLoggingExtensions** renumbered with sub-range spacing (1600xxx–1604xxx) to allow inserting log messages per region
 - ✅ **SiteEntry pair class** — `WebSiteHostingService` uses `ConcurrentDictionary<Guid, SiteEntry>` pairing instance + lifecycle manager; eliminates parallel dictionary synchronization
+- ✅ **Session validation** (May 25, 2026):
+  - ✅ Async authorization filter validates against DSM server (`SYNO.Core.User.get`)
+  - ✅ 1-minute TTL cache matches DSM minimum session timeout
+  - ✅ `DsmUsername` stored alongside `DsmSid` for defense-in-depth
+  - ✅ `IsAuthenticatedAsync()` consolidated (replaces `IsSessionValidAsync`)
 
 **Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
 
@@ -190,7 +195,7 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 Constants/
 ├── Application/                            # Application-wide constants (6 files)
-│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session, auth messages
+│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session (DsmSid, DsmUsername, TTL), auth messages
 │   ├── DotnetInfoParserConstants.cs        # dotnet --info section headers and framework identifiers
 │   ├── InfrastructureConstants.cs          # Directory names (Downloads)
 │   ├── LicenseConstants.cs                 # License file management
@@ -199,8 +204,9 @@ Constants/
 ├── DSM/                                    # Synology DSM-specific constants (7 files)
 │   ├── API/                                # API-related constants
 │   │   ├── ApiMethods.cs                   # CRUD operation names (Create, Get, List, etc.)
-│   │   ├── ApiNames.cs                     # 7 DSM API identifiers (SYNO.API.Auth, FileStation, etc.)
+│   │   ├── ApiNames.cs                     # 8 DSM API identifiers (SYNO.API.Auth, FileStation, Core.User, etc.)
 │   │   ├── ApiVersions.cs                  # Version range constants (Min: 1, Max: 7)
+│   │   ├── DsmConstants.cs                 # Shared DSM error codes (ErrorCodeAuthenticationFailed = -4)
 │   │   ├── ReverseProxyConstants.cs        # Proxy error codes and description prefix
 │   │   └── SerializationFormats.cs         # Enum: Form, Json
 │   ├── FileStation/                        # FileStation-specific constants (1 file)
@@ -235,9 +241,9 @@ Constants/
 
 | Category | Key Constants | Count |
 |----------|---------------|-------|
-| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), Session | ~35 |
+| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), DsmSid, DsmUsername, SessionValidationTtlMinutes | ~37 |
 | **Websites** | Process timeouts, port range (1024-65535), environment vars, validation messages | ~25 |
-| **DSM APIs** | 7 API names, CRUD methods, version ranges, error codes | ~35 + 1 enum |
+| **DSM APIs** | 8 API names (incl. Core.User), CRUD methods, version ranges, shared error codes | ~37 + 1 enum |
 | **FileStation** | Listing patterns, sorting, pagination (100 limit) | ~15 |
 | **Network** | Cookie header ("Cookie"), SSID prefix ("_SSID="), localhost | 6 + 1 enum |
 | **Runtime** | Architecture IDs (x64/arm/arm64), OS IDs (linux/osx/windows) | ~15 |
@@ -260,7 +266,7 @@ Constants/
 
 | Interface | Source File | Key Methods | Implemented By |
 |-----------|-------------|-------------|----------------|
-| **IAuthenticationService** | `Contracts/IAuthenticationService.cs` | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() | Ui.Services.AuthenticationService, Ui.Client.Services.AuthenticationService |
+| **IAuthenticationService** | `Contracts/IAuthenticationService.cs` | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() (validates against DSM server) | Ui.Services.AuthenticationService, Ui.Client.Services.AuthenticationService |
 | **IDotnetVersionService** | `Contracts/IDotnetVersionService.cs` | GetInstalledVersionsAsync(), GetChannelsAsync() | Ui.Services.DotnetVersionService, Ui.Client.Services.DotnetVersionService |
 | **IFileSystemService** | `Contracts/IFileSystemService.cs` | GetSharedFoldersAsync(), GetDirectoryContentsAsync() | Ui.Services.FileSystemService, Ui.Client.Services.FileSystemService |
 | **IFrameworkManagementService** | `Contracts/IFrameworkManagementService.cs` | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services.FrameworkManagementService |
@@ -297,8 +303,12 @@ Data/
 │   ├── IVersionsDetectorService.cs         # Version detection with smart caching (Singleton)
 │   └── IAssemblyRuntimeDetector.cs         # Runtime detection from *.runtimeconfig.json (Singleton)
 ├── Domain/                                 # Domain models
-│   ├── Authentication/                     # Auth-related models
+│   ├── Authentication/                     # Auth-related domain models
 │   │   └── LoginCredentials.cs             # Login credentials
+│   ├── Auth/                               # Auth API models
+│   │   └── AuthenticateLogin.cs            # Login request payload (account, passwd, otp_code, format)
+│   ├── User/                               # User API models
+│   │   └── CoreUserGetEntry.cs             # User get request payload (name)
 │   ├── FileSystem/                         # File system models
 │   │   └── FsEntry.cs                      # File system entry model
 │   ├── Licensing/                          # License information
@@ -320,21 +330,55 @@ Data/
 ├── Attributes/                             # Custom attributes
 │   └── DsmParameterNameAttribute.cs        # DSM parameter name mapping
 ├── DsmApi/                                 # DSM API integration
-│   ├── Models/                             # Auto-generated response models
-│   │   ├── Core/                           # Authentication, system info, ACL
-│   │   │   └── Acl/                        # ACL models (CoreAclSet, Rule, Permission, Inherit)
+│   ├── Models/                             # API models (records with init setters)
+│   │   ├── Auth/                           # Authentication models
+│   │   │   └── AuthenticateLogin.cs        # Login request payload
+│   │   ├── Core/                           # Core API models
+│   │   │   ├── Acl/                        # ACL models (CoreAclSet, Rule, Permission, Inherit)
+│   │   │   ├── ApiInformation.cs           # API information model
+│   │   │   ├── ApiInformationCollection.cs # API collection wrapper
+│   │   │   ├── ApiInformationQuery.cs      # Query parameters
+│   │   │   └── User/                       # User models
+│   │   │       └── CoreUserGetEntry.cs     # User get request payload
 │   │   ├── FileStation/                    # 9 file operation models
 │   │   └── ReverseProxy/                   # Proxy configuration models
 │   ├── Parameters/                         # Request parameter classes
-│   │   ├── Core/                           # Login/logout parameters
-│   │   ├── CoreAcl/                        # Access control parameters
-│   │   ├── CoreInformations/               # System info queries
+│   │   ├── Auth/                           # Authentication parameters
+│   │   │   └── AuthLoginParameters.cs      # Login request (SYNO.API.Auth.login)
+│   │   ├── Core/                           # Core API parameters
+│   │   │   ├── Acl/                        # ACL parameters
+│   │   │   │   └── CoreAclSetParameters.cs # ACL set request (SYNO.Core.Acl.set)
+│   │   │   ├── AppPortal/                  # AppPortal parameters
+│   │   │   │   └── ReverseProxy/           # Reverse proxy CRUD
+│   │   │   │       ├── ReverseProxyCreateParameters.cs
+│   │   │   │       ├── ReverseProxyDeleteParameters.cs
+│   │   │   │       ├── ReverseProxyListParameters.cs
+│   │   │   │       └── ReverseProxyUpdateParameters.cs
+│   │   │   └── User/                       # User parameters
+│   │   │       └── CoreUserGetParameters.cs # User get request (SYNO.Core.User.get)
 │   │   ├── FileStation/                    # 2 file operation parameters
-│   │   ├── ReverseProxy/                   # Proxy CRUD operations
+│   │   ├── Info/                           # API info queries
+│   │   │   └── InformationsQueryParameters.cs # System info query (SYNO.Core.Info.query)
 │   │   ├── ApiParametersBase.cs            # Base parameter class
 │   │   ├── ApiParametersNone.cs            # No-parameters wrapper
 │   │   └── IApiParameters.cs               # Parameter interface
-│   └── Responses/                          # API response wrappers (8 files)
+│   └── Responses/                          # API response wrappers
+│       ├── ApiInformationResponse.cs       # API info query response
+│       ├── ApiResponseBase.cs              # Generic response base with Error model
+│       ├── EmptyResponse.cs                # No-data response
+│       ├── Auth/                           # Authentication responses
+│       │   └── AuthLoginResponse.cs        # Login response (sid)
+│       ├── Core/                           # Core API responses
+│       │   ├── Acl/                        # ACL responses
+│       │   │   └── CoreAclSetResponse.cs   # ACL set response (task_id)
+│       │   ├── AppPortal/                  # AppPortal responses
+│       │   │   └── ReverseProxy/           # Reverse proxy responses
+│       │   │       └── ReverseProxyListResponse.cs # Proxy list response
+│       │   └── User/                       # User responses
+│       │       └── CoreUserGetResponse.cs  # User get response (users[])
+│       └── FileStation/                    # FileStation responses
+│           ├── FileStationListResponse.cs  # File list response
+│           └── FileStationListShareResponse.cs # Share list response
 ├── Exceptions/                             # Custom exception types (4 files)
 └── Results/                                # Result pattern implementations
     ├── ApiResult.cs                        # Base success/failure result
@@ -759,6 +803,16 @@ Client-side components use `ClientLoggingExtensions.cs` for structured logging i
 - **Scoped:** File manager (with factory lambda for root path), archive extractor, downloader, UI services - one per request
 - **Background Service:** WebSiteHostingService implements IHostedService for lifecycle management
 
+**Architectural Trade-off — Singleton `DsmApiClient`:**
+
+`DsmApiClient` is registered as Singleton despite holding per-session state (`_sid`, `_httpClient` cookie header, session validation cache). This is intentional because:
+
+1. **Shared `ApiInformations`:** API discovery cache is expensive to re-fetch (handshake call)
+2. **`HttpClient` reuse:** Named client with configured `BaseAddress` and timeouts — benefits from connection pooling
+3. **`BackgroundService` anchor:** `WebSiteHostingService` (Singleton) depends on services using `DsmApiClient`. `IHostedService` is always Singleton.
+
+**Mitigation:** `SetSid()` updates `_sid` + cookie header. Session validation cache uses a 1-minute TTL. Multi-user scenarios would need a Scoped wrapper.
+
 **Service Lifetime Hierarchy:**
 
 ```text
@@ -975,8 +1029,38 @@ using var timer = new OperationTimer(elapsed => logger.FrameworkInstalledDuratio
 3. DsmApiClient.HandShakeAsync() → SYNO.API.Info query
 4. DsmApiClient.AuthenticateAsync() → auth.login API call
 5. Response: SID stored in cookie header (ssid=...)
-6. Session persisted in ASP.NET Core session
+6. Session persisted in ASP.NET Core session (DsmSid + DsmUsername)
 ```
+
+#### Session Validation
+
+The `IsAuthenticatedAsync()` method performs server-side validation against the DSM to detect expired or revoked sessions:
+
+```text
+1. Check local session keys (DsmSid + DsmUsername) exist
+2. Check validation cache (1-minute TTL — matches DSM minimum session timeout)
+3. If cache expired: call SYNO.Core.User.get with cached username
+4. Response: success (user found) or error -4 (invalid/expired SID)
+5. Cache result for 1 minute to avoid per-request API overhead
+6. Clear session keys and return false if validation fails
+```
+
+**API Choice Rationale:**
+
+- `SYNO.API.Auth` only exposes `login` and `logout` — no `querySession` method (confirmed error 103 on DSM 7.2+)
+- `SYNO.Core.User.get` is the lightest API that validates session state
+- Returns error `-4` (Authentication Failed) for invalid/expired SID
+- Accepts any non-auth error as valid (user-specific errors still mean SID is alive)
+
+**Singleton Architectural Trade-off:**
+
+`DsmApiClient` is intentionally Singleton despite holding per-session state (`_sid`, `_sessionValid`, `_lastSessionValidation`):
+
+1. **Shared `ApiInformations`:** API discovery cache is expensive to re-fetch (handshake call)
+2. **`HttpClient` reuse:** Named client with configured `BaseAddress` and timeouts — benefits from connection pooling
+3. **`BackgroundService` anchor:** `WebSiteHostingService` (Singleton) depends on services using `DsmApiClient`. `IHostedService` is always Singleton.
+
+**Mitigation:** `SetSid()` updates `_sid` and `_httpClient` cookie header. Session validation cache uses a 1-minute TTL. Multi-user scenarios would need a Scoped wrapper.
 
 #### FileStation Operations
 
@@ -1074,14 +1158,21 @@ Input components with immediate validation feedback:
 
 1. **Server-Side Session Storage**
    - DSM SID stored in server session (not client storage)
+   - Username stored alongside SID for defense-in-depth (`DsmUsername`)
    - HttpOnly cookies prevent XSS attacks
    - SameSite=Strict prevents CSRF
 
-2. **Antiforgery Protection**
+2. **Server-Side Session Validation**
+   - `IsAuthenticatedAsync()` validates both session keys and calls `SYNO.Core.User.get`
+   - 1-minute TTL cache matches DSM minimum session timeout
+   - Detects expired or revoked sessions via DSM server (error `-4`)
+   - Clears session keys and redirects to login on validation failure
+
+3. **Antiforgery Protection**
    - Enabled for all Blazor components and API endpoints
    - Token validation on state-changing operations
 
-3. **HTTPS Enforcement**
+4. **HTTPS Enforcement**
    - `UseHttpsRedirection()` in middleware pipeline
    - Default protocol for reverse proxy is HTTPS
    - HSTS enabled by default for websites
@@ -1123,7 +1214,8 @@ Usage:
 
 - Applied to FrameworkManagementController
 - Applied to RuntimeManagementController
-- Validates active DSM session before allowing access
+- Validates active DSM session (both session keys + server-side validation) before allowing access
+- Delegates to `IAuthenticationService.IsAuthenticatedAsync()` for unified validation logic
 
 ---
 
@@ -1145,6 +1237,7 @@ Usage:
 **Current Implementation:**
 
 - **ApiInformations Cache:** DSM API metadata cached after handshake
+- **Session Validation Cache:** 1-minute TTL for DSM session validation results (avoids per-request API overhead)
 - **Instance Cache:** In-memory `ConcurrentDictionary` for website instances
 - **Configuration Cache:** JSON file read on startup, in-memory during runtime
 

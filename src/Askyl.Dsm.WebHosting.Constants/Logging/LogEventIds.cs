@@ -10,7 +10,7 @@ static class LogEventIds
 {
     #region Authentication — 1000000–1000999
 
-    /// <summary>Authentication service — IDs 1000001–1000008.</summary>
+    /// <summary>Authentication service — IDs 1000001–1000012.</summary>
     public const int AuthenticationBase = 1000000;
 
     #endregion

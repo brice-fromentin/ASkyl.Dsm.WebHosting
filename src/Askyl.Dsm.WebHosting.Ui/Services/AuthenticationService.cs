@@ -32,8 +32,9 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
             return AuthenticationResult.CreateNotAuthenticated("Invalid credentials");
         }
 
-        // Store DSM _sid in server-side session for persistence
+        // Store DSM SID and username in server-side session for persistence
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmSessionKey, apiClient.Sid);
+        httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmUsernameKey, login);
         logger.LoginSuccessful(login);
         return AuthenticationResult.CreateAuthenticated();
     }
@@ -48,6 +49,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         try
         {
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmSessionKey);
+            httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmUsernameKey);
             await apiClient.DisconnectAsync();
             logger.UserLoggedOut();
             return ApiResult.CreateSuccess("Logout successful");
@@ -60,10 +62,31 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     }
 
     /// <inheritdoc/>
-    public Task<ApiResultBool> IsAuthenticatedAsync()
+    public async Task<ApiResultBool> IsAuthenticatedAsync()
     {
-        var sid = httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmSessionKey);
+        logger.SessionValidationStarting();
 
-        return Task.FromResult(!String.IsNullOrEmpty(sid) ? ApiResultBool.CreateSuccess(true) : ApiResultBool.CreateSuccess(false, "No session found"));
+        var sessionId = httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmSessionKey);
+        var username = httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmUsernameKey);
+
+        if (String.IsNullOrEmpty(sessionId) || String.IsNullOrEmpty(username))
+        {
+            return ApiResultBool.CreateSuccess(false, "No session found");
+        }
+
+        if (!await apiClient.ValidateSessionAsync(username))
+        {
+            logger.SessionValidationFailed();
+
+            // Session is invalid on server - clear local session
+            httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmSessionKey);
+            httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmUsernameKey);
+            logger.SessionInvalidated();
+
+            return ApiResultBool.CreateSuccess(false, "Session expired on server");
+        }
+
+        logger.SessionValidationSuccess(ApplicationConstants.SessionValidationTtlMinutes);
+        return ApiResultBool.CreateSuccess(true);
     }
 }

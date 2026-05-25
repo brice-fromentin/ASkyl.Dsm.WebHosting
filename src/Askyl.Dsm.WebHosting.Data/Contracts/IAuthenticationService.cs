@@ -24,7 +24,9 @@ public interface IAuthenticationService
     Task<ApiResult> LogoutAsync();
 
     /// <summary>
-    /// Checks if the current session is authenticated via server-side validation.
+    /// Checks if the current session is authenticated by validating against the DSM server.
+    /// Returns the cached result if validation occurred within the TTL window (5 minutes).
+    /// If the session is invalid or expired, it is cleared from the local session store.
     /// </summary>
     /// <returns>An ApiResultBool containing a boolean indicating authentication status.</returns>
     Task<ApiResultBool> IsAuthenticatedAsync();

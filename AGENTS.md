@@ -525,6 +525,7 @@ After EVERY code modification, you MUST:
 - ReverseProxy API for web application routing
 - Authentication API for DSM login integration
 - Documentation: <https://global.download.synology.com/download/Document/DeveloperGuide/Synology_File_Station_API_Guide.pdf>
+- OSS Project Documentation : <https://github.com/pmilano1/synology-dsm-api/tree/master/docs/api-reference>
 
 **For detailed API integration patterns, see `docs/ai/technical-architecture.md` section "Data Models & API Integration".**
 

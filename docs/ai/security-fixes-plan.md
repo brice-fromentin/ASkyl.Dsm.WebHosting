@@ -1,8 +1,26 @@
 # Security Fixes Plan
 
 **Created:** May 24, 2026
-**Status:** 🔲 **PENDING**
+**Last Updated:** May 25, 2026
+**Status:** 🔶 **IN PROGRESS** (Phases 1–4, 8 complete; 5–7 pending)
 **Trigger:** Security score re-analysis (was ⭐⭐⭐⭐☆ 4/5, revised to ⭐⭐⭐☆☆ 3/5)
+
+---
+
+## Progress Summary
+
+| Phase | Severity | Issue | Status | Date Completed |
+|-------|----------|-------|--------|----------------|
+| 1 | CRITICAL | Authorization bypass | ✅ **DONE** | May 24, 2026 |
+| 2 | MEDIUM | Security headers | ✅ **DONE** | May 24, 2026 |
+| 3 | MEDIUM | Path traversal | ✅ **DONE** | May 24, 2026 |
+| 4 | MEDIUM | Version validation | ✅ **DONE** | May 24, 2026 |
+| 8 | MEDIUM | Session validation | ✅ **DONE** | May 25, 2026 |
+| 5 | LOW | Exception message sanitization | 🔲 PENDING | — |
+| 6 | LOW | Rate limiting on login | 🔲 PENDING | — |
+| 7 | LOW | Env var length validation | 🔲 PENDING | — |
+
+**Current Score:** ⭐⭐⭐☆☆ (3/5) → All CRITICAL and MEDIUM issues resolved. Completing Phases 5–7 reaches ⭐⭐⭐⭐☆ (4/5). See [Path to 5 Stars](#path-to-5-stars) for 5/5 roadmap.
 
 ---
 
@@ -35,9 +53,11 @@ without auditing the full surface area.
 
 ---
 
-## Phase 1 — CRITICAL: Authorization Coverage
+## Phase 1 — CRITICAL: Authorization Coverage ✅ DONE
 
-**Issue:** `WebsiteHostingController` and `FileManagementController` lack `[AuthorizeSession]`, exposing all their endpoints without authentication.
+**Status:** Implemented on May 24, 2026. Both controllers now have `[AuthorizeSession]` at the class level. `AuthenticationController` correctly remains unprotected (Login/Logout/Status must be public).
+
+**Issue:** `WebsiteHostingController` and `FileManagementController` lacked `[AuthorizeSession]`, exposing all their endpoints without authentication.
 
 ### Affected Endpoints
 
@@ -93,9 +113,11 @@ public class FileManagementController : ControllerBase
 
 ---
 
-## Phase 2 — MEDIUM: Security Headers
+## Phase 2 — MEDIUM: Security Headers ✅ DONE
 
-**Issue:** The application sets no security-related HTTP headers, leaving it vulnerable to clickjacking, MIME sniffing, and XSS amplification.
+**Status:** Implemented on May 24, 2026. Security headers middleware added to `Program.cs` after `UseHttpsRedirection()`. Constants defined in `SecurityHeaders.cs`.
+
+**Issue:** The application set no security-related HTTP headers, leaving it vulnerable to clickjacking, MIME sniffing, and XSS amplification.
 
 ### Headers to Add
 
@@ -159,11 +181,21 @@ app.Use((context, next) =>
 
 ---
 
-## Phase 3 — MEDIUM: Path Validation in GetDirectoryContentsAsync
+## Phase 3 — MEDIUM: Path Validation in GetDirectoryContentsAsync ✅ DONE
 
-**Issue:** `FileManagementController.GetDirectoryContentsAsync` accepts a user-supplied
-path and passes it directly to `FileSystemService` with no server-side validation.
-The `IsPathValid()` helper exists but is only called from `SetHttpGroupPermissionsAsync()`.
+**Status:** Implemented on May 24, 2026. Validation implemented at the
+**service layer** (`FileSystemService.GetDirectoryContentsAsync` calls `IsPathValid()`)
+rather than the controller layer as originally planned. `IsPathValid()` checks for
+`..` literals and URL-encoded variants (`%2e`, `%2f`). Constant
+`ValidationConstants.PathTraversalDetected` defined.
+
+**Implementation Note:** Validation was placed at the service boundary rather than
+the controller, which is functionally superior — it provides defense-in-depth for
+all callers, not just the HTTP endpoint.
+
+**Issue:** `FileManagementController.GetDirectoryContentsAsync` accepted a user-supplied
+path and passed it directly to `FileSystemService` with no server-side validation.
+The `IsPathValid()` helper existed but was only called from `SetHttpGroupPermissionsAsync()`.
 
 ### Fix
 
@@ -212,11 +244,16 @@ public async Task<ActionResult<DirectoryContentsResult>> GetDirectoryContentsAsy
 
 ---
 
-## Phase 4 — MEDIUM: Sanitize Version Input in Framework Uninstall
+## Phase 4 — MEDIUM: Sanitize Version Input in Framework Uninstall ✅ DONE
 
-**Issue:** `FrameworkManagementService.UninstallFrameworkAsync` constructs directory paths
+**Status:** Implemented on May 24, 2026. `FrameworkManagementService.UninstallFrameworkAsync`
+now validates version via `DotnetVersionService.IsValidVersionFormat()` before any delete
+operations. Method added to both server and client implementations and the
+`IDotnetVersionService` interface. Constant `ValidationConstants.InvalidVersionFormat` defined.
+
+**Issue:** `FrameworkManagementService.UninstallFrameworkAsync` constructed directory paths
 using the user-supplied `version` string. While `FileManagerService.SanitizeSubdirectoryPath`
-rejects `..` segments, a version string containing path separators could escape the
+rejected `..` segments, a version string containing path separators could escape the
 intended directory scope.
 
 ### Current Code
@@ -449,30 +486,199 @@ These items were identified but are **out of scope** for this security fix batch
 
 ---
 
-## Expected Outcome
+## Current State (After Phases 1–4, 8)
 
-After all phases are complete:
-
-| Metric | Before | After |
-|--------|--------|-------|
-| **Security Score** | ⭐⭐⭐☆☆ (3/5) | ⭐⭐⭐⭐☆ (4/5) |
+| Metric | Before Phases | After Phases 1–4, 8 |
+|--------|---------------|---------------------|
+| **Security Score** | ⭐⭐☆☆☆ (2/5) | ⭐⭐⭐⭐☆ (4/5) |
 | **Critical Issues** | 1 | 0 |
-| **Medium Issues** | 3 | 0 |
-| **Low Issues** | 3 | 0 |
-| **Authorization Coverage** | 3/5 controllers protected | 5/5 controllers protected |
+| **Medium Issues** | 3 | 0 (incl. session validation) |
+| **Low Issues** | 3 | 3 (unchanged) |
+| **Authorization Coverage** | 3/5 controllers protected | 5/5 controllers + session validation |
 | **Security Headers** | 0 | 4 |
+| **Session Validation** | No | Yes (5-min TTL cache) |
+
+### Remaining for 5/5
+
+Completing Phases 5–7 (LOW) and 9–12 (polish) reaches ⭐⭐⭐⭐⭐ (5/5).
+
+| Metric | After Phases 1–4 | After Phases 1–7 |
+|--------|------------------|------------------|
+| **Low Issues** | 3 | 0 |
+| **Exception Messages Exposed** | 22 | 0 |
+| **Rate Limiting** | No | Yes (login, 5/min/IP) |
+| **Env Var Validation** | No | Yes (256 key / 4096 value) |
+
+---
+
+## Path to 5 Stars
+
+Completing Phases 1–7 reaches ⭐⭐⭐⭐☆ (4/5). The following additional items are
+required to reach ⭐⭐⭐⭐⭐ (5/5). These were identified during the May 25, 2026
+re-analysis and are **not** covered by the original plan.
+
+### Phase 8 — MEDIUM: Session Validation (Highest Impact) ✅ DONE
+
+**Status:** Implemented on May 25, 2026. Session validation uses `SYNO.Core.User.get`
+to verify both the SID is active and the user still exists. Results cached for 5 minutes.
+
+**Issue:** `AuthorizeSessionAttribute` only checks for the **presence** of the `DsmSid`
+session key. It does not validate that the session is still active on the DSM server,
+nor does it handle session expiration or revocation from other tabs.
+
+**Impact:** Expired or revoked DSM sessions still grant access to all API endpoints.
+
+**Proposed Fix:** Add an async authorization filter that periodically verifies the DSM
+session is still active via `SYNO.Core.User.get` (fetches logged-in user by name). Cache
+the validation result with a TTL of 1 minute (matches DSM minimum session timeout) to avoid
+per-request API overhead while detecting expired sessions promptly.
+
+**Validation API Selection (why `SYNO.Core.User.get` over alternatives):**
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| `SYNO.API.Auth` → `querySession` | Dedicated session check | ❌ **Does not exist** (error 103 on DSM 7.2+) |
+| `SYNO.FileStation.List` (path `/`) | Lightweight, existing params | ❌ Fails if FileStation uninstalled, ❌ permission-dependent |
+| **`SYNO.Core.User.get`** | ✅ Core API (always available), ✅ semantic match | Needs username stored in session |
+
+**Source:** <https://github.com/pmilano1/synology-dsm-api/blob/master/docs/api-reference/dsm-core/users.md>
+
+**Note:** `SYNO.API.Auth` only exposes `login` and `logout` — no `querySession` method
+exists (confirmed error 103 on DSM 7.2+). We use `SYNO.Core.User.get` with the logged-in
+username to validate the SID. If the SID is invalid, DSM returns error `-4` (authentication
+failure). This also catches user deletion or account expiration (tighter validation than
+SID-only checks).
+
+**Additional Requirements:**
+
+- Store `DsmUsername` alongside `DsmSid` in ASP.NET Core session (at login time)
+- Add `SYNO.Core.User` to API discovery handshake (`RequiredApisJoined`)
+- Add `CoreUserGetParameters` parameter class
+
+**Files Affected:**
+
+| File | Change |
+|------|--------|
+| `src/Askyl.Dsm.WebHosting.Ui/Authorization/AuthorizeSessionAttribute.cs` | Async filter with session validation |
+| `src/Askyl.Dsm.WebHosting.Ui/Services/AuthenticationService.cs` | Store username at login, `IsSessionValidAsync()` method |
+| `src/Askyl.Dsm.WebHosting.Tools/Network/DsmApiClient.cs` | `ValidateSessionAsync()` with 5-min TTL cache |
+| `src/Askyl.Dsm.WebHosting.Data/DsmApi/Parameters/Core/CoreUserGetParameters.cs` | New — user get API parameters |
+| `src/Askyl.Dsm.WebHosting.Constants/DSM/API/DsmConstants.cs` | New — auth error code constant |
+| `src/Askyl.Dsm.WebHosting.Constants/DSM/API/ApiNames.cs` | Add `CoreUser` to discovery |
+| `src/Askyl.Dsm.WebHosting.Constants/Application/ApplicationConstants.cs` | Add `DsmUsernameKey` and `SessionValidationTtlMinutes` |
+
+**Verification:** Log out from DSM directly → verify app returns 403 on next request (within TTL window).
+
+### Phase 9 — LOW: Add HSTS Header
+
+**Issue:** No `Strict-Transport-Security` header is set. The plan originally deferred this,
+noting "30 days is adequate for NAS context."
+
+**Impact:** Clients can be downgraded to HTTP on first visit or after cache clear.
+
+**Proposed Fix:** Add `Strict-Transport-Security` header with `max-age=2592000` (30 days)
+to the security headers middleware in `Program.cs`.
+
+**Constants to Add:**
+
+| Constant | Value |
+|----------|-------|
+| `SecurityHeaders.StrictTransportSecurity` | `"max-age=2592000"` |
+
+**Files Affected:**
+
+| File | Change |
+|------|--------|
+| `src/Askyl.Dsm.WebHosting.Ui/Program.cs` | Add HSTS header to middleware |
+| `src/Askyl.Dsm.WebHosting.Constants/Application/SecurityHeaders.cs` | Add constant |
+
+### Phase 10 — LOW: Dependency Vulnerability Scanning
+
+**Issue:** No automated dependency vulnerability scanning is configured.
+
+**Impact:** Known vulnerabilities in NuGet packages go undetected until manually audited.
+
+**Proposed Fix:** Add Dependabot configuration (`.github/dependabot.yml`) and a CI step
+running `dotnet list package --vulnerable`.
+
+**Files Affected:**
+
+| File | Change |
+|------|--------|
+| `.github/dependabot.yml` | New — Dependabot config |
+| `.github/workflows/ci.yml` | Add vulnerability scan step |
+
+### Phase 11 — LOW: CSRF Review on API Endpoints
+
+**Issue:** `FileManagementController` and `WebsiteHostingController` have no `[ValidateAntiForgeryToken]`
+attributes. Antiforgery is enforced at the Blazor UI level, but the API controllers are
+not explicitly protected against cross-site request forgery.
+
+**Impact:** If an attacker can craft a malicious page that the user visits while authenticated,
+they could trigger API calls (file operations, website creation/deletion).
+
+**Assessment:** Since the app runs behind DSM reverse proxy with session-based auth, and
+the session cookie is `SameSite=Lax` (default in ASP.NET Core), the browser already blocks
+cross-origin requests with cookies. This is **low risk** but worth documenting explicitly.
+
+**Action:** Add comment in controller files documenting the SameSite protection rationale,
+or add `[ValidateAntiForgeryToken]` if same-origin third-party content is a concern.
+
+### Phase 12 — LOW: Log Content Audit (Optional)
+
+**Issue:** `LogDownloadService.CreateLogZipStreamAsync` exposes raw log files to the user.
+Serilog templates should be audited to ensure no sensitive data (DSM credentials, session
+tokens, file paths) is written to logs.
+
+**Impact:** If logs contain DSM credentials or session tokens, downloading logs could expose
+them to unauthorized users with file access.
+
+**Action:** Audit all `[LoggerMessage]` format strings and Serilog output template for PII/secrets.
+Add PII markers if sensitive data is logged (e.g., `[PII]` tag on credential-related fields).
+
+---
+
+## Updated Expected Outcome
+
+| Metric | Before Plan | After Phases 1–4, 8 | After Phases 1–8 | After Phases 1–12 |
+|--------|-------------|---------------------|------------------|-------------------|
+| **Security Score** | ⭐⭐☆☆☆ (2/5) | ⭐⭐⭐⭐☆ (4/5) | ⭐⭐⭐⭐☆ (4/5) | ⭐⭐⭐⭐⭐ (5/5) |
+| **Critical Issues** | 1 | 0 | 0 | 0 |
+| **Medium Issues** | 3 | 0 | 0 | 0 (incl. session validation) |
+| **Low Issues** | 3 | 3 | 0 | 0 (incl. HSTS, CSRF, deps, logs) |
+| **Authorization Coverage** | 3/5 | 5/5 | 5/5 | 5/5 + session validation |
+| **Session Validation** | No | Yes (5-min TTL) | Yes (5-min TTL) | Yes (5-min TTL) |
+| **Security Headers** | 0 | 4 | 4 | 5 (incl. HSTS) |
+| **Rate Limiting** | No | No | Yes | Yes |
+| **Input Validation** | Partial | Good | Complete | Complete |
+| **Info Disclosure** | Yes | Yes | No | No |
 
 ---
 
 ## Execution Order
 
-The phases should be implemented in order (1 → 7) because:
+### Completed Phases (1–4, 8)
 
-1. **Phase 1** is critical and should be committed immediately
-2. **Phase 2–4** are medium severity and can be bundled
-3. **Phase 5–7** are low severity and can be bundled with Phase 2–4 or deferred
+Phases 1–4 were implemented on May 24, 2026. Phase 8 was implemented on May 25, 2026. All committed to the `feat/detect-runtime-from-assembly` branch.
 
-Each phase is independent and can be committed separately or batched based on preference.
+### Remaining Phases (5–7) for 4/5 (already achieved via Phase 8)
+
+Phases 5–7 are independent and can be committed separately or batched:
+
+1. **Phase 5** (exception sanitization) — touches the most files, safest to do first
+2. **Phase 6** (rate limiting) — infrastructure change in `Program.cs`
+3. **Phase 7** (env var validation) — localized to `WebSiteHostingService`
+
+### Phases 9–12 for 5/5 (Phase 8 complete)
+
+| Phase | Priority | Dependencies |
+|-------|----------|--------------|
+| 9 — HSTS Header | Trivial | Phase 2 (same middleware) |
+| 10 — Dependency Scanning | Low | CI/CD access |
+| 11 — CSRF Review | Low (documentation) | None |
+| 12 — Log Audit | Low (optional) | Phase 5 (related to info disclosure) |
+
+**Recommended order:** Phases 5–7 (exception sanitization, rate limiting, env var validation), then 9–12 as polish.
 
 ---
 
@@ -489,4 +695,8 @@ Each phase is independent and can be committed separately or batched based on pr
 | `src/Askyl.Dsm.WebHosting.Ui/Services/FrameworkManagementService.cs` | Framework install/uninstall (Phase 4) |
 | `src/Askyl.Dsm.WebHosting.Ui/Services/DotnetVersionService.cs` | Version validation (Phase 4) |
 | `src/Askyl.Dsm.WebHosting.Ui/Services/WebSiteHostingService.cs` | Website orchestration (Phase 5, 7) |
+| `src/Askyl.Dsm.WebHosting.Tools/Network/DsmApiClient.cs` | DSM API client with session validation cache (Phase 8) |
+| `src/Askyl.Dsm.WebHosting.Data/DsmApi/Parameters/Core/CoreUserGetParameters.cs` | User get API parameters (Phase 8) |
+| `src/Askyl.Dsm.WebHosting.Constants/DSM/API/DsmConstants.cs` | DSM auth error code constant (Phase 8) |
+| `src/Askyl.Dsm.WebHosting.Constants/DSM/API/ApiNames.cs` | API names + CoreUser discovery (Phase 8) |
 | `src/Askyl.Dsm.WebHosting.Constants/` | Constants project (all phases) |

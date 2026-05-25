@@ -45,6 +45,11 @@ public static class ApiNames
     /// </summary>
     public const string CoreAcl = "SYNO.Core.ACL";
 
+    /// <summary>
+    /// Core user API for user management.
+    /// </summary>
+    public const string CoreUser = "SYNO.Core.User";
+
     #endregion
 
     #region AppPortal APIs
@@ -61,7 +66,7 @@ public static class ApiNames
     /// <summary>
     /// Comma-separated list of required API names for API handshake requests.
     /// </summary>
-    public static readonly string RequiredApisJoined = $"{Auth},{FileStationInfo},{FileStationList},{CoreAcl},{AppPortalReverseProxy}";
+    public static readonly string RequiredApisJoined = $"{Auth},{FileStationInfo},{FileStationList},{CoreAcl},{CoreUser},{AppPortalReverseProxy}";
 
     #endregion
 }

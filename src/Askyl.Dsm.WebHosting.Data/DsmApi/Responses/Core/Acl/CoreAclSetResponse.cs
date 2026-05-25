@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
+namespace Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.Acl;
 
 public class CoreAclSetResponse : ApiResponseBase<CoreAclSetData>
 {

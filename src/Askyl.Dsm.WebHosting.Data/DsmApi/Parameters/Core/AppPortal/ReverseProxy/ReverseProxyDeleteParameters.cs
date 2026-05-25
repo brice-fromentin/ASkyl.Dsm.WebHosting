@@ -3,7 +3,7 @@ using Askyl.Dsm.WebHosting.Data.Attributes;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.ReverseProxy;
 
-namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.ReverseProxy;
+namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.AppPortal.ReverseProxy;
 
 [DsmParameterName("uuids")]
 public class ReverseProxyDeleteParameters(ApiInformationCollection informations) : ApiParametersBase<ReverseProxyUuids>(informations)

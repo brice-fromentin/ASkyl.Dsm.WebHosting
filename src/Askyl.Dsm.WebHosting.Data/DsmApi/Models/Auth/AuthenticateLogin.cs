@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
+namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.Auth;
 
 public record AuthenticateLogin
 {
