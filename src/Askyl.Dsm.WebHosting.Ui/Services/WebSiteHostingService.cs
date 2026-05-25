@@ -21,7 +21,8 @@ public class WebSiteHostingService(
     IWebSitesConfigurationService configService,
     IFileSystemService fileSystemService,
     IReverseProxyManagerService reverseProxyManager,
-    IAssemblyRuntimeDetector assemblyRuntimeDetector) : BackgroundService, IWebSiteHostingService
+    IAssemblyRuntimeDetector assemblyRuntimeDetector,
+    IVersionsDetectorService versionsDetector) : BackgroundService, IWebSiteHostingService
 {
     #region Fields
 
@@ -228,6 +229,7 @@ public class WebSiteHostingService(
     {
         logger.HostingServiceStarting();
 
+        await versionsDetector.RefreshCacheAsync(cancellationToken);
         await InitializeAllInstancesAsync();
         await StartEligibleSitesAsync();
 

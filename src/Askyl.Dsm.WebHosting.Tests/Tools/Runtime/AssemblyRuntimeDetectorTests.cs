@@ -171,6 +171,25 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         Assert.True(result.IsCompatible);
     }
 
+    [Fact]
+    public void Detect_FullVersionInRuntimeConfig_NormalizesToChannel()
+    {
+        // Arrange
+        var path = Path.Combine(_tempDir, "App.dll");
+        File.WriteAllText(path, "fake dll");
+        WriteRuntimeConfig(path, "10.0.8");
+        _versionsDetector.Setup(v => v.IsChannelInstalled("10.0", DotNetFrameworkTypes.AspNetCore)).Returns(true);
+
+        // Act
+        var result = _detector.Detect(path);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("10.0", result.Channel);
+        Assert.True(result.IsCompatible);
+        Assert.Null(result.MissingMessage);
+    }
+
     #endregion
 
     #region Detect - Edge cases

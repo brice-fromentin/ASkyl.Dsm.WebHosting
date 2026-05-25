@@ -46,18 +46,20 @@ public sealed partial class AssemblyRuntimeDetector(
                 return null;
             }
 
-            logger.DetectedFramework(frameworkVersion, assemblyPath);
+            var channel = ExtractChannelFromVersion(frameworkVersion);
 
-            var isCompatible = versionsDetector.IsChannelInstalled(frameworkVersion, DotNetFrameworkTypes.AspNetCore);
+            logger.DetectedFramework(channel, assemblyPath);
+
+            var isCompatible = versionsDetector.IsChannelInstalled(channel, DotNetFrameworkTypes.AspNetCore);
 
             if (!isCompatible)
             {
-                logger.FrameworkNotInstalled(assemblyPath, frameworkVersion);
+                logger.FrameworkNotInstalled(assemblyPath, channel);
             }
 
-            var missingMessage = isCompatible ? null : $"Requires .NET {frameworkVersion}, but this runtime is not installed";
+            var missingMessage = isCompatible ? null : $"Requires .NET {channel}, but this runtime is not installed";
 
-            return new AssemblyRuntimeInfo(frameworkVersion, isCompatible, missingMessage);
+            return new AssemblyRuntimeInfo(channel, isCompatible, missingMessage);
         }
         catch (Exception ex)
         {
@@ -71,6 +73,17 @@ public sealed partial class AssemblyRuntimeDetector(
         var configPath = Path.ChangeExtension(assemblyPath, ".runtimeconfig.json");
 
         return File.Exists(configPath) ? configPath : null;
+    }
+
+    /// <summary>
+    /// Normalizes a full version string (e.g., <c>"10.0.8"</c>) to a channel (e.g., <c>"10.0"</c>).
+    /// Returns the input unchanged if it is already a two-part channel.
+    /// </summary>
+    private static string ExtractChannelFromVersion(string version)
+    {
+        var parts = version.Split('.');
+
+        return parts.Length >= 2 ? $"{parts[0]}.{parts[1]}" : version;
     }
 
     private static string? ExtractFrameworkVersion(string runtimeConfigPath)
