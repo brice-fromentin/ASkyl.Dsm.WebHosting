@@ -6,6 +6,7 @@ using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
@@ -80,6 +81,18 @@ builder.Services.AddSingleton<WebSiteHostingService>();
 builder.Services.AddSingleton<IWebSiteHostingService>(sp => (IWebSiteHostingService)sp.GetRequiredService<WebSiteHostingService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<WebSiteHostingService>());
 
+// Rate limiting for login endpoint (brute-force protection)
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("login-throttle", options =>
+    {
+        options.PermitLimit = 5;
+        options.Window = TimeSpan.FromMinutes(1);
+    });
+});
+
 var app = builder.Build();
 
 // Apply path base FIRST - before any middleware that needs to know about the prefix
@@ -96,6 +109,9 @@ else
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
+// Rate limiter must be before status code pages to prevent 429 from being re-executed to /not-found
+app.UseRateLimiter();
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();

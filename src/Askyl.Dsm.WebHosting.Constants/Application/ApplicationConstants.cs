@@ -114,6 +114,11 @@ public static class ApplicationConstants
     /// </summary>
     public const string OperationFailedErrorMessage = "The operation failed. Check the logs for details.";
 
+    /// <summary>
+    /// Error message displayed when login attempts exceed the rate limit (5 per minute).
+    /// </summary>
+    public const string RateLimitExceededErrorMessage = "Too many login attempts. Please wait a minute before trying again.";
+
     #endregion
 
     #region Loading Messages
