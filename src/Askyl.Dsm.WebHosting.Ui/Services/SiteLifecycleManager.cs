@@ -204,7 +204,7 @@ public sealed class SiteLifecycleManager : IDisposable
         catch (Exception ex)
         {
             _logger.FailedToStartSite(ex, _configuration.Name);
-            return ApiResult.CreateFailure($"Failed to start site: {ex.Message}");
+            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -238,7 +238,7 @@ public sealed class SiteLifecycleManager : IDisposable
         catch (Exception ex)
         {
             _logger.FailedToStopSite(ex, _configuration.Name);
-            return ApiResult.CreateFailure($"Failed to stop site: {ex.Message}");
+            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 

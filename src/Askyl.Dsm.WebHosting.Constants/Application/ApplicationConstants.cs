@@ -108,6 +108,12 @@ public static class ApplicationConstants
     /// </summary>
     public const string AuthenticationSuccessfulMessage = "Authentication successful";
 
+    /// <summary>
+    /// Generic error message for operation failures. Used to prevent leaking internal details (file paths, stack traces) to API responses.
+    /// The full exception is always logged server-side via [LoggerMessage] extensions.
+    /// </summary>
+    public const string OperationFailedErrorMessage = "The operation failed. Check the logs for details.";
+
     #endregion
 
     #region Loading Messages

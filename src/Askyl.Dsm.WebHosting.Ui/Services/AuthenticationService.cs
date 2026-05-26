@@ -57,7 +57,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         catch (Exception ex)
         {
             logger.LogoutError(ex);
-            return ApiResult.CreateFailure($"Logout failed: {ex.Message}");
+            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 

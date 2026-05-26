@@ -106,7 +106,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.ErrorAddingWebsite(ex, configuration.Name);
-            return WebSiteInstanceResult.CreateFailure($"Failed to add website: {ex.Message}");
+            return WebSiteInstanceResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -159,7 +159,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.ErrorUpdatingWebsite(ex, configuration.Name);
-            return WebSiteInstanceResult.CreateFailure($"Failed to update website: {ex.Message}");
+            return WebSiteInstanceResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -410,7 +410,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToRemoveSite(ex, siteName);
-            return ApiResult.CreateFailure($"Failed to remove site: {ex.Message}");
+            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -489,7 +489,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToCreateReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure($"Failed to create reverse proxy: {ex.Message}");
+            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -507,7 +507,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToUpdateReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure($"Failed to update reverse proxy: {ex.Message}");
+            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -525,7 +525,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToDeleteReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure($"Failed to delete reverse proxy: {ex.Message}");
+            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 

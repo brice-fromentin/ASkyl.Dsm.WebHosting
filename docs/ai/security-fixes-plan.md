@@ -1,8 +1,8 @@
 # Security Fixes Plan
 
 **Created:** May 24, 2026
-**Last Updated:** May 25, 2026
-**Status:** 🔶 **IN PROGRESS** (Phases 1–4, 8 complete; 5–7 pending)
+**Last Updated:** May 26, 2026
+**Status:** 🔶 **IN PROGRESS** (Phases 1–5, 8 complete; 6–7 pending)
 **Trigger:** Security score re-analysis (was ⭐⭐⭐⭐☆ 4/5, revised to ⭐⭐⭐☆☆ 3/5)
 
 ---
@@ -16,7 +16,7 @@
 | 3 | MEDIUM | Path traversal | ✅ **DONE** | May 24, 2026 |
 | 4 | MEDIUM | Version validation | ✅ **DONE** | May 24, 2026 |
 | 8 | MEDIUM | Session validation | ✅ **DONE** | May 25, 2026 |
-| 5 | LOW | Exception message sanitization | 🔲 PENDING | — |
+| 5 | LOW | Exception message sanitization | ✅ **DONE** | May 26, 2026 |
 | 6 | LOW | Rate limiting on login | 🔲 PENDING | — |
 | 7 | LOW | Env var length validation | 🔲 PENDING | — |
 

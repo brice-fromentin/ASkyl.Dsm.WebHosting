@@ -37,7 +37,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         catch (Exception ex)
         {
             logger.ErrorRetrievingSharedFolders(ex);
-            return SharedFoldersResult.CreateFailure($"Failed to retrieve shared folders: {ex.Message}");
+            return SharedFoldersResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -81,7 +81,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         catch (Exception ex)
         {
             logger.ErrorRetrievingDirectory(ex, path);
-            return DirectoryContentsResult.CreateFailure($"Failed to retrieve directory contents: {ex.Message}");
+            return DirectoryContentsResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 

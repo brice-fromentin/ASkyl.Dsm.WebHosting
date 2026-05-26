@@ -45,7 +45,7 @@ public class FrameworkManagementService(
         catch (Exception ex)
         {
             logger.FrameworkInstallError(ex, version);
-            return InstallationResult.CreateFailure($"Installation failed: {ex.Message}");
+            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -96,7 +96,7 @@ public class FrameworkManagementService(
         catch (Exception ex)
         {
             logger.FrameworkUninstallError(ex, version);
-            return InstallationResult.CreateFailure($"Uninstallation failed: {ex.Message}");
+            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
