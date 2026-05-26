@@ -72,6 +72,13 @@ public class WebSiteHostingService(
 
         logger.AddWebsiteStarting(configuration.Name);
 
+        // Validate environment variables before any side effects
+        var envVarResult = ValidateEnvironmentVariables(configuration.AdditionalEnvironmentVariables);
+        if (envVarResult is not null)
+        {
+            return envVarResult;
+        }
+
         try
         {
             // STEP 1: Set HTTP group permissions BEFORE adding website (CRITICAL - must succeed)
@@ -126,6 +133,13 @@ public class WebSiteHostingService(
         using var timer = new OperationTimer(elapsed => logger.UpdateWebsiteDuration(elapsed, configuration.Name));
 
         logger.UpdateWebsiteStarting(configuration.Name);
+
+        // Validate environment variables before any side effects
+        var envVarResult = ValidateEnvironmentVariables(configuration.AdditionalEnvironmentVariables);
+        if (envVarResult is not null)
+        {
+            return envVarResult;
+        }
 
         try
         {
@@ -555,6 +569,33 @@ public class WebSiteHostingService(
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Validates environment variable keys and values to prevent resource exhaustion.
+    /// Returns a failure result if validation fails, or null if all checks pass.
+    /// </summary>
+    private static WebSiteInstanceResult? ValidateEnvironmentVariables(Dictionary<string, string> environmentVariables)
+    {
+        if (environmentVariables is null || environmentVariables.Count == 0)
+        {
+            return null;
+        }
+
+        foreach (var kvp in environmentVariables)
+        {
+            if (String.IsNullOrWhiteSpace(kvp.Key) || kvp.Key.Length > ValidationConstants.EnvVarKeyMaxLength)
+            {
+                return WebSiteInstanceResult.CreateFailure(String.Format(ValidationConstants.EnvVarKeyTooLong, kvp.Key, ValidationConstants.EnvVarKeyMaxLength));
+            }
+
+            if (kvp.Value?.Length > ValidationConstants.EnvVarValueMaxLength)
+            {
+                return WebSiteInstanceResult.CreateFailure(String.Format(ValidationConstants.EnvVarValueTooLong, kvp.Key, ValidationConstants.EnvVarValueMaxLength));
+            }
+        }
+
+        return null;
     }
 
     #endregion
