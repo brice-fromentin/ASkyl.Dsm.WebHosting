@@ -54,7 +54,7 @@ public sealed class WebSiteConfiguration
     public string HostName { get; set; } = "";
 
     [Required(ErrorMessage = WebSiteConstants.PortRequiredErrorMessage)]
-    public int PublicPort { get; set; } = 443;
+    public int PublicPort { get; set; } = WebSiteConstants.DefaultPublicPort;
 
     public ProtocolType Protocol { get; set; } = ProtocolType.HTTPS;
 

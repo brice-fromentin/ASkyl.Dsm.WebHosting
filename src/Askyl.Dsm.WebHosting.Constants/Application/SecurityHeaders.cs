@@ -1,14 +1,24 @@
 namespace Askyl.Dsm.WebHosting.Constants.Application;
 
 /// <summary>
-/// HTTP security header values for response protection.
+/// HTTP security header names and values for response protection.
 /// </summary>
 public static class SecurityHeaders
 {
     /// <summary>
+    /// Header name for preventing MIME type sniffing.
+    /// </summary>
+    public const string XContentTypeOptionsName = "X-Content-Type-Options";
+
+    /// <summary>
     /// Prevents MIME type sniffing.
     /// </summary>
     public const string XContentTypeOptions = "nosniff";
+
+    /// <summary>
+    /// Header name for preventing clickjacking via iframes.
+    /// </summary>
+    public const string XFrameOptionsName = "X-Frame-Options";
 
     /// <summary>
     /// Prevents clickjacking via iframes.
@@ -16,9 +26,19 @@ public static class SecurityHeaders
     public const string XFrameOptions = "SAMEORIGIN";
 
     /// <summary>
+    /// Header name for limiting referrer information.
+    /// </summary>
+    public const string ReferrerPolicyName = "Referrer-Policy";
+
+    /// <summary>
     /// Limits referrer information sent to external origins.
     /// </summary>
     public const string ReferrerPolicy = "strict-origin-when-cross-origin";
+
+    /// <summary>
+    /// Header name for restricting resource loading.
+    /// </summary>
+    public const string ContentSecurityPolicyName = "Content-Security-Policy";
 
     /// <summary>
     /// Restricts resource loading to same-origin with inline allowances for Blazor/FluentUI.

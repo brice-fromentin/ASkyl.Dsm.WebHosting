@@ -6,6 +6,11 @@ namespace Askyl.Dsm.WebHosting.Constants.Application;
 public static class ValidationConstants
 {
     /// <summary>
+    /// Error message when a path is required but not provided.
+    /// </summary>
+    public const string PathRequired = "Path is required";
+
+    /// <summary>
     /// Error message when path traversal is detected.
     /// </summary>
     public const string PathTraversalDetected = "Invalid path: traversal sequences are not allowed";

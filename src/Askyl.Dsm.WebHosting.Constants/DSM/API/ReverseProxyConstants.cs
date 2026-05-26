@@ -10,6 +10,20 @@ public static class ReverseProxyConstants
     /// </summary>
     public const string DescriptionPrefix = "ADWH - ";
 
+    /// <summary>
+    /// Default proxy timeout value in seconds for connect, read, and send operations.
+    /// </summary>
+    public const int DefaultProxyTimeoutSeconds = 60;
+
+    #region ACL
+
+    /// <summary>
+    /// ACL permission type for allowing access.
+    /// </summary>
+    public const string AclPermissionTypeAllow = "allow";
+
+    #endregion
+
     #region Error Codes
 
     /// <summary>

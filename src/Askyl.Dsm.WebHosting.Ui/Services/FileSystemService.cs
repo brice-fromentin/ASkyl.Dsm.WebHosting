@@ -1,4 +1,5 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
@@ -113,7 +114,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
                 {
                     OwnerType = "group",
                     OwnerName = "http",
-                    PermissionType = "allow",
+                    PermissionType = ReverseProxyConstants.AclPermissionTypeAllow,
                     Permission = new()
                     {
                         ReadData = true,

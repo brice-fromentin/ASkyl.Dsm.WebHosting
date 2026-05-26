@@ -103,10 +103,10 @@ app.UseHttpsRedirection();
 // Security headers
 app.Use((context, next) =>
 {
-    context.Response.Headers.Append("X-Content-Type-Options", SecurityHeaders.XContentTypeOptions);
-    context.Response.Headers.Append("X-Frame-Options", SecurityHeaders.XFrameOptions);
-    context.Response.Headers.Append("Referrer-Policy", SecurityHeaders.ReferrerPolicy);
-    context.Response.Headers.Append("Content-Security-Policy", SecurityHeaders.ContentSecurityPolicy);
+    context.Response.Headers.Append(SecurityHeaders.XContentTypeOptionsName, SecurityHeaders.XContentTypeOptions);
+    context.Response.Headers.Append(SecurityHeaders.XFrameOptionsName, SecurityHeaders.XFrameOptions);
+    context.Response.Headers.Append(SecurityHeaders.ReferrerPolicyName, SecurityHeaders.ReferrerPolicy);
+    context.Response.Headers.Append(SecurityHeaders.ContentSecurityPolicyName, SecurityHeaders.ContentSecurityPolicy);
     return next();
 });
 

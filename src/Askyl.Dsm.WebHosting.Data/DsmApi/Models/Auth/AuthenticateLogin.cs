@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.Auth;
 
@@ -11,7 +12,7 @@ public record AuthenticateLogin
     public string Password { get; init; } = default!;
 
     [JsonPropertyName("format")]
-    public string Format { get; } = "cookie";
+    public string Format { get; } = DsmConstants.AuthFormatCookie;
 
     [JsonPropertyName("otp_code")]
     public string? OtpCode { get; init; }
