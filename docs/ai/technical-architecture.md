@@ -70,7 +70,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ⏳ TODO: Multi-language support
 - ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
-- ✅ **LoggerMessage migration** — 126 logger calls migrated to 145 source-generated `[LoggerMessage]` extension methods across 19 files; zero CA2254 warnings
+- ✅ **LoggerMessage migration** — 224 source-generated `[LoggerMessage]` extension methods across 19 source files; zero CA2254 warnings
 - ✅ **DSM API logging** — request timing, authentication failures, and API errors logged via `[LoggerMessage]` extensions; compile-time `IApiResponse` constraint replaces reflection
 - ✅ **Serilog configuration** — output template with `{EventId}`, `Log.CloseAndFlush()` on graceful shutdown, `WithActivity` enricher for correlation tracking
 - ✅ **OperationTimer** — value-type disposable timer for scope-based duration logging across all services; replaced manual `Stopwatch` boilerplate with single-line `using var` pattern
@@ -120,11 +120,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.8</Version>
-<AssemblyVersion>0.5.8.0</AssemblyVersion>
-<FileVersion>0.5.8.0</FileVersion>
-<InformationalVersion>0.5.8</InformationalVersion>
-<PackageVersion>0.5.8</PackageVersion>
+<Version>0.5.9</Version>
+<AssemblyVersion>0.5.9.0</AssemblyVersion>
+<FileVersion>0.5.9.0</FileVersion>
+<InformationalVersion>0.5.9</InformationalVersion>
+<PackageVersion>0.5.9</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -194,14 +194,16 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 ```text
 
 Constants/
-├── Application/                            # Application-wide constants (6 files)
+├── Application/                            # Application-wide constants (8 files)
 │   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session (DsmSid, DsmUsername, TTL), auth messages
 │   ├── DotnetInfoParserConstants.cs        # dotnet --info section headers and framework identifiers
 │   ├── InfrastructureConstants.cs          # Directory names (Downloads)
 │   ├── LicenseConstants.cs                 # License file management
 │   ├── LogConstants.cs                     # Log directory and file paths
+│   ├── SecurityHeaders.cs                  # HTTP security header values (CSP, X-Frame-Options, etc.)
+│   ├── ValidationConstants.cs              # Validation message constants (path traversal, version format, env vars)
 │   └── WebSiteConstants.cs                 # Website config, process lifecycle, port validation
-├── DSM/                                    # Synology DSM-specific constants (7 files)
+├── DSM/                                    # Synology DSM-specific constants (8 files)
 │   ├── API/                                # API-related constants
 │   │   ├── ApiMethods.cs                   # CRUD operation names (Create, Get, List, etc.)
 │   │   ├── ApiNames.cs                     # 8 DSM API identifiers (SYNO.API.Auth, FileStation, Core.User, etc.)
@@ -260,7 +262,7 @@ Constants/
 
 ### 2. Askyl.Dsm.WebHosting.Data
 
-**Purpose:** Core data layer, API definitions, domain services, and result types (13 service contracts)
+**Purpose:** Core data layer, API definitions, domain services, and result types (14 service contracts)
 
 **Complete Service Contracts Inventory:**
 
@@ -305,10 +307,6 @@ Data/
 ├── Domain/                                 # Domain models
 │   ├── Authentication/                     # Auth-related domain models
 │   │   └── LoginCredentials.cs             # Login credentials
-│   ├── Auth/                               # Auth API models
-│   │   └── AuthenticateLogin.cs            # Login request payload (account, passwd, otp_code, format)
-│   ├── User/                               # User API models
-│   │   └── CoreUserGetEntry.cs             # User get request payload (name)
 │   ├── FileSystem/                         # File system models
 │   │   └── FsEntry.cs                      # File system entry model
 │   ├── Licensing/                          # License information
@@ -745,7 +743,7 @@ Each service owns a dedicated 100K range at 1M spacing to prevent cross-service 
 
 | Range | Service | Extension File | Folder |
 |-------|---------|----------------|--------|
-| `1000001–1000008` | AuthenticationService | `AuthenticationLoggingExtensions.cs` | `Server/Authentication/` |
+| `1000001–1000012` | AuthenticationService | `AuthenticationLoggingExtensions.cs` | `Server/Authentication/` |
 | `1100001–1100012` | FileSystemService | `FileSystemServiceLoggingExtensions.cs` | `Server/FileManagement/` |
 | `1200001–1200006` | FileManagerService | `FileManagerServiceLoggingExtensions.cs` | `Server/FileManagement/` |
 | `1300001–1300007` | LogDownloadService | `LogDownloadServiceLoggingExtensions.cs` | `Server/FileManagement/` |
@@ -776,12 +774,12 @@ Client-side components use `ClientLoggingExtensions.cs` for structured logging i
 |-------|---------|-----------------|
 | `7000001` | LicenseService | `ILogLicenseService` |
 | `7100001–7100015` | Home page | `ILogHome` |
-| `7200001–7200003` | DotnetVersionsDialog | `ILogDotnetVersionsDialog` |
-| `7300001–7300003` | AspNetReleasesDialog | `ILogAspNetReleasesDialog` |
-| `7400001–7400003` | WebSiteConfigurationDialog | `ILogWebSiteConfigurationDialog` |
-| `7500001–7500003` | FileSelectionDialog | `ILogFileSelectionDialog` |
+| `7200001–7200004` | DotnetVersionsDialog | `ILogDotnetVersionsDialog` |
+| `7300001–7300004` | AspNetReleasesDialog | `ILogAspNetReleasesDialog` |
+| `7400001` | WebSiteConfigurationDialog | `ILogWebSiteConfigurationDialog` |
+| `7500001` | FileSelectionDialog | `ILogFileSelectionDialog` |
 
-**Total:** 436 `[LoggerMessage]` methods across 23 extension files (19 server + 1 client), zero CA2254 warnings.
+**Total:** 224 `[LoggerMessage]` methods across 19 source files (18 server + 1 client), zero CA2254 warnings.
 
 **Serilog Configuration:**
 
