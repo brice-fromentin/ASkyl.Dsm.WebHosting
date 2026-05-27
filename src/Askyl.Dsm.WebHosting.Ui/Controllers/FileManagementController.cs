@@ -9,6 +9,12 @@ namespace Askyl.Dsm.WebHosting.Ui.Controllers;
 /// <summary>
 /// Controller for file system operations via Synology FileStation API.
 /// </summary>
+/// <remarks>
+/// CSRF Protection: The session cookie uses SameSite=Strict, which prevents browsers
+/// from sending it on cross-origin requests. Combined with [AuthorizeSession] validation
+/// against the DSM server, this provides adequate CSRF defense without requiring
+/// [ValidateAntiForgeryToken] on each endpoint.
+/// </remarks>
 [ApiController]
 [Route(FileManagementRoutes.ControllerBaseRoute)]
 [AuthorizeSession]

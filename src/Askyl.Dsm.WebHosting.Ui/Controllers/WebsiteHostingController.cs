@@ -10,6 +10,12 @@ namespace Askyl.Dsm.WebHosting.Ui.Controllers;
 /// <summary>
 /// Controller for website management operations (CRUD + start/stop).
 /// </summary>
+/// <remarks>
+/// CSRF Protection: The session cookie uses SameSite=Strict, which prevents browsers
+/// from sending it on cross-origin requests. Combined with [AuthorizeSession] validation
+/// against the DSM server, this provides adequate CSRF defense without requiring
+/// [ValidateAntiForgeryToken] on each endpoint.
+/// </remarks>
 [ApiController]
 [Route(WebsiteHostingRoutes.ControllerBaseRoute)]
 [AuthorizeSession]
