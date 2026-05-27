@@ -123,6 +123,7 @@ app.Use((context, next) =>
     context.Response.Headers.Append(SecurityHeaders.XFrameOptionsName, SecurityHeaders.XFrameOptions);
     context.Response.Headers.Append(SecurityHeaders.ReferrerPolicyName, SecurityHeaders.ReferrerPolicy);
     context.Response.Headers.Append(SecurityHeaders.ContentSecurityPolicyName, SecurityHeaders.ContentSecurityPolicy);
+    context.Response.Headers.Append(SecurityHeaders.XXssProtectionName, SecurityHeaders.XXssProtection);
     return next();
 });
 
