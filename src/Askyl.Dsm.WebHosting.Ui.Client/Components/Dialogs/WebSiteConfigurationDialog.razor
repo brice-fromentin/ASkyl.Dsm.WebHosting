@@ -1,10 +1,9 @@
-@using Microsoft.FluentUI.AspNetCore.Components
 @using Askyl.Dsm.WebHosting.Constants.Network
+@using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Logging
-@using Askyl.Dsm.WebHosting.Ui.Client.Components.Controls
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -106,7 +105,7 @@
     #region Properties and Fields
 
     private WebSiteConfiguration Configuration { get; set; } = default!;
-    
+
     private bool IsEditMode => Content?.Configuration?.Id != Guid.Empty;
 
     private string ProtocolProxy
@@ -180,6 +179,18 @@
                 return;
             }
 
+            if (!String.IsNullOrEmpty(result.WarningMessage) && result.Value?.RequiredFramework is string channel)
+            {
+                var confirmMessage = $"The website requires .NET {channel} which is not installed. Install now?";
+                var confirm = await DialogService.ShowConfirmationAsync(confirmMessage);
+                var confirmResult = await confirm.Result;
+
+                if (confirmResult is { Cancelled: false })
+                {
+                    await ShowAspNetReleasesDialogAsync(channel);
+                }
+            }
+
             await Dialog.CloseAsync();
         }
         catch (Exception ex)
@@ -191,6 +202,12 @@
     }
 
     private async Task CancelAsync() => await Dialog.CancelAsync();
+
+    private async Task ShowAspNetReleasesDialogAsync(string channel)
+    {
+        var parameters = new DialogParameters { Width = DialogConstants.WidthAuto, Modal = true, TrapFocus = false, PreventScroll = true, PreventDismissOnOverlayClick = true };
+        await DialogService.ShowDialogAsync<AspNetReleasesDialog>(channel, parameters);
+    }
 
     #endregion
 }

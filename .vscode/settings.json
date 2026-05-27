@@ -4,12 +4,12 @@
     "dotnet.formatting.organizeImportsOnFormat": true,
     "html.format.wrapLineLength": 500,
     "debug.internalConsoleOptions": "openOnSessionStart",
-    "github.copilot.enable": {
-        "*": false
-    },
-    "github.copilot.renameSuggestions.triggerAutomatically": false,
-    "github.copilot.nextEditSuggestions.fixes": false,
-    "github.copilot.editor.enableCodeActions": false,
+    //"github.copilot.enable": {
+    //    "*": false
+    //},
+    //"github.copilot.renameSuggestions.triggerAutomatically": false,
+    //"github.copilot.nextEditSuggestions.fixes": false,
+    //"github.copilot.editor.enableCodeActions": false,
     // Test Loop - auto-run tests on file save
     "test-loop.ignorePatterns": [
         "bin",
@@ -23,5 +23,50 @@
         "*.log"
     ],
     "test-loop.cooldownMs": 500,
-    "test-loop.debounceMs": 300
+    "test-loop.debounceMs": 300,
+    "chat.tools.terminal.autoApprove": {
+        // Build, format, and test
+        "coverlet": true,
+        "dotnet build": true,
+        "dotnet clean": true,
+        "dotnet format": true,
+        "dotnet run": true,
+        "dotnet test": true,
+        // File operations
+        "cat": true,
+        "cd": true,
+        "curl": true,
+        "echo": true,
+        "find": true,
+        "grep": true,
+        "head": true,
+        "ls": true,
+        "mkdir": true,
+        "sed": true,
+        "tail": true,
+        // Git - safe operations
+        "git add": true,
+        "git branch": true,
+        "git diff": true,
+        "git fetch": true,
+        "git log": true,
+        "git pull": true,
+        "git push": true,
+        "git remote": true,
+        "git status": true,
+        // Validation
+        "markdownlint": true
+    },
+    "chat.tools.terminal.requireApproval": {
+        // Destructive git operations - always require explicit user confirmation
+        "git reset --hard": true,
+        "git reset --soft": true,
+        "git clean -f": true,
+        "git clean -fd": true,
+        "git clean -ffdx": true,
+        "git checkout -- .": true,
+        "git rebase --abort": true,
+        "git reflog expire": true,
+        "git gc --prune": true
+    }
 }

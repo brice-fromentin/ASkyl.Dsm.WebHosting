@@ -1,4 +1,4 @@
-using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -6,19 +6,19 @@ namespace Askyl.Dsm.WebHosting.Ui.Authorization;
 
 /// <summary>
 /// Authorizes access only if the user has an active server-side session.
-/// Checks for "DsmSid" in HttpContext.Session.
+/// Validates against the DSM server to detect sessions that expired or were revoked outside the application.
+/// Validation results are cached (TTL: 5 minutes) to avoid per-request API overhead.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
-public class AuthorizeSessionAttribute : Attribute, IAuthorizationFilter
+public class AuthorizeSessionAttribute : Attribute, IAsyncAuthorizationFilter
 {
-    public void OnAuthorization(AuthorizationFilterContext context)
+    public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
-        var session = context.HttpContext.Session;
+        // Validate session against DSM server (with caching)
+        var authService = context.HttpContext.RequestServices.GetRequiredService<IAuthenticationService>();
+        var result = await authService.IsAuthenticatedAsync();
 
-        // Check if user is authenticated via session (DsmSid must exist)
-        var sessionId = session.GetString(ApplicationConstants.DsmSessionKey);
-
-        if (String.IsNullOrEmpty(sessionId))
+        if (result.Value != true)
         {
             context.Result = new ForbidResult();
         }

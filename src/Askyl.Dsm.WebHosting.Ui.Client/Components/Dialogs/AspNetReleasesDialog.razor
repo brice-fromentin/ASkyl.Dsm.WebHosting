@@ -1,10 +1,6 @@
-@using Microsoft.FluentUI.AspNetCore.Components
-@using Askyl.Dsm.WebHosting.Constants.Runtime
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Logging
-@using Askyl.Dsm.WebHosting.Ui.Client.Components.Controls
-@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -35,7 +31,7 @@
             <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
         </FluentButton>
 
-        <FluentButton OnClick="@(IsSelectedVersionInstalled? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsWorking)" Class="flex-full-width">
+        <FluentButton OnClick="@(IsSelectedVersionInstalled ? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsWorking)" Class="flex-full-width">
             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                 <FluentIcon Value="@(IsSelectedVersionInstalled ? (Icon)new IconsRegular16.Delete() : new IconsRegular16.CloudArrowDown())" Color="Color.Fill" />
                 <FluentLabel Color="Color.Fill">
@@ -67,7 +63,7 @@
 
     public bool IsWorking { get; set; }
 
-    public string Message { get; set; } = "";
+    public string Message { get; set; } = String.Empty;
 
     public void NotifyStateChanged() => StateHasChanged();
 
@@ -76,6 +72,12 @@
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 
+    /// <summary>
+    /// Gets or sets the product version of the channel to pre-select (e.g., "9.0").
+    /// </summary>
+    [Parameter]
+    public string? Content { get; set; }
+
     private List<AspNetChannel> Channels { get; set; } = [];
 
     private IQueryable<AspNetRelease> Releases { get; set; } = AutoDataGrid<AspNetRelease>.Empty();
@@ -83,6 +85,8 @@
     private AspNetChannel? SelectedChannel { get; set; }
 
     private AspNetRelease? SelectedItem { get; set; }
+
+    private bool _channelsLoaded;
 
     #region Computed Properties
 
@@ -104,7 +108,16 @@
 
     #endregion
 
-    protected override async Task OnParametersSetAsync() => await LoadChannelsAsync();
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_channelsLoaded)
+        {
+            return;
+        }
+
+        _channelsLoaded = true;
+        await LoadChannelsAsync();
+    }
 
     private void OnReleaseSelected(AspNetRelease release)
     {
@@ -135,7 +148,11 @@
             }
 
             Channels = channelsResult.Value ?? [];
-            await OnChannelChanged(SelectedChannel ?? Channels.FirstOrDefault());
+
+            var initialChannel = Channels.FirstOrDefault(c => c.ProductVersion == Content)
+                ?? SelectedChannel
+                ?? Channels.FirstOrDefault();
+            await OnChannelChanged(initialChannel);
         }
         catch (Exception ex)
         {

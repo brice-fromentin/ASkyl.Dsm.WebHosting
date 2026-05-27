@@ -11,6 +11,12 @@ namespace Askyl.Dsm.WebHosting.Ui.Controllers;
 /// Controller for framework (ASP.NET) installation and uninstallation operations.
 /// Requires authentication via server-side session.
 /// </summary>
+/// <remarks>
+/// CSRF Protection: The session cookie uses SameSite=Strict, which prevents browsers
+/// from sending it on cross-origin requests. Combined with [AuthorizeSession] validation
+/// against the DSM server, this provides adequate CSRF defense without requiring
+/// [ValidateAntiForgeryToken] on each endpoint.
+/// </remarks>
 [ApiController]
 [Route(FrameworkManagementRoutes.ControllerBaseRoute)]
 [AuthorizeSession]

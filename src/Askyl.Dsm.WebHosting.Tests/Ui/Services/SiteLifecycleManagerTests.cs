@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
@@ -18,6 +20,7 @@ public class SiteLifecycleManagerTests : IDisposable
     private readonly Mock<ILogger<ILogSiteLifecycleManager>> _logger;
     private readonly FakeProcessRunner _processRunner;
     private readonly FakeProcessHandle _processHandle;
+    private readonly Mock<IAssemblyRuntimeDetector> _detector;
     private readonly WebSiteConfiguration _configuration;
     private readonly List<ProcessStartInfo> _startedProcesses;
     private readonly string _tempDir;
@@ -28,6 +31,7 @@ public class SiteLifecycleManagerTests : IDisposable
         _logger = new Mock<ILogger<ILogSiteLifecycleManager>>();
         _processRunner = new FakeProcessRunner();
         _processHandle = new FakeProcessHandle();
+        _detector = new Mock<IAssemblyRuntimeDetector>();
         _startedProcesses = _processRunner.StartedProcesses;
         _tempDir = Path.Combine(Path.GetTempPath(), $"asl_wh_{Guid.NewGuid():N}");
         _tempDll = Path.Combine(_tempDir, "MyApp.dll");
@@ -53,7 +57,7 @@ public class SiteLifecycleManagerTests : IDisposable
 
     private SiteLifecycleManager CreateManager()
     {
-        return new SiteLifecycleManager(_logger.Object, _processRunner, _configuration);
+        return new SiteLifecycleManager(_logger.Object, _processRunner, _detector.Object, _configuration);
     }
 
     public void Dispose()
@@ -102,6 +106,9 @@ public class SiteLifecycleManagerTests : IDisposable
         Assert.Equal(_configuration.ApplicationRealPath, startInfo.Arguments);
         Assert.Equal(Path.GetDirectoryName(_configuration.ApplicationRealPath), startInfo.WorkingDirectory);
         Assert.False(startInfo.UseShellExecute);
+        Assert.True(startInfo.RedirectStandardOutput);
+        Assert.True(startInfo.RedirectStandardError);
+        Assert.True(startInfo.CreateNoWindow);
         Assert.Equal($"http://localhost:{_configuration.InternalPort}", startInfo.Environment[WebSiteConstants.AspNetCoreUrlsEnvironmentVariable]);
         Assert.Equal(_configuration.Environment, startInfo.Environment[WebSiteConstants.AspNetCoreEnvironmentVariable]);
         Assert.Equal("test", startInfo.Environment["CUSTOM_VAR"]);
@@ -146,7 +153,6 @@ public class SiteLifecycleManagerTests : IDisposable
     public async Task StartAsync_WhenAlreadyRunning_ReturnsFailure()
     {
         // Arrange
-        _processHandle.SimulateRunning = true;
         var manager = CreateManager();
 
         await manager.StartAsync();
@@ -183,7 +189,6 @@ public class SiteLifecycleManagerTests : IDisposable
     public async Task StopAsync_WhenRunning_SendsGracefulShutdownAndWaits()
     {
         // Arrange
-        _processHandle.SimulateRunning = true;
         var manager = CreateManager();
 
         await manager.StartAsync();
@@ -243,7 +248,6 @@ public class SiteLifecycleManagerTests : IDisposable
     public async Task GetRuntimeStateAsync_WhenRunning_ReturnsRunningWithProcessInfo()
     {
         // Arrange
-        _processHandle.SimulateRunning = true;
         var manager = CreateManager();
 
         await manager.StartAsync();
@@ -277,7 +281,6 @@ public class SiteLifecycleManagerTests : IDisposable
     public async Task Dispose_WhenRunning_ForceKillsProcess()
     {
         // Arrange
-        _processHandle.SimulateRunning = true;
         var manager = CreateManager();
 
         await manager.StartAsync();
@@ -286,7 +289,7 @@ public class SiteLifecycleManagerTests : IDisposable
         manager.Dispose();
 
         // Wait for background dispose command to process
-        await Task.Delay(100);
+        await _processHandle.KillCompleted;
 
         // Assert
         Assert.True(_processHandle.KillCalled);
@@ -351,22 +354,30 @@ public class SiteLifecycleManagerTests : IDisposable
                 throw new InvalidOperationException("Permission denied");
             }
 
-            return HandleToReturn
-                ?? throw new InvalidOperationException("HandleToReturn not set");
+            var handle = HandleToReturn ?? throw new InvalidOperationException("HandleToReturn not set");
+            (handle as FakeProcessHandle)?.SetRunning(true);
+            return handle;
         }
     }
 
     private sealed class FakeProcessHandle : IProcessHandle
     {
-        public bool SimulateRunning;
         public int FakeId = 9999;
+        private bool _isRunning;
 
         public bool GracefulShutdownCalled { get; private set; }
         public bool WaitForExitCalled { get; private set; }
         public bool KillCalled { get; private set; }
+        public Task KillCompleted => _killTcs.Task;
+        private readonly TaskCompletionSource<bool> _killTcs = new();
 
         public int Id => FakeId;
-        public bool HasExited => !SimulateRunning;
+        public bool HasExited => !_isRunning;
+
+        internal void SetRunning(bool running)
+        {
+            _isRunning = running;
+        }
 
         public void SendGracefulShutdownSignal()
         {
@@ -376,7 +387,7 @@ public class SiteLifecycleManagerTests : IDisposable
         public Task WaitForExitAsync(CancellationToken cancellationToken)
         {
             WaitForExitCalled = true;
-            SimulateRunning = false;
+            _isRunning = false;
 
             return Task.CompletedTask;
         }
@@ -384,7 +395,8 @@ public class SiteLifecycleManagerTests : IDisposable
         public void Kill()
         {
             KillCalled = true;
-            SimulateRunning = false;
+            _isRunning = false;
+            _killTcs.TrySetResult(true);
         }
 
         public void Dispose()
@@ -430,6 +442,139 @@ public class SiteLifecycleManagerTests : IDisposable
         public void Dispose()
         {
         }
+    }
+
+    #endregion
+
+    #region Framework detection
+
+    [Fact]
+    public async Task StartAsync_IncompatibleFramework_ReturnsFailure()
+    {
+        // Arrange
+        _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath))
+            .Returns(new AssemblyRuntimeInfo(
+                "9.0", false, "Requires .NET 9.0, but this runtime is not installed"));
+        var manager = CreateManager();
+
+        // Act
+        var result = await manager.StartAsync();
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Contains("Requires .NET 9.0", result.Message);
+        Assert.Empty(_startedProcesses);
+
+        manager.Dispose();
+    }
+
+    [Fact]
+    public async Task StartAsync_CompatibleFramework_StartsSuccessfully()
+    {
+        // Arrange
+        _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath))
+            .Returns(new AssemblyRuntimeInfo("8.0", true, null));
+        var manager = CreateManager();
+
+        // Act
+        var result = await manager.StartAsync();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Single(_startedProcesses);
+
+        manager.Dispose();
+    }
+
+    [Fact]
+    public async Task StartAsync_DetectionFallsThrough_AllowsStart()
+    {
+        // Arrange - detection returns null (non-.NET file)
+        _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath)).Returns((AssemblyRuntimeInfo?)null);
+        var manager = CreateManager();
+
+        // Act
+        var result = await manager.StartAsync();
+
+        // Assert - should still start (no blocking)
+        Assert.True(result.Success);
+        Assert.Single(_startedProcesses);
+
+        manager.Dispose();
+    }
+
+    #endregion
+
+    #region Concurrent execution
+
+    [Fact]
+    public async Task ConcurrentStartCalls_ExecuteSequentiallyWithoutRaces()
+    {
+        // Arrange
+        _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath)).Returns((AssemblyRuntimeInfo?)null);
+        var manager = CreateManager();
+
+        // Act - fire 5 concurrent start calls
+        var tasks = Enumerable.Range(0, 5)
+            .Select(_ => manager.StartAsync())
+            .ToList();
+
+        var results = await Task.WhenAll(tasks);
+
+        // Assert - first call succeeds, rest fail (already running)
+        Assert.Single(results, r => r.Success);
+        Assert.Equal(4, results.Count(r => !r.Success));
+
+        manager.Dispose();
+    }
+
+    [Fact]
+    public async Task ConcurrentStartAndStop_QueueCommandsCorrectly()
+    {
+        // Arrange
+        _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath)).Returns((AssemblyRuntimeInfo?)null);
+        var manager = CreateManager();
+
+        // Act - interleave start/stop concurrently
+        var tasks = new[]
+        {
+            manager.StartAsync(),
+            manager.StartAsync(),
+            manager.StopAsync(),
+            manager.StartAsync(),
+        };
+
+        var results = await Task.WhenAll(tasks);
+
+        // Assert - at least one succeeded (channel serializes them)
+        Assert.Contains(results, r => r.Success);
+
+        manager.Dispose();
+    }
+
+    [Fact]
+    public async Task StartStopStartStop_Sequence_ExecutesWithoutStateLeakage()
+    {
+        // Arrange
+        _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath)).Returns((AssemblyRuntimeInfo?)null);
+        var manager = CreateManager();
+
+        // Act - first lifecycle cycle
+        var start1 = await manager.StartAsync();
+        var stop1 = await manager.StopAsync();
+
+        // Act - second lifecycle cycle
+        var start2 = await manager.StartAsync();
+        var stop2 = await manager.StopAsync();
+
+        // Assert - all succeed, process started twice
+        Assert.True(start1.Success);
+        Assert.True(stop1.Success);
+        Assert.True(start2.Success);
+        Assert.True(stop2.Success);
+        Assert.Equal(2, _startedProcesses.Count);
+
+        manager.Dispose();
     }
 
     #endregion

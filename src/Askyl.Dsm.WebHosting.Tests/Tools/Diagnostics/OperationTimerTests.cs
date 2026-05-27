@@ -52,7 +52,7 @@ public class OperationTimerTests
         using (new OperationTimer(elapsed => capturedDuration = elapsed))
         {
             // Simulate some work
-            System.Threading.Thread.Sleep(10);
+            Thread.Sleep(10);
         }
 
         // Assert
@@ -122,7 +122,7 @@ public class OperationTimerTests
 
         // Act
         var first = timer.ElapsedMilliseconds;
-        System.Threading.Thread.Sleep(5);
+        Thread.Sleep(5);
         var second = timer.ElapsedMilliseconds;
 
         // Assert
@@ -154,7 +154,7 @@ public class OperationTimerTests
         // Act
         using (new OperationTimer(elapsed => capturedDuration = elapsed))
         {
-            System.Threading.Thread.Sleep(5);
+            Thread.Sleep(5);
         }
 
         // Assert
@@ -172,7 +172,7 @@ public class OperationTimerTests
         {
             using (new OperationTimer(elapsed => capturedDuration = elapsed))
             {
-                System.Threading.Thread.Sleep(5);
+                Thread.Sleep(5);
                 return; // Early return — timer should still log
             }
         }
@@ -194,7 +194,7 @@ public class OperationTimerTests
         {
             using (new OperationTimer(elapsed => capturedDuration = elapsed))
             {
-                System.Threading.Thread.Sleep(5);
+                Thread.Sleep(5);
                 throw new InvalidOperationException("Simulated failure");
             }
         }
@@ -222,7 +222,7 @@ public class OperationTimerTests
         using (new OperationTimer(elapsed => capturedDuration = elapsed))
         using (await SemaphoreLock.AcquireAsync(owner))
         {
-            System.Threading.Thread.Sleep(5);
+            Thread.Sleep(5);
         }
 
         // Assert

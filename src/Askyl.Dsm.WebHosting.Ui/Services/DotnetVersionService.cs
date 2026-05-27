@@ -1,10 +1,11 @@
+using System.Text.RegularExpressions;
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
-using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -18,6 +19,8 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="downloader">Service for downloading .NET runtimes.</param>
 public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
 {
+    private static readonly Regex VersionPattern = new(@"^\d+\.\d+(\.\d+)?$", RegexOptions.Compiled);
+
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -28,7 +31,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
         catch (Exception ex)
         {
             logger.FailedToGetInstalledVersions(ex);
-            return InstalledVersionsResult.CreateFailure($"Failed to get installed versions: {ex.Message}");
+            return InstalledVersionsResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -42,7 +45,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
         catch (Exception ex)
         {
             logger.FailedToCheckChannelInstalled(ex, channel);
-            return ApiResultBool.CreateFailure($"Failed to check if channel '{channel}' is installed: {ex.Message}");
+            return ApiResultBool.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -56,7 +59,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
         catch (Exception ex)
         {
             logger.FailedToCheckVersionInstalled(ex, version);
-            return ApiResultBool.CreateFailure($"Failed to check if version '{version}' is installed: {ex.Message}");
+            return ApiResultBool.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -88,7 +91,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
         catch (Exception ex)
         {
             logger.FailedToGetChannels(ex);
-            return ChannelsResult.CreateFailure($"Failed to get ASP.NET Core channels: {ex.Message}");
+            return ChannelsResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -114,7 +117,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
         catch (Exception ex)
         {
             logger.FailedToGetReleases(ex, channel);
-            return ReleasesResult.CreateFailure($"Failed to get releases for channel '{channel}': {ex.Message}");
+            return ReleasesResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
+
+    public bool IsValidVersionFormat(string version)
+        => !String.IsNullOrWhiteSpace(version) && VersionPattern.IsMatch(version);
 }

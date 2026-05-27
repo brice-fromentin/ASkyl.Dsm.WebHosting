@@ -75,9 +75,19 @@ public static class ApplicationConstants
     public const string DsmSessionKey = "DsmSid";
 
     /// <summary>
+    /// Session key for the logged-in DSM username. Used by session validation to fetch user info via SYNO.Core.User.get.
+    /// </summary>
+    public const string DsmUsernameKey = "DsmUsername";
+
+    /// <summary>
     /// Session idle timeout in minutes.
     /// </summary>
     public const int SessionTimeoutMinutes = 30;
+
+    /// <summary>
+    /// TTL for cached DSM session validation results in minutes. Matches the minimum DSM session timeout (1 minute) to prevent validating stale sessions. Prevents per-request API overhead while detecting expired sessions promptly.
+    /// </summary>
+    public const int SessionValidationTtlMinutes = 1;
 
     #endregion
 
@@ -97,6 +107,17 @@ public static class ApplicationConstants
     /// Success message for successful authentication.
     /// </summary>
     public const string AuthenticationSuccessfulMessage = "Authentication successful";
+
+    /// <summary>
+    /// Generic error message for operation failures. Used to prevent leaking internal details (file paths, stack traces) to API responses.
+    /// The full exception is always logged server-side via [LoggerMessage] extensions.
+    /// </summary>
+    public const string OperationFailedErrorMessage = "The operation failed. Check the logs for details.";
+
+    /// <summary>
+    /// Error message displayed when login attempts exceed the rate limit (5 per minute).
+    /// </summary>
+    public const string RateLimitExceededErrorMessage = "Too many login attempts. Please wait a minute before trying again.";
 
     #endregion
 

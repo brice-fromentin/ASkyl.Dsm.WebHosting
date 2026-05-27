@@ -1,10 +1,14 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreAcl;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.FileStation;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.Acl;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.FileStation;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
@@ -33,12 +37,19 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         catch (Exception ex)
         {
             logger.ErrorRetrievingSharedFolders(ex);
-            return SharedFoldersResult.CreateFailure($"Failed to retrieve shared folders: {ex.Message}");
+            return SharedFoldersResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
     public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly)
     {
+        // Validate path to prevent path traversal attacks
+        if (!IsPathValid(path))
+        {
+            logger.PathValidationFailed(path);
+            return DirectoryContentsResult.CreateFailure(ValidationConstants.PathTraversalDetected);
+        }
+
         logger.RetrievingDirectoryContents(path, directoryOnly);
 
         try
@@ -70,7 +81,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         catch (Exception ex)
         {
             logger.ErrorRetrievingDirectory(ex, path);
-            return DirectoryContentsResult.CreateFailure($"Failed to retrieve directory contents: {ex.Message}");
+            return DirectoryContentsResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -82,7 +93,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (!IsPathValid(path))
         {
             logger.PathValidationFailed(path);
-            return ApiResult.CreateFailure("Invalid path: path traversal not allowed");
+            return ApiResult.CreateFailure(ValidationConstants.PathTraversalDetected);
         }
 
         var targetPath = isDirectory ? path : Path.GetDirectoryName(path) ?? path;
@@ -103,7 +114,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
                 {
                     OwnerType = "group",
                     OwnerName = "http",
-                    PermissionType = "allow",
+                    PermissionType = ReverseProxyConstants.AclPermissionTypeAllow,
                     Permission = new()
                     {
                         ReadData = true,

@@ -2,7 +2,7 @@ using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.Attributes;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 
-namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.ReverseProxy;
+namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.AppPortal.ReverseProxy;
 
 [DsmParameterName("entry")]
 public class ReverseProxyCreateParameters(ApiInformationCollection informations, Models.ReverseProxy.ReverseProxy? entry = null)

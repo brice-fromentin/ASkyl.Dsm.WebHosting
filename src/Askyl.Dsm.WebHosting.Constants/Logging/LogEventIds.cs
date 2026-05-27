@@ -10,7 +10,7 @@ static class LogEventIds
 {
     #region Authentication — 1000000–1000999
 
-    /// <summary>Authentication service — IDs 1000001–1000008.</summary>
+    /// <summary>Authentication service — IDs 1000001–1000012.</summary>
     public const int AuthenticationBase = 1000000;
 
     #endregion
@@ -38,9 +38,9 @@ static class LogEventIds
 
     #endregion
 
-    #region Process Lifecycle — 1600000–1600999
+    #region Process Lifecycle — 1600000–1604999
 
-    /// <summary>SiteLifecycleManager — IDs 1600001–1600022.</summary>
+    /// <summary>SiteLifecycleManager — IDs 1600001–1600007, 1601001–1601004, 1602001–1602003, 1603001–1603004, 1604001–1604005.</summary>
     public const int ProcessLifecycleBase = 1600000;
 
     #endregion
@@ -80,6 +80,9 @@ static class LogEventIds
 
     /// <summary>VersionsDetectorService — IDs 2200001–2200004.</summary>
     public const int VersionsDetectorBase = 2200000;
+
+    /// <summary>AssemblyRuntimeDetector — IDs 2250001–2250005.</summary>
+    public const int AssemblyRuntimeDetectorBase = 2250000;
 
     /// <summary>PlatformInfoService — IDs 2300001–2300002.</summary>
     public const int PlatformInfoBase = 2300000;

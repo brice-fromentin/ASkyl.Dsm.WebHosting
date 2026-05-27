@@ -1,10 +1,10 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
-using Askyl.Dsm.WebHosting.Tools.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -45,7 +45,7 @@ public class FrameworkManagementService(
         catch (Exception ex)
         {
             logger.FrameworkInstallError(ex, version);
-            return InstallationResult.CreateFailure($"Installation failed: {ex.Message}");
+            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 
@@ -55,6 +55,11 @@ public class FrameworkManagementService(
         {
             logger.UninstallFailedVersionRequired();
             return InstallationResult.CreateFailure("Version is required");
+        }
+
+        if (!dotnetVersionService.IsValidVersionFormat(version))
+        {
+            return InstallationResult.CreateFailure(ValidationConstants.InvalidVersionFormat);
         }
 
         using var timer = new OperationTimer(elapsed => logger.UninstallDuration(elapsed, version));
@@ -81,17 +86,17 @@ public class FrameworkManagementService(
         catch (LastReleaseUninstallException ex)
         {
             logger.UninstallFailed(ex.Message);
-            return InstallationResult.CreateFailure(ex.Message);
+            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
         catch (MissingChannelConfigurationException ex)
         {
             logger.UninstallFailed(ex.Message);
-            return InstallationResult.CreateFailure(ex.Message);
+            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
         catch (Exception ex)
         {
             logger.FrameworkUninstallError(ex, version);
-            return InstallationResult.CreateFailure($"Uninstallation failed: {ex.Message}");
+            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
         }
     }
 

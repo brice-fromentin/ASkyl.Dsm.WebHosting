@@ -3,17 +3,12 @@
 @implements IWorkingState
 
 @using System.Net
-@using Microsoft.FluentUI.AspNetCore.Components
 @using Askyl.Dsm.WebHosting.Constants.Application
-@using Askyl.Dsm.WebHosting.Constants.Network
 @using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Constants.WebApi
-@using Askyl.Dsm.WebHosting.Data.Domain.Authentication
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Logging
-@using Askyl.Dsm.WebHosting.Ui.Client.Interfaces
-@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 
 @inject IDialogService DialogService
 @inject IAuthenticationService AuthService
@@ -62,10 +57,11 @@
     </FluentButton>
 </FluentToolbar>
 
-<AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr">
+<AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr 1fr">
     <ChildContent>
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Name" Property="@(i => i.Configuration.Name)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Path" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Framework" Property="@(i => GetFrameworkDisplay(i))" Sortable="false" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="Internal Port" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="State" Property="@(i => i.State)" Sortable="true" />
     </ChildContent>
@@ -108,7 +104,7 @@
         try
         {
             var result = await WebsiteHostingService.GetAllWebsitesAsync();
-            
+
             if (!result.Success || result.Value is null)
             {
                 Logger.FailedToLoadWebsites(result.Message ?? "Unknown error");
@@ -143,6 +139,16 @@
     private async Task EditWebSite(WebSiteInstance instance) => await EditWebSite();
 
     private void HandleInstanceSelected(WebSiteInstance instance) => SelectedInstance = instance;
+
+    private static string GetFrameworkDisplay(WebSiteInstance instance)
+    {
+        if (String.IsNullOrEmpty(instance.RequiredFramework))
+        {
+            return "—";
+        }
+
+        return instance.RequiredFramework;
+    }
 
     private async Task DeleteWebSite()
     {
@@ -339,14 +345,15 @@
         _ = await dialog.Result;
     }
 
-    private DialogParameters CreateDialogParameters(string width) => new() 
-        { 
-            Width = width, 
-            Modal = true, 
-            TrapFocus = false, 
-            PreventScroll = true, 
-            PreventDismissOnOverlayClick = true 
-        };
+    private DialogParameters CreateDialogParameters(string width) => new()
+    {
+        Width = width,
+        Modal = true,
+        TrapFocus = false,
+        PreventScroll = true,
+        PreventDismissOnOverlayClick = true
+    };
 
     #endregion
+
 }

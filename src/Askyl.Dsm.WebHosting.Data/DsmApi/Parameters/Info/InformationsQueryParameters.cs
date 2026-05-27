@@ -1,7 +1,7 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 
-namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreInformations;
+namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Info;
 
 public class InformationsQueryParameters(ApiInformationCollection informations) : ApiParametersBase<ApiInformationQuery>(informations)
 {

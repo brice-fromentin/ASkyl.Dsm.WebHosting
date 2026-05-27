@@ -53,4 +53,11 @@ public interface IDotnetVersionService
     /// Call this after install/uninstall operations to update cached data.
     /// </summary>
     Task RefreshCacheAsync();
+
+    /// <summary>
+    /// Validates that a version string matches a valid .NET version format (e.g., "8.0", "8.0.1").
+    /// </summary>
+    /// <param name="version">The version string to validate.</param>
+    /// <returns>True if the version format is valid; otherwise, false.</returns>
+    bool IsValidVersionFormat(string version);
 }

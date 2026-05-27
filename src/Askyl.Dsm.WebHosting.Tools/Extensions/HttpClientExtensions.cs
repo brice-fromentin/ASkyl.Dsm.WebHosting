@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Constants.Network;
@@ -42,7 +43,7 @@ public static class HttpClientExtensions
         public async Task<TResponse?> PostJsonAsync<TRequest, TResponse>(string requestUri, TRequest? content, CancellationToken cancellationToken = default) where TRequest : class where TResponse : class
         {
             var jsonContent = content is not null
-                ? new StringContent(JsonSerializer.Serialize(content, JsonOptionsCache.Options), System.Text.Encoding.UTF8, NetworkConstants.ApplicationJson)
+                ? new StringContent(JsonSerializer.Serialize(content, JsonOptionsCache.Options), Encoding.UTF8, NetworkConstants.ApplicationJson)
                 : null;
 
             var response = await client.PostAsync(requestUri, jsonContent, cancellationToken);

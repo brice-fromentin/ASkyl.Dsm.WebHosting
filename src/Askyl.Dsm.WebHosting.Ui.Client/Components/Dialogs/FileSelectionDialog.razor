@@ -1,4 +1,3 @@
-@using Microsoft.FluentUI.AspNetCore.Components
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
@@ -100,7 +99,7 @@
     #region IWorkingState Implementation
 
     public bool IsWorking { get; set; }
-    public string Message { get; set; } = "";
+    public string Message { get; set; } = String.Empty;
 
     public void NotifyStateChanged() => StateHasChanged();
 
@@ -320,4 +319,5 @@
     }
 
     #endregion
+
 }

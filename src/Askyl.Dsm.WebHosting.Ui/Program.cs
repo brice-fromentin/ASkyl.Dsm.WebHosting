@@ -6,7 +6,7 @@ using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
-using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
@@ -58,6 +58,9 @@ builder.Services.AddScoped<IDownloaderService, DownloaderService>();
 // Register versions detector service (Singleton - caches expensive dotnet --info output)
 builder.Services.AddSingleton<IVersionsDetectorService, VersionsDetectorService>();
 
+// Register assembly runtime detector (Singleton - depends on IVersionsDetectorService)
+builder.Services.AddSingleton<IAssemblyRuntimeDetector, AssemblyRuntimeDetector>();
+
 // Register process runner (Singleton - stateless process spawning abstraction)
 builder.Services.AddSingleton<IProcessRunner, SystemProcessRunner>();
 
@@ -78,6 +81,18 @@ builder.Services.AddSingleton<WebSiteHostingService>();
 builder.Services.AddSingleton<IWebSiteHostingService>(sp => (IWebSiteHostingService)sp.GetRequiredService<WebSiteHostingService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<WebSiteHostingService>());
 
+// Rate limiting for login endpoint (brute-force protection)
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("login-throttle", options =>
+    {
+        options.PermitLimit = 5;
+        options.Window = TimeSpan.FromMinutes(1);
+    });
+});
+
 var app = builder.Build();
 
 // Apply path base FIRST - before any middleware that needs to know about the prefix
@@ -95,8 +110,22 @@ else
     app.UseHsts();
 }
 
+// Rate limiter must be before status code pages to prevent 429 from being re-executed to /not-found
+app.UseRateLimiter();
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+// Security headers
+app.Use((context, next) =>
+{
+    context.Response.Headers.Append(SecurityHeaders.XContentTypeOptionsName, SecurityHeaders.XContentTypeOptions);
+    context.Response.Headers.Append(SecurityHeaders.XFrameOptionsName, SecurityHeaders.XFrameOptions);
+    context.Response.Headers.Append(SecurityHeaders.ReferrerPolicyName, SecurityHeaders.ReferrerPolicy);
+    context.Response.Headers.Append(SecurityHeaders.ContentSecurityPolicyName, SecurityHeaders.ContentSecurityPolicy);
+    context.Response.Headers.Append(SecurityHeaders.XXssProtectionName, SecurityHeaders.XXssProtection);
+    return next();
+});
 
 // Session middleware must be before antiforgery and controllers
 app.UseSession();

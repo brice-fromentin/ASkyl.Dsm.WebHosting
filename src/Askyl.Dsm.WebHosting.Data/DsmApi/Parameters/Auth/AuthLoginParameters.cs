@@ -1,9 +1,10 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 
-namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core;
+namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Auth;
 
-public class AuthenticationLoginParameters(ApiInformationCollection informations, AuthenticateLogin? entry = null)
+public class AuthLoginParameters(ApiInformationCollection informations, AuthenticateLogin? entry = null)
     : ApiParametersBase<AuthenticateLogin>(informations, entry)
 {
     public override string Name => ApiNames.Auth;

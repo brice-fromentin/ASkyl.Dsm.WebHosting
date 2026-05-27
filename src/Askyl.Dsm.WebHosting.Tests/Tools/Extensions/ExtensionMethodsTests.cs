@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Tools.Extensions;
 
@@ -192,7 +194,7 @@ public class ExtensionMethodsTests : IDisposable
     public async Task GetJsonAsync_NonSuccess_ReturnsDefault()
     {
         // Arrange
-        SetResponse(statusCode: (int)System.Net.HttpStatusCode.NotFound);
+        SetResponse(statusCode: (int)HttpStatusCode.NotFound);
         var client = CreateClient();
 
         // Act
@@ -221,7 +223,7 @@ public class ExtensionMethodsTests : IDisposable
     public async Task GetJsonOrDefaultAsync_Failure_ReturnsDefaultValue()
     {
         // Arrange
-        SetResponse(statusCode: (int)System.Net.HttpStatusCode.NotFound);
+        SetResponse(statusCode: (int)HttpStatusCode.NotFound);
         var client = CreateClient();
 
         // Act
@@ -251,7 +253,7 @@ public class ExtensionMethodsTests : IDisposable
     public async Task PostJsonAsync_NonSuccess_ReturnsDefault()
     {
         // Arrange
-        SetResponse(statusCode: (int)System.Net.HttpStatusCode.BadRequest);
+        SetResponse(statusCode: (int)HttpStatusCode.BadRequest);
         var client = CreateClient();
 
         // Act
@@ -294,7 +296,7 @@ public class ExtensionMethodsTests : IDisposable
     public async Task DeleteJsonAsync_NonSuccess_ReturnsDefault()
     {
         // Arrange
-        SetResponse(statusCode: (int)System.Net.HttpStatusCode.NotFound);
+        SetResponse(statusCode: (int)HttpStatusCode.NotFound);
         var client = CreateClient();
 
         // Act
@@ -308,7 +310,7 @@ public class ExtensionMethodsTests : IDisposable
     public async Task DeleteJsonOrDefaultAsync_Failure_ReturnsDefaultValue()
     {
         // Arrange
-        SetResponse(statusCode: (int)System.Net.HttpStatusCode.NotFound);
+        SetResponse(statusCode: (int)HttpStatusCode.NotFound);
         var client = CreateClient();
 
         // Act
@@ -323,7 +325,7 @@ public class ExtensionMethodsTests : IDisposable
     public async Task PostJsonOrDefaultAsync_Failure_ReturnsDefaultValue()
     {
         // Arrange
-        SetResponse(statusCode: (int)System.Net.HttpStatusCode.BadRequest);
+        SetResponse(statusCode: (int)HttpStatusCode.BadRequest);
         var client = CreateClient();
 
         // Act
@@ -339,7 +341,7 @@ public class ExtensionMethodsTests : IDisposable
     {
         // Arrange
         var json = "{\"name\":\"test\",\"value\":42}";
-        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         // Act
         var result = await content.ReadFromJsonAsync<TestModel>();
@@ -367,7 +369,7 @@ public class ExtensionMethodsTests : IDisposable
     private sealed class MockHttpMessageHandler : HttpMessageHandler
     {
         private string? _content;
-        private int _statusCode = (int)System.Net.HttpStatusCode.OK;
+        private int _statusCode = (int)HttpStatusCode.OK;
 
         public void AddResponse(string content, int statusCode = 200)
         {
@@ -377,7 +379,7 @@ public class ExtensionMethodsTests : IDisposable
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new HttpResponseMessage((System.Net.HttpStatusCode)_statusCode)
+            return Task.FromResult(new HttpResponseMessage((HttpStatusCode)_statusCode)
             {
                 Content = new StringContent(_content ?? "")
             });

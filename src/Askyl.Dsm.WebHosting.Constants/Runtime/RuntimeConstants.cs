@@ -89,5 +89,10 @@ public static class RuntimeConstants
     /// </summary>
     public const string NoReleaseFileForRuntimeIdentifierErrorMessage = "No release file found for runtime identifier {0}.";
 
+    /// <summary>
+    /// Warning message when the .NET runtime version cannot be detected from the assembly.
+    /// </summary>
+    public const string RuntimeDetectionFailedWarningMessage = "Could not detect .NET runtime version from assembly";
+
     #endregion
 }

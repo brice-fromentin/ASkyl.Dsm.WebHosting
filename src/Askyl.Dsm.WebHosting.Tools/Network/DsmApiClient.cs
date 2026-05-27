@@ -6,11 +6,16 @@ using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.User;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.CoreInformations;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Auth;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.User;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Info;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Auth;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.User;
 using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -24,6 +29,10 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
     private int _port = SystemDefaults.DefaultHttpsPort;
     private string _sid = String.Empty;
 
+    // Session validation cache
+    private bool _sessionValid;
+    private DateTime _lastSessionValidation;
+
     public ApiInformationCollection ApiInformations { get; } = new();
 
     public string Sid => _sid;
@@ -32,8 +41,14 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
 
     /// <summary>
     /// Sets the session ID directly (for restoring from persisted state).
+    /// Also updates the HTTP client cookie header to ensure API calls use the restored SID.
     /// </summary>
-    public void SetSid(string sid) => _sid = sid;
+    public void SetSid(string sid)
+    {
+        _sid = sid;
+        _httpClient.DefaultRequestHeaders.Remove(NetworkConstants.CookieHeader);
+        _httpClient.DefaultRequestHeaders.Add(NetworkConstants.CookieHeader, NetworkConstants.SsidCookiePrefix + sid);
+    }
 
     /// <summary>
     /// Disconnects and clears the session.
@@ -44,6 +59,10 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
 
         _sid = String.Empty;
         _httpClient.DefaultRequestHeaders.Remove(NetworkConstants.CookieHeader);
+
+        // Clear session validation cache
+        _sessionValid = false;
+        _lastSessionValidation = DateTime.MinValue;
 
         logger.Disconnected();
     }
@@ -67,8 +86,52 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
             return false;
         }
 
+        // Invalidate session cache on new connection
+        _sessionValid = false;
+        _lastSessionValidation = DateTime.MinValue;
+
         logger.Connected();
 
+        return true;
+    }
+
+    /// <summary>
+    /// Validates whether the current DSM session is still active on the server.
+    /// Uses a lightweight SYNO.Core.User.get call to verify the SID and user existence.
+    /// Results are cached for the configured TTL to avoid per-request API overhead.
+    /// </summary>
+    /// <param name="username">The logged-in username to validate against.</param>
+    /// <returns>True if the session is valid, false if expired or invalid.</returns>
+    public async Task<bool> ValidateSessionAsync(string username)
+    {
+        if (String.IsNullOrEmpty(_sid))
+        {
+            return false;
+        }
+
+        // Check cache - skip API call if validation is fresh
+        if (_sessionValid && (DateTime.UtcNow - _lastSessionValidation).TotalMinutes < ApplicationConstants.SessionValidationTtlMinutes)
+        {
+            return true;
+        }
+
+        // Use Core.User.get as a lightweight session validation probe
+        // If the SID is invalid, DSM returns error -4 (authentication failure)
+        var parameters = new CoreUserGetParameters(ApiInformations, new CoreUserGetEntry(username));
+
+        var response = await ExecuteAsync<CoreUserGetResponse>(parameters);
+
+        // Session is invalid if: no response, or auth error (code -4)
+        // We accept any non-auth failure as valid (user-specific errors still mean SID is alive)
+        if (response is null || response.Error?.Code == DsmConstants.ErrorCodeAuthenticationFailed)
+        {
+            _sessionValid = false;
+            _lastSessionValidation = DateTime.UtcNow;
+            return false;
+        }
+
+        _sessionValid = true;
+        _lastSessionValidation = DateTime.UtcNow;
         return true;
     }
 
@@ -125,9 +188,9 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
             OtpCode = model.OtpCode
         };
 
-        var parameters = new AuthenticationLoginParameters(ApiInformations, login);
+        var parameters = new AuthLoginParameters(ApiInformations, login);
 
-        var response = await ExecuteAsync<SynoLoginResponse>(parameters);
+        var response = await ExecuteAsync<AuthLoginResponse>(parameters);
 
         if (response?.Success != true || response.Data is null)
         {

@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
-namespace Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
+namespace Askyl.Dsm.WebHosting.Data.DsmApi.Responses.FileStation;
 
 public class FileStationListResponse : ApiResponseBase<FileStationListData>
 {

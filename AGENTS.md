@@ -185,6 +185,7 @@ The AI assistant MUST use an **inference-based approach** rather than hardcoded 
 
 - Apply DRY and SOLID principles
 - Use early returns to avoid deep nesting
+- **Prefer simplicity** — Choose the simplest viable solution. Avoid unnecessary complexity (extra state, caching layers) unless explicitly requested.
 
 **Control Flow Statements (enforced by dotnet format):**
 Always use `{}` braces, even for single-line bodies:
@@ -524,6 +525,7 @@ After EVERY code modification, you MUST:
 - ReverseProxy API for web application routing
 - Authentication API for DSM login integration
 - Documentation: <https://global.download.synology.com/download/Document/DeveloperGuide/Synology_File_Station_API_Guide.pdf>
+- OSS Project Documentation : <https://github.com/pmilano1/synology-dsm-api/tree/master/docs/api-reference>
 
 **For detailed API integration patterns, see `docs/ai/technical-architecture.md` section "Data Models & API Integration".**
 
@@ -698,7 +700,7 @@ ask the user for clarification before proceeding.
 2. **NEVER include "Files Modified:" sections** - Redundant info via `git show`
 3. **FOCUS on "why" not "what"** - Explain reasoning and impact
 4. **Use conventional commit format** - `type: description` (e.g., `fix:`, `feat:`)
-5. **Keep it concise** - Summary line (50 chars max), blank line, detailed body
+5. **Keep it concise** - Summary line (50 chars max), blank line, short bullet points. Avoid long explanatory bodies unless the user explicitly asks for more context.
 
 **❌ WRONG - Don't list files:**
 

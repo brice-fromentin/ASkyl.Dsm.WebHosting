@@ -70,6 +70,11 @@ public static class WebSiteConstants
     #region Port Configuration
 
     /// <summary>
+    /// Default public port for HTTPS web applications.
+    /// </summary>
+    public const int DefaultPublicPort = 443;
+
+    /// <summary>
     /// Minimum port number for web applications (avoiding system services).
     /// </summary>
     public const int MinWebApplicationPort = 1024;

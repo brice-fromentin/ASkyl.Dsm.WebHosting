@@ -1,8 +1,10 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.8
+**Version:** 0.5.9
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 16, 2026 (Logging reorganization — Server/Client folder structure, client-side logging extensions, OperationTimer, ILoggerFactory in SystemProcessRunner)
+**Last Updated:** May 25, 2026 (Session validation against DSM server,
+`SYNO.Core.User.get` probe with 1-minute TTL cache, `DsmUsernameKey` session storage,
+`IsAuthenticatedAsync` consolidated, DSM API directory restructuring — Models/Parameters/Responses)
 
 ---
 
@@ -68,12 +70,22 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ⏳ TODO: Multi-language support
 - ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
-- ✅ **LoggerMessage migration** — 126 logger calls migrated to 145 source-generated `[LoggerMessage]` extension methods across 19 files; zero CA2254 warnings
+- ✅ **LoggerMessage migration** — 224 source-generated `[LoggerMessage]` extension methods across 19 source files; zero CA2254 warnings
 - ✅ **DSM API logging** — request timing, authentication failures, and API errors logged via `[LoggerMessage]` extensions; compile-time `IApiResponse` constraint replaces reflection
 - ✅ **Serilog configuration** — output template with `{EventId}`, `Log.CloseAndFlush()` on graceful shutdown, `WithActivity` enricher for correlation tracking
 - ✅ **OperationTimer** — value-type disposable timer for scope-based duration logging across all services; replaced manual `Stopwatch` boilerplate with single-line `using var` pattern
+- ✅ **Runtime detection** (May 22, 2026) — `AssemblyRuntimeDetector` parses `*.runtimeconfig.json` to detect
+  required .NET version; blocks site start if incompatible; framework column on Home grid;
+  `RequiredFramework` on instance only (not persisted)
+- ✅ **ProcessLoggingExtensions** renumbered with sub-range spacing (1600xxx–1604xxx) to allow inserting log messages per region
+- ✅ **SiteEntry pair class** — `WebSiteHostingService` uses `ConcurrentDictionary<Guid, SiteEntry>` pairing instance + lifecycle manager; eliminates parallel dictionary synchronization
+- ✅ **Session validation** (May 25, 2026):
+  - ✅ Async authorization filter validates against DSM server (`SYNO.Core.User.get`)
+  - ✅ 1-minute TTL cache matches DSM minimum session timeout
+  - ✅ `DsmUsername` stored alongside `DsmSid` for defense-in-depth
+  - ✅ `IsAuthenticatedAsync()` consolidated (replaces `IsSessionValidAsync`)
 
-**Security Score:** ⭐⭐⭐⭐☆ (4/5) - Production-ready after critical fixes
+**Security Score:** ⭐⭐⭐⭐⭐ (5/5) - Production-ready (all 12 security phases complete)
 
 ---
 
@@ -108,11 +120,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.8</Version>
-<AssemblyVersion>0.5.8.0</AssemblyVersion>
-<FileVersion>0.5.8.0</FileVersion>
-<InformationalVersion>0.5.8</InformationalVersion>
-<PackageVersion>0.5.8</PackageVersion>
+<Version>0.5.9</Version>
+<AssemblyVersion>0.5.9.0</AssemblyVersion>
+<FileVersion>0.5.9.0</FileVersion>
+<InformationalVersion>0.5.9</InformationalVersion>
+<PackageVersion>0.5.9</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -182,18 +194,21 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 ```text
 
 Constants/
-├── Application/                            # Application-wide constants (6 files)
-│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session, auth messages
+├── Application/                            # Application-wide constants (8 files)
+│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session (DsmSid, DsmUsername, TTL), auth messages
 │   ├── DotnetInfoParserConstants.cs        # dotnet --info section headers and framework identifiers
 │   ├── InfrastructureConstants.cs          # Directory names (Downloads)
 │   ├── LicenseConstants.cs                 # License file management
 │   ├── LogConstants.cs                     # Log directory and file paths
+│   ├── SecurityHeaders.cs                  # HTTP security header values (CSP, X-Frame-Options, etc.)
+│   ├── ValidationConstants.cs              # Validation message constants (path traversal, version format, env vars)
 │   └── WebSiteConstants.cs                 # Website config, process lifecycle, port validation
-├── DSM/                                    # Synology DSM-specific constants (7 files)
+├── DSM/                                    # Synology DSM-specific constants (8 files)
 │   ├── API/                                # API-related constants
 │   │   ├── ApiMethods.cs                   # CRUD operation names (Create, Get, List, etc.)
-│   │   ├── ApiNames.cs                     # 7 DSM API identifiers (SYNO.API.Auth, FileStation, etc.)
+│   │   ├── ApiNames.cs                     # 8 DSM API identifiers (SYNO.API.Auth, FileStation, Core.User, etc.)
 │   │   ├── ApiVersions.cs                  # Version range constants (Min: 1, Max: 7)
+│   │   ├── DsmConstants.cs                 # Shared DSM error codes (ErrorCodeAuthenticationFailed = -4)
 │   │   ├── ReverseProxyConstants.cs        # Proxy error codes and description prefix
 │   │   └── SerializationFormats.cs         # Enum: Form, Json
 │   ├── FileStation/                        # FileStation-specific constants (1 file)
@@ -228,9 +243,9 @@ Constants/
 
 | Category | Key Constants | Count |
 |----------|---------------|-------|
-| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), Session | ~35 |
+| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), DsmSid, DsmUsername, SessionValidationTtlMinutes | ~37 |
 | **Websites** | Process timeouts, port range (1024-65535), environment vars, validation messages | ~25 |
-| **DSM APIs** | 7 API names, CRUD methods, version ranges, error codes | ~35 + 1 enum |
+| **DSM APIs** | 8 API names (incl. Core.User), CRUD methods, version ranges, shared error codes | ~37 + 1 enum |
 | **FileStation** | Listing patterns, sorting, pagination (100 limit) | ~15 |
 | **Network** | Cookie header ("Cookie"), SSID prefix ("_SSID="), localhost | 6 + 1 enum |
 | **Runtime** | Architecture IDs (x64/arm/arm64), OS IDs (linux/osx/windows) | ~15 |
@@ -247,13 +262,13 @@ Constants/
 
 ### 2. Askyl.Dsm.WebHosting.Data
 
-**Purpose:** Core data layer, API definitions, domain services, and result types (13 service contracts)
+**Purpose:** Core data layer, API definitions, domain services, and result types (14 service contracts)
 
 **Complete Service Contracts Inventory:**
 
 | Interface | Source File | Key Methods | Implemented By |
 |-----------|-------------|-------------|----------------|
-| **IAuthenticationService** | `Contracts/IAuthenticationService.cs` | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() | Ui.Services.AuthenticationService, Ui.Client.Services.AuthenticationService |
+| **IAuthenticationService** | `Contracts/IAuthenticationService.cs` | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() (validates against DSM server) | Ui.Services.AuthenticationService, Ui.Client.Services.AuthenticationService |
 | **IDotnetVersionService** | `Contracts/IDotnetVersionService.cs` | GetInstalledVersionsAsync(), GetChannelsAsync() | Ui.Services.DotnetVersionService, Ui.Client.Services.DotnetVersionService |
 | **IFileSystemService** | `Contracts/IFileSystemService.cs` | GetSharedFoldersAsync(), GetDirectoryContentsAsync() | Ui.Services.FileSystemService, Ui.Client.Services.FileSystemService |
 | **IFrameworkManagementService** | `Contracts/IFrameworkManagementService.cs` | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services.FrameworkManagementService |
@@ -268,6 +283,7 @@ Constants/
 | **IArchiveExtractorService** | `Contracts/IArchiveExtractorService.cs` | Decompress(inputFile, exclude) | Tools.Infrastructure.ArchiveExtractorService |
 | **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), DownloadVersionToAsync(), GetAspNetCoreReleasesAsync() | Tools.Runtime.DownloaderService |
 | **IVersionsDetectorService** | `Contracts/IVersionsDetectorService.cs` | GetInstalledVersionsAsync(), IsChannelInstalled(), RefreshCacheAsync() | Tools.Runtime.VersionsDetectorService |
+| **IAssemblyRuntimeDetector** | `Contracts/IAssemblyRuntimeDetector.cs` | Detect() | Tools.Runtime.AssemblyRuntimeDetector |
 
 **Structure:**
 
@@ -286,9 +302,10 @@ Data/
 │   ├── IFileManagerService.cs              # File management (Scoped, configurable root)
 │   ├── IArchiveExtractorService.cs         # Archive extraction (Scoped)
 │   ├── IDownloaderService.cs               # .NET downloads with cancellation (Scoped)
-│   └── IVersionsDetectorService.cs         # Version detection with smart caching (Singleton)
+│   ├── IVersionsDetectorService.cs         # Version detection with smart caching (Singleton)
+│   └── IAssemblyRuntimeDetector.cs         # Runtime detection from *.runtimeconfig.json (Singleton)
 ├── Domain/                                 # Domain models
-│   ├── Authentication/                     # Auth-related models
+│   ├── Authentication/                     # Auth-related domain models
 │   │   └── LoginCredentials.cs             # Login credentials
 │   ├── FileSystem/                         # File system models
 │   │   └── FsEntry.cs                      # File system entry model
@@ -298,33 +315,68 @@ Data/
 │   │   ├── AspNetChannel.cs                # .NET channel info
 │   │   ├── AspNetCoreReleaseInfo.cs        # Release version details
 │   │   ├── AspNetRelease.cs                # Release metadata
+│   │   ├── AssemblyRuntimeInfo.cs          # Detected runtime info (channel, compatibility, error message)
 │   │   ├── FrameworkInfo.cs                # Framework metadata
 │   │   └── InstallFramework.cs             # Framework installation target
 │   └── WebSites/                           # Website management domain
 │       ├── ProcessInfo.cs                  # Process runtime snapshot (Id, IsResponding)
-│       ├── WebSiteConfiguration.cs         # Main config model
-│       ├── WebSiteInstance.cs              # Runtime instance
+│       ├── WebSiteConfiguration.cs         # Main config model (settings only — no runtime state)
+│       ├── WebSiteInstance.cs              # Runtime instance (owns RequiredFramework — not persisted)
 │       ├── WebSiteRuntimeState.cs          # Immutable record for site state (Running/Stopped/NotResponding)
 │       ├── WebSiteInstanceDetails.cs       # Website instance details for UI
 │       ├── WebSitesConfiguration.cs        # Persistent configuration store
 ├── Attributes/                             # Custom attributes
 │   └── DsmParameterNameAttribute.cs        # DSM parameter name mapping
 ├── DsmApi/                                 # DSM API integration
-│   ├── Models/                             # Auto-generated response models
-│   │   ├── Core/                           # Authentication, system info, ACL
-│   │   │   └── Acl/                        # ACL models (CoreAclSet, Rule, Permission, Inherit)
+│   ├── Models/                             # API models (records with init setters)
+│   │   ├── Auth/                           # Authentication models
+│   │   │   └── AuthenticateLogin.cs        # Login request payload
+│   │   ├── Core/                           # Core API models
+│   │   │   ├── Acl/                        # ACL models (CoreAclSet, Rule, Permission, Inherit)
+│   │   │   ├── ApiInformation.cs           # API information model
+│   │   │   ├── ApiInformationCollection.cs # API collection wrapper
+│   │   │   ├── ApiInformationQuery.cs      # Query parameters
+│   │   │   └── User/                       # User models
+│   │   │       └── CoreUserGetEntry.cs     # User get request payload
 │   │   ├── FileStation/                    # 9 file operation models
 │   │   └── ReverseProxy/                   # Proxy configuration models
 │   ├── Parameters/                         # Request parameter classes
-│   │   ├── Core/                           # Login/logout parameters
-│   │   ├── CoreAcl/                        # Access control parameters
-│   │   ├── CoreInformations/               # System info queries
+│   │   ├── Auth/                           # Authentication parameters
+│   │   │   └── AuthLoginParameters.cs      # Login request (SYNO.API.Auth.login)
+│   │   ├── Core/                           # Core API parameters
+│   │   │   ├── Acl/                        # ACL parameters
+│   │   │   │   └── CoreAclSetParameters.cs # ACL set request (SYNO.Core.Acl.set)
+│   │   │   ├── AppPortal/                  # AppPortal parameters
+│   │   │   │   └── ReverseProxy/           # Reverse proxy CRUD
+│   │   │   │       ├── ReverseProxyCreateParameters.cs
+│   │   │   │       ├── ReverseProxyDeleteParameters.cs
+│   │   │   │       ├── ReverseProxyListParameters.cs
+│   │   │   │       └── ReverseProxyUpdateParameters.cs
+│   │   │   └── User/                       # User parameters
+│   │   │       └── CoreUserGetParameters.cs # User get request (SYNO.Core.User.get)
 │   │   ├── FileStation/                    # 2 file operation parameters
-│   │   ├── ReverseProxy/                   # Proxy CRUD operations
+│   │   ├── Info/                           # API info queries
+│   │   │   └── InformationsQueryParameters.cs # System info query (SYNO.Core.Info.query)
 │   │   ├── ApiParametersBase.cs            # Base parameter class
 │   │   ├── ApiParametersNone.cs            # No-parameters wrapper
 │   │   └── IApiParameters.cs               # Parameter interface
-│   └── Responses/                          # API response wrappers (8 files)
+│   └── Responses/                          # API response wrappers
+│       ├── ApiInformationResponse.cs       # API info query response
+│       ├── ApiResponseBase.cs              # Generic response base with Error model
+│       ├── EmptyResponse.cs                # No-data response
+│       ├── Auth/                           # Authentication responses
+│       │   └── AuthLoginResponse.cs        # Login response (sid)
+│       ├── Core/                           # Core API responses
+│       │   ├── Acl/                        # ACL responses
+│       │   │   └── CoreAclSetResponse.cs   # ACL set response (task_id)
+│       │   ├── AppPortal/                  # AppPortal responses
+│       │   │   └── ReverseProxy/           # Reverse proxy responses
+│       │   │       └── ReverseProxyListResponse.cs # Proxy list response
+│       │   └── User/                       # User responses
+│       │       └── CoreUserGetResponse.cs  # User get response (users[])
+│       └── FileStation/                    # FileStation responses
+│           ├── FileStationListResponse.cs  # File list response
+│           └── FileStationListShareResponse.cs # Share list response
 ├── Exceptions/                             # Custom exception types (4 files)
 └── Results/                                # Result pattern implementations
     ├── ApiResult.cs                        # Base success/failure result
@@ -376,7 +428,8 @@ Tools/
 │   └── OperationTimer.cs                   # Disposable scope timer (Stopwatch + callback on Dispose)
 ├── Runtime/                                # .NET runtime management (DI-based)
     ├── DownloaderService.cs                # Binary download utility (implements IDownloaderService)
-    └── VersionsDetectorService.cs          # Version detection with smart caching (implements IVersionsDetectorService)
+    ├── VersionsDetectorService.cs          # Version detection with smart caching (implements IVersionsDetectorService)
+    └── AssemblyRuntimeDetector.cs          # Runtime detection from *.runtimeconfig.json (implements IAssemblyRuntimeDetector)
 └── Threading/                              # Async coordination utilities
     └── SemaphoreLock.cs                    # Semaphore-based async locking utility
 ```
@@ -477,8 +530,8 @@ Ui/
 │   ├── FrameworkManagementService.cs       # Framework installation
 │   ├── LogDownloadService.cs               # Log file retrieval
 │   ├── ReverseProxyManagerService.cs       # Proxy CRUD operations
-│   ├── SiteLifecycleManager.cs             # Per-site process management (start/stop, graceful shutdown, force kill)
-│   ├── WebSiteHostingService.cs            # Website orchestration (delegates process lifecycle to SiteLifecycleManager)
+│   ├── SiteLifecycleManager.cs             # Per-site process management (start/stop, graceful shutdown, force kill, framework validation on start)
+│   ├── WebSiteHostingService.cs            # Website orchestration (framework detection on init, delegates lifecycle to SiteLifecycleManager, SiteEntry pairs instance + manager)
 │   └── WebSitesConfigurationService.cs     # Configuration persistence
 ├── wwwroot/                                # Static assets (CSS, JS, images)
 ├── appsettings.json                        # Production configuration
@@ -690,13 +743,18 @@ Each service owns a dedicated 100K range at 1M spacing to prevent cross-service 
 
 | Range | Service | Extension File | Folder |
 |-------|---------|----------------|--------|
-| `1000001–1000008` | AuthenticationService | `AuthenticationLoggingExtensions.cs` | `Server/Authentication/` |
+| `1000001–1000012` | AuthenticationService | `AuthenticationLoggingExtensions.cs` | `Server/Authentication/` |
 | `1100001–1100012` | FileSystemService | `FileSystemServiceLoggingExtensions.cs` | `Server/FileManagement/` |
 | `1200001–1200006` | FileManagerService | `FileManagerServiceLoggingExtensions.cs` | `Server/FileManagement/` |
 | `1300001–1300007` | LogDownloadService | `LogDownloadServiceLoggingExtensions.cs` | `Server/FileManagement/` |
 | `1400001–1400011` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` | `Server/Framework/` |
 | `1500001–1500009` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` | `Server/Framework/` |
-| `1600001–1600022` | SiteLifecycleManager | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1600001–1600007` | SiteLifecycleManager (start/stop) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1601001–1601004` | SiteLifecycleManager (site stop) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1602001–1602003` | SiteLifecycleManager (dispose) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1603001–1603004` | SiteLifecycleManager (graceful shutdown) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1604001–1604005` | SiteLifecycleManager (duration) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `2250001–2250005` | AssemblyRuntimeDetector | `AssemblyRuntimeDetectorLoggingExtensions.cs` | `Server/Infrastructure/` |
 | `1700001–1700016` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` | `Server/ReverseProxy/` |
 | `1800001–1800044` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` | `Server/WebsiteHosting/` |
 | `1900001–1900018` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` | `Server/WebsiteHosting/` |
@@ -716,12 +774,12 @@ Client-side components use `ClientLoggingExtensions.cs` for structured logging i
 |-------|---------|-----------------|
 | `7000001` | LicenseService | `ILogLicenseService` |
 | `7100001–7100015` | Home page | `ILogHome` |
-| `7200001–7200003` | DotnetVersionsDialog | `ILogDotnetVersionsDialog` |
-| `7300001–7300003` | AspNetReleasesDialog | `ILogAspNetReleasesDialog` |
-| `7400001–7400003` | WebSiteConfigurationDialog | `ILogWebSiteConfigurationDialog` |
-| `7500001–7500003` | FileSelectionDialog | `ILogFileSelectionDialog` |
+| `7200001–7200004` | DotnetVersionsDialog | `ILogDotnetVersionsDialog` |
+| `7300001–7300004` | AspNetReleasesDialog | `ILogAspNetReleasesDialog` |
+| `7400001` | WebSiteConfigurationDialog | `ILogWebSiteConfigurationDialog` |
+| `7500001` | FileSelectionDialog | `ILogFileSelectionDialog` |
 
-**Total:** 436 `[LoggerMessage]` methods across 23 extension files (19 server + 1 client), zero CA2254 warnings.
+**Total:** 224 `[LoggerMessage]` methods across 19 source files (18 server + 1 client), zero CA2254 warnings.
 
 **Serilog Configuration:**
 
@@ -742,6 +800,16 @@ Client-side components use `ClientLoggingExtensions.cs` for structured logging i
 - **Singleton:** DsmApiClient, platform info, versions detector (with caching), configuration services, background services
 - **Scoped:** File manager (with factory lambda for root path), archive extractor, downloader, UI services - one per request
 - **Background Service:** WebSiteHostingService implements IHostedService for lifecycle management
+
+**Architectural Trade-off — Singleton `DsmApiClient`:**
+
+`DsmApiClient` is registered as Singleton despite holding per-session state (`_sid`, `_httpClient` cookie header, session validation cache). This is intentional because:
+
+1. **Shared `ApiInformations`:** API discovery cache is expensive to re-fetch (handshake call)
+2. **`HttpClient` reuse:** Named client with configured `BaseAddress` and timeouts — benefits from connection pooling
+3. **`BackgroundService` anchor:** `WebSiteHostingService` (Singleton) depends on services using `DsmApiClient`. `IHostedService` is always Singleton.
+
+**Mitigation:** `SetSid()` updates `_sid` + cookie header. Session validation cache uses a 1-minute TTL. Multi-user scenarios would need a Scoped wrapper.
 
 **Service Lifetime Hierarchy:**
 
@@ -809,13 +877,16 @@ IFileSystemService                FileSystemService            │
 
 ```text
 WebSiteHostingService (BackgroundService, Singleton)
-├── Orchestrates website instances via ConcurrentDictionary<Guid, WebSiteInstance>
+├── Orchestrates website instances via ConcurrentDictionary<Guid, SiteEntry>
+├── SiteEntry pairs WebSiteInstance + SiteLifecycleManager (eliminates parallel dictionary sync)
 ├── Loads configurations from JSON on startup
+├── Detects required framework on init (sets RequiredFramework on instance — not persisted)
 ├── Manages instance lifecycle (add/update/remove)
 └── Delegates per-site process management to SiteLifecycleManager
 
 SiteLifecycleManager (Per-instance, Thread-safe)
 ├── Starts/stops .NET web application processes via IProcessRunner abstraction (unit-testable)
+├── Validates framework compatibility on start (blocks if incompatible)
 ├── IProcessHandle? replaces direct Process? reference — delegates to SystemProcessHandle
 ├── Configures environment variables (ASPNETCORE_URLS, ASPNETCORE_ENVIRONMENT, custom vars)
 ├── Graceful shutdown with ProcessTerminator.SendGracefulShutdownSignal() (SIGTERM on Unix, CloseMainWindow on Windows)
@@ -832,9 +903,12 @@ SiteLifecycleManager (Per-instance, Thread-safe)
 - **Cross-platform graceful shutdown** — ProcessTerminator sends SIGTERM on Unix (via P/Invoke `libc.kill`) or CloseMainWindow on Windows; ASP.NET Core child processes drain in ~1-3 seconds
 - **Async process wait** — WaitForExitAsync with linked cancellation token replaces blocking WaitForExit(timeoutMs)
 - **Force kill fallback** — If process doesn't exit within timeout, Process.Kill() is called as last resort
-- **Thread-safe operations** — `ConcurrentDictionary` for instance management; Channel-based command serialization in SiteLifecycleManager (eliminates TOCTOU races)
+- **Thread-safe operations** — `ConcurrentDictionary<Guid, SiteEntry>` for instance management
+  (eliminates parallel dictionary sync); Channel-based command serialization in SiteLifecycleManager
+  (eliminates TOCTOU races)
 - **Idempotent stop** — Calling `StopAsync()` when already stopped returns success without error
 - **Safe disposal** — `DisposeCommand` queues after all pending commands; `Dispose()` blocks until loop drains
+- **Framework detection** — `IAssemblyRuntimeDetector.Detect()` called on init (sets `RequiredFramework` on instance) and on start (blocks if incompatible)
 
 ### 6. Strategy Pattern (Serialization)
 
@@ -953,8 +1027,38 @@ using var timer = new OperationTimer(elapsed => logger.FrameworkInstalledDuratio
 3. DsmApiClient.HandShakeAsync() → SYNO.API.Info query
 4. DsmApiClient.AuthenticateAsync() → auth.login API call
 5. Response: SID stored in cookie header (ssid=...)
-6. Session persisted in ASP.NET Core session
+6. Session persisted in ASP.NET Core session (DsmSid + DsmUsername)
 ```
+
+#### Session Validation
+
+The `IsAuthenticatedAsync()` method performs server-side validation against the DSM to detect expired or revoked sessions:
+
+```text
+1. Check local session keys (DsmSid + DsmUsername) exist
+2. Check validation cache (1-minute TTL — matches DSM minimum session timeout)
+3. If cache expired: call SYNO.Core.User.get with cached username
+4. Response: success (user found) or error -4 (invalid/expired SID)
+5. Cache result for 1 minute to avoid per-request API overhead
+6. Clear session keys and return false if validation fails
+```
+
+**API Choice Rationale:**
+
+- `SYNO.API.Auth` only exposes `login` and `logout` — no `querySession` method (confirmed error 103 on DSM 7.2+)
+- `SYNO.Core.User.get` is the lightest API that validates session state
+- Returns error `-4` (Authentication Failed) for invalid/expired SID
+- Accepts any non-auth error as valid (user-specific errors still mean SID is alive)
+
+**Singleton Architectural Trade-off:**
+
+`DsmApiClient` is intentionally Singleton despite holding per-session state (`_sid`, `_sessionValid`, `_lastSessionValidation`):
+
+1. **Shared `ApiInformations`:** API discovery cache is expensive to re-fetch (handshake call)
+2. **`HttpClient` reuse:** Named client with configured `BaseAddress` and timeouts — benefits from connection pooling
+3. **`BackgroundService` anchor:** `WebSiteHostingService` (Singleton) depends on services using `DsmApiClient`. `IHostedService` is always Singleton.
+
+**Mitigation:** `SetSid()` updates `_sid` and `_httpClient` cookie header. Session validation cache uses a 1-minute TTL. Multi-user scenarios would need a Scoped wrapper.
 
 #### FileStation Operations
 
@@ -1052,32 +1156,52 @@ Input components with immediate validation feedback:
 
 1. **Server-Side Session Storage**
    - DSM SID stored in server session (not client storage)
+   - Username stored alongside SID for defense-in-depth (`DsmUsername`)
    - HttpOnly cookies prevent XSS attacks
    - SameSite=Strict prevents CSRF
 
-2. **Antiforgery Protection**
+2. **Server-Side Session Validation**
+   - `IsAuthenticatedAsync()` validates both session keys and calls `SYNO.Core.User.get`
+   - 1-minute TTL cache matches DSM minimum session timeout
+   - Detects expired or revoked sessions via DSM server (error `-4`)
+   - Clears session keys and redirects to login on validation failure
+
+3. **Antiforgery & CSRF Protection**
    - Enabled for all Blazor components and API endpoints
+   - SameSite=Strict documented on all 5 API controllers as primary CSRF defense
    - Token validation on state-changing operations
 
-3. **HTTPS Enforcement**
+4. **HTTPS & HSTS Enforcement**
    - `UseHttpsRedirection()` in middleware pipeline
+   - `UseHsts()` enabled for non-development environments (30-day max-age)
    - Default protocol for reverse proxy is HTTPS
-   - HSTS enabled by default for websites
 
 ### API Security
 
-1. **No Client-Side Secrets**
-   - All DSM API calls go through server controllers
-   - Credentials never exposed to browser
+1. **Authorization Coverage**
+   - `[AuthorizeSession]` applied to all 5 API controllers (WebsiteHosting, FileManagement, FrameworkManagement, RuntimeManagement, LogDownload)
+   - `AuthenticationController` intentionally public for login/logout/status
+   - Validates active DSM session (both session keys + server-side validation) before allowing access
 
 2. **Input Validation**
    - Data annotations on all models
+   - Server-side validation in services:
+     - Path traversal prevention (`IsPathValid()` rejects `..` and encoded variants)
+     - Version format validation (`IsValidVersionFormat()` prevents directory escape)
+     - Environment variable limits (256 chars key, 4096 chars value)
 
-- Server-side validation in services
+3. **Rate Limiting**
+   - Login endpoint throttled: 5 attempts per minute per IP
+   - Prevents brute-force attacks against DSM credentials
 
-1. **Error Handling**
-   - Generic error messages (no stack traces to client)
-   - Structured logging for debugging
+4. **Error Handling & Information Disclosure**
+   - Generic error messages (`OperationFailedErrorMessage`) returned to clients
+   - Full exception details retained server-side via `[LoggerMessage]` extensions
+   - Structured logging for debugging without leaking internal paths
+
+5. **No Client-Side Secrets**
+   - All DSM API calls go through server controllers
+   - Credentials never exposed to browser
 
 ### File System Security
 
@@ -1087,21 +1211,19 @@ Input components with immediate validation feedback:
 
 2. **Path Validation**
    - Validate all file paths against allowed directories
-   - Prevent path traversal attacks
+   - Prevent path traversal attacks via `IsPathValid()` helper
 
-### Custom Authorization
+### Dependency & CI Security
 
-**AuthorizeSessionAttribute:**
+1. **Automated Vulnerability Scanning**
+   - Dependabot configured for weekly NuGet and GitHub Actions checks
+   - CI pipeline includes `dotnet list package --vulnerable` step
+   - Flags known vulnerabilities in pull requests
 
-Location: `Ui/Authorization/AuthorizeSessionAttribute.cs`
-
-Purpose: Session-based authorization for API controllers
-
-Usage:
-
-- Applied to FrameworkManagementController
-- Applied to RuntimeManagementController
-- Validates active DSM session before allowing access
+2. **Log Content Audit**
+   - 180+ `[LoggerMessage]` methods audited across 19 files
+   - Zero PII, secrets, or credentials logged
+   - Structured logging with Serilog ensures safe diagnostic output
 
 ---
 
@@ -1123,6 +1245,7 @@ Usage:
 **Current Implementation:**
 
 - **ApiInformations Cache:** DSM API metadata cached after handshake
+- **Session Validation Cache:** 1-minute TTL for DSM session validation results (avoids per-request API overhead)
 - **Instance Cache:** In-memory `ConcurrentDictionary` for website instances
 - **Configuration Cache:** JSON file read on startup, in-memory during runtime
 

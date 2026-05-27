@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -137,7 +138,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 
     private static string? SerializeValue(object value)
     {
-        if (value is System.Collections.IEnumerable and not string)
+        if (value is IEnumerable and not string)
         {
             return JsonSerializer.Serialize(value, JsonOptionsCache.Options);
         }

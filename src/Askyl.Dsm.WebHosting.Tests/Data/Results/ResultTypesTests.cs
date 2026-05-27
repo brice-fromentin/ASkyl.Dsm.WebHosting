@@ -173,8 +173,7 @@ public class ResultTypesTests
 
     [Theory]
     [MemberData(nameof(GetItemsSuccessTestData))]
-    public void ItemsResults_CreateSuccess_SetsValueAndSuccess(
-        string _, object value, Func<object, string, object> createSuccess)
+    public void ItemsResults_CreateSuccess_SetsValueAndSuccess(string _, object value, Func<object, string, object> createSuccess)
     {
         // Act
         var result = createSuccess(value, "OK");
@@ -197,8 +196,7 @@ public class ResultTypesTests
 
     [Theory]
     [MemberData(nameof(GetItemsFailureTestData))]
-    public void ItemsResults_CreateFailure_SetsExpectedProperties(
-        string _, object defaultFailureResult)
+    public void ItemsResults_CreateFailure_SetsExpectedProperties(string _, object defaultFailureResult)
     {
         // Default failure
         Assert.False(((dynamic)defaultFailureResult).Success);
