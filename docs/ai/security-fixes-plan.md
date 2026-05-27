@@ -20,6 +20,7 @@
 | 6 | LOW | Rate limiting on login | ✅ **DONE** | May 26, 2026 |
 | 7 | LOW | Env var length validation | ✅ **DONE** | May 26, 2026 |
 | 9 | LOW | HSTS header | ✅ **DONE** | May 27, 2026 |
+| 10 | LOW | Dependency scanning | ✅ **DONE** | May 27, 2026 |
 | 11 | LOW | CSRF review | ✅ **DONE** | May 27, 2026 |
 | 12 | LOW | Log content audit | ✅ **DONE** | May 27, 2026 |
 
@@ -494,7 +495,7 @@ These items were identified but are **out of scope** for this security fix batch
 |------|--------|-----------|
 | **Resource limits on child processes** | Requires cgroups integration; significant Linux-specific work | Track as medium-term improvement |
 | **Symlink protection in archive extraction** | Low risk in controlled Synology environment | Track as hardening item |
-| **Dependency vulnerability scanning** | CI/CD pipeline change, not code fix | Add Dependabot or `dotnet list package --vulnerable` to CI (Phase 10 — deferred) |
+| **Dependency vulnerability scanning** | CI/CD pipeline change, not code fix | ✅ Done — Phase 10 (Dependabot + CI scan step) |
 | **Certificate pinning** | Self-signed certs common on Synology; would break many deployments | Track as optional enhancement |
 | **Session persistence across restarts** | Memory cache is acceptable for single-instance NAS deployment | Track if multi-instance support is added |
 | **`AllowedHosts: *`** | App runs behind DSM reverse proxy; tightening breaks legitimate access patterns | Accept current behavior |
@@ -590,21 +591,22 @@ noting "30 days is adequate for NAS context."
 
 **Resolution:** `app.UseHsts()` was already in `Program.cs` — no action needed.
 
-### Phase 10 — LOW: Dependency Vulnerability Scanning
+### Phase 10 — LOW: Dependency Vulnerability Scanning ✅ DONE
+
+**Status:** Implemented on May 27, 2026. Dependabot configured for weekly NuGet
+and GitHub Actions checks. CI pipeline includes `dotnet list package --vulnerable`
+step.
 
 **Issue:** No automated dependency vulnerability scanning is configured.
 
 **Impact:** Known vulnerabilities in NuGet packages go undetected until manually audited.
 
-**Proposed Fix:** Add Dependabot configuration (`.github/dependabot.yml`) and a CI step
-running `dotnet list package --vulnerable`.
-
-**Files Affected:**
+**Resolution:**
 
 | File | Change |
 |------|--------|
-| `.github/dependabot.yml` | New — Dependabot config |
-| `.github/workflows/ci.yml` | Add vulnerability scan step |
+| `.github/dependabot.yml` | New — weekly NuGet + GitHub Actions checks |
+| `.github/workflows/dotnet-ci.yml` | Added `dotnet list package --vulnerable` step |
 
 ### Phase 11 — LOW: CSRF Review on API Endpoints ✅ DONE
 
