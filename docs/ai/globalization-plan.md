@@ -156,54 +156,71 @@ SiteLifecycleManager                ApiResult                     Home.razor
 
 > **Commit:** `4981b61` — 9 files, +1015 lines
 
-### Phase 2: Migrate Strings from Constants → Resources
+### Phase 2: Migrate Strings from Constants → Resources ✅ Done
 
-- [ ] Move user-facing strings from `ApplicationConstants` → `SharedResource.resx`
-  - `PlatformNotSupportedErrorMessage`
-  - `AuthenticationFailedErrorMessage`
-  - `AuthenticationSuccessfulMessage`
-  - `OperationFailedErrorMessage`
-  - `RateLimitExceededErrorMessage`
-  - `FailedToLoadDirectoryContentsErrorMessage`
-  - `LoadingSharedFoldersMessage`
-  - `LoadingDirectoryContentsMessage`
-- [ ] Move user-facing strings from `ValidationConstants` → `SharedResource.resx`
-  - `PathRequired`
-  - `PathTraversalDetected`
-  - `InvalidVersionFormat`
-  - `OperationFailed`
-  - `EnvVarKeyTooLong`
-  - `EnvVarValueTooLong`
-- [ ] Keep technical constants in `Constants` (paths, timeouts, session keys, routes)
-- [ ] Update server services to use `IStringLocalizer` instead of `ApplicationConstants`
+- [x] Move user-facing strings from `ApplicationConstants` → `SharedResource.resx`
+  - `PlatformNotSupportedErrorMessage` → `L.Error.PlatformNotSupported`
+  - `AuthenticationFailedErrorMessage` → `L.Error.AuthenticationFailed`
+  - `AuthenticationSuccessfulMessage` → `L.Success.AuthenticationSuccessful`
+  - `OperationFailedErrorMessage` → `L.Error.OperationFailed`
+  - `RateLimitExceededErrorMessage` → `L.Error.RateLimitExceeded`
+  - `FailedToLoadDirectoryContentsErrorMessage` → `L.Error.FailedToLoadDirectoryContents`
+  - `LoadingSharedFoldersMessage` → `L.Loading.SharedFolders`
+  - `LoadingDirectoryContentsMessage` → `L.Loading.DirectoryContents`
+- [x] Move user-facing strings from `ValidationConstants` → `SharedResource.resx`
+  - `PathRequired` → `L.Validation.PathRequired`
+  - `PathTraversalDetected` → `L.Validation.PathTraversalDetected`
+  - `InvalidVersionFormat` → `L.Validation.InvalidVersionFormat`
+  - `OperationFailed` → `L.Error.OperationFailed`
+  - `EnvVarKeyTooLong` → `L.Validation.EnvVarKeyTooLong`
+  - `EnvVarValueTooLong` → `L.Validation.EnvVarValueTooLong`
+- [x] Keep technical constants in `Constants` (paths, timeouts, session keys, routes)
+- [x] Update server services to use `IStringLocalizer` instead of `ApplicationConstants`
+- [x] Remove user-facing strings from `ApplicationConstants.cs` and `ValidationConstants.cs`
+  - `ValidationConstants` now only contains numeric limits (`EnvVarKeyMaxLength`, `EnvVarValueMaxLength`)
 
-### Phase 3: Migrate Server-Side Service Messages
+> **Bug fixes discovered:**
+> - `SharedResource.cs` was `static class` → caused `CS0718` (can't use static as generic type arg). Fixed to `sealed class`.
+> - `AddGlobalization()` registered `IStringLocalizer<SharedResource>` explicitly but `AddLocalization()` factory already handles this. Simplified to just `AddLocalization()`.
+> - `options.ResourcesPath = "Resources"` caused localizer to look for resources in wrong path. Removed — default behavior discovers by full type name.
 
-- [ ] `SiteLifecycleManager.cs` (Server): Replace hardcoded `CreateFailure(...)` → `_localizer[...]`
-  - "Site configuration is being updated"
-  - "Failed to queue start command"
-  - "Failed to queue stop command"
-  - "Site '{name}' is already running"
-  - "Application binary not found: {path}"
-  - "Incompatible framework"
-- [ ] `WebSiteHostingService.cs` (Server): Replace hardcoded `CreateFailure(...)` → `_localizer[...]`
-  - "Instance not found"
-  - "No application path configured"
-  - "Site with ID '{id}' not found"
-- [ ] `FrameworkManagementService.cs` (Server): Replace hardcoded `CreateFailure(...)` → `_localizer[...]`
-  - "Version is required"
-- [ ] `FileSystemService.cs` (Server): Replace hardcoded `CreateFailure(...)` → `_localizer[...]`
-  - "Failed to set ACL permissions for {path}..."
-- [ ] `AuthenticationService.cs` (Server): Replace hardcoded `CreateFailure(...)` → `_localizer[...]`
+### Phase 3: Migrate Server-Side Service Messages ✅ Done
 
-### Phase 4: Migrate WASM Client Service Messages
+- [x] `SiteLifecycleManager.cs` (Server): Added `IStringLocalizer<SharedResource>` to constructor
+  - 6 hardcoded strings → `_localizer[L.Error.*]`
+  - 2 `ApplicationConstants.OperationFailedErrorMessage` → `_localizer[L.Error.OperationFailed]`
+- [x] `WebSiteHostingService.cs` (Server): Added localizer to constructor
+  - 6 `ApplicationConstants.OperationFailedErrorMessage` → `_localizer[L.Error.OperationFailed]`
+  - 3 `ValidationConstants.EnvVar*` → `_localizer[L.Validation.*]`
+  - 3 hardcoded strings → `_localizer[L.Error.*]`
+  - Updated all 3 `SiteLifecycleManager` instantiation sites with localizer
+- [x] `FrameworkManagementService.cs` (Server): Added localizer
+  - 4 `ApplicationConstants.OperationFailedErrorMessage` → `_localizer[L.Error.OperationFailed]`
+  - 1 `ValidationConstants.InvalidVersionFormat` → `_localizer[L.Validation.InvalidVersionFormat]`
+  - 2 hardcoded "Version is required" → `_localizer[L.Validation.VersionRequired]`
+- [x] `FileSystemService.cs` (Server): Added localizer
+  - 2 `ApplicationConstants.OperationFailedErrorMessage` → `_localizer[L.Error.OperationFailed]`
+  - 2 `ValidationConstants.PathTraversalDetected` → `_localizer[L.Validation.PathTraversalDetected]`
+- [x] `DotnetVersionService.cs` (Server): Added localizer
+  - 5 `ApplicationConstants.OperationFailedErrorMessage` → `_localizer[L.Error.OperationFailed]`
+- [x] `AuthenticationService.cs` (Server): Added localizer
+  - 1 `ApplicationConstants.OperationFailedErrorMessage` → `_localizer[L.Error.OperationFailed]`
 
-- [ ] `WebSiteHostingService.cs` (WASM): Replace fallback `CreateFailure(...)` → `_localizer[...]`
-  - "Failed to load websites", "Failed to add website", etc.
-- [ ] `FileSystemService.cs` (WASM): Replace fallback `CreateFailure(...)` → `_localizer[...]`
-- [ ] `DotnetVersionService.cs` (WASM): Replace fallback `CreateFailure(...)` → `_localizer[...]`
-- [ ] `FrameworkManagementService.cs` (WASM): Replace fallback `CreateFailure(...)` → `_localizer[...]`
-- [ ] `AuthenticationService.cs` (WASM): Replace fallback `CreateFailure(...)` → `_localizer[...]`
+### Phase 4: Migrate WASM Client Service Messages ✅ Done
+
+- [x] `WebSiteHostingService.cs` (WASM): Added localizer to constructor — 6 fallback strings → `_localizer[L.Error.*]`
+- [x] `FileSystemService.cs` (WASM): Added localizer — 2 fallback strings → `_localizer[L.Error.*]`
+- [x] `DotnetVersionService.cs` (WASM): Added localizer — 5 fallback strings → `_localizer[L.Error.*]`
+- [x] `FrameworkManagementService.cs` (WASM): Added localizer — 2 fallback strings → `_localizer[L.Error.*]`
+- [x] `AuthenticationService.cs` (WASM): Added localizer — `ApplicationConstants.RateLimitExceededErrorMessage` + 2 hardcoded fallbacks
+- [x] `TreeContentService.cs` (WASM): Added localizer — 2 `ApplicationConstants.FailedToLoadDirectoryContentsErrorMessage`
+- [x] `Login.razor`: Added `@inject IStringLocalizer<SharedResource>` — replaced 3 `ApplicationConstants` references
+- [x] `FileSelectionDialog.razor`: Added `@inject IStringLocalizer<SharedResource>` — replaced 3 `ApplicationConstants` references
+- [x] Both `Program.cs` files: Added `builder.Services.AddGlobalization()` call + using directive
+
+> **Bug fixes discovered:**
+> - `Home.razor` had `ShowSafeErrorToast()` calling `WebUtility.HtmlEncode()` before `ToastService.ShowError()`. Blazor already auto-encodes, causing double encoding (`'` → `&#39;` → displayed as literal `&#39;`). Fixed by removing manual encoding.
+> - `SiteLifecycleManagerTests.cs`: Added `Mock<IStringLocalizer<SharedResource>>` — all 21 tests pass.
 
 ### Phase 5: UI Components Localization (`.razor` files)
 

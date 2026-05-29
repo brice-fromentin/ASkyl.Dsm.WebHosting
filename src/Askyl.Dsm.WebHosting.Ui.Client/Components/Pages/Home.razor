@@ -319,12 +319,12 @@
     #region Security Helpers
 
     /// <summary>
-    /// Safely displays an error toast with HTML-encoded message to prevent XSS attacks.
+    /// Displays an error toast. Blazor automatically HTML-encodes rendered text,
+    /// so no manual encoding is needed.
     /// </summary>
     private void ShowSafeErrorToast(string message)
     {
-        var encodedMessage = WebUtility.HtmlEncode(message);
-        ToastService.ShowError(encodedMessage);
+        ToastService.ShowError(message);
     }
 
     #endregion

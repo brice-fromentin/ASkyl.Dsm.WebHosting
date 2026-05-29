@@ -1,4 +1,3 @@
-using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
@@ -11,8 +10,11 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.FileStation;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Network;
+using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -20,7 +22,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Server-side implementation of IFileSystemService for Synology DSM FileStation API operations.
 /// Returns simple FileSystemItem data objects; UI-specific rendering is handled by the client layer.
 /// </summary>
-public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemService> logger) : Data.Contracts.IFileSystemService
+public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemService> logger, IStringLocalizer<SharedResource> localizer) : Data.Contracts.IFileSystemService
 {
     public async Task<SharedFoldersResult> GetSharedFoldersAsync()
     {
@@ -37,7 +39,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         catch (Exception ex)
         {
             logger.ErrorRetrievingSharedFolders(ex);
-            return SharedFoldersResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return SharedFoldersResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -47,7 +49,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (!IsPathValid(path))
         {
             logger.PathValidationFailed(path);
-            return DirectoryContentsResult.CreateFailure(ValidationConstants.PathTraversalDetected);
+            return DirectoryContentsResult.CreateFailure(localizer[L.Validation.PathTraversalDetected]);
         }
 
         logger.RetrievingDirectoryContents(path, directoryOnly);
@@ -81,7 +83,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         catch (Exception ex)
         {
             logger.ErrorRetrievingDirectory(ex, path);
-            return DirectoryContentsResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return DirectoryContentsResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -93,7 +95,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (!IsPathValid(path))
         {
             logger.PathValidationFailed(path);
-            return ApiResult.CreateFailure(ValidationConstants.PathTraversalDetected);
+            return ApiResult.CreateFailure(localizer[L.Validation.PathTraversalDetected]);
         }
 
         var targetPath = isDirectory ? path : Path.GetDirectoryName(path) ?? path;

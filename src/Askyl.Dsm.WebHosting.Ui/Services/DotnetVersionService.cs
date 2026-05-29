@@ -1,11 +1,13 @@
 using System.Text.RegularExpressions;
-using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
+using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -15,9 +17,10 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// the file system for .NET installation detection.
 /// </summary>
 /// <param name="logger">Logger instance.</param>
+/// <param name="localizer">Localizer for user-facing strings.</param>
 /// <param name="versionsDetector">Service for detecting installed .NET versions.</param>
 /// <param name="downloader">Service for downloading .NET runtimes.</param>
-public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
+public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IStringLocalizer<SharedResource> localizer, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
 {
     private static readonly Regex VersionPattern = new(@"^\d+\.\d+(\.\d+)?$", RegexOptions.Compiled);
 
@@ -31,7 +34,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
         catch (Exception ex)
         {
             logger.FailedToGetInstalledVersions(ex);
-            return InstalledVersionsResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return InstalledVersionsResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -45,7 +48,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
         catch (Exception ex)
         {
             logger.FailedToCheckChannelInstalled(ex, channel);
-            return ApiResultBool.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResultBool.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -59,7 +62,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
         catch (Exception ex)
         {
             logger.FailedToCheckVersionInstalled(ex, version);
-            return ApiResultBool.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResultBool.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -91,7 +94,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
         catch (Exception ex)
         {
             logger.FailedToGetChannels(ex);
-            return ChannelsResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ChannelsResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -117,7 +120,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, IVer
         catch (Exception ex)
         {
             logger.FailedToGetReleases(ex, channel);
-            return ReleasesResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ReleasesResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 

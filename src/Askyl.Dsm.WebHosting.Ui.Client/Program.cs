@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -23,6 +24,9 @@ builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
     client.Timeout = TimeSpan.FromSeconds(ApplicationConstants.HttpClientTimeoutSeconds);
 });
 builder.Services.AddFluentUIComponents();
+
+// Add globalization/localization services
+builder.Services.AddGlobalization();
 
 // Register authentication service as Singleton for app lifetime
 // Authentication state is managed server-side via session cookies, not client storage

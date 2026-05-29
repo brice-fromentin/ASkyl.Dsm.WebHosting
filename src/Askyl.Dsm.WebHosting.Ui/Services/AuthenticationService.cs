@@ -2,10 +2,13 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -15,7 +18,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="apiClient">The DSM API client for making authentication calls.</param>
 /// <param name="httpContextAccessor">Access to current HTTP context for session management.</param>
 /// <param name="logger">Logger for tracking authentication operations.</param>
-public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor httpContextAccessor, ILogger<ILogAuthenticationService> logger) : IAuthenticationService
+public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor httpContextAccessor, ILogger<ILogAuthenticationService> logger, IStringLocalizer<SharedResource> localizer) : IAuthenticationService
 {
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
@@ -57,7 +60,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         catch (Exception ex)
         {
             logger.LogoutError(ex);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 

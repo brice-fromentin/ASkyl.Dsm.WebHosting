@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
@@ -28,6 +29,9 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddHttpClient();
 builder.Services.AddFluentUIComponents();
+
+// Add globalization/localization services
+builder.Services.AddGlobalization();
 
 // Add IHttpContextAccessor as singleton (required for Blazor server-side)
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();

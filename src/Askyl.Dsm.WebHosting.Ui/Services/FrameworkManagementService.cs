@@ -1,10 +1,12 @@
-using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
+using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -14,14 +16,15 @@ public class FrameworkManagementService(
     IDownloaderService downloader,
     IFileManagerService fileManager,
     IArchiveExtractorService archiveExtractor,
-    ILogger<ILogFrameworkManagementService> logger) : IFrameworkManagementService
+    ILogger<ILogFrameworkManagementService> logger,
+    IStringLocalizer<SharedResource> localizer) : IFrameworkManagementService
 {
     public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel, CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrEmpty(version))
         {
             logger.InstallFailedVersionRequired();
-            return InstallationResult.CreateFailure("Version is required");
+            return InstallationResult.CreateFailure(localizer[L.Validation.VersionRequired]);
         }
 
         using var timer = new OperationTimer(elapsed => logger.InstallDuration(elapsed, version));
@@ -45,7 +48,7 @@ public class FrameworkManagementService(
         catch (Exception ex)
         {
             logger.FrameworkInstallError(ex, version);
-            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return InstallationResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -54,12 +57,12 @@ public class FrameworkManagementService(
         if (String.IsNullOrEmpty(version))
         {
             logger.UninstallFailedVersionRequired();
-            return InstallationResult.CreateFailure("Version is required");
+            return InstallationResult.CreateFailure(localizer[L.Validation.VersionRequired]);
         }
 
         if (!dotnetVersionService.IsValidVersionFormat(version))
         {
-            return InstallationResult.CreateFailure(ValidationConstants.InvalidVersionFormat);
+            return InstallationResult.CreateFailure(localizer[L.Validation.InvalidVersionFormat]);
         }
 
         using var timer = new OperationTimer(elapsed => logger.UninstallDuration(elapsed, version));
@@ -86,17 +89,17 @@ public class FrameworkManagementService(
         catch (LastReleaseUninstallException ex)
         {
             logger.UninstallFailed(ex.Message);
-            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return InstallationResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
         catch (MissingChannelConfigurationException ex)
         {
             logger.UninstallFailed(ex.Message);
-            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return InstallationResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
         catch (Exception ex)
         {
             logger.FrameworkUninstallError(ex, version);
-            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return InstallationResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 

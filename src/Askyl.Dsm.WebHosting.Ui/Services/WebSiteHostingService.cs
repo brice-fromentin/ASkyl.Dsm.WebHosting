@@ -4,9 +4,12 @@ using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
+using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -22,7 +25,8 @@ public class WebSiteHostingService(
     IFileSystemService fileSystemService,
     IReverseProxyManagerService reverseProxyManager,
     IAssemblyRuntimeDetector assemblyRuntimeDetector,
-    IVersionsDetectorService versionsDetector) : BackgroundService, IWebSiteHostingService
+    IVersionsDetectorService versionsDetector,
+    IStringLocalizer<SharedResource> localizer) : BackgroundService, IWebSiteHostingService
 {
     #region Fields
 
@@ -113,7 +117,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.ErrorAddingWebsite(ex, configuration.Name);
-            return WebSiteInstanceResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return WebSiteInstanceResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -125,7 +129,7 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(configuration.Id, out var entry))
         {
             logger.InstanceNotFoundUpdate(configuration.Name);
-            return WebSiteInstanceResult.CreateFailure($"Instance not found for website '{configuration.Name}'");
+            return WebSiteInstanceResult.CreateFailure(localizer[L.Error.InstanceNotFound]);
         }
 
         var existingInstance = entry.Instance;
@@ -173,7 +177,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.ErrorUpdatingWebsite(ex, configuration.Name);
-            return WebSiteInstanceResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return WebSiteInstanceResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -191,7 +195,7 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(id, out var entry))
         {
             logger.CannotStartSiteNotFound(id);
-            return ApiResult.CreateFailure($"Site with ID '{id}' not found");
+            return ApiResult.CreateFailure(localizer[L.Error.SiteNotFound, id]);
         }
 
         using var timer = new OperationTimer(elapsed => logger.StartWebsiteDuration(elapsed, entry.Instance.Configuration.Name));
@@ -217,7 +221,7 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(id, out var entry))
         {
             logger.CannotStopSiteNotFound(id);
-            return ApiResult.CreateFailure($"Site with ID '{id}' not found");
+            return ApiResult.CreateFailure(localizer[L.Error.SiteNotFound, id]);
         }
 
         using var timer = new OperationTimer(elapsed => logger.StopWebsiteDuration(elapsed, entry.Instance.Configuration.Name));
@@ -290,7 +294,7 @@ public class WebSiteHostingService(
                 instance.RequiredFramework = runtimeInfo?.Channel;
             }
 
-            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, assemblyRuntimeDetector, site);
+            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), localizer, processRunner, assemblyRuntimeDetector, site);
             _sites[instance.Id] = new SiteEntry(instance, lifecycleManager);
 
             logger.InstanceCreated(site.Name);
@@ -320,7 +324,7 @@ public class WebSiteHostingService(
     public async Task<WebSiteInstance> AddInstanceAsync(WebSiteConfiguration configuration)
     {
         var instance = new WebSiteInstanceDetails(configuration);
-        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, assemblyRuntimeDetector, configuration);
+        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), localizer, processRunner, assemblyRuntimeDetector, configuration);
         _sites[instance.Id] = new SiteEntry(instance, lifecycleManager);
 
         logger.InstanceAdded(configuration.Name);
@@ -349,7 +353,7 @@ public class WebSiteHostingService(
         // Recreate lifecycle manager with new configuration to avoid stale config
         entry.LifecycleManager.Dispose();
         existingInstance.Configuration = newConfiguration;
-        entry.LifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, assemblyRuntimeDetector, newConfiguration);
+        entry.LifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), localizer, processRunner, assemblyRuntimeDetector, newConfiguration);
 
         logger.InstanceUpdated(newConfiguration.Name);
 
@@ -379,7 +383,7 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(instanceId, out var entry))
         {
             logger.CannotRemoveInstanceNotFound(instanceId);
-            return ApiResult.CreateFailure("Instance not found");
+            return ApiResult.CreateFailure(localizer[L.Error.InstanceNotFound]);
         }
 
         var instance = entry.Instance;
@@ -424,7 +428,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToRemoveSite(ex, siteName);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -474,7 +478,7 @@ public class WebSiteHostingService(
         if (String.IsNullOrEmpty(configuration.ApplicationRealPath))
         {
             logger.NoApplicationRealPath(configuration.Name);
-            return ApiResult.CreateFailure("No application path configured");
+            return ApiResult.CreateFailure(localizer[L.Error.NoApplicationPath]);
         }
 
         // Determine if the target is a directory (if ApplicationPath ends with .dll, set permissions on parent directory)
@@ -503,7 +507,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToCreateReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -521,7 +525,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToUpdateReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -539,7 +543,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToDeleteReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(localizer[L.Error.OperationFailed]);
         }
     }
 
@@ -575,7 +579,7 @@ public class WebSiteHostingService(
     /// Validates environment variable keys and values to prevent resource exhaustion.
     /// Returns a failure result if validation fails, or null if all checks pass.
     /// </summary>
-    private static WebSiteInstanceResult? ValidateEnvironmentVariables(Dictionary<string, string> environmentVariables)
+    private WebSiteInstanceResult? ValidateEnvironmentVariables(Dictionary<string, string> environmentVariables)
     {
         if (environmentVariables is null || environmentVariables.Count == 0)
         {
@@ -586,12 +590,12 @@ public class WebSiteHostingService(
         {
             if (String.IsNullOrWhiteSpace(kvp.Key) || kvp.Key.Length > ValidationConstants.EnvVarKeyMaxLength)
             {
-                return WebSiteInstanceResult.CreateFailure(String.Format(ValidationConstants.EnvVarKeyTooLong, kvp.Key, ValidationConstants.EnvVarKeyMaxLength));
+                return WebSiteInstanceResult.CreateFailure(localizer[L.Validation.EnvVarKeyTooLong, kvp.Key, ValidationConstants.EnvVarKeyMaxLength]);
             }
 
             if (kvp.Value?.Length > ValidationConstants.EnvVarValueMaxLength)
             {
-                return WebSiteInstanceResult.CreateFailure(String.Format(ValidationConstants.EnvVarValueTooLong, kvp.Key, ValidationConstants.EnvVarValueMaxLength));
+                return WebSiteInstanceResult.CreateFailure(localizer[L.Validation.EnvVarValueTooLong, kvp.Key, ValidationConstants.EnvVarValueMaxLength]);
             }
         }
 

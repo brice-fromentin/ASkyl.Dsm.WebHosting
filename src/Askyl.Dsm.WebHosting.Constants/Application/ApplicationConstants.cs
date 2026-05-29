@@ -91,55 +91,6 @@ public static class ApplicationConstants
 
     #endregion
 
-    #region Status Messages
-
-    /// <summary>
-    /// Error message when platform is not supported.
-    /// </summary>
-    public const string PlatformNotSupportedErrorMessage = "The application can only run on Linux or MacOS";
-
-    /// <summary>
-    /// Error message for failed authentication.
-    /// </summary>
-    public const string AuthenticationFailedErrorMessage = "Authentication failed";
-
-    /// <summary>
-    /// Success message for successful authentication.
-    /// </summary>
-    public const string AuthenticationSuccessfulMessage = "Authentication successful";
-
-    /// <summary>
-    /// Generic error message for operation failures. Used to prevent leaking internal details (file paths, stack traces) to API responses.
-    /// The full exception is always logged server-side via [LoggerMessage] extensions.
-    /// </summary>
-    public const string OperationFailedErrorMessage = "The operation failed. Check the logs for details.";
-
-    /// <summary>
-    /// Error message displayed when login attempts exceed the rate limit (5 per minute).
-    /// </summary>
-    public const string RateLimitExceededErrorMessage = "Too many login attempts. Please wait a minute before trying again.";
-
-    #endregion
-
-    #region Loading Messages
-
-    /// <summary>
-    /// Error message when failing to load directory contents.
-    /// </summary>
-    public const string FailedToLoadDirectoryContentsErrorMessage = "Failed to load directory contents";
-
-    /// <summary>
-    /// Loading message for shared folders.
-    /// </summary>
-    public const string LoadingSharedFoldersMessage = "Loading shared folders...";
-
-    /// <summary>
-    /// Loading message for directory contents.
-    /// </summary>
-    public const string LoadingDirectoryContentsMessage = "Loading directory contents...";
-
-    #endregion
-
     #region UI Interaction
 
     /// <summary>

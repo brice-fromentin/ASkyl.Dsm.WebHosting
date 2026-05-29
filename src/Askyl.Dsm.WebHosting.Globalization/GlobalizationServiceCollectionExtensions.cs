@@ -1,4 +1,8 @@
-namespace Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
+using Askyl.Dsm.WebHosting.Globalization.Resources;
+using Microsoft.Extensions.Localization;
+
+namespace Askyl.Dsm.WebHosting.Globalization;
 
 /// <summary>
 /// Extension methods for registering globalization services.
@@ -11,7 +15,11 @@ public static class GlobalizationServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddGlobalization(this IServiceCollection services)
     {
-        services.AddLocalization(options => options.ResourcesPath = "Resources");
+        // AddLocalization registers IStringLocalizer<> factory.
+        // ResourcesPath is intentionally omitted — resources are discovered by the
+        // full type name (Askyl.Dsm.WebHosting.Globalization.Resources.SharedResource),
+        // which matches the embedded resource name from the .resx files in Resources/ folder.
+        services.AddLocalization();
 
         return services;
     }

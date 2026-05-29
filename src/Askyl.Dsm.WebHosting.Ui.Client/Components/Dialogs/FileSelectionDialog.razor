@@ -2,7 +2,10 @@
 @using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Globalization.Resources
 @using Askyl.Dsm.WebHosting.Logging
+@using Microsoft.Extensions.Localization
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -12,6 +15,7 @@
 @inject ITreeContentService TreeContentService
 @inject IJSRuntime JSRuntime
 @inject ILogger<ILogFileSelectionDialog> Logger
+@inject IStringLocalizer<SharedResource> localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -115,7 +119,7 @@
 
     private async Task LoadSharedFoldersAsync()
     {
-        using var worker = this.CreateWorkingState(ApplicationConstants.LoadingSharedFoldersMessage);
+        using var worker = this.CreateWorkingState(localizer[L.Loading.SharedFolders]);
 
         try
         {
@@ -178,7 +182,7 @@
             return;
         }
 
-        using var worker = this.CreateWorkingState(ApplicationConstants.LoadingDirectoryContentsMessage);
+        using var worker = this.CreateWorkingState(localizer[L.Loading.DirectoryContents]);
 
         try
         {
@@ -186,7 +190,7 @@
 
             if (!contentsResult.Success)
             {
-                await HandleDirectoryLoadErrorAsync(contentsResult.Message ?? ApplicationConstants.FailedToLoadDirectoryContentsErrorMessage);
+                await HandleDirectoryLoadErrorAsync(contentsResult.Message ?? localizer[L.Error.FailedToLoadDirectoryContents]);
                 return;
             }
 
@@ -195,7 +199,7 @@
         catch (Exception ex)
         {
             Logger.FailedToLoadDirectoryContents(ex, selectedPath);
-            await HandleDirectoryLoadErrorAsync($"{ApplicationConstants.FailedToLoadDirectoryContentsErrorMessage}: {ex.Message}");
+            await HandleDirectoryLoadErrorAsync($"{localizer[L.Error.FailedToLoadDirectoryContents]}: {ex.Message}");
         }
     }
 

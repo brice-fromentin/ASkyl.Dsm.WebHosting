@@ -2,7 +2,10 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Tools.Extensions;
+using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 
@@ -10,20 +13,21 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// Client-side proxy for IFileSystemService that calls REST API endpoints.
 /// </summary>
 /// <param name="httpClientFactory">HttpClientFactory to create the named client.</param>
-public class FileSystemService(IHttpClientFactory httpClientFactory) : IFileSystemService
+/// <param name="localizer">Localizer for user-facing strings.</param>
+public class FileSystemService(IHttpClientFactory httpClientFactory, IStringLocalizer<SharedResource> localizer) : IFileSystemService
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     /// <inheritdoc/>
     public async Task<SharedFoldersResult> GetSharedFoldersAsync()
-        => await _httpClient.GetJsonOrDefaultAsync<SharedFoldersResult>(FileManagementRoutes.SharedFoldersFullRoute, () => SharedFoldersResult.CreateFailure("Failed to load shared folders"));
+        => await _httpClient.GetJsonOrDefaultAsync<SharedFoldersResult>(FileManagementRoutes.SharedFoldersFullRoute, () => SharedFoldersResult.CreateFailure(localizer[L.Error.FailedToLoadSharedFolders]));
 
     /// <inheritdoc/>
     public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly)
     {
         var parameters = new[] { ("path", path), ("directoryOnly", directoryOnly.ToLower()) };
         var url = FileManagementRoutes.DirectoryContentsFullRoute.WithQuery(parameters);
-        return await _httpClient.GetJsonOrDefaultAsync<DirectoryContentsResult>(url, () => DirectoryContentsResult.CreateFailure($"Failed to load directory contents for path: {path}"));
+        return await _httpClient.GetJsonOrDefaultAsync<DirectoryContentsResult>(url, () => DirectoryContentsResult.CreateFailure(localizer[L.Error.FailedToLoadDirectoryContentsWithPath, path]));
     }
 
     /// <inheritdoc/>

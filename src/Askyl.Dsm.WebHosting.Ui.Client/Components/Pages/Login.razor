@@ -6,11 +6,15 @@
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Data.Domain.Authentication
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Globalization.Resources
+@using Microsoft.Extensions.Localization
 
 @inject IAuthenticationService authService
 @inject IDialogService DialogsService
 @inject IToastService ToastService
 @inject NavigationManager navigation
+@inject IStringLocalizer<SharedResource> localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -56,7 +60,7 @@
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            DialogsService.ShowError(ApplicationConstants.PlatformNotSupportedErrorMessage);
+            DialogsService.ShowError(localizer[L.Error.PlatformNotSupported]);
         }
 
         var isAuthenticatedResult = await authService.IsAuthenticatedAsync();
@@ -80,12 +84,12 @@
         if (!result.Success || !result.IsAuthenticated)
         {
             // failed - either HTTP call failed or credentials invalid
-            var errorMessage = result.Message?.Trim() ?? ApplicationConstants.AuthenticationFailedErrorMessage;
+            var errorMessage = result.Message?.Trim() ?? localizer[L.Error.AuthenticationFailed];
             ToastService.ShowError(errorMessage);
             return;
         }
 
-        ToastService.ShowSuccess(ApplicationConstants.AuthenticationSuccessfulMessage);
+        ToastService.ShowSuccess(localizer[L.Success.AuthenticationSuccessful]);
         navigation.NavigateTo(ApplicationConstants.HomePagePath);
     }
 }
