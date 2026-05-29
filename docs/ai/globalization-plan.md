@@ -141,17 +141,20 @@ SiteLifecycleManager                ApiResult                     Home.razor
 
 ## 3. Implementation Phases
 
-### Phase 1: Globalization Assembly Foundation
+### Phase 1: Globalization Assembly Foundation ✅ Done
 
-- [ ] Create `Askyl.Dsm.WebHosting.Globalization` project (class library, `net10.0`)
-- [ ] Add NuGet: `Microsoft.Extensions.Localization`
-- [ ] Create `Resources/SharedResource.resx` (en-US default) with ALL user-facing strings
-- [ ] Create `Resources/SharedResource.fr-FR.resx` (French translations — empty initially)
-- [ ] Create `Resources/SharedResource.cs` (dummy class, no Designer)
-- [ ] Create `LocalizationKeys.cs` (key constants organized by domain)
-- [ ] Create `GlobalizationServiceCollectionExtensions.cs` (DI registration)
-- [ ] Add project references: `Ui → Globalization`, `Ui.Client → Globalization`
-- [ ] Configure `.csproj`: `<BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>`
+- [x] Create `Askyl.Dsm.WebHosting.Globalization` project (class library, `net10.0`)
+- [x] Add NuGet: `Microsoft.Extensions.Localization`
+- [x] Create `Resources/SharedResource.resx` (en-US default) with ALL user-facing strings
+- [x] Create `Resources/SharedResource.fr-FR.resx` (French translations — empty initially)
+- [x] Create `Resources/SharedResource.cs` (dummy class, no Designer)
+- [x] Create `LocalizationKeys.cs` (key constants organized by domain as `L.*`)
+- [x] Create `GlobalizationServiceCollectionExtensions.cs` (DI registration)
+- [x] Add project references: `Ui → Globalization`, `Ui.Client → Globalization`
+- [x] Add project to `.slnx`
+- [x] Format → Build → Verify: zero errors, zero warnings
+
+> **Commit:** `4981b61` — 9 files, +1015 lines
 
 ### Phase 2: Migrate Strings from Constants → Resources
 
@@ -680,6 +683,8 @@ public async Task<ApiResult> CallApiAsync()
 | 2026-05-28 | No page reload on language switch | Event-based re-render; better UX |
 | 2026-05-28 | localStorage for persistence | No server dependency; survives reloads; standard browser API |
 | 2026-05-28 | Migrate user-facing strings from `Constants` | `const string` cannot be localized; `ApplicationConstants` and `ValidationConstants` should only hold technical values |
+| 2026-05-29 | Key class named `L` (not `LocalizationKeys`) | Shorter import: `L.Error.FailedToLoadWebsites` vs `LocalizationKeys.Error.FailedToLoadWebsites` |
+| 2026-05-29 | Flat keys in resx (`Login_PageTitle`) | Avoids nested resource file complexity; matches `L.Login.PageTitle` constant value |
 
 ---
 
