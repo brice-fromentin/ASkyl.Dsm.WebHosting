@@ -1,6 +1,9 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Globalization.Resources
 @using Askyl.Dsm.WebHosting.Logging
+@using Microsoft.Extensions.Localization
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -10,24 +13,25 @@
 @inject IFrameworkManagementService ManagementService
 @inject IToastService ToastService
 @inject ILogger<ILogAspNetReleasesDialog> Logger
+@inject IStringLocalizer<SharedResource> localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">ASP.NET Online</FluentLabel>
+    <FluentLabel Typo="Typography.H2">@localizer[L.AspNetReleases.DialogTitle]</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Disabled="@IsWorking" Class="flex-full-width">Close</FluentButton>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Disabled="@IsWorking" Class="flex-full-width">@localizer[L.Common.Close]</FluentButton>
 </FluentDialogFooter>
 
 <FluentDialogBody>
     <FluentToolbar Class="full-width">
-        <FluentLabel>Channel</FluentLabel>
+        <FluentLabel>@localizer[L.AspNetReleases.ChannelLabel]</FluentLabel>
 
         <FluentSelect TOption="AspNetChannel" Items="@Channels" SelectedOption="@SelectedChannel" SelectedOptionChanged="OnChannelChanged" Width="140px" Disabled="@IsWorking" />
 
-        <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="Refresh" Disabled="@IsWorking">
+        <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="@localizer[L.Common.Refresh]" Disabled="@IsWorking">
             <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
         </FluentButton>
 
@@ -44,14 +48,14 @@
     <div class="dialog-grid-container">
         <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="240px 120px 100px 120px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
             <ChildContent>
-                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="Version" Property="@(r => r.Version)" Sortable="true" />
-                <TemplateColumn TGridItem="AspNetRelease" Title="Installed" Align="Align.Center">
+                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="@localizer[L.AspNetReleases.GridColumnVersion]" Property="@(r => r.Version)" Sortable="true" />
+                <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[L.AspNetReleases.GridColumnInstalled]" Align="Align.Center">
                     @(context.IsInstalled ? "✓" : String.Empty)
                 </TemplateColumn>
-                <TemplateColumn TGridItem="AspNetRelease" Title="Security" Align="Align.Center">
+                <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[L.AspNetReleases.GridColumnSecurity]" Align="Align.Center">
                     @(context.IsSecurity ? "⚠" : String.Empty)
                 </TemplateColumn>
-                <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="Release" Property="@(r => r.ReleaseDate)" Format="yyyy-MM-dd" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending" />
+                <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="@localizer[L.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="yyyy-MM-dd" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending" />
             </ChildContent>
         </AutoDataGrid>
     </div>
@@ -100,10 +104,12 @@
     {
         if (SelectedItem == null)
         {
-            return "Select a version";
+            return localizer[L.AspNetReleases.SelectVersion];
         }
 
-        return IsSelectedVersionInstalled ? $"Uninstall {SelectedItem.Version}" : $"Install {SelectedItem.Version}";
+        return IsSelectedVersionInstalled
+            ? String.Format(localizer[L.AspNetReleases.UninstallVersion], SelectedItem.Version)
+            : String.Format(localizer[L.AspNetReleases.InstallVersion], SelectedItem.Version);
     }
 
     #endregion
@@ -141,7 +147,7 @@
 
             if (!channelsResult.Success)
             {
-                await ShowErrorAsync(channelsResult.Message ?? "Failed to load channels");
+                await ShowErrorAsync(channelsResult.Message ?? localizer[L.Error.FailedToLoadChannels]);
                 Channels.Clear();
                 SelectedChannel = null;
                 return;
@@ -179,7 +185,7 @@
 
             if (!releasesResult.Success)
             {
-                await ShowErrorAsync(releasesResult.Message ?? "Failed to load releases");
+                await ShowErrorAsync(releasesResult.Message ?? localizer[L.Error.FailedToLoadReleases]);
                 Releases = AutoDataGrid<AspNetRelease>.Empty();
                 return;
             }
@@ -214,18 +220,18 @@
 
         try
         {
-            using var worker = this.CreateWorkingState("Installing ...");
+            using var worker = this.CreateWorkingState(localizer[L.Loading.Installing]);
 
             var result = await ManagementService.InstallFrameworkAsync(SelectedItem.Version, SelectedChannel?.ProductVersion ?? String.Empty);
 
             if (result.Success)
             {
-                await DialogService.ShowInfoAsync(result.Message ?? "Installation completed successfully");
+                await DialogService.ShowInfoAsync(result.Message ?? localizer[L.Success.InstallationCompleted]);
                 await Refresh();
             }
             else
             {
-                await DialogService.ShowErrorAsync(result.Message ?? "Installation failed");
+                await DialogService.ShowErrorAsync(result.Message ?? localizer[L.Error.InstallationFailed]);
             }
         }
         catch (Exception ex)
@@ -253,18 +259,18 @@
 
         try
         {
-            using var worker = this.CreateWorkingState("Uninstalling ...");
+            using var worker = this.CreateWorkingState(localizer[L.Loading.Uninstalling]);
 
             var uninstallResult = await ManagementService.UninstallFrameworkAsync(SelectedItem.Version);
 
             if (uninstallResult.Success)
             {
-                await DialogService.ShowInfoAsync(uninstallResult.Message ?? "Uninstallation completed successfully");
+                await DialogService.ShowInfoAsync(uninstallResult.Message ?? localizer[L.Success.UninstallationCompleted]);
                 await Refresh();
             }
             else
             {
-                await DialogService.ShowErrorAsync(uninstallResult.Message ?? "Uninstallation failed");
+                await DialogService.ShowErrorAsync(uninstallResult.Message ?? localizer[L.Error.UninstallationFailed]);
             }
         }
         catch (Exception ex)

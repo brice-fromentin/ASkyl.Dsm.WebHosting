@@ -222,20 +222,30 @@ SiteLifecycleManager                ApiResult                     Home.razor
 > - `Home.razor` had `ShowSafeErrorToast()` calling `WebUtility.HtmlEncode()` before `ToastService.ShowError()`. Blazor already auto-encodes, causing double encoding (`'` → `&#39;` → displayed as literal `&#39;`). Fixed by removing manual encoding.
 > - `SiteLifecycleManagerTests.cs`: Added `Mock<IStringLocalizer<SharedResource>>` — all 21 tests pass.
 
-### Phase 5: UI Components Localization (`.razor` files)
+### Phase 5: UI Components Localization (`.razor` files) ✅ Done
 
-- [ ] Localize `Pages/Login.razor` (labels, messages, titles, page title)
-- [ ] Localize `Pages/Home.razor` (toolbar buttons, grid columns, toast fallbacks, page title)
-- [ ] Localize `Pages/NotFound.razor` (page title, content)
-- [ ] Localize `Dialogs/WebSiteConfigurationDialog.razor` (all labels, buttons, section headers)
-- [ ] Localize `Dialogs/AspNetReleasesDialog.razor` (all labels, buttons, column titles)
-- [ ] Localize `Dialogs/FileSelectionDialog.razor` (loading messages, error fallbacks)
-- [ ] Localize `Dialogs/DotnetVersionsDialog.razor` (if exists)
-- [ ] Localize `Dialogs/LicensesDialog.razor` (if exists)
-- [ ] Localize `Controls/AutoDataGrid.razor` ("Loading items...", "No items found.", "Items : {count}")
-- [ ] Localize `Controls/LoadingOverlay.razor` (if has user-facing strings)
-- [ ] Localize `Controls/RealTimeNumberField.razor` (if has user-facing strings)
-- [ ] Localize `Controls/RealTimeTextField.razor` (if has user-facing strings)
+- [x] Localize `Pages/Login.razor` — PageTitle, dialog title, labels (Login/Password/OTP), OK button, authenticating message
+- [x] Localize `Pages/Home.razor` — PageTitle, toolbar buttons (Add/Edit/Delete/.NET Version/ASP.NET Online/Licenses/Download Logs/Logout), grid column titles, all toast/loading messages
+- [x] Localize `Pages/NotFound.razor` — PageTitle, content text
+- [x] Localize `Dialogs/WebSiteConfigurationDialog.razor` — Dialog title, all labels (Name, Application Path, Environment, Internal Port, Shutdown Timeout, Enabled, Auto Start, Hostname, Protocol, Public Port, Enable HSTS), section headers, buttons (Cancel/Update/Create), error messages
+- [x] Localize `Dialogs/AspNetReleasesDialog.razor` — Dialog title, channel label, grid columns (Version/Installed/Security/Release), action button text, install/uninstall messages, error messages
+- [x] Localize `Dialogs/FileSelectionDialog.razor` — Dialog title, grid columns (Name/Size/Type/Modified), empty state messages, buttons (Cancel/Select File), error messages
+- [x] Localize `Dialogs/DotnetVersionsDialog.razor` — Dialog title, searching/loading message, "not found" message, error message
+- [x] Localize `Dialogs/LicensesDialog.razor` — Dialog title, loading message, Close button
+- [x] Localize `Controls/AutoDataGrid.razor` — Loading content, empty content, items count label
+- [x] `Controls/LoadingOverlay.razor` — No user-facing strings (only renders `WorkingStateComponent.Message`)
+- [x] `Controls/RealTimeNumberField.razor` — No user-facing strings (label passed via parameter)
+- [x] `Controls/RealTimeTextField.razor` — No user-facing strings (label passed via parameter)
+
+> **New keys added:**
+> - `Common_Size`, `Common_Type`, `Common_Modified`
+> - `Loading_Installing`, `Loading_Uninstalling`
+> - `Home_LoadingWebsites`
+> - `DotnetVersions_DialogTitle`, `DotnetVersions_Searching`, `DotnetVersions_NotFound`, `DotnetVersions_FailedToLoad`
+> - `Licenses_DialogTitle`, `Licenses_Loading`
+> - `FileSelection_DialogTitle`, `FileSelection_SelectFile`, `FileSelection_NoFilesFound`, `FileSelection_SelectFolder`, `FileSelection_Directory`, `FileSelection_File`
+
+> **Build:** zero errors, zero warnings
 
 ### Phase 6: Culture Manager & Runtime Switching
 

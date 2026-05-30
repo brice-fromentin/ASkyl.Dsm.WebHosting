@@ -1,18 +1,22 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Licensing
+@using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Globalization.Resources
+@using Microsoft.Extensions.Localization
 
 @implements IDialogContentComponent
 @implements IWorkingState
 
 @inject ILicenseService LicenseService
+@inject IStringLocalizer<SharedResource> localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">Licenses</FluentLabel>
+    <FluentLabel Typo="Typography.H2">@localizer[L.Licenses.DialogTitle]</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Class="flex-full-width">Close</FluentButton>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Class="flex-full-width">@localizer[L.Common.Close]</FluentButton>
 </FluentDialogFooter>
 
 <FluentDialogBody>
@@ -55,7 +59,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using var worker = this.CreateWorkingState("Loading licenses...");
+        using var worker = this.CreateWorkingState(localizer[L.Licenses.Loading]);
 
         _licenses = await LicenseService.GetLicensesAsync();
     }

@@ -81,6 +81,15 @@
   <data name="Loading" xml:space="preserve">
     <value>Chargement...</value>
   </data>
+  <data name="Common_Size" xml:space="preserve">
+    <value>Taille</value>
+  </data>
+  <data name="Common_Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Common_Modified" xml:space="preserve">
+    <value>Modifié</value>
+  </data>
 
   <!-- Login -->
   <data name="Login_PageTitle" xml:space="preserve">
@@ -251,6 +260,12 @@
   <data name="Loading_DirectoryContents" xml:space="preserve">
     <value>Chargement du contenu du répertoire...</value>
   </data>
+  <data name="Loading_Installing" xml:space="preserve">
+    <value>Installation en cours...</value>
+  </data>
+  <data name="Loading_Uninstalling" xml:space="preserve">
+    <value>Désinstallation en cours...</value>
+  </data>
 
   <!-- Error -->
   <data name="Error_PlatformNotSupported" xml:space="preserve">
@@ -394,6 +409,53 @@
   </data>
   <data name="Validation_EnvVarValueTooLong" xml:space="preserve">
     <value>La valeur de la variable d'environnement '{0}' dépasse la longueur maximale de {1} caractères</value>
+  </data>
+
+  <!-- Home Loading -->
+  <data name="Home_LoadingWebsites" xml:space="preserve">
+    <value>Chargement des sites web...</value>
+  </data>
+
+  <!-- DotnetVersions Dialog -->
+  <data name="DotnetVersions_DialogTitle" xml:space="preserve">
+    <value>Versions .NET</value>
+  </data>
+  <data name="DotnetVersions_Searching" xml:space="preserve">
+    <value>Recherche des versions .NET...</value>
+  </data>
+  <data name="DotnetVersions_NotFound" xml:space="preserve">
+    <value>Aucune installation .NET trouvée. Vérifiez que .NET est installé.</value>
+  </data>
+  <data name="DotnetVersions_FailedToLoad" xml:space="preserve">
+    <value>Échec du chargement des versions .NET</value>
+  </data>
+
+  <!-- Licenses Dialog -->
+  <data name="Licenses_DialogTitle" xml:space="preserve">
+    <value>Licences</value>
+  </data>
+  <data name="Licenses_Loading" xml:space="preserve">
+    <value>Chargement des licences...</value>
+  </data>
+
+  <!-- FileSelection Dialog -->
+  <data name="FileSelection_DialogTitle" xml:space="preserve">
+    <value>Sélection de fichier</value>
+  </data>
+  <data name="FileSelection_SelectFile" xml:space="preserve">
+    <value>Sélectionner le fichier</value>
+  </data>
+  <data name="FileSelection_NoFilesFound" xml:space="preserve">
+    <value>Aucun fichier trouvé dans ce répertoire.</value>
+  </data>
+  <data name="FileSelection_SelectFolder" xml:space="preserve">
+    <value>Sélectionnez un dossier partagé dans l'arborescence pour afficher son contenu.</value>
+  </data>
+  <data name="FileSelection_Directory" xml:space="preserve">
+    <value>Répertoire</value>
+  </data>
+  <data name="FileSelection_File" xml:space="preserve">
+    <value>Fichier</value>
   </data>
 
 </root>

@@ -20,7 +20,7 @@
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">File Selection</FluentLabel>
+    <FluentLabel Typo="Typography.H2">@localizer[L.FileSelection.DialogTitle]</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogBody>
@@ -33,7 +33,7 @@
         <Panel2>
             <AutoDataGrid TItem="FsEntry" Items="@_files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick" OnRowDoubleClick="@OnFileDoubleClick" OnReload="@ReloadCurrentDirectory">
                 <ChildContent>
-                    <TemplateColumn TGridItem="FsEntry" Title="Name" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Name)" InitialSortDirection="SortDirection.Ascending">
+                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[L.Home.GridColumnName]" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Name)" InitialSortDirection="SortDirection.Ascending">
                         <ChildContent Context="file">
                             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                                 <FluentIcon Value="@GetFileIcon(file)" />
@@ -41,24 +41,24 @@
                             </FluentStack>
                         </ChildContent>
                     </TemplateColumn>
-                    <TemplateColumn TGridItem="FsEntry" Title="Size" Align="Align.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
+                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[L.Common.Size]" Align="Align.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
                         @(GetFileSize(context))
                     </TemplateColumn>
-                    <TemplateColumn TGridItem="FsEntry" Title="Type" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
+                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[L.Common.Type]" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
                         @(GetFileType(context))
                     </TemplateColumn>
-                    <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="Modified" Property="@(f => f.Modified)" Format="yyyy-MM-dd HH:mm" Align="Align.Center" Sortable="true" />
+                    <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="@localizer[L.Common.Modified]" Property="@(f => f.Modified)" Format="yyyy-MM-dd HH:mm" Align="Align.Center" Sortable="true" />
                 </ChildContent>
 
                 <EmptyContent>
                     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
                         @if (!String.IsNullOrEmpty(_selectedPath))
                         {
-                            <FluentLabel>No files found in this directory.</FluentLabel>
+                            <FluentLabel>@localizer[L.FileSelection.NoFilesFound]</FluentLabel>
                         }
                         else
                         {
-                            <FluentLabel>Select a shared folder from the tree to view its contents.</FluentLabel>
+                            <FluentLabel>@localizer[L.FileSelection.SelectFolder]</FluentLabel>
                         }
                     </FluentStack>
                 </EmptyContent>
@@ -70,10 +70,10 @@
 <FluentDialogFooter>
     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
         <FluentButton OnClick="CancelAsync" Appearance="Appearance.Neutral">
-            Cancel
+            @localizer[L.Common.Cancel]
         </FluentButton>
         <FluentButton OnClick="ConfirmAsync" Appearance="Appearance.Accent" Disabled="@(_selectedFile == null)">
-            Select File
+            @localizer[L.FileSelection.SelectFile]
         </FluentButton>
     </FluentStack>
 </FluentDialogFooter>
@@ -127,7 +127,7 @@
 
             if (!sharedFoldersResult.Success)
             {
-                await ShowErrorAsync(sharedFoldersResult.Message ?? "Failed to load shared folders");
+                await ShowErrorAsync(sharedFoldersResult.Message ?? localizer[L.Error.FailedToLoadSharedFolders]);
                 TreeItems = [];
                 return;
             }

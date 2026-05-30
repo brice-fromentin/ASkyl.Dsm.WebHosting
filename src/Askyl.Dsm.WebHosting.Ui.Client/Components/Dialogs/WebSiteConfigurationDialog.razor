@@ -3,7 +3,10 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Globalization.Resources
 @using Askyl.Dsm.WebHosting.Logging
+@using Microsoft.Extensions.Localization
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -11,25 +14,26 @@
 @inject IDialogService DialogService
 @inject IWebSiteHostingService HostingService
 @inject ILogger<ILogWebSiteConfigurationDialog> Logger
+@inject IStringLocalizer<SharedResource> localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">@(IsEditMode ? "Edit Website" : "Add Website")</FluentLabel>
+    <FluentLabel Typo="Typography.H2">@(IsEditMode ? localizer[L.WebsiteConfig.EditTitle] : localizer[L.WebsiteConfig.AddTitle])</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogBody @onkeydown:Enter="OnEnterKeyAsync">
     <EditForm Model="@Configuration" OnValidSubmit="ConfirmAsync">
         <DataAnnotationsValidator />
         <FluentStack Orientation="Orientation.Vertical">
-            <RealTimeTextField @bind-Value="Configuration.Name" Label="Name" Class="full-size" Autofocus="true" />
+            <RealTimeTextField @bind-Value="Configuration.Name" Label="@localizer[L.WebsiteConfig.NameLabel]" Class="full-size" Autofocus="true" />
             <FluentValidationMessage For="@(() => Configuration.Name)" />
 
             <FluentDivider />
-            <FluentLabel Typo="Typography.H3">Application Settings</FluentLabel>
+            <FluentLabel Typo="Typography.H3">@localizer[L.WebsiteConfig.AppSettingsSection]</FluentLabel>
 
             <FluentStack Orientation="Orientation.Vertical">
-                <FluentLabel>Application Path</FluentLabel>
+                <FluentLabel>@localizer[L.WebsiteConfig.AppPathLabel]</FluentLabel>
                 <FluentStack Orientation="Orientation.Horizontal">
                     <RealTimeTextField @bind-Value="Configuration.ApplicationPath" Class="flex-full-width" />
                     <FluentButton IconStart="@(new IconsRegular20.FolderOpen())" Appearance="Appearance.Outline" OnClick="SelectApplicationPath" Type="ButtonType.Button" />
@@ -38,27 +42,27 @@
             <FluentValidationMessage For="@(() => Configuration.ApplicationPath)" />
             <FluentStack Orientation="Orientation.Horizontal">
                 <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
-                    <RealTimeTextField @bind-Value="Configuration.Environment" Label="Environment" Class="full-size" />
+                    <RealTimeTextField @bind-Value="Configuration.Environment" Label="@localizer[L.WebsiteConfig.EnvironmentLabel]" Class="full-size" />
                     <FluentValidationMessage For="@(() => Configuration.Environment)" />
                 </FluentStack>
                 <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
-                    <RealTimeNumberField @bind-Value="Configuration.InternalPort" Label="Internal Port" Class="full-size" />
+                    <RealTimeNumberField @bind-Value="Configuration.InternalPort" Label="@localizer[L.WebsiteConfig.InternalPortLabel]" Class="full-size" />
                     <FluentValidationMessage For="@(() => Configuration.InternalPort)" />
                 </FluentStack>
             </FluentStack>
-            <RealTimeNumberField @bind-Value="Configuration.ProcessTimeoutSeconds" Label="Shutdown Timeout (seconds)" Class="full-size" />
+            <RealTimeNumberField @bind-Value="Configuration.ProcessTimeoutSeconds" Label="@localizer[L.WebsiteConfig.ShutdownTimeoutLabel]" Class="full-size" />
             <FluentValidationMessage For="@(() => Configuration.ProcessTimeoutSeconds)" />
-            <FluentCheckbox @bind-Value="Configuration.IsEnabled" Label="Enabled" />
-            <FluentCheckbox @bind-Value="Configuration.AutoStart" Label="Auto Start" />
+            <FluentCheckbox @bind-Value="Configuration.IsEnabled" Label="@localizer[L.WebsiteConfig.EnabledLabel]" />
+            <FluentCheckbox @bind-Value="Configuration.AutoStart" Label="@localizer[L.WebsiteConfig.AutoStartLabel]" />
 
             <FluentDivider />
-            <FluentLabel Typo="Typography.H3">Reverse Proxy</FluentLabel>
+            <FluentLabel Typo="Typography.H3">@localizer[L.WebsiteConfig.ReverseProxySection]</FluentLabel>
 
-            <RealTimeTextField @bind-Value="Configuration.HostName" Label="Hostname" Class="full-size" />
+            <RealTimeTextField @bind-Value="Configuration.HostName" Label="@localizer[L.WebsiteConfig.HostnameLabel]" Class="full-size" />
             <FluentValidationMessage For="@(() => Configuration.HostName)" />
             <FluentStack Orientation="Orientation.Horizontal">
                 <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
-                    <FluentSelect TOption="string" @bind-Value="ProtocolProxy" Label="Protocol" Class="full-size">
+                    <FluentSelect TOption="string" @bind-Value="ProtocolProxy" Label="@localizer[L.WebsiteConfig.ProtocolLabel]" Class="full-size">
                         @foreach (var protocol in Enum.GetValues<ProtocolType>())
                         {
                             <FluentOption Value="@(((int)protocol).ToString())">@protocol.ToString()</FluentOption>
@@ -67,19 +71,19 @@
                     <FluentValidationMessage For="@(() => Configuration.Protocol)" />
                 </FluentStack>
                 <FluentStack Orientation="Orientation.Vertical" Class="flex-full-width">
-                    <RealTimeNumberField @bind-Value="Configuration.PublicPort" Label="Public Port" Class="full-size" />
+                    <RealTimeNumberField @bind-Value="Configuration.PublicPort" Label="@localizer[L.WebsiteConfig.PublicPortLabel]" Class="full-size" />
                     <FluentValidationMessage For="@(() => Configuration.PublicPort)" />
                 </FluentStack>
             </FluentStack>
-            <FluentCheckbox @bind-Value="Configuration.EnableHSTS" Label="Enable HSTS" />
+            <FluentCheckbox @bind-Value="Configuration.EnableHSTS" Label="@localizer[L.WebsiteConfig.EnableHSTSLabel]" />
         </FluentStack>
         <div class="fluent-dialog-footer">
             <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
                 <FluentButton OnClick="CancelAsync" Appearance="Appearance.Neutral" Type="ButtonType.Button">
-                    Cancel
+                    @localizer[L.Common.Cancel]
                 </FluentButton>
                 <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">
-                    @(IsEditMode ? "Update" : "Create")
+                    @(IsEditMode ? localizer[L.WebsiteConfig.UpdateButton] : localizer[L.WebsiteConfig.CreateButton])
                 </FluentButton>
             </FluentStack>
         </div>
@@ -163,7 +167,7 @@
         {
             if (String.IsNullOrEmpty(Configuration.ApplicationRealPath))
             {
-                await DialogService.ShowErrorAsync("Application path is required. Please select a valid application path.");
+                await DialogService.ShowErrorAsync(localizer[L.Error.ApplicationPathRequired]);
                 return;
             }
 
@@ -175,7 +179,7 @@
 
             if (!result.Success)
             {
-                await DialogService.ShowErrorAsync($"Failed: {result.Message}");
+                await DialogService.ShowErrorAsync($"{localizer[L.Error.OperationFailed]}: {result.Message}");
                 return;
             }
 

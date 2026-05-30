@@ -17,6 +17,9 @@ public static class L
         public const string Delete = "Delete";
         public const string Refresh = "Refresh";
         public const string Loading = "Loading";
+        public const string Size = "Common_Size";
+        public const string Type = "Common_Type";
+        public const string Modified = "Common_Modified";
     }
 
     /// <summary>Authentication and login page strings.</summary>
@@ -46,6 +49,7 @@ public static class L
         public const string GridColumnFramework = "Home_GridColumnFramework";
         public const string GridColumnInternalPort = "Home_GridColumnInternalPort";
         public const string GridColumnState = "Home_GridColumnState";
+        public const string LoadingWebsites = "Home_LoadingWebsites";
     }
 
     /// <summary>Not found page strings.</summary>
@@ -91,6 +95,33 @@ public static class L
         public const string GridColumnRelease = "AspNetReleases_GridColumnRelease";
     }
 
+    /// <summary>.NET versions dialog strings.</summary>
+    public static class DotnetVersions
+    {
+        public const string DialogTitle = "DotnetVersions_DialogTitle";
+        public const string Searching = "DotnetVersions_Searching";
+        public const string NotFound = "DotnetVersions_NotFound";
+        public const string FailedToLoad = "DotnetVersions_FailedToLoad";
+    }
+
+    /// <summary>Licenses dialog strings.</summary>
+    public static class Licenses
+    {
+        public const string DialogTitle = "Licenses_DialogTitle";
+        public const string Loading = "Licenses_Loading";
+    }
+
+    /// <summary>File selection dialog strings.</summary>
+    public static class FileSelection
+    {
+        public const string DialogTitle = "FileSelection_DialogTitle";
+        public const string SelectFile = "FileSelection_SelectFile";
+        public const string NoFilesFound = "FileSelection_NoFilesFound";
+        public const string SelectFolder = "FileSelection_SelectFolder";
+        public const string Directory = "FileSelection_Directory";
+        public const string File = "FileSelection_File";
+    }
+
     /// <summary>AutoDataGrid control strings.</summary>
     public static class AutoDataGrid
     {
@@ -104,6 +135,8 @@ public static class L
     {
         public const string SharedFolders = "Loading_SharedFolders";
         public const string DirectoryContents = "Loading_DirectoryContents";
+        public const string Installing = "Loading_Installing";
+        public const string Uninstalling = "Loading_Uninstalling";
     }
 
     /// <summary>Error messages displayed to the user (toasts, dialogs, API responses).</summary>

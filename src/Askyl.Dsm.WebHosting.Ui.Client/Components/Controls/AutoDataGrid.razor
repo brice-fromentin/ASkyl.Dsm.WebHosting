@@ -1,4 +1,9 @@
 @using Askyl.Dsm.WebHosting.Constants.Application
+@using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Globalization.Resources
+@using Microsoft.Extensions.Localization
+
+@inject IStringLocalizer<SharedResource> localizer
 @typeparam TItem where TItem : class
 
 <div class="auto-data-grid-content">
@@ -17,7 +22,7 @@
                 {
                     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
                         <FluentProgressRing />
-                        <FluentLabel>Loading items...</FluentLabel>
+                        <FluentLabel>@localizer[L.AutoDataGrid.Loading]</FluentLabel>
                     </FluentStack>
                 }
             </LoadingContent>
@@ -31,7 +36,7 @@
                 {
                     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
                         <FluentIcon Value="@(new IconsRegular16.Info())" />
-                        <FluentLabel>No items found.</FluentLabel>
+                        <FluentLabel>@localizer[L.AutoDataGrid.Empty]</FluentLabel>
                     </FluentStack>
                 }
             </EmptyContent>
@@ -40,7 +45,7 @@
     <div class="auto-data-grid-infos-area">
         <FluentToolbar>
             <FluentSpacer />
-            <FluentLabel>Items : @Items?.Count()</FluentLabel>
+            <FluentLabel>@String.Format(localizer[L.AutoDataGrid.ItemsCount], Items?.Count())</FluentLabel>
             @if (OnReload.HasDelegate)
             {
                 <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />

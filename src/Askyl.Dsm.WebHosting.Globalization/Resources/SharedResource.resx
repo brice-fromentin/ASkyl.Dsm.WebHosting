@@ -81,6 +81,15 @@
   <data name="Loading" xml:space="preserve">
     <value>Loading...</value>
   </data>
+  <data name="Common_Size" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="Common_Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Common_Modified" xml:space="preserve">
+    <value>Modified</value>
+  </data>
 
   <!-- Login -->
   <data name="Login_PageTitle" xml:space="preserve">
@@ -251,6 +260,12 @@
   <data name="Loading_DirectoryContents" xml:space="preserve">
     <value>Loading directory contents...</value>
   </data>
+  <data name="Loading_Installing" xml:space="preserve">
+    <value>Installing...</value>
+  </data>
+  <data name="Loading_Uninstalling" xml:space="preserve">
+    <value>Uninstalling...</value>
+  </data>
 
   <!-- Error -->
   <data name="Error_PlatformNotSupported" xml:space="preserve">
@@ -394,6 +409,53 @@
   </data>
   <data name="Validation_EnvVarValueTooLong" xml:space="preserve">
     <value>Environment variable '{0}' value exceeds maximum length of {1} characters</value>
+  </data>
+
+  <!-- Home Loading -->
+  <data name="Home_LoadingWebsites" xml:space="preserve">
+    <value>Loading websites...</value>
+  </data>
+
+  <!-- DotnetVersions Dialog -->
+  <data name="DotnetVersions_DialogTitle" xml:space="preserve">
+    <value>.NET Versions</value>
+  </data>
+  <data name="DotnetVersions_Searching" xml:space="preserve">
+    <value>Searching for .NET versions...</value>
+  </data>
+  <data name="DotnetVersions_NotFound" xml:space="preserve">
+    <value>No .NET installation found. Make sure .NET is installed.</value>
+  </data>
+  <data name="DotnetVersions_FailedToLoad" xml:space="preserve">
+    <value>Failed to load .NET versions</value>
+  </data>
+
+  <!-- Licenses Dialog -->
+  <data name="Licenses_DialogTitle" xml:space="preserve">
+    <value>Licenses</value>
+  </data>
+  <data name="Licenses_Loading" xml:space="preserve">
+    <value>Loading licenses...</value>
+  </data>
+
+  <!-- FileSelection Dialog -->
+  <data name="FileSelection_DialogTitle" xml:space="preserve">
+    <value>File Selection</value>
+  </data>
+  <data name="FileSelection_SelectFile" xml:space="preserve">
+    <value>Select File</value>
+  </data>
+  <data name="FileSelection_NoFilesFound" xml:space="preserve">
+    <value>No files found in this directory.</value>
+  </data>
+  <data name="FileSelection_SelectFolder" xml:space="preserve">
+    <value>Select a shared folder from the tree to view its contents.</value>
+  </data>
+  <data name="FileSelection_Directory" xml:space="preserve">
+    <value>Directory</value>
+  </data>
+  <data name="FileSelection_File" xml:space="preserve">
+    <value>File</value>
   </data>
 
 </root>

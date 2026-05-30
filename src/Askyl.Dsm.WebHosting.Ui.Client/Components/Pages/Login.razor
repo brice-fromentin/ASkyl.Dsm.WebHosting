@@ -18,26 +18,26 @@
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
-<PageTitle>ADWH - Login</PageTitle>
+<PageTitle>@localizer[L.Login.PageTitle]</PageTitle>
 
 <FluentDialog Modal="true" TrapFocus="true" PreventScroll="true">
     <EditForm Model="@Model" OnValidSubmit="Authenticate">
         <DataAnnotationsValidator />
 
         <FluentDialogHeader>
-            <h2>Authentication (DSM account)</h2>
+            <h2>@localizer[L.Login.DialogTitle]</h2>
         </FluentDialogHeader>
 
         <FluentStack Orientation="Orientation.Vertical">
-            <RealTimeTextField @bind-Value="Model.Login" Label="Login:" Class="full-size" Autofocus="true" Name="username" />
+            <RealTimeTextField @bind-Value="Model.Login" Label="@localizer[L.Login.LoginLabel]" Class="full-size" Autofocus="true" Name="username" />
             <FluentValidationMessage For="(() => Model.Login)" />
-            <RealTimeTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Label="Password:" Class="full-size" Name="password" />
+            <RealTimeTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Label="@localizer[L.Login.PasswordLabel]" Class="full-size" Name="password" />
             <FluentValidationMessage For="(() => Model.Password)" />
-            <RealTimeTextField @bind-Value="Model.OtpCode" Label="OTP:" Class="full-size" Name="otp" />
+            <RealTimeTextField @bind-Value="Model.OtpCode" Label="@localizer[L.Login.OTPLabel]" Class="full-size" Name="otp" />
         </FluentStack>
 
         <FluentDialogFooter>
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="flex-grow: 1;">OK</FluentButton>
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="flex-grow: 1;">@localizer[L.Common.OK]</FluentButton>
         </FluentDialogFooter>
     </EditForm>
 </FluentDialog>
@@ -77,7 +77,7 @@
             return;
         }
 
-        using var worker = this.CreateWorkingState("Authenticating...");
+        using var worker = this.CreateWorkingState(localizer[L.Login.Authenticating]);
 
         var result = await authService.LoginAsync(Model.Login, Model.Password, Model.OtpCode);
 
