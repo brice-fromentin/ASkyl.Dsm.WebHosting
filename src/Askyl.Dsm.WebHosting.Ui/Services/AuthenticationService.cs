@@ -7,7 +7,6 @@ using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Network;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -18,6 +17,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="apiClient">The DSM API client for making authentication calls.</param>
 /// <param name="httpContextAccessor">Access to current HTTP context for session management.</param>
 /// <param name="logger">Logger for tracking authentication operations.</param>
+/// <param name="localizer">Localizer for user-facing strings.</param>
 public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor httpContextAccessor, ILogger<ILogAuthenticationService> logger, IStringLocalizer<SharedResource> localizer) : IAuthenticationService
 {
     /// <inheritdoc/>
@@ -26,7 +26,6 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         using var timer = new OperationTimer(elapsed => logger.LoginDuration(elapsed, login));
 
         logger.LoginStarting(login);
-
         var model = new LoginCredentials(login, password, otpCode);
 
         if (!await apiClient.ConnectAsync(model))
@@ -35,11 +34,18 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
             return AuthenticationResult.CreateNotAuthenticated("Invalid credentials");
         }
 
+        // Best-effort: fetch user preferences (language, date/time format) from SYNO.Core.UserSettings.get
+        await apiClient.FetchUserLanguageAsync();
+
+        // Server resolves culture (user preference or system fallback) and timezone
+        var culture = CodepageToCultureConverter.Convert(apiClient.UserLanguage ?? apiClient.SystemPreferences.Codepage);
+        var timezone = DsmTimezoneToIanaConverter.Convert(apiClient.SystemPreferences.Timezone);
+
         // Store DSM SID and username in server-side session for persistence
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmSessionKey, apiClient.Sid);
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmUsernameKey, login);
         logger.LoginSuccessful(login);
-        return AuthenticationResult.CreateAuthenticated();
+        return AuthenticationResult.CreateAuthenticated(null, culture, timezone);
     }
 
     /// <inheritdoc/>

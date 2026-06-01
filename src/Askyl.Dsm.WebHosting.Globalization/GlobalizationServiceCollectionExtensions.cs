@@ -1,5 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Globalization;

@@ -29,4 +29,6 @@ This project has also the following goals :
     Technical
         - Integration tests for DsmApiClient, FileSystemService, DownloaderService.
         - Blazor UI tests (bUnit).
+        - Better specialized exceptions management.
+        - Better DsmApiClient life cycle.
         - ...

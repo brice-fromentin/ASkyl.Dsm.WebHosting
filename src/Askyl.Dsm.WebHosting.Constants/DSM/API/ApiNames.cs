@@ -50,6 +50,12 @@ public static class ApiNames
     /// </summary>
     public const string CoreUser = "SYNO.Core.User";
 
+    /// <summary>
+    /// Core user settings API for fetching per-user preferences (language, etc.).
+    /// Uses method "get" (v1), no payload required. Only extracts Personal.lang from the massive response.
+    /// </summary>
+    public const string CoreUserSettings = "SYNO.Core.UserSettings";
+
     #endregion
 
     #region AppPortal APIs
@@ -66,7 +72,7 @@ public static class ApiNames
     /// <summary>
     /// Comma-separated list of required API names for API handshake requests.
     /// </summary>
-    public static readonly string RequiredApisJoined = $"{Auth},{FileStationInfo},{FileStationList},{CoreAcl},{CoreUser},{AppPortalReverseProxy}";
+    public static readonly string RequiredApisJoined = $"{Auth},{FileStationInfo},{FileStationList},{CoreAcl},{CoreUser},{CoreUserSettings},{AppPortalReverseProxy}";
 
     #endregion
 }

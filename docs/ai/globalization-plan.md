@@ -40,7 +40,7 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 | **Supported cultures** | Derived from `/etc/synoinfo.conf` `supplang` field | Only shows languages installed on this DSM |
 | **Satellite assemblies** | `loadAllSatelliteResources: true` in `index.html` | .NET 10 native feature — all cultures loaded at startup |
 | **DSM system preferences** | Read from `/etc/synoinfo.conf` at startup (always available, no auth needed) | System codepage, timezone, supported languages |
-| **DSM user preferences** | Best-effort fetch via `SYNO.Core.UserSettings` after login | Per-user language (`Personal.lang`) with system fallback |
+| **DSM user preferences** | Best-effort fetch via `SYNO.Core.UserSettings.get` after login | Per-user language (`Personal.lang`), date/time formats (`Personal.dateFormat`, `Personal.timeFormat`) with `/etc/synoinfo.conf` fallback |
 
 ### 2.2.1 DSM User Preferences Integration
 
@@ -54,21 +54,40 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 | `SYNO.Core.User.list` | Same fields + `description`, `expired`, `2fa_status` | ❌ No |
 | `SYNO.Core.Desktop.SessionData.getjs` | `SynoToken`, `isAdmin`, `user` | ❌ No |
 | `SYNO.Core.System.info` | `codepage` (e.g. `"enu"`), `time_zone` (e.g. `"America/New_York"`) | ⚠️ System-level only |
-| `SYNO.Core.Region.Language` | `codepage` (e.g. `"enu"`), `language` (e.g. `"def"`), `maillang` (e.g. `"enu"`) | ✅ System-level language |
-| `SYNO.Core.Region.NTP` | `timezone` (e.g. `"Amsterdam"`), `date_format` (e.g. `"d/m/Y"`), `time_format` (e.g. `"H:i"`) | ✅ System-level timezone + date/time format |
-| `SYNO.Core.UserSettings` | All user settings including `Personal.lang` (e.g. `"enu"`) | ✅ **Per-user language preference!** |
+| `SYNO.Core.Region.Language` | `codepage` (e.g. `"enu"`), `language` (e.g. `"def"`), `maillang` (e.g. `"enu"`) | ✅ System-level language (not used — `UserSettings` is preferred) |
+| `SYNO.Core.Region.NTP` | `timezone` (e.g. `"Amsterdam"`), `date_format` (e.g. `"d/m/Y"`), `time_format` (e.g. `"H:i"`) | ✅ System-level timezone + date/time format (not used — `UserSettings` is preferred) |
+| `SYNO.Core.UserSettings` | All user settings including `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat` | ✅ **Per-user language + date/time format — used!** (method: `get`, no payload) |
 
 **Verified API responses (from live DSM 7.x instance):**
 
 ```json
-// SYNO.Core.Region.Language (v1, method: get)
+// SYNO.Core.UserSettings (v1, method: get) — NO payload needed
+// Returns ALL user settings (~1400 lines). Only Personal section is relevant:
 {
-  "codepage": "enu",
-  "language": "def",
-  "maillang": "enu"
+  "data": {
+    "Personal": {
+      "lang": "ita",
+      "dateFormat": "Y/m/d",
+      "timeFormat": "h:i a"
+    },
+    "Desktop": { ... },
+    "SYNO.SDS.App.FileStation3.Instance": { ... },
+    // ... 100+ other app-specific settings (ignored)
+  },
+  "success": true
 }
 
-// SYNO.Core.Region.NTP (v3, method: get)
+// SYNO.Core.Region.Language (v1, method: get) — NOT USED (system-level only)
+{
+  "data": {
+    "codepage": "enu",
+    "language": "def",
+    "maillang": "enu"
+  },
+  "success": true
+}
+
+// SYNO.Core.Region.NTP (v3, method: get) — NOT USED (system-level only)
 {
   "timezone": "Amsterdam",
   "date_format": "d/m/Y",
@@ -76,30 +95,14 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
   "timestamp": 1780143170,
   "now": "Sat May 30 14:12:50 2026"
 }
-
-// SYNO.Core.UserSettings (v1, method: apply)
-// Returns ALL user settings (massive response ~1400 lines)
-// Relevant excerpt:
-{
-  "Personal": {
-    "lang": "enu"
-  },
-  "Desktop": { ... },
-  "SYNO.SDS.App.FileStation3.Instance": { ... },
-  // ... 100+ other app-specific settings
-}
 ```
 
 **Key observations:**
-- `SYNO.Core.Region.Language` and `SYNO.Core.Region.NTP` are **system-level** settings (shared by all users)
-- `SYNO.Core.UserSettings` contains **per-user** settings, including `Personal.lang` — this is the per-user language preference!
-- `SYNO.Core.UserSettings` uses method `apply` (not `get`) — it both applies settings AND returns all current settings
-- The response is massive (~1400 lines) containing all app-specific settings (window positions, grid states, etc.)
-- `Personal.lang` uses the same 3-letter codepage format: `"enu"` = en-US, `"fra"` = fr-FR, etc.
-- `codepage` uses 3-letter BCP-47-like codes: `"enu"` = en-US, `"fra"` = fr-FR, `"deu"` = de-DE, etc.
-- `language: "def"` means "default" (follows codepage)
-- `timezone` uses IANA-style names: `"Amsterdam"` (not `"Europe/Amsterdam"`)
-- `date_format` and `time_format` use **PHP-style format strings** (`d/m/Y`, `H:i`)
+- `SYNO.Core.UserSettings.get` (v1) returns **all** user settings (~1400 lines) but only `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat` are needed
+- `SYNO.Core.UserSettings` with method `apply` requires a payload body (error 114) — **method `get` works without payload**
+- `SYNO.Core.Region.Language` and `SYNO.Core.Region.NTP` are **system-level** settings (shared by all users) — not used since `UserSettings` provides per-user data
+- `Personal.lang` uses 3-letter BCP-47-like codes: `"ita"` = it-IT, `"fra"` = fr-FR, `"enu"` = en-US, etc.
+- `Personal.dateFormat` and `Personal.timeFormat` use **PHP-style format strings** (`Y/m/d`, `h:i a`)
 
 **Strategy: Culture resolution (two phases, no localStorage):**
 
@@ -127,31 +130,32 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 **Key design decisions:**
 - **No `localStorage`** — DSM is the single source of truth; no browser persistence needed
 - **`/etc/synoinfo.conf` is always available** — read at app startup before any authentication
-- **`SYNO.Core.UserSettings` is best-effort** — per-user preference is preferred but not required
+- **`SYNO.Core.UserSettings.get` is best-effort** — per-user language + date/time format; not required
+- **Per-user language IS supported** — `Personal.lang` returns the user's language preference
+- **Per-user date/time format IS supported** — `Personal.dateFormat` + `Personal.timeFormat` (PHP-style)
 - **No "first visit" ambiguity** — system settings provide an immediate fallback
 - **User can change language in DSM Control Panel** → change takes effect on next app visit (no sync needed)
 
 **API Version Compatibility (verified from community libraries):**
 
-| API | DSM 5 | DSM 6 | DSM 7 | Methods |
-|---|---|---|---|---|
-| `SYNO.Core.Region.Language` | v1 | v1 | v1 | `get`, `set` |
-| `SYNO.Core.Region.NTP` | v1 | v2 | **v3** | `get`, `set` |
-| `SYNO.Core.Region.NTP.DateTimeFormat` | ✗ | v1 | v1 | `get`, `set` |
-| `SYNO.Core.Region.NTP.Server` | v1 | v1 | v1 | `get`, `set` |
-| `SYNO.Core.UserSettings` | v1 | v1 | v1 | `apply` (your DSM) / `get` + `set` (community libs) |
-| `SYNO.Core.PersonalSettings` | ✗ | ✗ | v1 | `get`, `set` |
+| API | DSM 5 | DSM 6 | DSM 7 | Methods | Used? |
+|---|---|---|---|---|---|
+| `SYNO.Core.UserSettings` | v1 | v1 | v1 | `get` + `set` | ✅ **YES** (method: `get`) |
+| `SYNO.Core.Region.Language` | v1 | v1 | v1 | `get`, `set` | ❌ No (system-level only) |
+| `SYNO.Core.Region.NTP` | v1 | v2 | **v3** | `get`, `set` | ❌ No (system-level only) |
+| `SYNO.Core.PersonalSettings` | ✗ | ✗ | v1 | `get`, `set` | ❌ No (not needed) |
 
-**Method discrepancy for `SYNO.Core.UserSettings`:**
-- Your DSM 7.x instance uses method `apply` for **both reading and writing** (observed in live API calls)
-- Community libraries (N4S4/synology-api) use `get` for reading and `set` for writing
-- The `apply` method may be a DSM 7.x-specific behavior or build-specific quirk
-- **Recommendation:** Use `apply` (as verified on your instance); if it ever fails, fall back to `get`
+**Why `SYNO.Core.UserSettings.get` instead of `SYNO.Core.Region.Language`:**
+- `SYNO.Core.UserSettings` with method `apply` **requires a payload body** — calling without returns error 114
+- `SYNO.Core.UserSettings` with method `get` requires **no payload**, returns all user settings including per-user language + date/time format
+- `SYNO.Core.Region.Language` is system-level only — no per-user override detection
+- **Per-user language IS supported**: `Personal.lang` = user's language preference
+- **Per-user date/time format IS supported**: `Personal.dateFormat` + `Personal.timeFormat` = PHP-style format strings
 
 **Additional related APIs discovered:**
-- `SYNO.Core.PersonalSettings` (DSM 7 only, v1) — simpler per-user settings, alternative to `UserSettings`
-- `SYNO.Core.Region.NTP.DateTimeFormat` — separate API for date/time format (DSM 6+) 
-- `SYNO.Core.Region.NTP.Server` — separate API for enabling/disabling NAS as NTP server
+- `SYNO.Core.PersonalSettings` (DSM 7 only, v1) — simpler per-user settings, not needed since `UserSettings.get` works
+- `SYNO.Core.Region.NTP.DateTimeFormat` — separate API for date/time format (DSM 6+), not needed
+- `SYNO.Core.Region.NTP.Server` — separate API for enabling/disabling NAS as NTP server, not needed
 
 **Documentation sources (unofficial — NO official Synology documentation exists for these APIs):**
 - **[N4S4/synology-api](https://github.com/N4S4/synology-api)** — Python library with [full CoreSystem API docs](https://n4s4.github.io/synology-api/docs/apis/classes/core_system), unit tests showing request/response patterns, actively maintained
@@ -170,44 +174,49 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
    - **Zero additional I/O** — file is already read and parsed; just extract 3 more keys from the existing dictionary
 
 2. **Server-side — User preferences (after auth, best-effort):**
-   - After `AuthenticateAsync()` succeeds, call `SYNO.Core.UserSettings` (v1, method: `apply`) → extracts `Personal.lang` (e.g. `"enu"`)
-   - Non-blocking: if the API call fails, system preferences are used as fallback
+   - After `AuthenticateAsync()` succeeds, call `SYNO.Core.UserSettings.get` (v1, method: `get`) → extracts `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat`
+   - Non-blocking: if the API call fails, system preferences from `/etc/synoinfo.conf` are used as fallback
+   - No payload needed; response is large (~1400 lines) but only 3 fields are extracted
 
 3. **Server-side — Code conversion (DSM → .NET):**
    - All DSM code conversions happen **on the server only** — the WASM client never sees raw DSM codes
    - `CodepageToCultureConverter`: `"enu"` → `"en-US"`, `"fra"` → `"fr-FR"`, etc.
    - `SupplangToCultureConverter`: `"fre"` → `"fr-FR"`, `"ger"` → `"de-DE"`, etc.
    - `DsmTimezoneToIanaConverter`: `"Amsterdam"` → `"Europe/Amsterdam"`, etc.
+   - `PhpDateFormatToDotNetConverter`: `"Y/m/d"` → `"yyyy/MM/dd"`, `"d/m/Y"` → `"dd/MM/yyyy"`, etc.
+   - `PhpTimeFormatToDotNetConverter`: `"H:i"` → `"H:mm"`, `"h:i a"` → `"h:mm tt"`, etc.
 
 4. **Login flow — Enriched AuthenticationResult:**
    - `AuthenticationService.LoginAsync()` fetches UserSettings and converts all codes to .NET format
    - `AuthenticationResult` is enriched with pre-converted culture strings (no separate API endpoint needed):
      ```csharp
-     public string? UserCulture { get; init; }        // "en-US" (from Personal.lang)
-     public string SystemCulture { get; init; } = null!;  // "en-US" (from codepage)
-     public string Timezone { get; init; } = null!;   // "Europe/Amsterdam" (from timezone)
-     public string[] SupportedCultures { get; init; } = null!; // ["en-US","fr-FR",...]
+     public string? Culture { get; init; }            // "en-US" (from Personal.lang or system fallback)
+     public string? Timezone { get; init; }           // "Europe/Amsterdam" (from timezone)
      ```
    - **Eliminates:** `UserPreferencesController`, `GET /user-preferences` endpoint, extra HTTP round-trip
 
 5. **Client-side (`CultureManager`):** Receives pre-converted data from login response:
-   - Priority: `UserCulture` → `SystemCulture` → browser `navigator.language` → `en-US`
+   - Priority: `Culture` (from login response) → browser `navigator.language` → `en-US`
    - No DSM code converters needed on WASM side — just `new CultureInfo(string)`
 
 6. **Login page:** Uses system `codepage` from `DsmSystemPreferences` (available immediately, no API call needed)
 
 **New artifacts needed:**
 - `Askyl.Dsm.WebHosting.Data/Domain/System/DsmSystemPreferences.cs` — domain model for system prefs (raw DSM codes)
-- `Askyl.Dsm.WebHosting.Data/DsmApi/Parameters/Core/UserSettings/CoreUserSettingsParameters.cs` — API: `SYNO.Core.UserSettings`, method: `apply`, version: 1
-- `Askyl.Dsm.WebHosting.Data/DsmApi/Responses/Core/UserSettings/CoreUserSettingsResponse.cs` — minimal response model with `Personal.lang` only
+- `Askyl.Dsm.WebHosting.Data/DsmApi/Parameters/Core/UserSettings/CoreUserSettingsParameters.cs` — API: `SYNO.Core.UserSettings`, method: `get`, version: 1
+- `Askyl.Dsm.WebHosting.Data/DsmApi/Responses/Core/UserSettings/CoreUserSettingsResponse.cs` — response model extracting `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat`
 - `Askyl.Dsm.WebHosting.Tools/Network/CodepageToCultureConverter.cs` — DSM codepage (`"enu"`) → .NET culture name (`"en-US"`)
 - `Askyl.Dsm.WebHosting.Tools/Network/SupplangToCultureConverter.cs` — DSM supplang (`"fre"`) → .NET culture name (`"fr-FR"`)
 - `Askyl.Dsm.WebHosting.Tools/Network/DsmTimezoneToIanaConverter.cs` — DSM timezone (`"Amsterdam"`) → IANA (`"Europe/Amsterdam"`)
+- `Askyl.Dsm.WebHosting.Tools/Network/PhpDateFormatToDotNetConverter.cs` — PHP `"Y/m/d"` → .NET `"yyyy/MM/dd"`
+- `Askyl.Dsm.WebHosting.Tools/Network/PhpTimeFormatToDotNetConverter.cs` — PHP `"H:i"` → .NET `"H:mm"`
 - Add constants to `SystemDefaults.cs`: `KeyCodepage`, `KeyTimezone`, `KeySupportedLanguages`
 - Extend `ReadSettingsAsync()` in `DsmApiClient` to populate `SystemPreferences`
 - Update `DsmApiClient.ConnectAsync()` to fetch UserSettings post-auth (best-effort)
-- **Modify `AuthenticationResult`** to include `UserCulture`, `SystemCulture`, `Timezone`, `SupportedCultures`
+- **Modify `AuthenticationResult`** to include `Culture`, `Timezone`
 - **Modify `AuthenticationService.LoginAsync()`** (server) to convert codes and populate `AuthenticationResult`
+- **Add** `CoreUserSettings` to `RequiredApisJoined` in `ApiNames.cs`
+- **Add** `CoreUserSettings` constant to `ApiNames.cs`
 
 ### 2.3 Resource File Organization
 
@@ -421,36 +430,38 @@ SiteLifecycleManager                ApiResult                     Home.razor
 **All DSM code conversion happens on the server only — WASM never sees raw DSM codes.**
 
 **System preferences (from `/etc/synoinfo.conf`, no auth needed):**
-- [ ] Add constants to `SystemDefaults.cs`: `KeyCodepage = "codepage"`, `KeyTimezone = "timezone"`, `KeySupportedLanguages = "supplang"`
-- [ ] Create `DsmSystemPreferences.cs` domain model in `Data/Domain/System/`:
+- [x] Add constants to `SystemDefaults.cs`: `KeyCodepage = "codepage"`, `KeyTimezone = "timezone"`, `KeySupportedLanguages = "supplang"`
+- [x] Create `DsmSystemPreferences.cs` domain model in `Data/Domain/System/`:
   - `Codepage` (string, e.g. `"enu"`)
   - `Timezone` (string, e.g. `"Amsterdam"`)
-  - `SupportedLanguages` (string[], e.g. `["enu", "cht", "chs", ...]`)
-- [ ] Extend `ReadSettingsAsync()` in `DsmApiClient` to extract `codepage`, `timezone`, `supplang` from the existing dictionary → populate `SystemPreferences` property
+  - `SupportedLanguages` (string, e.g. `"enu,cht,chs,..."`)
+- [x] Extend `ReadSettings()` in `DsmApiClient` to extract `codepage`, `timezone`, `supplang` from the existing dictionary → populate `SystemPreferences` property
   - **Zero additional I/O** — file is already read; just extract 3 more keys
 
 **DSM code converters (server-side, in `Tools/Network/`):**
-- [ ] Create `CodepageToCultureConverter.cs` (DSM codepage `"enu"` → .NET `"en-US"`, `"fra"` → `"fr-FR"`, `"deu"` → `"de-DE"`, `"jpn"` → `"ja-JP"`, `"zht"` → `"zh-TW"`, `"zhs"` → `"zh-CN"`, etc.)
-- [ ] Create `SupplangToCultureConverter.cs` (DSM supplang `"fre"` → .NET `"fr-FR"`, `"ger"` → `"de-DE"`, `"spn"` → `"es-ES"`, `"zht"` → `"zh-TW"`, etc.)
-- [ ] Create `DsmTimezoneToIanaConverter.cs` (DSM `"Amsterdam"` → IANA `"Europe/Amsterdam"`, `"New_York"` → IANA `"America/New_York"`, etc.)
+- [x] Create `CodepageToCultureConverter.cs` (DSM codepage `"enu"` → .NET `"en-US"`, `"fra"` → `"fr-FR"`, `"deu"` → `"de-DE"`, `"jpn"` → `"ja-JP"`, `"zht"` → `"zh-TW"`, `"zhs"` → `"zh-CN"`, etc.)
+- [x] Create `SupplangToCultureConverter.cs` (DSM supplang `"fre"` → .NET `"fr-FR"`, `"ger"` → `"de-DE"`, `"spn"` → `"es-ES"`, `"zht"` → `"zh-TW"`, etc.)
+- [x] Create `DsmTimezoneToIanaConverter.cs` (DSM `"Amsterdam"` → IANA `"Europe/Amsterdam"`, `"New_York"` → IANA `"America/New_York"`, etc.)
+- [x] Create `PhpDateFormatToDotNetConverter.cs` (PHP `"Y/m/d"` → .NET `"yyyy/MM/dd"`, `"d/m/Y"` → .NET `"dd/MM/yyyy"`, etc.)
+- [x] Create `PhpTimeFormatToDotNetConverter.cs` (PHP `"H:i"` → .NET `"H:mm"`, `"h:i a"` → .NET `"h:mm tt"`, etc.)
 
 **User preferences (from API, after auth, best-effort):**
-- [ ] Create `CoreUserSettingsParameters.cs` (API: `SYNO.Core.UserSettings`, method: `apply`, version: 1)
-- [ ] Create `CoreUserSettingsResponse.cs` (minimal response model — only extract `Personal.lang`, ignore the rest of the massive ~1400-line response)
-- [ ] Update `DsmApiClient.ConnectAsync()` to fetch UserSettings after authentication (best-effort, non-blocking)
-- [ ] Add `SystemPreferences` and `UserPreferences` properties to `DsmApiClient`
+- [x] Create `CoreUserSettingsParameters.cs` (API: `SYNO.Core.UserSettings`, method: `get`, version: 1)
+- [x] Create `CoreUserSettingsResponse.cs` (response model — extracts `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat`)
+- [x] Add `UserLanguage`, `UserDateFormat`, `UserTimeFormat` properties to `DsmApiClient`
+- [x] Update `DsmApiClient.FetchUserLanguageAsync()` to populate all three properties from `Personal`
+- [x] Add `CoreUserSettings` to `RequiredApisJoined` in `ApiNames.cs`
+- [x] Add `CoreUserSettings` constant to `ApiNames.cs`
 
 **Enrich AuthenticationResult with pre-converted culture data:**
-- [ ] Modify `AuthenticationResult` to include:
-  - `UserCulture` (string?, e.g. `"en-US"`) — from Personal.lang, converted
-  - `SystemCulture` (string, e.g. `"en-US"`) — from codepage, converted
-  - `Timezone` (string, e.g. `"Europe/Amsterdam"`) — from timezone, converted
-  - `SupportedCultures` (string[], e.g. `["en-US", "fr-FR", "de-DE", ...]`) — from supplang, converted
-- [ ] Modify `AuthenticationService.LoginAsync()` (server) to:
-  - Call `apiClient.GetUserLanguageAsync()` (best-effort)
-  - Convert all DSM codes to .NET format using converters
-  - Return enriched `AuthenticationResult.CreateAuthenticated(userCulture: ..., systemCulture: ..., timezone: ..., supportedCultures: ...)`
-- [ ] Update `AuthenticationService.LoginAsync()` (WASM client proxy) — no changes needed (deserializes new properties automatically)
+- [x] Modify `AuthenticationResult` to include:
+  - `Culture` (string?, e.g. `"en-US"`) — from UserSettings.Personal.lang or system fallback, converted
+  - `Timezone` (string?, e.g. `"Europe/Amsterdam"`) — from timezone, converted
+- [x] Modify `AuthenticationService.LoginAsync()` (server) to:
+  - Call `apiClient.FetchUserLanguageAsync()` (best-effort)
+  - Convert DSM codes to .NET format using converters
+  - Return enriched `AuthenticationResult.CreateAuthenticated(message: ..., culture: ..., timezone: ...)`
+- [x] Update `AuthenticationService.LoginAsync()` (WASM client proxy) — no changes needed (deserializes new properties automatically)
 
 **No separate API endpoint needed — all data flows through the login response.**
 
@@ -469,7 +480,7 @@ SiteLifecycleManager                ApiResult                     Home.razor
   - Uses converters from `Tools/Network/` (server-side only)
 - [ ] Implement `CultureManager` for WASM:
   - Receives pre-converted `AuthenticationResult` from login
-  - Resolution: `UserCulture` → `SystemCulture` → browser `navigator.language` → `en-US`
+  - Resolution: `Culture` (from login response) → browser `navigator.language` → `en-US`
   - No DSM code converters — just `new CultureInfo(string)`
 - [ ] Register `ICultureManager` in both `Program.cs` files
 - [ ] Configure `loadAllSatelliteResources: true` in `wwwroot/index.html`
@@ -917,7 +928,8 @@ public async Task<ApiResult> CallApiAsync()
 | Server messages in API responses | Server uses `IStringLocalizer` → localized strings travel in `.Message` → WASM displays them directly |
 | Template strings with placeholders | Use `_localizer[key, arg1, arg2]` overload for strings like `"Site '{0}' is already running"` |
 | DSM codepage not recognized | `CodepageToCultureConverter` falls back to `"en-US"` for unknown codes; user can override in UI |
-| `SYNO.Core.UserSettings` response is massive (~1400 lines) | Only deserialize `Personal.lang`; use `System.Text.Json` with `PropertyNameCaseInsensitive` and selective property extraction |
+| `SYNO.Core.UserSettings` response is massive (~1400 lines) | Only deserialize `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat`; use `System.Text.Json` with selective property extraction |
+| DSM date/time format uses PHP-style strings (`Y/m/d`, `H:i`) | `PhpDateFormatToDotNetConverter` / `PhpTimeFormatToDotNetConverter` map PHP tokens to .NET equivalents |
 | DSM timezone format (`"Amsterdam"` vs `"Europe/Amsterdam"`) | `CodepageToCultureConverter` maps DSM timezone names to IANA tz database names |
 
 ---
@@ -940,6 +952,8 @@ public async Task<ApiResult> CallApiAsync()
 | 2026-05-30 | Four-tier culture resolution | localStorage → per-user lang → system codepage → browser Accept-Language → en-US |
 | 2026-05-30 | `CodepageToCultureConverter` utility class | DSM uses 3-letter codes (`"enu"`, `"fra"`, `"deu"`) that need mapping to .NET `CultureInfo` names (`"en-US"`, `"fr-FR"`, `"de-DE"`) |
 | 2026-05-30 | Best-effort fetch of DSM prefs | The three APIs may not exist on all DSM versions; failure is non-blocking and falls through to browser Accept-Language |
+| 2026-05-31 | Use `SYNO.Core.UserSettings` with method `get` (not `apply`) | `apply` requires a payload body (error 114); `get` needs no payload and returns all user settings including `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat` |
+| 2026-06-01 | Extract `Personal.dateFormat` and `Personal.timeFormat` from UserSettings | Verified via live API: `Personal` section contains PHP-style format strings (`Y/m/d`, `h:i a`) that need conversion to .NET format equivalents |
 
 ---
 

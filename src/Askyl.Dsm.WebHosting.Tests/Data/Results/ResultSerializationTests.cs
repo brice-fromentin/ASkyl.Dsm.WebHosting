@@ -60,7 +60,7 @@ public class ResultSerializationTests
     public void AuthenticationResult_RoundTrip_DeserializesCorrectly()
     {
         // Arrange
-        var result = AuthenticationResult.CreateAuthenticated("Welcome");
+        var result = AuthenticationResult.CreateAuthenticated("Welcome", "en-US", "UTC");
         var json = JsonSerializer.Serialize(result, JsonOptions);
 
         // Act

@@ -26,6 +26,21 @@ public static class SystemDefaults
     /// </summary>
     public const string KeyExternalHttpsPort = "external_port_dsm_https";
 
+    /// <summary>
+    /// Key name for system codepage (language) in synoinfo.conf (e.g. "enu", "fra").
+    /// </summary>
+    public const string KeyCodepage = "codepage";
+
+    /// <summary>
+    /// Key name for system timezone in synoinfo.conf (e.g. "Amsterdam", "New_York").
+    /// </summary>
+    public const string KeyTimezone = "timezone";
+
+    /// <summary>
+    /// Key name for supported languages in synoinfo.conf (e.g. "enu,cht,chs,krn,tha,ger,fre").
+    /// </summary>
+    public const string KeySupportedLanguages = "supplang";
+
     #endregion
 
     #region Default Values

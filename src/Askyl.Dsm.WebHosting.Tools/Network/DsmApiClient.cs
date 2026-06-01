@@ -6,16 +6,20 @@ using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
+using Askyl.Dsm.WebHosting.Data.Domain.System;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.User;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.User;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.UserSettings;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Info;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.User;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.UserSettings;
+using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -25,19 +29,44 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
-    private string _server = String.Empty;
-    private int _port = SystemDefaults.DefaultHttpsPort;
-    private string _sid = String.Empty;
-
     // Session validation cache
     private bool _sessionValid;
     private DateTime _lastSessionValidation;
 
     public ApiInformationCollection ApiInformations { get; } = new();
 
-    public string Sid => _sid;
+    /// <summary>
+    /// System-level DSM preferences extracted from /etc/synoinfo.conf.
+    /// Populated at construction time by reading the configuration file synchronously.
+    /// </summary>
+    public DsmSystemPreferences SystemPreferences { get; } = ReadSettings(logger);
 
-    public bool IsConnected => !String.IsNullOrEmpty(_sid);
+    /// <summary>
+    /// Session ID (SID) for the current DSM session.
+    /// </summary>
+    public string Sid { get; private set; } = String.Empty;
+
+    /// <summary>
+    /// User's language in DSM codepage format (e.g. "enu").
+    /// Populated after authentication via SYNO.Core.UserSettings.get (best-effort).
+    /// Respects the user's personal override; falls back to system codepage.
+    /// Null if the API call failed or returned no language.
+    /// </summary>
+    public string? UserLanguage { get; private set; }
+
+    /// <summary>
+    /// User's date format in PHP-style format string (e.g. "Y/m/d", "d/m/Y").
+    /// Populated after authentication via SYNO.Core.UserSettings.get (best-effort).
+    /// Null if the API call failed or returned no date format.
+    /// </summary>
+    public string? UserDateFormat { get; private set; }
+
+    /// <summary>
+    /// User's time format in PHP-style format string (e.g. "H:i", "h:i a").
+    /// Populated after authentication via SYNO.Core.UserSettings.get (best-effort).
+    /// Null if the API call failed or returned no time format.
+    /// </summary>
+    public string? UserTimeFormat { get; private set; }
 
     /// <summary>
     /// Sets the session ID directly (for restoring from persisted state).
@@ -45,9 +74,13 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
     /// </summary>
     public void SetSid(string sid)
     {
-        _sid = sid;
+        Sid = sid;
         _httpClient.DefaultRequestHeaders.Remove(NetworkConstants.CookieHeader);
-        _httpClient.DefaultRequestHeaders.Add(NetworkConstants.CookieHeader, NetworkConstants.SsidCookiePrefix + sid);
+
+        if (sid.Length > 0)
+        {
+            _httpClient.DefaultRequestHeaders.Add(NetworkConstants.CookieHeader, NetworkConstants.SsidCookiePrefix + sid);
+        }
     }
 
     /// <summary>
@@ -57,24 +90,23 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
     {
         logger.Disconnecting();
 
-        _sid = String.Empty;
-        _httpClient.DefaultRequestHeaders.Remove(NetworkConstants.CookieHeader);
+        SetSid(String.Empty);
 
         // Clear session validation cache
         _sessionValid = false;
         _lastSessionValidation = DateTime.MinValue;
+
+        // Clear user preferences on disconnect
+        UserLanguage = null;
+        UserDateFormat = null;
+        UserTimeFormat = null;
 
         logger.Disconnected();
     }
 
     public async Task<bool> ConnectAsync(LoginCredentials model)
     {
-        logger.Connecting(_server, _port);
-
-        if (!await ReadSettingsAsync())
-        {
-            return false;
-        }
+        logger.Connecting(SystemPreferences.Server, SystemPreferences.Port);
 
         if (!await HandShakeAsync())
         {
@@ -89,7 +121,6 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
         // Invalidate session cache on new connection
         _sessionValid = false;
         _lastSessionValidation = DateTime.MinValue;
-
         logger.Connected();
 
         return true;
@@ -104,7 +135,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
     /// <returns>True if the session is valid, false if expired or invalid.</returns>
     public async Task<bool> ValidateSessionAsync(string username)
     {
-        if (String.IsNullOrEmpty(_sid))
+        if (String.IsNullOrEmpty(Sid))
         {
             return false;
         }
@@ -135,27 +166,80 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
         return true;
     }
 
-    private async Task<bool> ReadSettingsAsync()
+    private static DsmSystemPreferences ReadSettings(ILogger<ILogDsmApiClient> logger)
     {
         if (!File.Exists(SystemDefaults.ConfigurationFileName))
         {
             logger.ConfigurationFileNotFound(SystemDefaults.ConfigurationFileName);
-            return false;
+            throw new FileNotFoundException("DSM configuration file not found", SystemDefaults.ConfigurationFileName);
         }
 
-        var lines = await File.ReadAllLinesAsync(SystemDefaults.ConfigurationFileName);
+        var lines = File.ReadAllLines(SystemDefaults.ConfigurationFileName);
         var settings = lines.Where(x => x.Contains('='))
-                           .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", String.Empty));
+                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", String.Empty));
 
         logger.ConfigurationLoaded(settings.Count);
-        _server = settings[SystemDefaults.KeyExternalHostIp];
 
-        if (!Int32.TryParse(settings[SystemDefaults.KeyExternalHttpsPort], out _port))
+        var server = GetMandatorySetting(settings, SystemDefaults.KeyExternalHostIp, logger);
+        var codepage = GetMandatorySetting(settings, SystemDefaults.KeyCodepage, logger);
+        var timezone = GetMandatorySetting(settings, SystemDefaults.KeyTimezone, logger);
+        var supportedLanguages = GetMandatorySetting(settings, SystemDefaults.KeySupportedLanguages, logger);
+        var port = Int32.TryParse(settings.TryGetValue(SystemDefaults.KeyExternalHttpsPort, out var p) ? p : null, out var parsedPort) ? parsedPort : SystemDefaults.DefaultHttpsPort;
+
+        return new DsmSystemPreferences(server, port, codepage, timezone, supportedLanguages);
+    }
+
+    private static string GetMandatorySetting(Dictionary<string, string> settings, string key, ILogger<ILogDsmApiClient> logger)
+    {
+        if (!settings.TryGetValue(key, out var value) || value.Length == 0)
         {
-            _port = SystemDefaults.DefaultHttpsPort;
+            logger.MandatorySettingMissing(key);
+            throw new MandatorySettingMissingException(key);
         }
 
-        return true;
+        return value;
+    }
+
+    /// <summary>
+    /// Fetches the user's personal preferences from SYNO.Core.UserSettings.get (best-effort, non-blocking).
+    /// Called after authentication; failure silently falls back to system preferences.
+    /// </summary>
+    /// <remarks>
+    /// The API returns all user settings (~1400 lines). We extract Personal.lang, dateFormat, and timeFormat.
+    /// </remarks>
+    /// <returns>The user's language code in DSM format (e.g. "enu"), or null if unavailable.</returns>
+    public async Task<string?> FetchUserLanguageAsync()
+    {
+        try
+        {
+            var parameters = new CoreUserSettingsParameters(ApiInformations);
+            var response = await ExecuteAsync<CoreUserSettingsResponse>(parameters);
+
+            var personal = response?.Data?.Personal;
+
+            if (personal?.Lang is { Length: > 0 } lang)
+            {
+                UserLanguage = lang;
+            }
+
+            if (personal?.DateFormat is { Length: > 0 } dateFormat)
+            {
+                UserDateFormat = dateFormat;
+            }
+
+            if (personal?.TimeFormat is { Length: > 0 } timeFormat)
+            {
+                UserTimeFormat = timeFormat;
+            }
+
+            return UserLanguage;
+        }
+        catch
+        {
+            // Best-effort: silently ignore failures; system preferences are used as fallback
+        }
+
+        return null;
     }
 
     private async Task<bool> HandShakeAsync()
@@ -163,17 +247,15 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
         logger.HandshakeStarting();
 
         var parameters = new InformationsQueryParameters(ApiInformations);
-
         var result = await ExecuteAsync<ApiInformationResponse>(parameters);
 
-        if (result is null || !result.Success || result.Data is null || result.Data.Count == 0)
+        if (result?.Success != true || result.Data is null || result.Data.Count == 0)
         {
             logger.HandshakeFailure();
             return false;
         }
 
         ApiInformations.Replace(result.Data);
-
         logger.HandshakeSuccess();
 
         return true;
@@ -181,15 +263,8 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
 
     private async Task<bool> AuthenticateAsync(LoginCredentials model)
     {
-        var login = new AuthenticateLogin
-        {
-            Account = model.Login,
-            Password = model.Password,
-            OtpCode = model.OtpCode
-        };
-
+        var login = new AuthenticateLogin(model.Login, model.Password, model.OtpCode);
         var parameters = new AuthLoginParameters(ApiInformations, login);
-
         var response = await ExecuteAsync<AuthLoginResponse>(parameters);
 
         if (response?.Success != true || response.Data is null)
@@ -199,8 +274,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
             return false;
         }
 
-        _sid = response.Data.Sid;
-        _httpClient.DefaultRequestHeaders.Add(NetworkConstants.CookieHeader, NetworkConstants.SsidCookiePrefix + response.Data.Sid);
+        SetSid(response.Data.Sid);
 
         return true;
     }
@@ -210,7 +284,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
     public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
         where R : IApiResponse
     {
-        var url = parameters.BuildUrl(_server, _port);
+        var url = parameters.BuildUrl(SystemPreferences.Server, SystemPreferences.Port);
         var result = parameters.SerializationFormat switch
         {
             SerializationFormats.Form
