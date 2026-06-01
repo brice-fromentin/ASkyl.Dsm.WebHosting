@@ -43,7 +43,7 @@ public class FrameworkManagementService(
             await dotnetVersionService.RefreshCacheAsync();
 
             logger.FrameworkInstalled(version);
-            return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been installed successfully.");
+            return InstallationResult.CreateSuccess(localizer[L.Success.InstallationCompleted]);
         }
         catch (Exception ex)
         {
@@ -84,7 +84,7 @@ public class FrameworkManagementService(
             await dotnetVersionService.RefreshCacheAsync();
 
             logger.FrameworkUninstalled(version);
-            return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been uninstalled successfully.");
+            return InstallationResult.CreateSuccess(localizer[L.Success.UninstallationCompleted]);
         }
         catch (LastReleaseUninstallException ex)
         {

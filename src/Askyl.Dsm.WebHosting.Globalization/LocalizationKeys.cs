@@ -179,6 +179,8 @@ public static class L
         public const string NoApplicationPath = "Error_NoApplicationPath";
         public const string SiteNotFound = "Error_SiteNotFound";
         public const string FailedToSetACL = "Error_FailedToSetACL";
+        public const string NoSessionFound = "Error_NoSessionFound";
+        public const string SessionExpired = "Error_SessionExpired";
     }
 
     /// <summary>Success messages displayed to the user.</summary>
@@ -186,6 +188,7 @@ public static class L
     {
         public const string AuthenticationSuccessful = "Success_AuthenticationSuccessful";
         public const string InstallationCompleted = "Success_InstallationCompleted";
+        public const string LogoutSuccessful = "Success_LogoutSuccessful";
         public const string UninstallationCompleted = "Success_UninstallationCompleted";
     }
 

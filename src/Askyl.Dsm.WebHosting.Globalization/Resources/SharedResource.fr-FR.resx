@@ -379,6 +379,12 @@
   <data name="Error_FailedToSetACL" xml:space="preserve">
     <value>Échec de la configuration des permissions ACL pour {0} : Réussite={1}, Code d'erreur={2}</value>
   </data>
+  <data name="Error_NoSessionFound" xml:space="preserve">
+    <value>Aucune session trouvée</value>
+  </data>
+  <data name="Error_SessionExpired" xml:space="preserve">
+    <value>Session expirée sur le serveur</value>
+  </data>
 
   <!-- Success -->
   <data name="Success_AuthenticationSuccessful" xml:space="preserve">
@@ -386,6 +392,9 @@
   </data>
   <data name="Success_InstallationCompleted" xml:space="preserve">
     <value>Installation terminée avec succès</value>
+  </data>
+  <data name="Success_LogoutSuccessful" xml:space="preserve">
+    <value>Déconnexion réussie</value>
   </data>
   <data name="Success_UninstallationCompleted" xml:space="preserve">
     <value>Désinstallation terminée avec succès</value>

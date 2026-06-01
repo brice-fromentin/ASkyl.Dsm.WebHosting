@@ -151,7 +151,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (response?.Success != true || response.Data?.TaskId is null)
         {
             logger.FailedToSetAclPermissions(path, response?.Success, response?.Error?.Code);
-            return ApiResult.CreateFailure($"Failed to set ACL permissions for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}");
+            return ApiResult.CreateFailure(localizer[L.Error.FailedToSetACL, path, response?.Success ?? false, response?.Error?.Code ?? 0]);
         }
 
         logger.AclPermissionsSet(path, response.Data.TaskId);

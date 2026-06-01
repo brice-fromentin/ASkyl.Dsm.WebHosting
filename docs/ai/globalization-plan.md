@@ -1,6 +1,6 @@
 # Globalization (Multi-Language) Plan
 
-## Status: Planning
+## Status: In Progress (Phase 6 next)
 
 ---
 
@@ -24,6 +24,7 @@
 A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing strings and localization infrastructure.
 
 **Rationale:**
+
 - **Separation of concerns**: UI projects (`Ui`, `Ui.Client`) don't manage localization — they consume it
 - **Shared resource files**: Server and WASM use the same `.resx` files → consistent messages across HTTP API boundary
 - **Zero project references**: `Globalization` depends only on `Microsoft.Extensions.Localization` (NuGet)
@@ -44,7 +45,7 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 
 ### 2.2.1 DSM User Preferences Integration
 
-**Problem:** The application runs on a Synology NAS where each DSM user has configured language, date/time format, and timezone preferences. We want to honor these preferences by default rather than forcing English.
+**Problem:** The application runs on a Synology NAS where each DSM user has configured language, date/time format, and timezone preferences. We want to honor these by default rather than forcing English.
 
 **Research findings:**
 
@@ -98,6 +99,7 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 ```
 
 **Key observations:**
+
 - `SYNO.Core.UserSettings.get` (v1) returns **all** user settings (~1400 lines) but only `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat` are needed
 - `SYNO.Core.UserSettings` with method `apply` requires a payload body (error 114) — **method `get` works without payload**
 - `SYNO.Core.Region.Language` and `SYNO.Core.Region.NTP` are **system-level** settings (shared by all users) — not used since `UserSettings` provides per-user data
@@ -106,7 +108,7 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 
 **Strategy: Culture resolution (two phases, no localStorage):**
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │                    Login Page                                 │
 │  (System settings loaded from /etc/synoinfo.conf ✅)          │
@@ -128,6 +130,7 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 ```
 
 **Key design decisions:**
+
 - **No `localStorage`** — DSM is the single source of truth; no browser persistence needed
 - **`/etc/synoinfo.conf` is always available** — read at app startup before any authentication
 - **`SYNO.Core.UserSettings.get` is best-effort** — per-user language + date/time format; not required
@@ -146,6 +149,7 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 | `SYNO.Core.PersonalSettings` | ✗ | ✗ | v1 | `get`, `set` | ❌ No (not needed) |
 
 **Why `SYNO.Core.UserSettings.get` instead of `SYNO.Core.Region.Language`:**
+
 - `SYNO.Core.UserSettings` with method `apply` **requires a payload body** — calling without returns error 114
 - `SYNO.Core.UserSettings` with method `get` requires **no payload**, returns all user settings including per-user language + date/time format
 - `SYNO.Core.Region.Language` is system-level only — no per-user override detection
@@ -153,13 +157,15 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 - **Per-user date/time format IS supported**: `Personal.dateFormat` + `Personal.timeFormat` = PHP-style format strings
 
 **Additional related APIs discovered:**
+
 - `SYNO.Core.PersonalSettings` (DSM 7 only, v1) — simpler per-user settings, not needed since `UserSettings.get` works
 - `SYNO.Core.Region.NTP.DateTimeFormat` — separate API for date/time format (DSM 6+), not needed
 - `SYNO.Core.Region.NTP.Server` — separate API for enabling/disabling NAS as NTP server, not needed
 
 **Documentation sources (unofficial — NO official Synology documentation exists for these APIs):**
-- **[N4S4/synology-api](https://github.com/N4S4/synology-api)** — Python library with [full CoreSystem API docs](https://n4s4.github.io/synology-api/docs/apis/classes/core_system), unit tests showing request/response patterns, actively maintained
-- **[mib1185/py-synologydsm-api](https://github.com/mib1185/py-synologydsm-api)** — Home Assistant library with API version info across DSM 5/6/7 (source: [const_7_api_info.py](https://github.com/mib1185/py-synologydsm-api/tree/master/tests/api_data/dsm_7/const_7_api_info.py))
+
+- **[N4S4/synology-api](https://github.com/N4S4/synology-api)** — Python library with full CoreSystem API docs, unit tests showing request/response patterns
+- **[mib1185/py-synologydsm-api](https://github.com/mib1185/py-synologydsm-api)** — Home Assistant library with API version info across DSM 5/6/7
 - **[pmilano1/synology-dsm-api](https://github.com/pmilano1/synology-dsm-api)** — Comprehensive API documentation repository
 - Synology only publishes the [DSM Login Web API Guide](https://kb.synology.com/en-us/DG/DSM_Login_Web_API_Guide/2) (authentication only) — all Core API knowledge is community reverse-engineered
 
@@ -189,10 +195,12 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 4. **Login flow — Enriched AuthenticationResult:**
    - `AuthenticationService.LoginAsync()` fetches UserSettings and converts all codes to .NET format
    - `AuthenticationResult` is enriched with pre-converted culture strings (no separate API endpoint needed):
+
      ```csharp
      public string? Culture { get; init; }            // "en-US" (from Personal.lang or system fallback)
      public string? Timezone { get; init; }           // "Europe/Amsterdam" (from timezone)
      ```
+
    - **Eliminates:** `UserPreferencesController`, `GET /user-preferences` endpoint, extra HTTP round-trip
 
 5. **Client-side (`CultureManager`):** Receives pre-converted data from login response:
@@ -202,6 +210,7 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 6. **Login page:** Uses system `codepage` from `DsmSystemPreferences` (available immediately, no API call needed)
 
 **New artifacts needed:**
+
 - `Askyl.Dsm.WebHosting.Data/Domain/System/DsmSystemPreferences.cs` — domain model for system prefs (raw DSM codes)
 - `Askyl.Dsm.WebHosting.Data/DsmApi/Parameters/Core/UserSettings/CoreUserSettingsParameters.cs` — API: `SYNO.Core.UserSettings`, method: `get`, version: 1
 - `Askyl.Dsm.WebHosting.Data/DsmApi/Responses/Core/UserSettings/CoreUserSettingsResponse.cs` — response model extracting `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat`
@@ -220,7 +229,7 @@ A new assembly `Askyl.Dsm.WebHosting.Globalization` will own all user-facing str
 
 ### 2.3 Resource File Organization
 
-```
+```text
 Askyl.Dsm.WebHosting.Globalization/
 ├── Resources/
 │   ├── SharedResource.resx            # Default (en-US) — fallback
@@ -231,6 +240,7 @@ Askyl.Dsm.WebHosting.Globalization/
 ```
 
 **Naming Convention:**
+
 - Keys use `PascalCase`, grouped by domain prefix:
   - `Login_PageTitle`, `Login_DialogTitle`, `Login_LoginLabel`
   - `Home_PageTitle`, `Home_AddButton`, `Home_EditButton`
@@ -240,7 +250,7 @@ Askyl.Dsm.WebHosting.Globalization/
 
 ### 2.4 Dependency Graph (After)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────┐
 │              Askyl.Dsm.WebHosting.Globalization           │
 │  (NuGet: Microsoft.Extensions.Localization only)         │
@@ -279,7 +289,8 @@ Askyl.Dsm.WebHosting.Globalization/
 ### 2.5 Message Flow (Before vs After)
 
 **Before (hardcoded, unlocalizable):**
-```
+
+```text
 Server (Ui)                          HTTP API                      WASM (Ui.Client)
 ─────────────                       ──────────                    ──────────────────
 SiteLifecycleManager                ApiResult                     Home.razor
@@ -289,7 +300,8 @@ SiteLifecycleManager                ApiResult                     Home.razor
 ```
 
 **After (localized end-to-end):**
-```
+
+```text
 Server (Ui)                          HTTP API                      WASM (Ui.Client)
 ─────────────                       ──────────                    ──────────────────
 SiteLifecycleManager                ApiResult                     Home.razor
@@ -358,6 +370,7 @@ SiteLifecycleManager                ApiResult                     Home.razor
   - `ValidationConstants` now only contains numeric limits (`EnvVarKeyMaxLength`, `EnvVarValueMaxLength`)
 
 > **Bug fixes discovered:**
+>
 > - `SharedResource.cs` was `static class` → caused `CS0718` (can't use static as generic type arg). Fixed to `sealed class`.
 > - `AddGlobalization()` registered `IStringLocalizer<SharedResource>` explicitly but `AddLocalization()` factory already handles this. Simplified to just `AddLocalization()`.
 > - `options.ResourcesPath = "Resources"` caused localizer to look for resources in wrong path. Removed — default behavior discovers by full type name.
@@ -397,7 +410,8 @@ SiteLifecycleManager                ApiResult                     Home.razor
 - [x] Both `Program.cs` files: Added `builder.Services.AddGlobalization()` call + using directive
 
 > **Bug fixes discovered:**
-> - `Home.razor` had `ShowSafeErrorToast()` calling `WebUtility.HtmlEncode()` before `ToastService.ShowError()`. Blazor already auto-encodes, causing double encoding (`'` → `&#39;` → displayed as literal `&#39;`). Fixed by removing manual encoding.
+>
+> - Home.razor: removed double HTML encoding in ShowSafeErrorToast (Blazor auto-encodes)
 > - `SiteLifecycleManagerTests.cs`: Added `Mock<IStringLocalizer<SharedResource>>` — all 21 tests pass.
 
 ### Phase 5: UI Components Localization (`.razor` files) ✅ Done
@@ -405,7 +419,7 @@ SiteLifecycleManager                ApiResult                     Home.razor
 - [x] Localize `Pages/Login.razor` — PageTitle, dialog title, labels (Login/Password/OTP), OK button, authenticating message
 - [x] Localize `Pages/Home.razor` — PageTitle, toolbar buttons (Add/Edit/Delete/.NET Version/ASP.NET Online/Licenses/Download Logs/Logout), grid column titles, all toast/loading messages
 - [x] Localize `Pages/NotFound.razor` — PageTitle, content text
-- [x] Localize `Dialogs/WebSiteConfigurationDialog.razor` — Dialog title, all labels (Name, Application Path, Environment, Internal Port, Shutdown Timeout, Enabled, Auto Start, Hostname, Protocol, Public Port, Enable HSTS), section headers, buttons (Cancel/Update/Create), error messages
+- [x] Localize Dialogs/WebSiteConfigurationDialog.razor — Dialog title, all labels, section headers, buttons, error messages
 - [x] Localize `Dialogs/AspNetReleasesDialog.razor` — Dialog title, channel label, grid columns (Version/Installed/Security/Release), action button text, install/uninstall messages, error messages
 - [x] Localize `Dialogs/FileSelectionDialog.razor` — Dialog title, grid columns (Name/Size/Type/Modified), empty state messages, buttons (Cancel/Select File), error messages
 - [x] Localize `Dialogs/DotnetVersionsDialog.razor` — Dialog title, searching/loading message, "not found" message, error message
@@ -416,13 +430,13 @@ SiteLifecycleManager                ApiResult                     Home.razor
 - [x] `Controls/RealTimeTextField.razor` — No user-facing strings (label passed via parameter)
 
 > **New keys added:**
+>
 > - `Common_Size`, `Common_Type`, `Common_Modified`
 > - `Loading_Installing`, `Loading_Uninstalling`
 > - `Home_LoadingWebsites`
 > - `DotnetVersions_DialogTitle`, `DotnetVersions_Searching`, `DotnetVersions_NotFound`, `DotnetVersions_FailedToLoad`
 > - `Licenses_DialogTitle`, `Licenses_Loading`
 > - `FileSelection_DialogTitle`, `FileSelection_SelectFile`, `FileSelection_NoFilesFound`, `FileSelection_SelectFolder`, `FileSelection_Directory`, `FileSelection_File`
-
 > **Build:** zero errors, zero warnings
 
 ### Phase 5: DSM System & User Preferences Integration (Server-Side)
@@ -430,6 +444,7 @@ SiteLifecycleManager                ApiResult                     Home.razor
 **All DSM code conversion happens on the server only — WASM never sees raw DSM codes.**
 
 **System preferences (from `/etc/synoinfo.conf`, no auth needed):**
+
 - [x] Add constants to `SystemDefaults.cs`: `KeyCodepage = "codepage"`, `KeyTimezone = "timezone"`, `KeySupportedLanguages = "supplang"`
 - [x] Create `DsmSystemPreferences.cs` domain model in `Data/Domain/System/`:
   - `Codepage` (string, e.g. `"enu"`)
@@ -439,13 +454,15 @@ SiteLifecycleManager                ApiResult                     Home.razor
   - **Zero additional I/O** — file is already read; just extract 3 more keys
 
 **DSM code converters (server-side, in `Tools/Network/`):**
-- [x] Create `CodepageToCultureConverter.cs` (DSM codepage `"enu"` → .NET `"en-US"`, `"fra"` → `"fr-FR"`, `"deu"` → `"de-DE"`, `"jpn"` → `"ja-JP"`, `"zht"` → `"zh-TW"`, `"zhs"` → `"zh-CN"`, etc.)
+
+- [x] Create CodepageToCultureConverter.cs (DSM codepage to .NET culture: enu→en-US, fra→fr-FR, etc.)
 - [x] Create `SupplangToCultureConverter.cs` (DSM supplang `"fre"` → .NET `"fr-FR"`, `"ger"` → `"de-DE"`, `"spn"` → `"es-ES"`, `"zht"` → `"zh-TW"`, etc.)
 - [x] Create `DsmTimezoneToIanaConverter.cs` (DSM `"Amsterdam"` → IANA `"Europe/Amsterdam"`, `"New_York"` → IANA `"America/New_York"`, etc.)
 - [x] Create `PhpDateFormatToDotNetConverter.cs` (PHP `"Y/m/d"` → .NET `"yyyy/MM/dd"`, `"d/m/Y"` → .NET `"dd/MM/yyyy"`, etc.)
 - [x] Create `PhpTimeFormatToDotNetConverter.cs` (PHP `"H:i"` → .NET `"H:mm"`, `"h:i a"` → .NET `"h:mm tt"`, etc.)
 
 **User preferences (from API, after auth, best-effort):**
+
 - [x] Create `CoreUserSettingsParameters.cs` (API: `SYNO.Core.UserSettings`, method: `get`, version: 1)
 - [x] Create `CoreUserSettingsResponse.cs` (response model — extracts `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat`)
 - [x] Add `UserLanguage`, `UserDateFormat`, `UserTimeFormat` properties to `DsmApiClient`
@@ -454,6 +471,7 @@ SiteLifecycleManager                ApiResult                     Home.razor
 - [x] Add `CoreUserSettings` constant to `ApiNames.cs`
 
 **Enrich AuthenticationResult with pre-converted culture data:**
+
 - [x] Modify `AuthenticationResult` to include:
   - `Culture` (string?, e.g. `"en-US"`) — from UserSettings.Personal.lang or system fallback, converted
   - `Timezone` (string?, e.g. `"Europe/Amsterdam"`) — from timezone, converted
@@ -486,7 +504,29 @@ SiteLifecycleManager                ApiResult                     Home.razor
 - [ ] Configure `loadAllSatelliteResources: true` in `wwwroot/index.html`
 - [ ] Wire `Login.razor` to call `CultureManager.InitializeFromLoginAsync(result)` after successful login
 
-### Phase 7: Language Selector UI
+### Phase 7: FluentValidation Migration (Localized Validation Messages)
+
+**Problem:** DataAnnotations [Required(ErrorMessage = "...")] requires compile-time constant strings.
+
+**Solution:** Replace DataAnnotations with FluentValidation — industry-standard approach that injects `IStringLocalizer` at runtime for full localization.
+
+**Why Phase 7 (not earlier):** Depends on Phase 6 (Culture Manager) so IStringLocalizer respects user culture.
+
+- [ ] Add NuGet: `FluentValidation`, `FluentValidation.AspNetCore` to `Ui` project
+- [ ] Create `WebSiteConfigurationValidator.cs` in `Ui/Validators/`:
+  - Inject `IStringLocalizer<SharedResource>`
+  - Rules: `Name` (required), `ApplicationPath` (required), `InternalPort` (required, range), `Environment` (required), `ProcessTimeoutSeconds` (range), `HostName` (required), `PublicPort` (required)
+  - Messages use `localizer[L.Validation.*]` keys
+- [ ] Register validators: `builder.Services.AddFluentValidationAutoConfiguration()` in `Ui/Program.cs`
+- [ ] Replace `<DataAnnotationsValidator />` with `<FluentValidationValidator />` in `WebSiteConfigurationDialog.razor`
+- [ ] Remove user-facing validation error messages from `WebSiteConstants.cs` (keep numeric limits: `MinWebApplicationPort`, `MaxWebApplicationPort`, etc.)
+- [ ] Add missing validation keys to `LocalizationKeys.cs` and both `.resx` files:
+  - `Validation_SiteNameRequired`, `Validation_SiteNameLength`, `Validation_ApplicationPathRequired`
+  - `Validation_PortRange`, `Validation_ProcessTimeoutRange`, `Validation_EnvironmentRequired`, `Validation_HostNameRequired`
+- [ ] Add French translations for all new validation keys
+- [ ] **Not migrated:** `RuntimeConstants` error strings in `DownloaderService` (Tools) — internal exceptions caught and converted to `L.Error.OperationFailed`
+
+### Phase 8: Language Selector UI
 
 - [ ] Add language selector dropdown to `MainLayout.razor` header
 - [ ] Populate dropdown from `ICultureManager.SupportedCultures` (derived from `supplang`)
@@ -495,19 +535,20 @@ SiteLifecycleManager                ApiResult                     Home.razor
 - [ ] Trigger component re-render on culture change (event-based)
 - [ ] **No localStorage** — selection is session-only; changing language in DSM Control Panel takes precedence on next visit
 
-### Phase 8: Culture-Aware Formatting
+### Phase 9: Culture-Aware Formatting
 
 - [ ] Ensure dates render per culture (FluentUI date components)
 - [ ] Ensure numbers render per culture
 - [ ] Verify pluralization rules work per culture
 
-### Phase 9: Testing & Validation
+### Phase 10: Testing & Validation
 
 - [ ] Test language switching at runtime (no reload)
 - [ ] Test persistence across page reloads
 - [ ] Test fallback to English for missing translations
 - [ ] Test browser culture detection on first visit
 - [ ] Test server-side messages are localized in API responses
+- [ ] Test FluentValidation messages are localized (French)
 - [ ] Build passes with no warnings
 - [ ] Format passes (`dotnet format`)
 
@@ -746,7 +787,7 @@ SiteLifecycleManager                ApiResult                     Home.razor
 
 ### 5.1 Globalization Assembly Structure
 
-```
+```text
 Askyl.Dsm.WebHosting.Globalization/
 ├── Askyl.Dsm.WebHosting.Globalization.csproj
 │   ├── <TargetFramework>net10.0</TargetFramework>
@@ -881,6 +922,7 @@ public interface ICultureManager
 ### 5.8 Resource Access Patterns
 
 **In `.razor` files:**
+
 ```csharp
 @inject IStringLocalizer<SharedResource> T
 
@@ -889,6 +931,7 @@ public interface ICultureManager
 ```
 
 **In C# services (server-side, for API response messages):**
+
 ```csharp
 private readonly IStringLocalizer<SharedResource> _localizer;
 
@@ -904,6 +947,7 @@ public ApiResult DoSomething()
 ```
 
 **In C# services (WASM, for fallback messages):**
+
 ```csharp
 private readonly IStringLocalizer<SharedResource> _localizer;
 

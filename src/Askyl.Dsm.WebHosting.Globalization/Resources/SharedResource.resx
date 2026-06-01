@@ -379,6 +379,12 @@
   <data name="Error_FailedToSetACL" xml:space="preserve">
     <value>Failed to set ACL permissions for {0}: Success={1}, ErrorCode={2}</value>
   </data>
+  <data name="Error_NoSessionFound" xml:space="preserve">
+    <value>No session found</value>
+  </data>
+  <data name="Error_SessionExpired" xml:space="preserve">
+    <value>Session expired on server</value>
+  </data>
 
   <!-- Success -->
   <data name="Success_AuthenticationSuccessful" xml:space="preserve">
@@ -386,6 +392,9 @@
   </data>
   <data name="Success_InstallationCompleted" xml:space="preserve">
     <value>Installation completed successfully</value>
+  </data>
+  <data name="Success_LogoutSuccessful" xml:space="preserve">
+    <value>Logout successful</value>
   </data>
   <data name="Success_UninstallationCompleted" xml:space="preserve">
     <value>Uninstallation completed successfully</value>

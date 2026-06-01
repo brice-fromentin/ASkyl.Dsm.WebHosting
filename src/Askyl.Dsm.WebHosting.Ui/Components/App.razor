@@ -23,7 +23,13 @@
 
 <body>
     <Routes @rendermode="@wasm" />
-    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["_framework/blazor.web.js"]" autostart="false"></script>
+    <script>
+        Blazor.start({
+            loadAllGlobalizationData: true,
+            loadAllSatelliteResources: true
+        });
+    </script>
 </body>
 
 </html>

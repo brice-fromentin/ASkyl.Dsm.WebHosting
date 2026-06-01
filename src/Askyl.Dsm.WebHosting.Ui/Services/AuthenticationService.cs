@@ -31,7 +31,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         if (!await apiClient.ConnectAsync(model))
         {
             logger.LoginFailed(login);
-            return AuthenticationResult.CreateNotAuthenticated("Invalid credentials");
+            return AuthenticationResult.CreateNotAuthenticated(localizer[L.Error.AuthenticationFailed]);
         }
 
         // Best-effort: fetch user preferences (language, date/time format) from SYNO.Core.UserSettings.get
@@ -61,7 +61,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmUsernameKey);
             await apiClient.DisconnectAsync();
             logger.UserLoggedOut();
-            return ApiResult.CreateSuccess("Logout successful");
+            return ApiResult.CreateSuccess(localizer[L.Success.LogoutSuccessful]);
         }
         catch (Exception ex)
         {
@@ -80,7 +80,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
 
         if (String.IsNullOrEmpty(sessionId) || String.IsNullOrEmpty(username))
         {
-            return ApiResultBool.CreateSuccess(false, "No session found");
+            return ApiResultBool.CreateSuccess(false, localizer[L.Error.NoSessionFound]);
         }
 
         if (!await apiClient.ValidateSessionAsync(username))
@@ -92,7 +92,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmUsernameKey);
             logger.SessionInvalidated();
 
-            return ApiResultBool.CreateSuccess(false, "Session expired on server");
+            return ApiResultBool.CreateSuccess(false, localizer[L.Error.SessionExpired]);
         }
 
         logger.SessionValidationSuccess(ApplicationConstants.SessionValidationTtlMinutes);
