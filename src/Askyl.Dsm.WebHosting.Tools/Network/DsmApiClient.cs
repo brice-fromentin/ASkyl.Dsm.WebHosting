@@ -47,9 +47,9 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
     public string Sid { get; private set; } = String.Empty;
 
     /// <summary>
-    /// User's language in DSM codepage format (e.g. "enu").
+    /// User's language in DSM format (e.g. "enu", "fra").
     /// Populated after authentication via SYNO.Core.UserSettings.get (best-effort).
-    /// Respects the user's personal override; falls back to system codepage.
+    /// Returns "def" if the user has not set a personal language preference.
     /// Null if the API call failed or returned no language.
     /// </summary>
     public string? UserLanguage { get; private set; }
@@ -181,12 +181,10 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
         logger.ConfigurationLoaded(settings.Count);
 
         var server = GetMandatorySetting(settings, SystemDefaults.KeyExternalHostIp, logger);
-        var codepage = GetMandatorySetting(settings, SystemDefaults.KeyCodepage, logger);
-        var timezone = GetMandatorySetting(settings, SystemDefaults.KeyTimezone, logger);
-        var supportedLanguages = GetMandatorySetting(settings, SystemDefaults.KeySupportedLanguages, logger);
+        var language = settings.TryGetValue(SystemDefaults.KeyLanguage, out var lang) && lang.Length > 0 ? lang : "def";
         var port = Int32.TryParse(settings.TryGetValue(SystemDefaults.KeyExternalHttpsPort, out var p) ? p : null, out var parsedPort) ? parsedPort : SystemDefaults.DefaultHttpsPort;
 
-        return new DsmSystemPreferences(server, port, codepage, timezone, supportedLanguages);
+        return new DsmSystemPreferences(server, port, language);
     }
 
     private static string GetMandatorySetting(Dictionary<string, string> settings, string key, ILogger<ILogDsmApiClient> logger)

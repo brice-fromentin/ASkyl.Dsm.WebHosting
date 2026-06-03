@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Askyl.Dsm.WebHosting.Tools.Network;
+namespace Askyl.Dsm.WebHosting.Tools.Converters;
 
 /// <summary>
 /// Converts PHP-style date format strings (used by DSM) to .NET format strings.

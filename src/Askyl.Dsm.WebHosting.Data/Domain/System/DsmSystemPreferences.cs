@@ -2,19 +2,15 @@ namespace Askyl.Dsm.WebHosting.Data.Domain.System;
 
 /// <summary>
 /// System-level DSM preferences extracted from /etc/synoinfo.conf.
-/// Contains raw DSM codes (codepage, timezone, supported languages) before conversion to .NET format.
+/// Contains raw DSM codes (language) before conversion to .NET format.
 /// </summary>
 /// <param name="server">External host IP from configuration.</param>
 /// <param name="port">External HTTPS port from configuration.</param>
-/// <param name="codepage">System codepage (e.g. "enu").</param>
-/// <param name="timezone">System timezone (e.g. "Amsterdam").</param>
-/// <param name="supportedLanguages">Comma-separated supported language codes (e.g. "enu,fra,deu").</param>
+/// <param name="language">System language (e.g. "def" for default browser language, or a specific code).</param>
 public sealed class DsmSystemPreferences(
     string server,
     int port,
-    string codepage,
-    string timezone,
-    string supportedLanguages)
+    string language)
 {
     /// <summary>
     /// External host IP address from /etc/synoinfo.conf.
@@ -27,17 +23,8 @@ public sealed class DsmSystemPreferences(
     public int Port { get; init; } = port;
 
     /// <summary>
-    /// System codepage in DSM format (e.g. "enu" = en-US, "fra" = fr-FR).
+    /// System language in DSM format (e.g. "def" for default browser language, or a specific code).
+    /// When "def", the browser language should be used as fallback.
     /// </summary>
-    public string Codepage { get; init; } = codepage;
-
-    /// <summary>
-    /// System timezone in DSM format (e.g. "Amsterdam", "New_York").
-    /// </summary>
-    public string Timezone { get; init; } = timezone;
-
-    /// <summary>
-    /// Comma-separated list of supported language codes in DSM format (e.g. "enu,cht,chs,krn,tha,ger,fre").
-    /// </summary>
-    public string SupportedLanguages { get; init; } = supportedLanguages;
+    public string Language { get; init; } = language;
 }

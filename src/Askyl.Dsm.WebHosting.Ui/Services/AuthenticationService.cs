@@ -1,10 +1,12 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Converters;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Microsoft.Extensions.Localization;
@@ -37,15 +39,13 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         // Best-effort: fetch user preferences (language, date/time format) from SYNO.Core.UserSettings.get
         await apiClient.FetchUserLanguageAsync();
 
-        // Server resolves culture (user preference or system fallback) and timezone
-        var culture = CodepageToCultureConverter.Convert(apiClient.UserLanguage ?? apiClient.SystemPreferences.Codepage);
-        var timezone = DsmTimezoneToIanaConverter.Convert(apiClient.SystemPreferences.Timezone);
+        var culture = ResolveCulture(apiClient);
 
         // Store DSM SID and username in server-side session for persistence
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmSessionKey, apiClient.Sid);
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmUsernameKey, login);
         logger.LoginSuccessful(login);
-        return AuthenticationResult.CreateAuthenticated(null, culture, timezone);
+        return AuthenticationResult.CreateAuthenticated(null, culture);
     }
 
     /// <inheritdoc/>
@@ -97,5 +97,21 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
 
         logger.SessionValidationSuccess(ApplicationConstants.SessionValidationTtlMinutes);
         return ApiResultBool.CreateSuccess(true);
+    }
+
+    /// <summary>
+    /// Resolves culture from user preferences.
+    /// UserSettings.Personal.lang already resolves user override vs. system fallback.
+    /// If "def", let WASM use browser navigator.language.
+    /// </summary>
+    private static string ResolveCulture(DsmApiClient apiClient)
+    {
+        // UserSettings.Personal.lang handles user vs. system resolution server-side
+        // Only skip to browser fallback if explicitly "def"
+        string? cultureCode = apiClient.UserLanguage is { Length: > 0 } userLang && userLang != SystemDefaults.LanguageDefault
+            ? userLang
+            : null;
+
+        return DsmLanguageToCultureConverter.Convert(cultureCode);
     }
 }

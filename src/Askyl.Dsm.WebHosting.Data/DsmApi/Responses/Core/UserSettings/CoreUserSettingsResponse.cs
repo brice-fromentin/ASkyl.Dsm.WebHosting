@@ -26,7 +26,8 @@ public class CoreUserSettingsData
 public class CoreUserSettingsPersonal
 {
     /// <summary>
-    /// User's preferred language in DSM codepage format (e.g. "enu" = en-US, "fra" = fr-FR).
+    /// User's preferred language in DSM format (e.g. "enu" = en-US, "fra" = fr-FR).
+    /// Returns "def" if the user has not set a personal language preference.
     /// </summary>
     [JsonPropertyName("lang")]
     public string? Lang { get; set; }

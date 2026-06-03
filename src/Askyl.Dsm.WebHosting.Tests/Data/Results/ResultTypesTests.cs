@@ -94,7 +94,7 @@ public class ResultTypesTests
     public void AuthenticationResult_CreateAuthenticated_SetsSuccess()
     {
         // Act
-        var result = AuthenticationResult.CreateAuthenticated("Welcome", "en-US", "UTC");
+        var result = AuthenticationResult.CreateAuthenticated("Welcome", "en-US");
 
         // Assert
         Assert.True(result.Success);
