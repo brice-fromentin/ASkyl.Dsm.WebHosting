@@ -1,5 +1,21 @@
 {
   "$version": 4,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$QWEN_PROJECT_DIR/.qwen/hooks/reinject-agents-standards.sh",
+            "name": "reinject-agents-standards",
+            "description": "Re-inject AGENTS.md into session context after compression",
+            "timeout": 10000
+          }
+        ]
+      }
+    ]
+  },
   "mcpServers": {
     "web-search": {
       "args": [
