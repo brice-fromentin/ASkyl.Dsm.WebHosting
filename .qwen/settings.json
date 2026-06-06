@@ -58,6 +58,7 @@
       "Bash(markdownlint *)",
       "Bash(mkdir *)",
       "Bash(sed *)",
+      "Bash(strings *)",
       "Bash(tail *)"
     ],
     "deny": [
