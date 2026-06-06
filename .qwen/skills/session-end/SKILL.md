@@ -1,13 +1,17 @@
 ---
-name: end-session
+name: session-end
 description: Sync global memories to workspace, update plan, and prepare commit. Use when the user signals end of a phase or session wrap-up.
 ---
 
 # End Session Workflow
 
-Trigger when the user says "end session", "wrap up", "sync memories", or signals they're done working.
+Trigger when the user says "end session", "session end", "wrap up", "sync memories", or signals they're done working.
 
 ## Steps
+
+0. **Announce**
+
+   Output `Skill session-end has been triggered`
 
 1. **Sync memories to workspace**
 
