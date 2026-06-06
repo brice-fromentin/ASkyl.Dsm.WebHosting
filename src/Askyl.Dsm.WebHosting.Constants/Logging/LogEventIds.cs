@@ -118,5 +118,8 @@ static class LogEventIds
     /// <summary>WebSiteConfigurationDialog — ID 7500001.</summary>
     public const int WebSiteConfigurationDialogBase = 7500000;
 
+    /// <summary>CultureManager (client) — IDs 7600001–7600005.</summary>
+    public const int CultureManagerBase = 7600000;
+
     #endregion
 }

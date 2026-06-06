@@ -10,6 +10,11 @@ namespace Askyl.Dsm.WebHosting.Globalization;
 public static class GlobalizationServiceCollectionExtensions
 {
     /// <summary>
+    /// Default culture when no user preference is available.
+    /// </summary>
+    public const string DefaultCulture = "en-US";
+
+    /// <summary>
     /// Adds localization services for the SharedResource resource file.
     /// Call this in both server and client <c>Program.cs</c>.
     /// </summary>

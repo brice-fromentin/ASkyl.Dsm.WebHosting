@@ -20,6 +20,9 @@ public interface ILogDotnetVersionsDialog { }
 /// <summary>Category marker for ILogger&lt;T&gt; — no implementation required.</summary>
 public interface ILogWebSiteConfigurationDialog { }
 
+/// <summary>Category marker for ILogger&lt;T&gt; — no implementation required.</summary>
+public interface ILogCultureManager { }
+
 /// <summary>
 /// Structured logging extension methods for client-side (WASM) events.
 /// </summary>
@@ -228,6 +231,45 @@ public static partial class ClientLoggingExtensions
     [LoggerMessage(EventId = 7500001, Level = LogLevel.Error, Message = "Error {Action} website")]
     public static partial void ErrorModifyingWebsite(
         this ILogger<ILogWebSiteConfigurationDialog> logger, Exception ex, string action);
+
+    #endregion
+
+    #region CultureManager — 7600001–7600005
+
+    /// <summary>
+    /// Logs the resolved culture from the login response.
+    /// </summary>
+    [LoggerMessage(EventId = 7600001, Level = LogLevel.Debug, Message = "Culture resolved from login response: {Culture}")]
+    public static partial void CultureResolvedFromLogin(
+        this ILogger<ILogCultureManager> logger, string culture);
+
+    /// <summary>
+    /// Logs the browser language fallback detection.
+    /// </summary>
+    [LoggerMessage(EventId = 7600002, Level = LogLevel.Debug, Message = "Culture resolved from browser language: {Culture}")]
+    public static partial void CultureResolvedFromBrowser(
+        this ILogger<ILogCultureManager> logger, string culture);
+
+    /// <summary>
+    /// Logs the fallback to default culture.
+    /// </summary>
+    [LoggerMessage(EventId = 7600003, Level = LogLevel.Debug, Message = "Culture resolved to default: {Culture}")]
+    public static partial void CultureResolvedToDefault(
+        this ILogger<ILogCultureManager> logger, string culture);
+
+    /// <summary>
+    /// Logs the final culture applied to the thread.
+    /// </summary>
+    [LoggerMessage(EventId = 7600004, Level = LogLevel.Debug, Message = "Culture applied to thread: {Culture}")]
+    public static partial void CultureApplied(
+        this ILogger<ILogCultureManager> logger, string culture);
+
+    /// <summary>
+    /// Logs a failure to detect browser language via JS interop.
+    /// </summary>
+    [LoggerMessage(EventId = 7600005, Level = LogLevel.Debug, Message = "Failed to detect browser language via JS interop")]
+    public static partial void BrowserLanguageDetectionFailed(
+        this ILogger<ILogCultureManager> logger, Exception ex);
 
     #endregion
 }

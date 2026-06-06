@@ -98,5 +98,15 @@ public static class ApplicationConstants
     /// </summary>
     public const int DoubleClickTimeoutMilliseconds = 400;
 
+    /// <summary>
+    /// Environment variable name for supported cultures passed from server to WASM client via <c>Blazor.start()</c>.
+    /// </summary>
+    public const string SupportedCulturesEnvironmentVariable = "ADWH_SUPPORTED_CULTURES";
+
+    /// <summary>
+    /// JavaScript interop method name for retrieving the browser's preferred language.
+    /// </summary>
+    public const string JsInteropNavigatorLanguageGet = "navigator.language.get";
+
     #endregion
 }

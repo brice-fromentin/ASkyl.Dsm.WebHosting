@@ -15,6 +15,7 @@
 @inject IToastService ToastService
 @inject NavigationManager navigation
 @inject IStringLocalizer<SharedResource> localizer
+@inject ICultureManager cultureManager
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -88,6 +89,9 @@
             ToastService.ShowError(errorMessage);
             return;
         }
+
+        // Initialize culture from login response (user preference or system fallback)
+        await cultureManager.InitializeFromLoginAsync(result.Culture);
 
         ToastService.ShowSuccess(localizer[L.Success.AuthenticationSuccessful]);
         navigation.NavigateTo(ApplicationConstants.HomePagePath);

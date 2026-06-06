@@ -5,6 +5,7 @@ using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
+using Askyl.Dsm.WebHosting.Ui;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using Microsoft.AspNetCore.RateLimiting;
@@ -32,6 +33,7 @@ builder.Services.AddFluentUIComponents();
 
 // Add globalization/localization services
 builder.Services.AddGlobalization();
+builder.Services.ConfigureGlobalizationRequestLocalization();
 
 // Add IHttpContextAccessor as singleton (required for Blazor server-side)
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
@@ -101,6 +103,9 @@ var app = builder.Build();
 
 // Apply path base FIRST - before any middleware that needs to know about the prefix
 app.UsePathBase(ApplicationConstants.ApplicationUrlSubPath);
+
+// Request localization must be early in the pipeline (after path base, before routing)
+app.UseGlobalizationRequestLocalization();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

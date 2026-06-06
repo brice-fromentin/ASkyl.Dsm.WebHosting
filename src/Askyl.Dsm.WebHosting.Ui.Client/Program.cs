@@ -16,17 +16,26 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration).CreateLogger();
 builder.Logging.AddSerilog(dispose: true);
 
+// Add globalization/localization services
+builder.Services.AddGlobalization();
+
+// Register culture manager (scoped - lives for the session)
+builder.Services.AddScoped<ICultureManager, CultureManager>();
+
+// Register HTTP message handler (scoped - depends on ICultureManager)
+builder.Services.AddScoped<AcceptLanguageHandler>();
+
+// Register HTTP client with Accept-Language header handler
 builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
 {
     // API controllers are hosted at the domain root (without /adwh path base)
     // Reverse proxy handles /adwh/api/... -> /api/... routing in production
     client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);
     client.Timeout = TimeSpan.FromSeconds(ApplicationConstants.HttpClientTimeoutSeconds);
-});
-builder.Services.AddFluentUIComponents();
+})
+.AddHttpMessageHandler<AcceptLanguageHandler>();
 
-// Add globalization/localization services
-builder.Services.AddGlobalization();
+builder.Services.AddFluentUIComponents();
 
 // Register authentication service as Singleton for app lifetime
 // Authentication state is managed server-side via session cookies, not client storage

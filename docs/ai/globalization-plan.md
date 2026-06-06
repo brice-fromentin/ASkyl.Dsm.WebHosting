@@ -1,6 +1,6 @@
 # Globalization (Multi-Language) Plan
 
-## Status: In Progress (Phase 6 next)
+## Status: In Progress (Phase 7 next)
 
 ---
 
@@ -477,26 +477,55 @@ SiteLifecycleManager                ApiResult                     Home.razor
 
 **No separate API endpoint needed — all data flows through the login response.**
 
-### Phase 6: Culture Manager & Resolution
+### Phase 6: Culture Manager & Resolution ✅ Done
 
 **WASM receives pre-converted .NET culture strings from the login response — no DSM code converters needed on the client.**
 
-- [ ] Create `ICultureManager` interface in `Globalization` assembly:
-  - `Task InitializeFromLoginAsync(AuthenticationResult)` — called with login response data
+**Key design: culture flows from WASM → server via HTTP headers (no server-side CultureManager needed).**
+
+**Supported cultures are discovered server-side from embedded `.resx` resources and injected to WASM via `Blazor.start()` environment variable — zero hardcoded lists.**
+
+- [x] Create `ICultureManager` interface in `Globalization` assembly:
+  - `Task InitializeFromLoginAsync(string? culture)` — called with culture from login response
   - `CultureInfo CurrentCulture` — current active culture
-  - `CultureInfo[] SupportedCultures` — from login response (pre-converted)
-  - `Task SetCultureAsync(string cultureName)` — runtime culture switch
-  - `event Action<CultureInfo>? CultureChanged` — for component re-render
-- [ ] Implement `CultureManager` for Server:
-  - Resolution: system `language` (if != "def") → browser `Accept-Language` → `en-US`
-  - Uses converters from `Tools/Network/` (server-side only)
-- [ ] Implement `CultureManager` for WASM:
-  - Receives pre-converted `AuthenticationResult` from login
+  - `CultureInfo CurrentUICulture` — same as CurrentCulture
+  - **No `SetCultureAsync` or `CultureChanged`** — culture is DSM-controlled, not user-switchable
+- [x] Implement `CultureManager` for WASM (Ui.Client):
+  - `static SupportedCultures` — initialized at class load via `Environment.GetEnvironmentVariable()` (injected by server)
+  - Uses `System.Text.Json` to deserialize JSON array from environment variable
   - Resolution: `Culture` (from login response) → browser `navigator.language` → `en-US`
   - No DSM code converters — just `new CultureInfo(string)`
-- [ ] Register `ICultureManager` in both `Program.cs` files
-- [ ] Configure `loadAllSatelliteResources: true` in `wwwroot/index.html`
-- [ ] Wire `Login.razor` to call `CultureManager.InitializeFromLoginAsync(result)` after successful login
+  - Sets `CultureInfo.DefaultThreadCurrentUICulture` and `Thread.CurrentThread.CurrentUICulture`
+  - **No runtime culture switching** — culture is locked for the session after login
+- [x] Create `AcceptLanguageHandler` (`DelegatingHandler`) — attaches `Accept-Language` header to all HTTP requests from WASM
+- [x] Create `GlobalizationExtensions.cs` in Ui project (server-side):
+  - `DiscoverSupportedCultures()` — scans assembly directory for culture subdirectories containing project satellite assemblies (`*.resources.dll`)
+  - `SupportedCultures` — static auto-property, computed once at class load
+  - `SupportedCultureNamesJson` — static auto-property, JSON-serialized once at class load
+  - `ConfigureGlobalizationRequestLocalization()` — registers supported cultures with `RequestLocalizationOptions`
+  - `UseGlobalizationRequestLocalization()` — adds `UseRequestLocalization` middleware
+- [x] Configure `App.razor` to inject cultures via `Blazor.start()`:
+  - Uses `dotnet.withEnvironmentVariable()` to pass `ADWH_SUPPORTED_CULTURES` JSON array
+  - Uses `MarkupString` to render JSON inline in `<script>` block (single quotes wrap JS strings to avoid HTML escaping of inner double quotes)
+- [x] Add constant `ApplicationConstants.SupportedCulturesEnvironmentVariable` for environment variable name
+- [x] Register `ICultureManager` in WASM `Program.cs` (scoped)
+- [x] Wire HTTP client with `AcceptLanguageHandler` in WASM `Program.cs`
+- [x] Configure `loadAllSatelliteResources: true` in `App.razor` (was done in Phase 5)
+- [x] Add `culture.js` for browser `navigator.language` detection via JS interop
+- [x] Wire `Login.razor` to call `CultureManager.InitializeFromLoginAsync(result.Culture)` after successful login
+
+> **Architecture decisions:**
+>
+> - **DSM-controlled culture**: Culture is resolved once at login from DSM user/system preferences — no runtime switching
+> - **Server-side discovery**: `ResourceManager.GetResourceFiles()` not available in WASM — server discovers via `Assembly.GetManifestResourceNames()` and injects via `Blazor.start()`
+> - **`dotnet.withEnvironmentVariable()`**: Pure .NET approach, no JS variable or JS interop needed for culture discovery
+> - **Static `SupportedCultures`**: Initialized at class load (DI registration time), available before login
+> - **Adding a new culture**: Add a `.resx` file → server auto-discovers → injects to WASM → zero code changes needed
+>
+> **Bug fixes discovered:**
+>
+> - `AcceptLanguageHandler` used `Microsoft.Net.Http.Headers` — corrected to `System.Net.Http.Headers.StringWithQualityHeaderValue`
+> - Initial `ResourceManager.GetResourceFiles()` approach not viable in WASM — switched to `dotnet.withEnvironmentVariable()` via `Blazor.start()`
 
 ### Phase 7: FluentValidation Migration (Localized Validation Messages)
 
@@ -520,14 +549,9 @@ SiteLifecycleManager                ApiResult                     Home.razor
 - [ ] Add French translations for all new validation keys
 - [ ] **Not migrated:** `RuntimeConstants` error strings in `DownloaderService` (Tools) — internal exceptions caught and converted to `L.Error.OperationFailed`
 
-### Phase 8: Language Selector UI
+### Phase 8: ~~Language Selector UI~~ — Cancelled
 
-- [ ] Add language selector dropdown to `MainLayout.razor` header
-- [ ] Populate dropdown from `ICultureManager.SupportedCultures` (defined in code: en-US, fr-FR)
-- [ ] Wire up `ICultureManager.SetCultureAsync()` on selection change
-- [ ] Visual feedback (current language highlighted)
-- [ ] Trigger component re-render on culture change (event-based)
-- [ ] **No localStorage** — selection is session-only; changing language in DSM Control Panel takes precedence on next visit
+**Cancelled** — culture is 100% DSM-controlled (user preference or system fallback). There is no runtime language switching in the UI. Culture is resolved once at login and locked for the session.
 
 ### Phase 9: Culture-Aware Formatting
 
@@ -537,12 +561,13 @@ SiteLifecycleManager                ApiResult                     Home.razor
 
 ### Phase 10: Testing & Validation
 
-- [ ] Test language switching at runtime (no reload)
-- [ ] Test persistence across page reloads
+- [ ] Test culture resolution from login response (DSM preference)
+- [ ] Test fallback to browser language when login response lacks culture
 - [ ] Test fallback to English for missing translations
 - [ ] Test browser culture detection on first visit
 - [ ] Test server-side messages are localized in API responses
 - [ ] Test FluentValidation messages are localized (French)
+- [ ] Test culture propagates via Accept-Language header to server
 - [ ] Build passes with no warnings
 - [ ] Format passes (`dotnet format`)
 

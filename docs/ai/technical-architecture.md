@@ -67,7 +67,14 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
   - ✅ Async `WaitForExitAsync` with linked cancellation token replaces blocking `WaitForExit(timeoutMs)`
   - ✅ Reduced timeouts: HttpClient (90→15s), Process (60→10s) — eliminates DSM reverse proxy 504 errors
 - ⏳ TODO: Certificate management for reverse proxy
-- ⏳ TODO: Multi-language support
+- ⏳ **Multi-language support** (June 2026 — Phases 1-6 complete, 7-10 remaining):
+  - ✅ Globalization assembly with `SharedResource.resx` + satellite assemblies (fr-FR)
+  - ✅ Server-side culture discovery via satellite assembly directory scanning
+  - ✅ Culture injection to WASM via `Blazor.start()` environment variable
+  - ✅ `ICultureManager` — resolves culture once at login (DSM-controlled, no runtime switching)
+  - ✅ `AcceptLanguageHandler` — propagates culture to server via HTTP headers
+  - ✅ `RequestLocalization` middleware — server reads `Accept-Language` from WASM
+  - ⏳ FluentValidation migration (Phase 7), culture-aware formatting (Phase 9), testing (Phase 10)
 - ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
 - ✅ **LoggerMessage migration** — 224 source-generated `[LoggerMessage]` extension methods across 19 source files; zero CA2254 warnings
@@ -1224,6 +1231,54 @@ Input components with immediate validation feedback:
    - 180+ `[LoggerMessage]` methods audited across 19 files
    - Zero PII, secrets, or credentials logged
    - Structured logging with Serilog ensures safe diagnostic output
+
+---
+
+## Globalization & Localization
+
+### Architecture Overview
+
+Culture is **DSM-controlled** — resolved once at login from user/system preferences, then locked for the session. There is no runtime language switching in the UI.
+
+### Culture Flow
+
+1. **Server discovers cultures** — scans `Globalization` assembly directory for satellite assembly subdirectories (e.g., `fr-FR/Askyl.Dsm.WebHosting.Globalization.resources.dll`)
+2. **Server injects to WASM** — culture names serialized as JSON, injected via `Blazor.start()` → `dotnet.withEnvironmentVariable('ADWH_SUPPORTED_CULTURES', '["en-US","fr-FR"]')`
+3. **WASM parses cultures** — `CultureManager` static property deserializes JSON at class load (DI registration time)
+4. **Login resolves culture** — priority: login response `Culture` → browser `navigator.language` → default `en-US`
+5. **WASM propagates to server** — `AcceptLanguageHandler` attaches `Accept-Language` header to all HTTP requests
+6. **Server reads header** — `RequestLocalization` middleware sets thread culture per request
+
+### Key Components
+
+| Component | Location | Purpose |
+|---|---|---|
+| `ICultureManager` | `Globalization` | Interface: `InitializeFromLoginAsync()`, `CurrentCulture`, `CurrentUICulture` |
+| `CultureManager` | `Ui.Client` | WASM implementation with static `SupportedCultures` from env var |
+| `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header |
+| `GlobalizationExtensions` | `Ui` | Server-side culture discovery + `RequestLocalization` config |
+| `culture.js` | `Ui.Client/wwwroot/js` | JS interop for `navigator.language` detection |
+
+### Culture Resolution Priority
+
+1. **Login response culture** — server resolved user vs system preference (from DSM settings)
+2. **Browser language** — `navigator.language` via JS interop (exact match, then parent culture)
+3. **Default** — `en-US`
+
+### Adding a New Culture
+
+1. Add `SharedResource.<culture>.resx` to `Globalization/Resources/`
+2. Build — SDK auto-generates satellite assembly in `<culture>/` subdirectory
+3. Server auto-discovers via directory scan → injects to WASM
+4. **Zero code changes needed**
+
+### Design Decisions
+
+- **DSM-controlled culture**: No runtime switching — culture locked after login, changes require re-login
+- **Satellite assembly discovery**: `Directory.GetDirectories()` on assembly location, filtered by project satellite assembly name
+- **`dotnet.withEnvironmentVariable()`**: Pure .NET approach, no JS variables or JS interop needed for culture discovery
+- **Static `SupportedCultures`**: Initialized at class load, available before login
+- **`MarkupString` in `App.razor`**: Required to avoid HTML-encoding of JSON double quotes inside `<script>` block
 
 ---
 

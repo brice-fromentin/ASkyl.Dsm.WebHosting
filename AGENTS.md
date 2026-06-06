@@ -142,17 +142,23 @@ The AI assistant MUST use an **inference-based approach** rather than hardcoded 
 
 ### 6.2 C# Language Features (.NET 10 & C# 14)
 
-**Native Types Usage (enforced by dotnet format):**
+**String vs string Pattern (CRITICAL — common failure point):**
 
-- Use PascalCase class names (`String`, `Int32`, `Boolean`, `Double`, etc.) for:
-  - Static method calls
-  - Static properties/fields
-  - Explicit type references in reflection
-- Use lowercase keywords (`string`, `int`, `bool`, `double`, etc.) for:
-  - Variable declarations
-  - Parameter types
-  - Return types
-  - Instance method calls
+- `String.Equals`, `String.IsNullOrWhiteSpace`, `String.Empty`, `String.Format` — **ALWAYS** PascalCase `String.` for static members
+- `string`, `int`, `bool`, `double` — **ALWAYS** lowercase for types, variables, parameters, return types
+- This rule is **NOT** reliably enforced by tooling — manual verification is mandatory
+
+```csharp
+// ✅ CORRECT
+String.Equals(a, b, StringComparison.Ordinal)  // static method
+String.IsNullOrWhiteSpace(input)              // static method
+String.Empty                                    // static field
+string name = "hello";                          // type declaration
+Func<string> factory;                           // type usage
+
+// ❌ WRONG
+string.Equals(a, b)    // lowercase for static method — NEVER
+```
 
 **Other Requirements:**
 
@@ -359,7 +365,6 @@ logger.LogWarning("Login failed for user: {Login}", login);
 
 These patterns are automatically enforced by `dotnet format`. Trust the tooling:
 
-- **String/String pattern**: `string` for types, `String.` for static members
 - **Using directives**: System first, then alphabetical; unused usings removed
 - **Primary constructors**: Mandatory for classes with constructor parameters
 - **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()`
@@ -368,28 +373,54 @@ These patterns are automatically enforced by `dotnet format`. Trust the tooling:
 
 These require manual verification BEFORE responding:
 
-1. **Magic Strings and Numbers**
+1. **String/String Pattern** (CRITICAL — most frequently violated rule)
+   - Search for `string\.` in all modified files — every match is a violation
+   - Static members MUST use `String.` prefix: `String.Equals`, `String.IsNullOrWhiteSpace`, `String.Empty`, `String.Format`
+   - Type/variable usage MUST use lowercase `string`: `string name`, `Func<string>`
+
+2. **Magic Strings and Numbers**
    - Have ALL hardcoded strings (e.g., "X-Location-Path") been replaced by constants?
    - Have ALL hardcoded numbers been replaced by constants?
    - Search for all string literals and numeric literals in modified code
 
-2. **Logger Call Compliance**
+3. **Logger Call Compliance**
    - Are ALL log calls using `[LoggerMessage]` extension methods (e.g., `logger.LoginFailed(login)`)?
    - Are there ZERO direct calls to `logger.LogInformation()`, `logger.LogError()`, `logger.LogWarning()`, etc.?
    - Do services inject `ILogger<ILogXxx>` (not bare `ILogger`)?
 
-3. **Control Flow Blank Lines**
-   - Is there a blank line BEFORE control flow statements (unless first in scope or after comment)?
-   - Is there a blank line AFTER control flow statements (unless last in scope)?
-   - Are there NO blank lines BETWEEN statements inside blocks?
+4. **Control Flow Blank Lines** (CRITICAL — frequently violated)
+   - **BEFORE control flow:** blank line required before `if`, `else`, `foreach`, `for`, `while`, `switch`, `try`, `catch` — **unless** first in scope or preceded by a comment
+   - **AFTER control flow:** blank line required after the closing `}` — **unless** last in parent scope
+   - **NEVER** blank lines between individual statements inside a block
+   - **Search pattern:** scan every `if`, `else`, `foreach`, `for`, `while` — verify blank line before (if not first/comment) and after (if not last)
 
-4. **Target-Typed `new` Expressions** (MANUAL CHECK)
+   ```csharp
+   // ✅ CORRECT — blank line before control flow (not first in scope)
+   var x = GetValue();
+
+   if (condition)  // blank line above because not first
+   {
+       DoA();
+       DoB();       // NO blank line between statements
+   }
+
+   DoNext();        // blank line after complete control structure
+
+   // ❌ WRONG — missing blank line before control flow
+   var x = GetValue();
+   if (condition)   // missing blank line above!
+   {
+       DoSomething();
+   }
+   ```
+
+5. **Target-Typed `new` Expressions** (MANUAL CHECK)
    - Use target-typed `new` when type can be inferred: `new(1, 1)` instead of `new SemaphoreSlim(1, 1)`
    - **Exception:** When the variable name already includes the type name (e.g., `lockInstance` for `SemaphoreLock`), `var` is acceptable — the type is already evident
    - Applies to: local variables, fields, auto-properties, explicit interface implementations
    - Note: Analyzers (IDE0295/RCS1187) don't catch all cases (e.g., explicit interface properties), so manual verification is required
 
-5. **Markdown Documentation Validation** (when creating/modifying .md files)
+6. **Markdown Documentation Validation** (when creating/modifying .md files)
    - Run `markdownlint <file-path>` to validate markdown syntax and style
    - Fix ALL errors before responding (target: zero errors)
    - Common fixes: add language tags to code blocks, fix line lengths (>200 chars), add blank lines around headings/lists
@@ -503,9 +534,10 @@ After EVERY code modification, you MUST:
 
 - [ ] Format command executed (`dotnet format`) - for C# code
 - [ ] Build command executed with `/nr:false` flag - for C# code
+- [ ] **String/String pattern correct** — no `string\.` for static members (MANUAL)
 - [ ] No magic strings/numbers in code (MANUAL)
 - [ ] No direct `ILogger` calls — all logging via `[LoggerMessage]` extensions (MANUAL)
-- [ ] Control flow blank lines correct (MANUAL)
+- [ ] **Control flow blank lines** — blank line before every `if/else/foreach/for/while` (unless first/comment) and after closing `}` (unless last) (MANUAL)
 - [ ] Method declarations with ≤ 4 params on one line (unless > 200 chars) (MANUAL)
 - [ ] Markdown validation passed (`markdownlint`) - for .md files
 - [ ] All comments/messages in English
