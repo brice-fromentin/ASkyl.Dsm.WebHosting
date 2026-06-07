@@ -192,7 +192,7 @@ public static class L
         public const string UninstallationCompleted = "Success_UninstallationCompleted";
     }
 
-    /// <summary>Validation error messages from server-side services.</summary>
+    /// <summary>Validation error messages from server-side services (not model-specific).</summary>
     public static class Validation
     {
         public const string PathRequired = "Validation_PathRequired";
@@ -201,5 +201,25 @@ public static class L
         public const string VersionRequired = "Validation_VersionRequired";
         public const string EnvVarKeyTooLong = "Validation_EnvVarKeyTooLong";
         public const string EnvVarValueTooLong = "Validation_EnvVarValueTooLong";
+    }
+
+    /// <summary>Validation messages for WebSiteConfiguration model.</summary>
+    public static class WebSiteConfiguration
+    {
+        public const string NameRequired = "WebSiteConfiguration_NameRequired";
+        public const string NameLength = "WebSiteConfiguration_NameLength";
+        public const string ApplicationPathRequired = "WebSiteConfiguration_ApplicationPathRequired";
+        public const string PortRequired = "WebSiteConfiguration_PortRequired";
+        public const string PortRange = "WebSiteConfiguration_PortRange";
+        public const string EnvironmentRequired = "WebSiteConfiguration_EnvironmentRequired";
+        public const string ProcessTimeoutRange = "WebSiteConfiguration_ProcessTimeoutRange";
+        public const string HostNameRequired = "WebSiteConfiguration_HostNameRequired";
+    }
+
+    /// <summary>Validation messages for LoginCredentials model.</summary>
+    public static class LoginCredentials
+    {
+        public const string LoginRequired = "LoginCredentials_LoginRequired";
+        public const string PasswordRequired = "LoginCredentials_PasswordRequired";
     }
 }

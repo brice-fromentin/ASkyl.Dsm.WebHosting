@@ -420,6 +420,40 @@
     <value>La valeur de la variable d'environnement '{0}' dépasse la longueur maximale de {1} caractères</value>
   </data>
 
+  <!-- WebSiteConfiguration Validation -->
+  <data name="WebSiteConfiguration_NameRequired" xml:space="preserve">
+    <value>Le nom du site est requis</value>
+  </data>
+  <data name="WebSiteConfiguration_NameLength" xml:space="preserve">
+    <value>Le nom du site doit comporter entre 1 et 100 caractères</value>
+  </data>
+  <data name="WebSiteConfiguration_ApplicationPathRequired" xml:space="preserve">
+    <value>Le chemin de l'application est requis</value>
+  </data>
+  <data name="WebSiteConfiguration_PortRequired" xml:space="preserve">
+    <value>Le port est requis</value>
+  </data>
+  <data name="WebSiteConfiguration_PortRange" xml:space="preserve">
+    <value>Le port doit être compris entre 1024 et 65535</value>
+  </data>
+  <data name="WebSiteConfiguration_EnvironmentRequired" xml:space="preserve">
+    <value>L'environnement est requis</value>
+  </data>
+  <data name="WebSiteConfiguration_ProcessTimeoutRange" xml:space="preserve">
+    <value>Le délai d'arrêt doit être compris entre 10 et 120 secondes</value>
+  </data>
+  <data name="WebSiteConfiguration_HostNameRequired" xml:space="preserve">
+    <value>Le nom d'hôte est requis</value>
+  </data>
+
+  <!-- LoginCredentials Validation -->
+  <data name="LoginCredentials_LoginRequired" xml:space="preserve">
+    <value>L'identifiant est requis</value>
+  </data>
+  <data name="LoginCredentials_PasswordRequired" xml:space="preserve">
+    <value>Le mot de passe est requis</value>
+  </data>
+
   <!-- Home Loading -->
   <data name="Home_LoadingWebsites" xml:space="preserve">
     <value>Chargement des sites web...</value>

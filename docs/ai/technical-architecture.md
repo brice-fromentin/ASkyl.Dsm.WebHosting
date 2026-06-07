@@ -1240,6 +1240,11 @@ Input components with immediate validation feedback:
 
 Culture is **DSM-controlled** — resolved once at login from user/system preferences, then locked for the session. There is no runtime language switching in the UI.
 
+The Globalization assembly serves two purposes:
+
+1. **Localization resources** — `SharedResource.resx` with satellite assemblies per culture
+2. **Shared validators** — FluentValidation validators used by both server and client
+
 ### Culture Flow
 
 1. **Server discovers cultures** — scans `Globalization` assembly directory for satellite assembly subdirectories (e.g., `fr-FR/Askyl.Dsm.WebHosting.Globalization.resources.dll`)
@@ -1258,6 +1263,39 @@ Culture is **DSM-controlled** — resolved once at login from user/system prefer
 | `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header |
 | `GlobalizationExtensions` | `Ui` | Server-side culture discovery + `RequestLocalization` config |
 | `culture.js` | `Ui.Client/wwwroot/js` | JS interop for `navigator.language` detection |
+| `LocalizationKeys.cs` | `Globalization` | Strongly-typed keys organized by model (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`) |
+| `WebSiteConfigurationValidator` | `Globalization/Validators/` | FluentValidation rules for `WebSiteConfiguration` (7 properties) |
+| `LoginCredentialsValidator` | `Globalization/Validators/` | FluentValidation rules for `LoginCredentials` (2 properties) |
+
+### Validation Architecture
+
+Validators are defined once in Globalization and consumed by both server and client — eliminating duplicate validation logic:
+
+| Layer | Package | Registration | Behavior |
+|-------|---------|--------------|----------|
+| **Globalization** | `FluentValidation` + `FluentValidation.DependencyInjectionExtensions` | Contains both validators | Defines all rules with localized messages via `IStringLocalizer<SharedResource>` |
+| **Server (Ui)** | `FluentValidation.AspNetCore` | `AddFluentValidationAutoValidation()` | Auto-populates ModelState; invalid POST returns 400 Bad Request |
+| **Client (WASM)** | `Blazilla` | `<FluentValidator />` in EditForm | Real-time field-level validation with localized messages |
+
+**Dependency Graph:**
+
+```text
+Globalization → Data (for domain models)
+Globalization → FluentValidation, FluentValidation.DependencyInjectionExtensions
+Ui (server) → Globalization + FluentValidation.AspNetCore
+Ui.Client (WASM) → Globalization + Blazilla
+```
+
+**Registration (Program.cs):**
+
+```csharp
+// Server (Ui/Program.cs)
+builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
+builder.Services.AddFluentValidationAutoValidation();
+
+// Client (Ui.Client/Program.cs)
+builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
+```
 
 ### Culture Resolution Priority
 
@@ -1272,6 +1310,14 @@ Culture is **DSM-controlled** — resolved once at login from user/system prefer
 3. Server auto-discovers via directory scan → injects to WASM
 4. **Zero code changes needed**
 
+### Adding a New Validator
+
+1. Create `XxxValidator.cs` in `Globalization/Validators/`
+2. Add keys to `LocalizationKeys.cs` under model-scoped class (e.g., `L.XxxModel.*`)
+3. Add strings to both `.resx` files
+4. Validator auto-discovered by `AddValidatorsFromAssemblyContaining<SharedResource>()`
+5. **Zero registration changes needed**
+
 ### Design Decisions
 
 - **DSM-controlled culture**: No runtime switching — culture locked after login, changes require re-login
@@ -1279,6 +1325,9 @@ Culture is **DSM-controlled** — resolved once at login from user/system prefer
 - **`dotnet.withEnvironmentVariable()`**: Pure .NET approach, no JS variables or JS interop needed for culture discovery
 - **Static `SupportedCultures`**: Initialized at class load, available before login
 - **`MarkupString` in `App.razor`**: Required to avoid HTML-encoding of JSON double quotes inside `<script>` block
+- **Shared validators in Globalization**: Single source of truth — server auto-validation and client Blazilla validation use the same rules
+- **Model-scoped localization keys**: `L.WebSiteConfiguration.*` and `L.LoginCredentials.*` make it clear which model each message belongs to
+- **No DataAnnotations**: All validation migrated to FluentValidation — DataAnnotations cannot use runtime-localized messages
 
 ---
 

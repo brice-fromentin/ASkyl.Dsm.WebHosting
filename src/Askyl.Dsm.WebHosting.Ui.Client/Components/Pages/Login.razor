@@ -23,7 +23,7 @@
 
 <FluentDialog Modal="true" TrapFocus="true" PreventScroll="true">
     <EditForm Model="@Model" OnValidSubmit="Authenticate">
-        <DataAnnotationsValidator />
+        <FluentValidator />
 
         <FluentDialogHeader>
             <h2>@localizer[L.Login.DialogTitle]</h2>

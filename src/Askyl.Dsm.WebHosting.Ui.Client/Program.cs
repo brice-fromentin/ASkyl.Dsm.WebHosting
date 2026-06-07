@@ -1,8 +1,10 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
+using FluentValidation;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
@@ -36,6 +38,9 @@ builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
 .AddHttpMessageHandler<AcceptLanguageHandler>();
 
 builder.Services.AddFluentUIComponents();
+
+// Register FluentValidation validators from Globalization assembly
+builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 
 // Register authentication service as Singleton for app lifetime
 // Authentication state is managed server-side via session cookies, not client storage

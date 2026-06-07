@@ -1,11 +1,23 @@
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
+using Askyl.Dsm.WebHosting.Globalization.Resources;
+using Askyl.Dsm.WebHosting.Globalization.Validators;
+using Microsoft.Extensions.Localization;
+using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Data.Domain.Authentication;
 
 public class LoginCredentialsTests
 {
+    private static LoginCredentialsValidator CreateValidator()
+    {
+        var localizerMock = new Mock<IStringLocalizer<SharedResource>>();
+        localizerMock.Setup(x => x[It.IsAny<string>()])
+            .Returns((string name) => new LocalizedString(name, name));
+        localizerMock.Setup(x => x[It.IsAny<string>(), It.IsAny<object[]>()])
+            .Returns((string name, object[] args) => new LocalizedString(name, name));
+        return new LoginCredentialsValidator(localizerMock.Object);
+    }
+
     #region Login
 
     [Fact]
@@ -13,16 +25,14 @@ public class LoginCredentialsTests
     {
         // Arrange
         var credentials = new LoginCredentials("", "password", null);
-        var context = new ValidationContext(credentials);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(credentials, context, results, validateAllProperties: true);
+        var result = validator.Validate(credentials);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(LoginCredentials.Login))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(LoginCredentials.Login));
     }
 
     [Fact]
@@ -31,16 +41,14 @@ public class LoginCredentialsTests
         // Arrange
         var credentials = new LoginCredentials();
         credentials.Login = null!;
-        var context = new ValidationContext(credentials);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(credentials, context, results, validateAllProperties: true);
+        var result = validator.Validate(credentials);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(LoginCredentials.Login))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(LoginCredentials.Login));
     }
 
     [Fact]
@@ -48,15 +56,13 @@ public class LoginCredentialsTests
     {
         // Arrange
         var credentials = CreateValidCredentials();
-        var context = new ValidationContext(credentials);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(credentials, context, results, validateAllProperties: true);
+        var result = validator.Validate(credentials);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(LoginCredentials.Login))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(LoginCredentials.Login));
     }
 
     #endregion
@@ -68,16 +74,14 @@ public class LoginCredentialsTests
     {
         // Arrange
         var credentials = new LoginCredentials("admin", "", null);
-        var context = new ValidationContext(credentials);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(credentials, context, results, validateAllProperties: true);
+        var result = validator.Validate(credentials);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(LoginCredentials.Password))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(LoginCredentials.Password));
     }
 
     [Fact]
@@ -86,16 +90,14 @@ public class LoginCredentialsTests
         // Arrange
         var credentials = new LoginCredentials("admin", "password", null);
         credentials.Password = null!;
-        var context = new ValidationContext(credentials);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(credentials, context, results, validateAllProperties: true);
+        var result = validator.Validate(credentials);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(LoginCredentials.Password))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(LoginCredentials.Password));
     }
 
     [Fact]
@@ -103,15 +105,13 @@ public class LoginCredentialsTests
     {
         // Arrange
         var credentials = CreateValidCredentials();
-        var context = new ValidationContext(credentials);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(credentials, context, results, validateAllProperties: true);
+        var result = validator.Validate(credentials);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(LoginCredentials.Password))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(LoginCredentials.Password));
     }
 
     #endregion
@@ -123,15 +123,13 @@ public class LoginCredentialsTests
     {
         // Arrange
         var credentials = new LoginCredentials("admin", "password", null);
-        var context = new ValidationContext(credentials);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(credentials, context, results, validateAllProperties: true);
+        var result = validator.Validate(credentials);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(LoginCredentials.OtpCode))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(LoginCredentials.OtpCode));
     }
 
     [Fact]
@@ -139,15 +137,13 @@ public class LoginCredentialsTests
     {
         // Arrange
         var credentials = new LoginCredentials("admin", "password", "");
-        var context = new ValidationContext(credentials);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(credentials, context, results, validateAllProperties: true);
+        var result = validator.Validate(credentials);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(LoginCredentials.OtpCode))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(LoginCredentials.OtpCode));
     }
 
     [Fact]
@@ -155,15 +151,13 @@ public class LoginCredentialsTests
     {
         // Arrange
         var credentials = new LoginCredentials("admin", "password", "123456");
-        var context = new ValidationContext(credentials);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(credentials, context, results, validateAllProperties: true);
+        var result = validator.Validate(credentials);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(LoginCredentials.OtpCode))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(LoginCredentials.OtpCode));
     }
 
     #endregion

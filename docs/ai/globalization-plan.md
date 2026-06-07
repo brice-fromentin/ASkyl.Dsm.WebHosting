@@ -1,6 +1,6 @@
 # Globalization (Multi-Language) Plan
 
-## Status: In Progress (Phase 7 next)
+## Status: In Progress (Phase 9 next)
 
 ---
 
@@ -527,7 +527,7 @@ SiteLifecycleManager                ApiResult                     Home.razor
 > - `AcceptLanguageHandler` used `Microsoft.Net.Http.Headers` — corrected to `System.Net.Http.Headers.StringWithQualityHeaderValue`
 > - Initial `ResourceManager.GetResourceFiles()` approach not viable in WASM — switched to `dotnet.withEnvironmentVariable()` via `Blazor.start()`
 
-### Phase 7: FluentValidation Migration (Localized Validation Messages)
+### Phase 7: FluentValidation Migration (Localized Validation Messages) ✅ Done
 
 **Problem:** DataAnnotations [Required(ErrorMessage = "...")] requires compile-time constant strings.
 
@@ -535,19 +535,51 @@ SiteLifecycleManager                ApiResult                     Home.razor
 
 **Why Phase 7 (not earlier):** Depends on Phase 6 (Culture Manager) so IStringLocalizer respects user culture.
 
-- [ ] Add NuGet: `FluentValidation`, `FluentValidation.AspNetCore` to `Ui` project
-- [ ] Create `WebSiteConfigurationValidator.cs` in `Ui/Validators/`:
-  - Inject `IStringLocalizer<SharedResource>`
-  - Rules: `Name` (required), `ApplicationPath` (required), `InternalPort` (required, range), `Environment` (required), `ProcessTimeoutSeconds` (range), `HostName` (required), `PublicPort` (required)
-  - Messages use `localizer[L.Validation.*]` keys
-- [ ] Register validators: `builder.Services.AddFluentValidationAutoConfiguration()` in `Ui/Program.cs`
-- [ ] Replace `<DataAnnotationsValidator />` with `<FluentValidationValidator />` in `WebSiteConfigurationDialog.razor`
-- [ ] Remove user-facing validation error messages from `WebSiteConstants.cs` (keep numeric limits: `MinWebApplicationPort`, `MaxWebApplicationPort`, etc.)
-- [ ] Add missing validation keys to `LocalizationKeys.cs` and both `.resx` files:
-  - `Validation_SiteNameRequired`, `Validation_SiteNameLength`, `Validation_ApplicationPathRequired`
-  - `Validation_PortRange`, `Validation_ProcessTimeoutRange`, `Validation_EnvironmentRequired`, `Validation_HostNameRequired`
-- [ ] Add French translations for all new validation keys
-- [ ] **Not migrated:** `RuntimeConstants` error strings in `DownloaderService` (Tools) — internal exceptions caught and converted to `L.Error.OperationFailed`
+**Architecture: Single shared validator in Globalization assembly**
+
+The validator lives in `Globalization/Validators/` — shared by both server and client:
+- **Server** (`Ui`): Uses `FluentValidation.AspNetCore` for automatic model binding validation (returns 400 with ModelState errors)
+- **Client** (`Ui.Client`): Uses **Blazilla** (`<FluentValidator />`) for real-time UI validation with localized messages
+
+**Dependency graph:**
+```
+Globalization → Data (for domain models)
+Globalization → FluentValidation, FluentValidation.DependencyInjectionExtensions
+Ui (server) → Globalization + FluentValidation.AspNetCore
+Ui.Client (WASM) → Globalization + Blazilla
+```
+
+**Models migrated:**
+
+| Model | Validator | Rules | UI Component |
+|-------|-----------|-------|--------------|
+| `WebSiteConfiguration` | `WebSiteConfigurationValidator` | Name (required, length), ApplicationPath (required), InternalPort (required, range), Environment (required), ProcessTimeoutSeconds (range), HostName (required), PublicPort (required, range) | `WebSiteConfigurationDialog.razor` |
+| `LoginCredentials` | `LoginCredentialsValidator` | Login (required), Password (required) | `Login.razor` |
+
+- [x] Add `Data` project reference + FluentValidation packages to `Globalization.csproj`
+- [x] Create `WebSiteConfigurationValidator.cs` in `Globalization/Validators/` (7 rules)
+- [x] Create `LoginCredentialsValidator.cs` in `Globalization/Validators/` (2 rules)
+- [x] Restructure `LocalizationKeys.cs` — flat `L.Validation.*` → model-scoped `L.WebSiteConfiguration.*` and `L.LoginCredentials.*`
+- [x] Update both `.resx` files with new key names + French translations for LoginCredentials
+- [x] Register validators: `builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>()` in both `Program.cs` (server + client)
+- [x] Server: Add `FluentValidation.AspNetCore` + `AddFluentValidationAutoValidation()` for automatic model binding
+- [x] Client: Replace `<DataAnnotationsValidator />` with `<FluentValidator />` (Blazilla) in both dialogs
+- [x] Add `@using Blazilla` to `_Imports.razor`
+- [x] Remove user-facing validation error messages from `WebSiteConstants.cs` (keep numeric limits: `MinWebApplicationPort`, `MaxWebApplicationPort`, etc.)
+- [x] Remove DataAnnotations from `WebSiteConfiguration.cs` and `LoginCredentials.cs` models
+- [x] Update `WebSiteConfigurationTests.cs` to use FluentValidation validator (replaced DataAnnotations `Validator.TryValidateObject`)
+- [x] Update `LoginCredentialsTests.cs` to use FluentValidation validator (replaced DataAnnotations `Validator.TryValidateObject`)
+- [x] **Not migrated:** `RuntimeConstants` error strings in `DownloaderService` (Tools) — internal exceptions caught and converted to `L.Error.OperationFailed`
+- [x] **Audit complete:** Full codebase grep confirmed zero remaining DataAnnotations
+
+> **Bug fixes discovered:**
+>
+> - `FluentValidation.AspNetCore` not WASM-compatible — used **Blazilla** (`<FluentValidator />`) for client, `FluentValidation.AspNetCore` for server auto-validation
+> - FluentValidation 12 changed `WithMessage()` API — no more `Func<string>`, uses direct string resolution
+> - `LocalizedString` has no implicit `string` conversion — use `.Value` property
+> - Tests needed rewrite: DataAnnotations `Validator.TryValidateObject` → FluentValidation `IValidator.Validate()`
+> - Server registration: `AddFluentValidationAutoValidation()` on `IServiceCollection` (not on `IMvcBuilder`)
+> - `LoginCredentials` had DataAnnotations missed in initial audit — added to migration scope
 
 ### Phase 8: ~~Language Selector UI~~ — Cancelled
 

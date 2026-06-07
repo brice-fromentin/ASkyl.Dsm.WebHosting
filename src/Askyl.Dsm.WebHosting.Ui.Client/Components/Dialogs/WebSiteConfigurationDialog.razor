@@ -24,7 +24,7 @@
 
 <FluentDialogBody @onkeydown:Enter="OnEnterKeyAsync">
     <EditForm Model="@Configuration" OnValidSubmit="ConfirmAsync">
-        <DataAnnotationsValidator />
+        <FluentValidator />
         <FluentStack Orientation="Orientation.Vertical">
             <RealTimeTextField @bind-Value="Configuration.Name" Label="@localizer[L.WebsiteConfig.NameLabel]" Class="full-size" Autofocus="true" />
             <FluentValidationMessage For="@(() => Configuration.Name)" />

@@ -420,6 +420,40 @@
     <value>Environment variable '{0}' value exceeds maximum length of {1} characters</value>
   </data>
 
+  <!-- WebSiteConfiguration Validation -->
+  <data name="WebSiteConfiguration_NameRequired" xml:space="preserve">
+    <value>Site name is required</value>
+  </data>
+  <data name="WebSiteConfiguration_NameLength" xml:space="preserve">
+    <value>Site name must be between 1 and 100 characters</value>
+  </data>
+  <data name="WebSiteConfiguration_ApplicationPathRequired" xml:space="preserve">
+    <value>Application path is required</value>
+  </data>
+  <data name="WebSiteConfiguration_PortRequired" xml:space="preserve">
+    <value>Port is required</value>
+  </data>
+  <data name="WebSiteConfiguration_PortRange" xml:space="preserve">
+    <value>Port must be between 1024 and 65535</value>
+  </data>
+  <data name="WebSiteConfiguration_EnvironmentRequired" xml:space="preserve">
+    <value>Environment is required</value>
+  </data>
+  <data name="WebSiteConfiguration_ProcessTimeoutRange" xml:space="preserve">
+    <value>Shutdown timeout must be between 10 and 120 seconds</value>
+  </data>
+  <data name="WebSiteConfiguration_HostNameRequired" xml:space="preserve">
+    <value>Host name is required</value>
+  </data>
+
+  <!-- LoginCredentials Validation -->
+  <data name="LoginCredentials_LoginRequired" xml:space="preserve">
+    <value>Login is required</value>
+  </data>
+  <data name="LoginCredentials_PasswordRequired" xml:space="preserve">
+    <value>Password is required</value>
+  </data>
+
   <!-- Home Loading -->
   <data name="Home_LoadingWebsites" xml:space="preserve">
     <value>Loading websites...</value>

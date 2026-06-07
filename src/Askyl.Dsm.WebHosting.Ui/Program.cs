@@ -1,6 +1,7 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
@@ -8,6 +9,8 @@ using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Services;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
@@ -39,7 +42,14 @@ builder.Services.ConfigureGlobalizationRequestLocalization();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 // Add controllers WITHOUT API versioning (simpler routes)
-builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
+builder.Services.AddControllers()
+                .AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
+
+// Register FluentValidation validators from Globalization assembly
+builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
+
+// Enable automatic FluentValidation integration with ASP.NET Core model binding
+builder.Services.AddFluentValidationAutoValidation();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

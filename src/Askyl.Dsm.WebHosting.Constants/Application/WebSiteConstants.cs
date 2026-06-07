@@ -56,11 +56,6 @@ public static class WebSiteConstants
     public const int MaxProcessTimeoutSeconds = 120;
 
     /// <summary>
-    /// Validation error message for process timeout range.
-    /// </summary>
-    public const string ProcessTimeoutRangeErrorMessage = "Shutdown timeout must be between 10 and 120 seconds.";
-
-    /// <summary>
     /// Delay in milliseconds to wait after process kill for OS cleanup.
     /// </summary>
     public const int ProcessKillCleanupDelayMs = 500;
@@ -84,11 +79,6 @@ public static class WebSiteConstants
     /// </summary>
     public const int MaxWebApplicationPort = 65535;
 
-    /// <summary>
-    /// Validation error message for port range.
-    /// </summary>
-    public const string PortRangeErrorMessage = "Port must be between 1024 and 65535.";
-
     #endregion
 
     #region File Extensions
@@ -97,35 +87,6 @@ public static class WebSiteConstants
     /// File extension for DLL files.
     /// </summary>
     public const string DllFileExtension = ".dll";
-
-    #endregion
-
-    #region Validation Error Messages
-
-    /// <summary>
-    /// Validation error message for required site name.
-    /// </summary>
-    public const string SiteNameRequiredErrorMessage = "Site name is required.";
-
-    /// <summary>
-    /// Validation error message for required application path.
-    /// </summary>
-    public const string ApplicationPathRequiredErrorMessage = "Application path is required.";
-
-    /// <summary>
-    /// Validation error message for required port.
-    /// </summary>
-    public const string PortRequiredErrorMessage = "Port is required.";
-
-    /// <summary>
-    /// Validation error message for required environment.
-    /// </summary>
-    public const string EnvironmentRequiredErrorMessage = "Environment is required.";
-
-    /// <summary>
-    /// Validation error message for required host name.
-    /// </summary>
-    public const string HostNameRequiredErrorMessage = "Host name is required.";
 
     #endregion
 }
