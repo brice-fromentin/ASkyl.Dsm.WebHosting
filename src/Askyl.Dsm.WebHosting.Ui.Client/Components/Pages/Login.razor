@@ -7,14 +7,12 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Authentication
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Globalization.Resources
-@using Microsoft.Extensions.Localization
 
 @inject IAuthenticationService authService
 @inject IDialogService DialogsService
 @inject IToastService ToastService
 @inject NavigationManager navigation
-@inject IStringLocalizer<SharedResource> localizer
+@inject ILocalizer localizer
 @inject ICultureManager cultureManager
 
 <LoadingOverlay WorkingStateComponent="@this" />
@@ -91,7 +89,7 @@
         }
 
         // Initialize culture from login response (user preference or system fallback)
-        await cultureManager.InitializeFromLoginAsync(result.Culture);
+        cultureManager.InitializeFromLogin(result.Culture);
 
         ToastService.ShowSuccess(localizer[L.Success.AuthenticationSuccessful]);
         navigation.NavigateTo(ApplicationConstants.HomePagePath);

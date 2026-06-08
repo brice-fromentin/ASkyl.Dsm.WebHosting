@@ -2,9 +2,10 @@
 
 **Version:** 0.5.9
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 25, 2026 (Session validation against DSM server,
-`SYNO.Core.User.get` probe with 1-minute TTL cache, `DsmUsernameKey` session storage,
-`IsAuthenticatedAsync` consolidated, DSM API directory restructuring — Models/Parameters/Responses)
+**Last Updated:** June 8, 2026 (Globalization refinement — `GlobalizationSettings` in Globalization assembly,
+`ILocalizer` abstraction, `CultureManager` with pre-resolved static fields, pure C# browser detection,
+synchronous culture methods, `AuthenticationResult` JSON serialization fixes, camelCase JSON,
+`DsmLanguageToCultureConverter` returns `null` for `"def"`, `ResetToSystem()` on logout)
 
 ---
 
@@ -127,11 +128,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.9</Version>
-<AssemblyVersion>0.5.9.0</AssemblyVersion>
-<FileVersion>0.5.9.0</FileVersion>
-<InformationalVersion>0.5.9</InformationalVersion>
-<PackageVersion>0.5.9</PackageVersion>
+<Version>0.5.10</Version>
+<AssemblyVersion>0.5.10.0</AssemblyVersion>
+<FileVersion>0.5.10.0</FileVersion>
+<InformationalVersion>0.5.10</InformationalVersion>
+<PackageVersion>0.5.10</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -1247,23 +1248,27 @@ The Globalization assembly serves two purposes:
 
 ### Culture Flow
 
-1. **Server discovers cultures** — scans `Globalization` assembly directory for satellite assembly subdirectories (e.g., `fr-FR/Askyl.Dsm.WebHosting.Globalization.resources.dll`)
-2. **Server injects to WASM** — culture names serialized as JSON, injected via `Blazor.start()` → `dotnet.withEnvironmentVariable('ADWH_SUPPORTED_CULTURES', '["en-US","fr-FR"]')`
-3. **WASM parses cultures** — `CultureManager` static property deserializes JSON at class load (DI registration time)
-4. **Login resolves culture** — priority: login response `Culture` → browser `navigator.language` → default `en-US`
-5. **WASM propagates to server** — `AcceptLanguageHandler` attaches `Accept-Language` header to all HTTP requests
-6. **Server reads header** — `RequestLocalization` middleware sets thread culture per request
+1. **Server discovers cultures** — scans `Globalization` assembly directory for satellite assembly subdirectories (e.g., `fr-FR/`)
+2. **Server reads DSM system culture** — extracts `language` from `/etc/synoinfo.conf`, converts via `DsmLanguageToCultureConverter` (returns `null` for `"def"`)
+3. **Server injects to WASM** — supported cultures as JSON + system culture, injected via `Blazor.start()` using `dotnet.withEnvironmentVariable()` for `ADWH_SUPPORTED_CULTURES` and `ADWH_SYSTEM_CULTURE`
+4. **WASM parses cultures** — `GlobalizationSettings` static properties deserialize JSON at class load (DI registration time)
+5. **CultureManager pre-resolves** — static fields capture `BrowserCulture` (from WASM runtime's auto-set `CurrentUICulture`), `SystemCulture`, and `SupportedCultures` (from env var) as `CultureInfo?`
+6. **Login resolves culture** — priority: login response `Culture` → system culture → browser culture → default `en-US`
+7. **WASM propagates to server** — `AcceptLanguageHandler` attaches `Accept-Language` header to all HTTP requests
+8. **Server reads header** — `RequestLocalization` middleware sets thread culture per request
 
 ### Key Components
 
 | Component | Location | Purpose |
 |---|---|---|
-| `ICultureManager` | `Globalization` | Interface: `InitializeFromLoginAsync()`, `CurrentCulture`, `CurrentUICulture` |
-| `CultureManager` | `Ui.Client` | WASM implementation with static `SupportedCultures` from env var |
+| `ICultureManager` | `Globalization` | Interface: `InitializeFromLogin(string?)`, `ResetToSystem()`, `CurrentCulture`, `CurrentUICulture` |
+| `CultureManager` | `Ui.Client` | WASM implementation with pre-resolved static fields (`BrowserCulture`, `SystemCulture`, `SupportedCultures`) |
+| `GlobalizationSettings` | `Globalization` | Static settings: `SupportedCultures`, `SupportedCultureNamesJson`, `SystemCulture` |
 | `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header |
-| `GlobalizationExtensions` | `Ui` | Server-side culture discovery + `RequestLocalization` config |
-| `culture.js` | `Ui.Client/wwwroot/js` | JS interop for `navigator.language` detection |
+| `GlobalizationExtensions` | `Ui/Extensions/` | Server-side `RequestLocalization` config (file-scoped extension methods) |
 | `LocalizationKeys.cs` | `Globalization` | Strongly-typed keys organized by model (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`) |
+| `ILocalizer` | `Globalization` | Abstraction interface — hides `IStringLocalizer` from consumer projects |
+| `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `IStringLocalizer<SharedResource>` |
 | `WebSiteConfigurationValidator` | `Globalization/Validators/` | FluentValidation rules for `WebSiteConfiguration` (7 properties) |
 | `LoginCredentialsValidator` | `Globalization/Validators/` | FluentValidation rules for `LoginCredentials` (2 properties) |
 
@@ -1299,9 +1304,20 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 
 ### Culture Resolution Priority
 
-1. **Login response culture** — server resolved user vs system preference (from DSM settings)
-2. **Browser language** — `navigator.language` via JS interop (exact match, then parent culture)
+**At construction (login page, post-logout):**
+
+1. **DSM system culture** — from `ADWH_SYSTEM_CULTURE` env var (pre-resolved to `CultureInfo?` as `SystemCulture`)
+2. **Browser culture** — from WASM runtime's auto-set `CultureInfo.CurrentUICulture` (pre-resolved to `CultureInfo` as `BrowserCulture`)
 3. **Default** — `en-US`
+
+**After login:**
+
+1. **Login response culture** — server resolved user vs system preference (from DSM settings)
+2. **DSM system culture** — same as above (pre-resolved)
+3. **Browser culture** — same as above (pre-resolved)
+4. **Default** — `en-US`
+
+**Matching strategy:** `FindMatchingCulture(CultureInfo)` uses `CultureInfo.Equals` for exact match, then `TwoLetterISOLanguageName` for parent culture fallback. All matching is done at class load time.
 
 ### Adding a New Culture
 
@@ -1320,7 +1336,17 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 
 ### Design Decisions
 
-- **DSM-controlled culture**: No runtime switching — culture locked after login, changes require re-login
+- **DSM-controlled culture**: No runtime switching — culture locked after login, reset to system on logout
+- **Synchronous culture methods**: `InitializeFromLogin()` and `ResetToSystem()` are `void` — no I/O involved
+- **Pre-resolved static fields**: `BrowserCulture`, `SystemCulture`, and `SupportedCultures` captured at class load — `ResolveSystemCulture()` is allocation-free at runtime
+- **Pure C# browser detection**: WASM runtime auto-sets `CultureInfo.CurrentUICulture` from Accept-Language header — no JS interop needed
+- **`DsmLanguageToCultureConverter` returns `null` for `"def"`**: `"def"` means "use browser default" — not English
+- **`GlobalizationSettings` in Globalization assembly**: Static settings (supported cultures, system culture) belong where the resources are — not in Ui project
+- **`GlobalizationExtensions` in `Ui/Extensions/`**: ASP.NET Core extensions belong in the project that uses them, uses .NET 10 file-scoped `extension` pattern
+- **`ILocalizer` abstraction**: Hides `IStringLocalizer` from consumer projects — enforces consistent usage via single indexer
+- **`AuthenticationResult.Culture` is `{ get; set; }`**: System.Text.Json requires setters for deserialization into properties
+- **`IsAuthenticated` marked `[JsonIgnore]`**: Redundant alias for `Success` — pollutes JSON response
+- **ASP.NET Core default camelCase JSON**: Removed `PropertyNamingPolicy = null` — camelCase is industry standard and matches WASM client defaults
 - **Satellite assembly discovery**: `Directory.GetDirectories()` on assembly location, filtered by project satellite assembly name
 - **`dotnet.withEnvironmentVariable()`**: Pure .NET approach, no JS variables or JS interop needed for culture discovery
 - **Static `SupportedCultures`**: Initialized at class load, available before login

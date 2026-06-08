@@ -1,6 +1,6 @@
 # Globalization (Multi-Language) Plan
 
-## Status: In Progress (Phase 9 next)
+## Status: In Progress (Phase 8 next)
 
 ---
 
@@ -538,11 +538,13 @@ SiteLifecycleManager                ApiResult                     Home.razor
 **Architecture: Single shared validator in Globalization assembly**
 
 The validator lives in `Globalization/Validators/` — shared by both server and client:
+
 - **Server** (`Ui`): Uses `FluentValidation.AspNetCore` for automatic model binding validation (returns 400 with ModelState errors)
 - **Client** (`Ui.Client`): Uses **Blazilla** (`<FluentValidator />`) for real-time UI validation with localized messages
 
 **Dependency graph:**
-```
+
+```text
 Globalization → Data (for domain models)
 Globalization → FluentValidation, FluentValidation.DependencyInjectionExtensions
 Ui (server) → Globalization + FluentValidation.AspNetCore
@@ -581,9 +583,112 @@ Ui.Client (WASM) → Globalization + Blazilla
 > - Server registration: `AddFluentValidationAutoValidation()` on `IServiceCollection` (not on `IMvcBuilder`)
 > - `LoginCredentials` had DataAnnotations missed in initial audit — added to migration scope
 
-### Phase 8: ~~Language Selector UI~~ — Cancelled
+### Phase 8: Localize Remaining Hardcoded UI Strings ✅ Done
 
-**Cancelled** — culture is 100% DSM-controlled (user preference or system fallback). There is no runtime language switching in the UI. Culture is resolved once at login and locked for the session.
+**Problem:** Code-behind logic in `.razor` files still contains hardcoded strings for toasts, confirmations, working states, and error messages.
+
+**Root cause:** Phase 5 localized the markup (template) content but missed code-behind strings in event handlers.
+
+**Strings localized:**
+
+| File | String | Key | Context |
+|---|---|---|---|
+| `Home.razor` | `Are you sure you want to delete...` | `Home.DeleteConfirmation` | Delete confirmation dialog |
+| `Home.razor` | `Deleting website '{0}'...` | `Loading.DeletingWebsite` | Working state message |
+| `Home.razor` | `Error deleting website: {0}` | `Home.ErrorDeleting` | Error toast |
+| `Home.razor` | `Starting website '{0}'...` | `Loading.StartingWebsite` | Working state message |
+| `Home.razor` | `Error starting website: {0}` | `Home.ErrorStarting` | Error toast |
+| `Home.razor` | `Stopping website '{0}'...` | `Loading.StoppingWebsite` | Working state message |
+| `Home.razor` | `Error stopping website: {0}` | `Home.ErrorStopping` | Error toast |
+| `Home.razor` | `Error during logout: {0}` | `Home.ErrorLoggingOut` | Error toast |
+| `AspNetReleasesDialog.razor` | `Installation error: {0}` | `AspNetReleases.InstallationError` | Error dialog |
+| `AspNetReleasesDialog.razor` | `Click OK if you want to proceed with uninstalling ASP.NET Core {0}` | `AspNetReleases.UninstallConfirmation` | Uninstall confirmation |
+| `AspNetReleasesDialog.razor` | `Uninstallation error: {0}` | `AspNetReleases.UninstallationError` | Error dialog |
+| `WebSiteConfigurationDialog.razor` | `The website requires .NET {0} which is not installed. Install now?` | `WebsiteConfig.FrameworkNotInstalled` | Install framework prompt |
+| `WebSiteConfigurationDialog.razor` | `Error {0} website: {1}` | `WebsiteConfig.ErrorModifying` | Error dialog (updating/creating) |
+| `WebSiteConfigurationDialog.razor` | `Updating '{0}'...` | `Loading.UpdatingWebsite` | Working state message |
+| `WebSiteConfigurationDialog.razor` | `Creating '{0}'...` | `Loading.CreatingWebsite` | Working state message |
+| `DotnetVersionsDialog.razor` | `Error while searching for global .NET version: {0}` | `DotnetVersions.ErrorSearching` | Error message |
+
+> **Commit:** `TBD`
+
+### Phase 8b: ILocalizer Abstraction (Hide IStringLocalizer) ✅ Done
+
+**Problem:** `IStringLocalizer<SharedResource>` was the public localization API. Consumers could inject it directly, bypassing the abstraction layer. This prevented enforcing consistent usage.
+
+**Solution:** Created `ILocalizer` interface with a single indexer that wraps `IStringLocalizer<SharedResource>` — hidden inside the Globalization assembly.
+
+**Artifacts:**
+
+| File | Purpose |
+|------|---------|
+| `ILocalizer.cs` | Interface with strongly-typed indexer `this[string name, params object[] arguments]` |
+| `Localizer.cs` | Wrapper implementation holding `IStringLocalizer<SharedResource>` |
+| `GlobalizationServiceCollectionExtensions.cs` | Added `AddScoped<ILocalizer>` registration |
+
+**Usage:**
+
+```csharp
+// Inject
+@inject ILocalizer localizer
+
+// Simple key
+@localizer[L.Home.PageTitle]
+
+// Key with args
+localizer[L.Home.DeleteConfirmation, selectedName]
+localizer[L.WebsiteConfig.ErrorModifying, action, ex.Message]
+```
+
+**Files migrated:** 24 files (6 server services, 6 client services, 9 components, 2 validators, 3 tests)
+
+**Result:** `IStringLocalizer` references reduced from 31 → 6 (all inside Globalization internals). Consumer projects (`Ui`, `Ui.Client`, `Tests`) have zero `Microsoft.Extensions.Localization` imports.
+
+> **Commit:** `TBD`
+
+### Phase 8c: CultureManager Refinement & JSON Serialization Fixes ✅ Done
+
+**Issues discovered during testing:**
+
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| `result.Culture` was `null` after login | `AuthenticationResult.Culture` was get-only — System.Text.Json can't set it | Changed to `{ get; set; }` |
+| `IsAuthenticated` appeared in JSON | Redundant alias for `Success` | Added `[JsonIgnore]` |
+| Server used PascalCase JSON | `PropertyNamingPolicy = null` overrode ASP.NET Core default | Removed override — back to camelCase |
+| `DsmLanguageToCultureConverter` returned `"en-US"` for `"def"` | `"def"` means "browser default", not English | Returns `null` for `"def"`/unrecognized codes |
+| `InitializeFromLoginAsync`/`ResetToSystemAsync` not truly async | No I/O — just in-memory lookups | Changed to `void` synchronous methods |
+| Browser language detection used JS interop | Unnecessary — WASM runtime auto-sets `CultureInfo.CurrentUICulture` | Pure C# via `CultureInfo.CurrentUICulture` |
+| `culture.js` tried to overwrite `navigator.language` | Read-only built-in property — assignment failed silently | Deleted file, no longer needed |
+| `ResolveSystemCulture()` re-looked up env vars on each call | Inefficient — repeated work at runtime | Pre-resolve static fields to `CultureInfo?` |
+| `GlobalizationExtensions` in Ui root with static settings | Mixed concerns — settings belong in Globalization assembly | Created `GlobalizationSettings` in Globalization, moved extensions to `Ui/Extensions/` |
+
+**Artifacts:**
+
+| File | Change |
+|------|--------|
+| `GlobalizationSettings.cs` | New — static settings class (supported cultures + system culture) in Globalization assembly |
+| `Ui/Extensions/GlobalizationExtensions.cs` | Moved from Ui root, uses .NET 10 file-scoped `extension` pattern |
+| `ICultureManager.cs` | `InitializeFromLogin(string?)` + `ResetToSystem()` (synchronous, no `Task`) |
+| `CultureManager.cs` | Pre-resolves `BrowserCulture` and `SystemCulture` as static `CultureInfo?`; `FindMatchingCulture` uses `CultureInfo` + `TwoLetterISOLanguageName` |
+| `DsmLanguageToCultureConverter.cs` | Returns `string?` — `null` for `"def"`/unrecognized |
+| `AuthenticationResult.cs` | `Culture { get; set; }`, `IsAuthenticated` marked `[JsonIgnore]` |
+| `ApplicationConstants.cs` | Added `SystemCultureEnvironmentVariable`, removed `JsInteropNavigatorLanguage` |
+| `App.razor` | Injects system culture via `Blazor.start()`, removed `culture.js` reference |
+| `Program.cs` (Ui) | Wires system culture from DsmApiClient after build |
+| `Home.razor` | Calls `CultureManager.ResetToSystem()` on logout |
+| `Login.razor` | Calls `cultureManager.InitializeFromLogin(result.Culture)` |
+
+**Resolution chain (final):**
+
+```text
+Construction:  SystemCulture (env var) → BrowserCulture (WASM runtime) → en-US
+Post-login:    result.Culture (from server) → SystemCulture → BrowserCulture → en-US
+Post-logout:   SystemCulture (env var) → BrowserCulture (WASM runtime) → en-US
+```
+
+**Verification:** Build ✅ (0 warnings), Tests ✅ (211/211)
+
+> **Commit:** `TBD`
 
 ### Phase 9: Culture-Aware Formatting
 
@@ -1050,15 +1155,24 @@ public async Task<ApiResult> CallApiAsync()
 | 2026-05-31 | Use `SYNO.Core.UserSettings` with method `get` (not `apply`) | `apply` requires a payload body (error 114); `get` needs no payload and returns all user settings including `Personal.lang`, `Personal.dateFormat`, `Personal.timeFormat` |
 | 2026-06-01 | Extract `Personal.dateFormat` and `Personal.timeFormat` from UserSettings | Verified via live API: `Personal` section contains PHP-style format strings (`Y/m/d`, `h:i a`) that need conversion to .NET format equivalents |
 | 2026-06-03 | Remove `DsmTimezoneToIanaConverter`, `SupplangToCultureConverter`, and all timezone/supported-languages plumbing | Neither timezone nor supported languages are consumed by the app; `AuthenticationResult` only carries `Culture` |
+| 2026-06-08 | Phase 8 localizes remaining hardcoded UI strings in code-behind | Phase 5 localized markup but missed C# event handler strings (toasts, confirmations, working states) |
+| 2026-06-08 | `ILocalizer` abstraction hides `IStringLocalizer` from consumer projects | Prevents direct Microsoft dependency leaks and enforces consistent usage pattern via single indexer |
+| 2026-06-08 | `AuthenticationResult.Culture` uses `{ get; set; }` | System.Text.Json can't deserialize into get-only properties without parameterized constructor matching |
+| 2026-06-08 | `IsAuthenticated` marked `[JsonIgnore]` | Redundant alias for `Success` — pollutes JSON response |
+| 2026-06-08 | Revert to ASP.NET Core default camelCase JSON | `PropertyNamingPolicy = null` caused deserialization mismatch with WASM client |
+| 2026-06-08 | `DsmLanguageToCultureConverter` returns `null` for `"def"` | `"def"` means "use browser default" — should not force English |
+| 2026-06-08 | `InitializeFromLogin`/`ResetToSystem` are synchronous `void` | No I/O involved — `Task` return type was interface-only convention |
+| 2026-06-08 | Browser culture via `CultureInfo.CurrentUICulture` | WASM runtime auto-sets from Accept-Language header — no JS interop needed |
+| 2026-06-08 | Delete `culture.js` | Tried to overwrite read-only `navigator.language` — failed silently |
+| 2026-06-08 | Static fields pre-resolve to `CultureInfo?` | Avoids repeated env var lookups and string comparisons at runtime |
+| 2026-06-08 | `FindMatchingCulture` uses `CultureInfo` + `TwoLetterISOLanguageName` | Proper .NET API for parent language matching — no manual `Split('-')` |
+| 2026-06-08 | `GlobalizationSettings` in Globalization assembly | Static settings belong where the resources are — not in Ui project |
+| 2026-06-08 | `GlobalizationExtensions` in `Ui/Extensions/` | ASP.NET Core extensions belong in the project that uses them |
+| 2026-06-08 | `ResetToSystem()` resets to system resolution chain | Logout should restore system/browser culture — not just browser |
 
 ---
 
 ## 8. Next Steps
 
-1. Begin Phase 1: Create `Askyl.Dsm.WebHosting.Globalization` assembly
-2. Populate `SharedResource.resx` with all strings from Section 4
-3. Create `SharedResource.fr-FR.resx` with French translations
-4. Migrate strings from `ApplicationConstants` and `ValidationConstants`
-5. Update server and WASM services to use `IStringLocalizer`
-6. Localize all `.razor` components
-7. Implement `ICultureManager` and language selector UI
+1. Begin Phase 9: Verify culture-aware formatting (dates, numbers, pluralization)
+2. Begin Phase 10: End-to-end testing & validation

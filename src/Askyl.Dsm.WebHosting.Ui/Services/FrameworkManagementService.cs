@@ -3,10 +3,8 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
-using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
-using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -17,7 +15,7 @@ public class FrameworkManagementService(
     IFileManagerService fileManager,
     IArchiveExtractorService archiveExtractor,
     ILogger<ILogFrameworkManagementService> logger,
-    IStringLocalizer<SharedResource> localizer) : IFrameworkManagementService
+    ILocalizer localizer) : IFrameworkManagementService
 {
     public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel, CancellationToken cancellationToken = default)
     {

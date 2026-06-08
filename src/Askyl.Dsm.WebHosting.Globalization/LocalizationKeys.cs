@@ -3,7 +3,7 @@ namespace Askyl.Dsm.WebHosting.Globalization;
 /// <summary>
 /// Strongly-typed localization key constants, organized by domain.
 /// Keys are flat strings that match the &lt;data name="..."&gt; entries in SharedResource.resx.
-/// Use with <c>IStringLocalizer&lt;SharedResource&gt;</c> for compile-time safety.
+/// Use with <see cref="ILocalizer"/> for compile-time safety.
 /// </summary>
 public static class L
 {
@@ -50,6 +50,11 @@ public static class L
         public const string GridColumnInternalPort = "Home_GridColumnInternalPort";
         public const string GridColumnState = "Home_GridColumnState";
         public const string LoadingWebsites = "Home_LoadingWebsites";
+        public const string DeleteConfirmation = "Home_DeleteConfirmation";
+        public const string ErrorDeleting = "Home_ErrorDeleting";
+        public const string ErrorStarting = "Home_ErrorStarting";
+        public const string ErrorStopping = "Home_ErrorStopping";
+        public const string ErrorLoggingOut = "Home_ErrorLoggingOut";
     }
 
     /// <summary>Not found page strings.</summary>
@@ -79,6 +84,8 @@ public static class L
         public const string EnableHSTSLabel = "WebsiteConfig_EnableHSTSLabel";
         public const string UpdateButton = "WebsiteConfig_UpdateButton";
         public const string CreateButton = "WebsiteConfig_CreateButton";
+        public const string FrameworkNotInstalled = "WebsiteConfig_FrameworkNotInstalled";
+        public const string ErrorModifying = "WebsiteConfig_ErrorModifying";
     }
 
     /// <summary>ASP.NET releases dialog strings.</summary>
@@ -93,6 +100,9 @@ public static class L
         public const string GridColumnInstalled = "AspNetReleases_GridColumnInstalled";
         public const string GridColumnSecurity = "AspNetReleases_GridColumnSecurity";
         public const string GridColumnRelease = "AspNetReleases_GridColumnRelease";
+        public const string InstallationError = "AspNetReleases_InstallationError";
+        public const string UninstallConfirmation = "AspNetReleases_UninstallConfirmation";
+        public const string UninstallationError = "AspNetReleases_UninstallationError";
     }
 
     /// <summary>.NET versions dialog strings.</summary>
@@ -102,6 +112,7 @@ public static class L
         public const string Searching = "DotnetVersions_Searching";
         public const string NotFound = "DotnetVersions_NotFound";
         public const string FailedToLoad = "DotnetVersions_FailedToLoad";
+        public const string ErrorSearching = "DotnetVersions_ErrorSearching";
     }
 
     /// <summary>Licenses dialog strings.</summary>
@@ -137,6 +148,11 @@ public static class L
         public const string DirectoryContents = "Loading_DirectoryContents";
         public const string Installing = "Loading_Installing";
         public const string Uninstalling = "Loading_Uninstalling";
+        public const string DeletingWebsite = "Loading_DeletingWebsite";
+        public const string StartingWebsite = "Loading_StartingWebsite";
+        public const string StoppingWebsite = "Loading_StoppingWebsite";
+        public const string UpdatingWebsite = "Loading_UpdatingWebsite";
+        public const string CreatingWebsite = "Loading_CreatingWebsite";
     }
 
     /// <summary>Error messages displayed to the user (toasts, dialogs, API responses).</summary>

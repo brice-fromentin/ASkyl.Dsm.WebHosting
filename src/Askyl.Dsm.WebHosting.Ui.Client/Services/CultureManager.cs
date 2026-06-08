@@ -3,30 +3,159 @@ using System.Text.Json;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
-using Microsoft.JSInterop;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 
 /// <summary>
 /// WASM implementation of <see cref="ICultureManager"/>.
-/// Resolves culture once at login from DSM settings, falls back to browser language, then default.
+/// Resolves culture at construction from DSM system settings, then overrides with user preference at login.
 /// Propagates culture to server via HTTP <c>Accept-Language</c> headers.
 /// Culture cannot be changed at runtime — it is controlled by DSM user/system preferences.
 /// Supported cultures are discovered from the environment variable injected by the server via <c>Blazor.start()</c>.
+/// Browser language is detected from <see cref="CultureInfo.CurrentUICulture"/> auto-set by the WASM runtime.
 /// </summary>
-/// <param name="jsRuntime">JavaScript runtime for browser language detection.</param>
 /// <param name="logger">Logger for culture resolution debugging.</param>
-public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> logger) : ICultureManager
+public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManager
 {
+    #region Static Fields
+
     /// <summary>
     /// Gets the supported cultures discovered from the server-injected environment variable.
-    /// Initialized once when the class is first referenced (at DI registration time).
     /// </summary>
-    public static CultureInfo[] SupportedCultures { get; } = ParseSupportedCultures();
+    private static CultureInfo[] SupportedCultures { get; } = ParseSupportedCultures();
 
-    public CultureInfo CurrentCulture { get; private set; } = new(GlobalizationServiceCollectionExtensions.DefaultCulture);
+    /// <summary>
+    /// Gets the browser's initial culture, captured at class load time before any override.
+    /// The WASM runtime sets <see cref="CultureInfo.CurrentUICulture"/> from the Accept-Language header at startup.
+    /// </summary>
+    private static CultureInfo BrowserCulture { get; } = new(CultureInfo.CurrentUICulture.Name);
+
+    /// <summary>
+    /// Gets the DSM system culture injected by the server via <c>Blazor.start()</c>.
+    /// Returns <c>null</c> when DSM language is set to "def" (browser default).
+    /// </summary>
+    private static CultureInfo? SystemCulture { get; } = ResolveSystemCultureFromEnv();
+
+    #endregion
+
+    #region Properties
+
+    /// <summary>
+    /// Current culture — resolved at construction from DSM system settings, overridden by user preference at login.
+    /// </summary>
+    public CultureInfo CurrentCulture { get; private set; } = ResolveInitialCulture();
 
     public CultureInfo CurrentUICulture => CurrentCulture;
+
+    #endregion
+
+    #region ICultureManager Implementation
+
+    /// <inheritdoc/>
+    public void InitializeFromLogin(string? culture)
+    {
+        // If user has a specific culture, apply it; otherwise fall back to system resolution
+        if (String.IsNullOrWhiteSpace(culture))
+        {
+            return;
+        }
+
+        var cultureInfo = new CultureInfo(culture);
+        var match = FindMatchingCulture(cultureInfo);
+
+        if (match is null)
+        {
+            // Unsupported culture — fall back to system resolution (system → browser → default)
+            ApplyCulture(ResolveSystemCulture());
+            return;
+        }
+
+        logger.CultureResolvedFromLogin(match.Name);
+        ApplyCulture(match);
+    }
+
+    /// <inheritdoc/>
+    public void ResetToSystem()
+    {
+        var culture = ResolveSystemCulture();
+        ApplyCulture(culture);
+        logger.CultureResetToSystem(culture.Name);
+    }
+
+    #endregion
+
+    #region Construction Helpers
+
+    private static CultureInfo ResolveInitialCulture()
+    {
+        var culture = ResolveSystemCulture();
+        ApplyCultureToThread(culture);
+        return culture;
+    }
+
+    private static void ApplyCultureToThread(CultureInfo culture)
+    {
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        Thread.CurrentThread.CurrentUICulture = culture;
+        Thread.CurrentThread.CurrentCulture = culture;
+    }
+
+    #endregion
+
+    #region Culture Resolution
+
+    /// <summary>
+    /// Resolves culture from DSM system settings, browser language, or default.
+    /// Used at construction (login page) and after logout.
+    /// </summary>
+    private static CultureInfo ResolveSystemCulture()
+    {
+        // Priority 1: DSM system culture (pre-resolved at class load)
+        if (SystemCulture is not null)
+        {
+            return SystemCulture;
+        }
+
+        // Priority 2: browser culture (pre-resolved at class load)
+        return BrowserCulture;
+    }
+
+    /// <summary>
+    /// Finds a matching culture in <see cref="SupportedCultures"/> by exact name or parent language.
+    /// </summary>
+    private static CultureInfo? FindMatchingCulture(CultureInfo culture)
+    {
+        // Try exact match first (e.g. "fr-FR")
+        var match = SupportedCultures.FirstOrDefault(c => c.Equals(culture));
+
+        if (match is not null)
+        {
+            return match;
+        }
+
+        // Try parent language (e.g. "fr" from "fr-CA")
+        return SupportedCultures.FirstOrDefault(c => String.Equals(c.TwoLetterISOLanguageName, culture.TwoLetterISOLanguageName, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Resolves the DSM system culture from the environment variable at class load time.
+    /// </summary>
+    private static CultureInfo? ResolveSystemCultureFromEnv()
+    {
+        var name = Environment.GetEnvironmentVariable(ApplicationConstants.SystemCultureEnvironmentVariable);
+
+        if (String.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        return FindMatchingCulture(new CultureInfo(name));
+    }
+
+    #endregion
+
+    #region Environment Parsing
 
     private static CultureInfo[] ParseSupportedCultures()
     {
@@ -47,84 +176,16 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
         return [.. names.Select(n => new CultureInfo(n))];
     }
 
-    public Task InitializeFromLoginAsync(string? culture)
+    #endregion
+
+    #region Private Helpers
+
+    private void ApplyCulture(CultureInfo culture)
     {
-        string? resolved = null;
-
-        // Priority 1: culture from login response (server resolved user vs system preference)
-        if (!String.IsNullOrWhiteSpace(culture) && SupportedCultures.Any(c => String.Equals(c.Name, culture, StringComparison.OrdinalIgnoreCase)))
-        {
-            resolved = culture;
-            logger.CultureResolvedFromLogin(culture);
-        }
-
-        // Priority 2: browser navigator.language
-        if (resolved is null)
-        {
-            resolved = DetectBrowserLanguage();
-
-            if (resolved is not null)
-            {
-                logger.CultureResolvedFromBrowser(resolved);
-            }
-        }
-
-        // Priority 3: default
-        resolved ??= GlobalizationServiceCollectionExtensions.DefaultCulture;
-        logger.CultureResolvedToDefault(resolved);
-
-        return SetCultureInternalAsync(resolved);
-    }
-
-    private Task SetCultureInternalAsync(string cultureName)
-    {
-        var culture = SupportedCultures.FirstOrDefault(c => String.Equals(c.Name, cultureName, StringComparison.OrdinalIgnoreCase));
-
-        // Fallback to default for unsupported cultures
-        culture ??= new CultureInfo(GlobalizationServiceCollectionExtensions.DefaultCulture);
-
-        // Apply culture to current thread
-        CultureInfo.DefaultThreadCurrentUICulture = culture;
-        CultureInfo.DefaultThreadCurrentCulture = culture;
-        Thread.CurrentThread.CurrentUICulture = culture;
-        Thread.CurrentThread.CurrentCulture = culture;
-
+        ApplyCultureToThread(culture);
         CurrentCulture = culture;
-
         logger.CultureApplied(culture.Name);
-
-        return Task.CompletedTask;
     }
 
-    private string? DetectBrowserLanguage()
-    {
-        try
-        {
-            var browserLang = jsRuntime.InvokeAsync<string>(ApplicationConstants.JsInteropNavigatorLanguageGet).Result;
-
-            if (String.IsNullOrWhiteSpace(browserLang))
-            {
-                return null;
-            }
-
-            // Try exact match first (e.g. "fr-FR")
-            var match = SupportedCultures.FirstOrDefault(c => String.Equals(c.Name, browserLang, StringComparison.OrdinalIgnoreCase));
-
-            if (match is not null)
-            {
-                return match.Name;
-            }
-
-            // Try parent culture (e.g. "fr" from "fr-CA")
-            var parentName = browserLang.Split('-')[0];
-            match = SupportedCultures.FirstOrDefault(c => String.Equals(c.Name, parentName, StringComparison.OrdinalIgnoreCase) || String.Equals(c.Parent.Name, parentName, StringComparison.OrdinalIgnoreCase));
-            return match?.Name;
-        }
-        catch (Exception ex)
-        {
-            // JS interop failure — return null to let default culture win
-            logger.BrowserLanguageDetectionFailed(ex);
-            return null;
-        }
-    }
+    #endregion
 }

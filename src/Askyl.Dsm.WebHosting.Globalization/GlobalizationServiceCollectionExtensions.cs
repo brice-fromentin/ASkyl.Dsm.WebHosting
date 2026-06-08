@@ -26,6 +26,10 @@ public static class GlobalizationServiceCollectionExtensions
         // which matches the embedded resource name from the .resx files in Resources/ folder.
         services.AddLocalization();
 
+        // Wrap IStringLocalizer<SharedResource> behind ILocalizer to hide Microsoft internals.
+        // Singleton is safe — LocalizedString is immutable and culture is resolved at call time.
+        services.AddSingleton<ILocalizer>(sp => new Localizer(sp.GetRequiredService<IStringLocalizer<SharedResource>>()));
+
         return services;
     }
 }

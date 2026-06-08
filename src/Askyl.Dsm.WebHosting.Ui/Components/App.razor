@@ -1,4 +1,5 @@
 ﻿@using Askyl.Dsm.WebHosting.Constants.Application
+@using Askyl.Dsm.WebHosting.Globalization
 @using Askyl.Dsm.WebHosting.Ui
 
 <!DOCTYPE html>
@@ -15,7 +16,6 @@
     <ImportMap />
 
     <script src="@Assets["js/tree-navigation.js"]"></script>
-    <script src="@Assets["js/culture.js"]"></script>
 
     <link rel="icon" type="image/svg+xml" href="images/adwh-logo.svg" sizes="any">
     <link rel="icon" type="image/png" href="images/favicon.png" sizes="any" />
@@ -32,7 +32,11 @@
                 configureRuntime: dotnet => {
                     dotnet.withEnvironmentVariable(
                         '@ApplicationConstants.SupportedCulturesEnvironmentVariable',
-                        '@((MarkupString)GlobalizationExtensions.SupportedCultureNamesJson)'
+                        '@((MarkupString)GlobalizationSettings.SupportedCultureNamesJson)'
+                    );
+                    dotnet.withEnvironmentVariable(
+                        '@ApplicationConstants.SystemCultureEnvironmentVariable',
+                        '@(GlobalizationSettings.SystemCulture ?? "")'
                     );
                 }
             },

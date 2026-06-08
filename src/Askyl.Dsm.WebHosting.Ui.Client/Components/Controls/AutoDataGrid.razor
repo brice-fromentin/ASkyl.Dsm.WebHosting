@@ -1,9 +1,7 @@
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Globalization.Resources
-@using Microsoft.Extensions.Localization
 
-@inject IStringLocalizer<SharedResource> localizer
+@inject ILocalizer localizer
 @typeparam TItem where TItem : class
 
 <div class="auto-data-grid-content">
@@ -45,7 +43,7 @@
     <div class="auto-data-grid-infos-area">
         <FluentToolbar>
             <FluentSpacer />
-            <FluentLabel>@String.Format(localizer[L.AutoDataGrid.ItemsCount], Items?.Count())</FluentLabel>
+            <FluentLabel>@localizer[L.AutoDataGrid.ItemsCount, Items?.Count() ?? 0]</FluentLabel>
             @if (OnReload.HasDelegate)
             {
                 <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />

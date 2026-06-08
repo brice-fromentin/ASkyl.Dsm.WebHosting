@@ -1,8 +1,6 @@
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Globalization;
-using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
-using Microsoft.Extensions.Localization;
 using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
@@ -12,7 +10,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// </summary>
 /// <param name="fileSystemService">The file system service to fetch directory contents.</param>
 /// <param name="localizer">Localizer for user-facing strings.</param>
-public class TreeContentService(IFileSystemService fileSystemService, IStringLocalizer<SharedResource> localizer) : ITreeContentService
+public class TreeContentService(IFileSystemService fileSystemService, ILocalizer localizer) : ITreeContentService
 {
     /// <inheritdoc/>
     public async Task<List<TreeViewItem>> LoadChildDirectoriesAsync(string path, Func<string, Task> errorHandler, Func<string, Task<List<TreeViewItem>>> loadChildrenAsync)

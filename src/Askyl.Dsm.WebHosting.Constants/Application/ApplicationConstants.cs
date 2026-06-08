@@ -104,9 +104,9 @@ public static class ApplicationConstants
     public const string SupportedCulturesEnvironmentVariable = "ADWH_SUPPORTED_CULTURES";
 
     /// <summary>
-    /// JavaScript interop method name for retrieving the browser's preferred language.
+    /// Environment variable name for DSM system culture passed from server to WASM client via <c>Blazor.start()</c>.
     /// </summary>
-    public const string JsInteropNavigatorLanguageGet = "navigator.language.get";
+    public const string SystemCultureEnvironmentVariable = "ADWH_SYSTEM_CULTURE";
 
     #endregion
 }

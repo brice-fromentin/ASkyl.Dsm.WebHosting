@@ -271,5 +271,19 @@ public static partial class ClientLoggingExtensions
     public static partial void BrowserLanguageDetectionFailed(
         this ILogger<ILogCultureManager> logger, Exception ex);
 
+    /// <summary>
+    /// Logs the culture resolved from DSM system settings.
+    /// </summary>
+    [LoggerMessage(EventId = 7600006, Level = LogLevel.Debug, Message = "Culture resolved from DSM system settings: {Culture}")]
+    public static partial void CultureResolvedFromSystem(
+        this ILogger<ILogCultureManager> logger, string culture);
+
+    /// <summary>
+    /// Logs the culture reset to DSM system resolution (on logout).
+    /// </summary>
+    [LoggerMessage(EventId = 7600007, Level = LogLevel.Debug, Message = "Culture reset to system resolution: {Culture}")]
+    public static partial void CultureResetToSystem(
+        this ILogger<ILogCultureManager> logger, string culture);
+
     #endregion
 }

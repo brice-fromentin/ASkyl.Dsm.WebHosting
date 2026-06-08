@@ -1,14 +1,12 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
-using Askyl.Dsm.WebHosting.Globalization.Resources;
 using FluentValidation;
-using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Globalization.Validators;
 
 public sealed class WebSiteConfigurationValidator : AbstractValidator<WebSiteConfiguration>
 {
-    public WebSiteConfigurationValidator(IStringLocalizer<SharedResource> localizer)
+    public WebSiteConfigurationValidator(ILocalizer localizer)
     {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage(localizer[L.WebSiteConfiguration.NameRequired].Value)

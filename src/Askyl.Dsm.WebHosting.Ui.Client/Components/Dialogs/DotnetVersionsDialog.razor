@@ -2,16 +2,14 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Globalization.Resources
 @using Askyl.Dsm.WebHosting.Logging
-@using Microsoft.Extensions.Localization
 
 @implements IDialogContentComponent
 
 @inject IDotnetVersionService DotnetVersionService
 @inject IToastService ToastService
 @inject ILogger<ILogDotnetVersionsDialog> Logger
-@inject IStringLocalizer<SharedResource> localizer
+@inject ILocalizer localizer
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">@localizer[L.DotnetVersions.DialogTitle]</FluentLabel>
@@ -101,7 +99,7 @@
         catch (Exception ex)
         {
             Logger.ErrorSearchingDotnetVersion(ex);
-            ErrorMessage = $"Error while searching for global .NET version: {ex.Message}";
+            ErrorMessage = localizer[L.DotnetVersions.ErrorSearching, ex.Message];
             DotnetVersions = [];
         }
         finally

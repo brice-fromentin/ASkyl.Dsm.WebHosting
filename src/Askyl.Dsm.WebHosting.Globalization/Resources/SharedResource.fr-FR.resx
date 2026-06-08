@@ -151,6 +151,21 @@
   <data name="Home_GridColumnState" xml:space="preserve">
     <value>État</value>
   </data>
+  <data name="Home_DeleteConfirmation" xml:space="preserve">
+    <value>Êtes-vous sûr de vouloir supprimer le site web '{0}' ? Cette action est irréversible.</value>
+  </data>
+  <data name="Home_ErrorDeleting" xml:space="preserve">
+    <value>Erreur lors de la suppression du site web : {0}</value>
+  </data>
+  <data name="Home_ErrorStarting" xml:space="preserve">
+    <value>Erreur lors du démarrage du site web : {0}</value>
+  </data>
+  <data name="Home_ErrorStopping" xml:space="preserve">
+    <value>Erreur lors de l'arrêt du site web : {0}</value>
+  </data>
+  <data name="Home_ErrorLoggingOut" xml:space="preserve">
+    <value>Erreur lors de la déconnexion : {0}</value>
+  </data>
 
   <!-- NotFound -->
   <data name="NotFound_PageTitle" xml:space="preserve">
@@ -212,6 +227,12 @@
   <data name="WebsiteConfig_CreateButton" xml:space="preserve">
     <value>Créer</value>
   </data>
+  <data name="WebsiteConfig_FrameworkNotInstalled" xml:space="preserve">
+    <value>Le site web nécessite .NET {0} qui n'est pas installé. Installer maintenant ?</value>
+  </data>
+  <data name="WebsiteConfig_ErrorModifying" xml:space="preserve">
+    <value>Erreur lors de la {0} du site web : {1}</value>
+  </data>
 
   <!-- AspNetReleases -->
   <data name="AspNetReleases_DialogTitle" xml:space="preserve">
@@ -241,6 +262,15 @@
   <data name="AspNetReleases_GridColumnRelease" xml:space="preserve">
     <value>Publication</value>
   </data>
+  <data name="AspNetReleases_InstallationError" xml:space="preserve">
+    <value>Erreur d'installation : {0}</value>
+  </data>
+  <data name="AspNetReleases_UninstallConfirmation" xml:space="preserve">
+    <value>Cliquez sur OK pour procéder à la désinstallation d'ASP.NET Core {0}</value>
+  </data>
+  <data name="AspNetReleases_UninstallationError" xml:space="preserve">
+    <value>Erreur de désinstallation : {0}</value>
+  </data>
 
   <!-- AutoDataGrid -->
   <data name="AutoDataGrid_Loading" xml:space="preserve">
@@ -265,6 +295,21 @@
   </data>
   <data name="Loading_Uninstalling" xml:space="preserve">
     <value>Désinstallation en cours...</value>
+  </data>
+  <data name="Loading_DeletingWebsite" xml:space="preserve">
+    <value>Suppression du site web '{0}'...</value>
+  </data>
+  <data name="Loading_StartingWebsite" xml:space="preserve">
+    <value>Démarrage du site web '{0}'...</value>
+  </data>
+  <data name="Loading_StoppingWebsite" xml:space="preserve">
+    <value>Arrêt du site web '{0}'...</value>
+  </data>
+  <data name="Loading_UpdatingWebsite" xml:space="preserve">
+    <value>Mise à jour de '{0}'...</value>
+  </data>
+  <data name="Loading_CreatingWebsite" xml:space="preserve">
+    <value>Création de '{0}'...</value>
   </data>
 
   <!-- Error -->
@@ -471,6 +516,9 @@
   </data>
   <data name="DotnetVersions_FailedToLoad" xml:space="preserve">
     <value>Échec du chargement des versions .NET</value>
+  </data>
+  <data name="DotnetVersions_ErrorSearching" xml:space="preserve">
+    <value>Erreur lors de la recherche des versions .NET : {0}</value>
   </data>
 
   <!-- Licenses Dialog -->

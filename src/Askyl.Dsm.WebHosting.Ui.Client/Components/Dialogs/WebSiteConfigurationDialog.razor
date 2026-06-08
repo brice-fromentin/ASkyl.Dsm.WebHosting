@@ -4,9 +4,7 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Globalization.Resources
 @using Askyl.Dsm.WebHosting.Logging
-@using Microsoft.Extensions.Localization
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -14,7 +12,7 @@
 @inject IDialogService DialogService
 @inject IWebSiteHostingService HostingService
 @inject ILogger<ILogWebSiteConfigurationDialog> Logger
-@inject IStringLocalizer<SharedResource> localizer
+@inject ILocalizer localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -171,7 +169,7 @@
                 return;
             }
 
-            using var worker = this.CreateWorkingState(IsEditMode ? $"Updating '{Configuration.Name}'..." : $"Creating '{Configuration.Name}'...");
+           using var worker = this.CreateWorkingState(localizer[IsEditMode ? L.Loading.UpdatingWebsite : L.Loading.CreatingWebsite, Configuration.Name]);
 
             var result = IsEditMode
                 ? await HostingService.UpdateWebsiteAsync(Configuration)
@@ -185,7 +183,7 @@
 
             if (!String.IsNullOrEmpty(result.WarningMessage) && result.Value?.RequiredFramework is string channel)
             {
-                var confirmMessage = $"The website requires .NET {channel} which is not installed. Install now?";
+                var confirmMessage = localizer[L.WebsiteConfig.FrameworkNotInstalled, channel];
                 var confirm = await DialogService.ShowConfirmationAsync(confirmMessage);
                 var confirmResult = await confirm.Result;
 
@@ -201,7 +199,7 @@
         {
             var action = IsEditMode ? "updating" : "creating";
             Logger.ErrorModifyingWebsite(ex, action);
-            await DialogService.ShowErrorAsync($"Error {action} website: {ex.Message}");
+            await DialogService.ShowErrorAsync(localizer[L.WebsiteConfig.ErrorModifying, action, ex.Message]);
         }
     }
 

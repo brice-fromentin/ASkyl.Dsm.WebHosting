@@ -9,29 +9,26 @@ namespace Askyl.Dsm.WebHosting.Data.Results;
 public sealed class AuthenticationResult(bool success, string? message, string? culture = null, ApiErrorCode errorCode = default)
     : ApiResult(success, message, errorCode)
 {
-    [JsonConstructor]
-    private AuthenticationResult() : this(false, null, null, ApiErrorCode.Failure) { }
-
-    /// <summary>
-    /// Indicates whether the user is authenticated. This property is an alias for Success
-    /// and provides semantic clarity in authentication contexts.
-    /// </summary>
-    public bool IsAuthenticated => Success;
-
     /// <summary>
     /// The resolved culture in .NET format (e.g. "en-US").
     /// The server chooses between user preference and system fallback.
     /// Only populated on successful authentication.
     /// </summary>
-    [JsonPropertyName("culture")]
-    public string? Culture { get; } = culture;
+    public string? Culture { get; set; } = culture;
+
+    /// <summary>
+    /// Indicates whether the user is authenticated. This property is an alias for Success
+    /// and provides semantic clarity in authentication contexts. Not serialized to JSON.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsAuthenticated => Success;
 
     /// <summary>
     /// Creates a successful authentication result where the user is authenticated.
     /// </summary>
     /// <param name="message">Optional success message.</param>
-    /// <param name="culture">The resolved culture (user preference or system fallback).</param>
-    public static AuthenticationResult CreateAuthenticated(string? message, string culture)
+    /// <param name="culture">The resolved culture (user preference or system fallback), or null to let client use browser/system fallback.</param>
+    public static AuthenticationResult CreateAuthenticated(string? message, string? culture)
         => new(true, message, culture, ApiErrorCode.None);
 
     /// <summary>

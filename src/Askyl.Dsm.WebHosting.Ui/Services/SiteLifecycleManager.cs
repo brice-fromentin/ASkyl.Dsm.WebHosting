@@ -6,11 +6,9 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
-using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
-using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -22,7 +20,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 public sealed class SiteLifecycleManager : IDisposable
 {
     private readonly ILogger<ILogSiteLifecycleManager> _logger;
-    private readonly IStringLocalizer<SharedResource> _localizer;
+    private readonly ILocalizer _localizer;
     private readonly IProcessRunner _processRunner;
     private readonly IAssemblyRuntimeDetector _assemblyRuntimeDetector;
     private readonly WebSiteConfiguration _configuration;
@@ -38,7 +36,7 @@ public sealed class SiteLifecycleManager : IDisposable
 
     public SiteLifecycleManager(
         ILogger<ILogSiteLifecycleManager> logger,
-        IStringLocalizer<SharedResource> localizer,
+        ILocalizer localizer,
         IProcessRunner processRunner,
         IAssemblyRuntimeDetector assemblyRuntimeDetector,
         WebSiteConfiguration configuration)

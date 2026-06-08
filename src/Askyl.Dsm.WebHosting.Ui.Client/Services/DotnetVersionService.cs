@@ -4,9 +4,7 @@ using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
-using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Tools.Extensions;
-using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 
@@ -15,7 +13,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// </summary>
 /// <param name="httpClientFactory">HttpClientFactory to create the named client.</param>
 /// <param name="localizer">Localizer for user-facing strings.</param>
-public class DotnetVersionService(IHttpClientFactory httpClientFactory, IStringLocalizer<SharedResource> localizer) : IDotnetVersionService
+public class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocalizer localizer) : IDotnetVersionService
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 

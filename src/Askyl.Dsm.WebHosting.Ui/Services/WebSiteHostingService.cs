@@ -5,11 +5,9 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
-using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
-using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -26,7 +24,7 @@ public class WebSiteHostingService(
     IReverseProxyManagerService reverseProxyManager,
     IAssemblyRuntimeDetector assemblyRuntimeDetector,
     IVersionsDetectorService versionsDetector,
-    IStringLocalizer<SharedResource> localizer) : BackgroundService, IWebSiteHostingService
+    ILocalizer localizer) : BackgroundService, IWebSiteHostingService
 {
     #region Fields
 

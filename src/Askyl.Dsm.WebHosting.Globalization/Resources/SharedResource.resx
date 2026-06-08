@@ -151,6 +151,21 @@
   <data name="Home_GridColumnState" xml:space="preserve">
     <value>State</value>
   </data>
+  <data name="Home_DeleteConfirmation" xml:space="preserve">
+    <value>Are you sure you want to delete the website '{0}'? This action cannot be undone.</value>
+  </data>
+  <data name="Home_ErrorDeleting" xml:space="preserve">
+    <value>Error deleting website: {0}</value>
+  </data>
+  <data name="Home_ErrorStarting" xml:space="preserve">
+    <value>Error starting website: {0}</value>
+  </data>
+  <data name="Home_ErrorStopping" xml:space="preserve">
+    <value>Error stopping website: {0}</value>
+  </data>
+  <data name="Home_ErrorLoggingOut" xml:space="preserve">
+    <value>Error during logout: {0}</value>
+  </data>
 
   <!-- NotFound -->
   <data name="NotFound_PageTitle" xml:space="preserve">
@@ -212,6 +227,12 @@
   <data name="WebsiteConfig_CreateButton" xml:space="preserve">
     <value>Create</value>
   </data>
+  <data name="WebsiteConfig_FrameworkNotInstalled" xml:space="preserve">
+    <value>The website requires .NET {0} which is not installed. Install now?</value>
+  </data>
+  <data name="WebsiteConfig_ErrorModifying" xml:space="preserve">
+    <value>Error {0} website: {1}</value>
+  </data>
 
   <!-- AspNetReleases -->
   <data name="AspNetReleases_DialogTitle" xml:space="preserve">
@@ -241,6 +262,15 @@
   <data name="AspNetReleases_GridColumnRelease" xml:space="preserve">
     <value>Release</value>
   </data>
+  <data name="AspNetReleases_InstallationError" xml:space="preserve">
+    <value>Installation error: {0}</value>
+  </data>
+  <data name="AspNetReleases_UninstallConfirmation" xml:space="preserve">
+    <value>Click OK if you want to proceed with uninstalling ASP.NET Core {0}</value>
+  </data>
+  <data name="AspNetReleases_UninstallationError" xml:space="preserve">
+    <value>Uninstallation error: {0}</value>
+  </data>
 
   <!-- AutoDataGrid -->
   <data name="AutoDataGrid_Loading" xml:space="preserve">
@@ -265,6 +295,21 @@
   </data>
   <data name="Loading_Uninstalling" xml:space="preserve">
     <value>Uninstalling...</value>
+  </data>
+  <data name="Loading_DeletingWebsite" xml:space="preserve">
+    <value>Deleting website '{0}'...</value>
+  </data>
+  <data name="Loading_StartingWebsite" xml:space="preserve">
+    <value>Starting website '{0}'...</value>
+  </data>
+  <data name="Loading_StoppingWebsite" xml:space="preserve">
+    <value>Stopping website '{0}'...</value>
+  </data>
+  <data name="Loading_UpdatingWebsite" xml:space="preserve">
+    <value>Updating '{0}'...</value>
+  </data>
+  <data name="Loading_CreatingWebsite" xml:space="preserve">
+    <value>Creating '{0}'...</value>
   </data>
 
   <!-- Error -->
@@ -471,6 +516,9 @@
   </data>
   <data name="DotnetVersions_FailedToLoad" xml:space="preserve">
     <value>Failed to load .NET versions</value>
+  </data>
+  <data name="DotnetVersions_ErrorSearching" xml:space="preserve">
+    <value>Error while searching for global .NET version: {0}</value>
   </data>
 
   <!-- Licenses Dialog -->

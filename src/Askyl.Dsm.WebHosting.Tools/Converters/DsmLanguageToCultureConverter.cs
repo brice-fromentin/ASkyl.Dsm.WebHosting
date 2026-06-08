@@ -9,15 +9,23 @@ namespace Askyl.Dsm.WebHosting.Tools.Converters;
 public static class DsmLanguageToCultureConverter
 {
     /// <summary>
-    /// Converts a DSM language code to a .NET culture name.
-    /// Falls back to "en-US" if the language code is null, empty, or not recognized.
+    /// Value indicating the DSM language is set to browser default.
     /// </summary>
-    /// <param name="languageCode">DSM language code (e.g. "enu", "fra", "deu"), or null to use default.</param>
-    /// <returns>.NET culture name (e.g. "en-US", "fr-FR", "de-DE"). Never null.</returns>
-    public static string Convert(string? languageCode)
+    public const string DefaultBrowser = "def";
+
+    /// <summary>
+    /// Converts a DSM language code to a .NET culture name.
+    /// Returns <c>null</c> if the language code is "def" (browser default), null, empty, or not recognized.
+    /// </summary>
+    /// <param name="languageCode">DSM language code (e.g. "enu", "fra", "deu", "def").</param>
+    /// <returns>.NET culture name (e.g. "en-US", "fr-FR", "de-DE"), or <c>null</c> if the code means "use browser default".</returns>
+    public static string? Convert(string? languageCode)
     {
-        return String.IsNullOrWhiteSpace(languageCode)
-            ? "en-US"
-            : DsmLanguageCodes.All.TryGetValue(languageCode.Trim(), out var cultureName) ? cultureName : "en-US";
+        if (String.IsNullOrWhiteSpace(languageCode) || String.Equals(languageCode, DefaultBrowser, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return DsmLanguageCodes.All.TryGetValue(languageCode.Trim(), out var cultureName) ? cultureName : null;
     }
 }

@@ -1,10 +1,8 @@
 @page "/notfound"
 
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Globalization.Resources
-@using Microsoft.Extensions.Localization
 
-@inject IStringLocalizer<SharedResource> localizer
+@inject ILocalizer localizer
 
 <PageTitle>@localizer[L.NotFound.PageTitle]</PageTitle>
 

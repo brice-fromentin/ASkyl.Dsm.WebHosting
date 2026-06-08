@@ -1,9 +1,7 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Globalization.Resources
 @using Askyl.Dsm.WebHosting.Logging
-@using Microsoft.Extensions.Localization
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -13,7 +11,7 @@
 @inject IFrameworkManagementService ManagementService
 @inject IToastService ToastService
 @inject ILogger<ILogAspNetReleasesDialog> Logger
-@inject IStringLocalizer<SharedResource> localizer
+@inject ILocalizer localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
@@ -108,8 +106,8 @@
         }
 
         return IsSelectedVersionInstalled
-            ? String.Format(localizer[L.AspNetReleases.UninstallVersion], SelectedItem.Version)
-            : String.Format(localizer[L.AspNetReleases.InstallVersion], SelectedItem.Version);
+            ? localizer[L.AspNetReleases.UninstallVersion, SelectedItem.Version]
+            : localizer[L.AspNetReleases.InstallVersion, SelectedItem.Version];
     }
 
     #endregion
@@ -237,7 +235,7 @@
         catch (Exception ex)
         {
             Logger.InstallationError(ex, SelectedItem?.Version);
-            await DialogService.ShowErrorAsync($"Installation error: {ex.Message}");
+            await DialogService.ShowErrorAsync(localizer[L.AspNetReleases.InstallationError, ex.Message]);
         }
     }
 
@@ -248,7 +246,7 @@
             return;
         }
 
-        var confirmationMessage = $"Click OK if you want to proceed with uninstalling ASP.NET Core {SelectedItem.Version}";
+        var confirmationMessage = localizer[L.AspNetReleases.UninstallConfirmation, SelectedItem.Version];
         var confirmation = await DialogService.ShowConfirmationAsync(confirmationMessage);
         var result = await confirmation.Result;
 
@@ -276,7 +274,7 @@
         catch (Exception ex)
         {
             Logger.UninstallationError(ex, SelectedItem?.Version);
-            await DialogService.ShowErrorAsync($"Uninstallation error: {ex.Message}");
+            await DialogService.ShowErrorAsync(localizer[L.AspNetReleases.UninstallationError, ex.Message]);
         }
     }
 }

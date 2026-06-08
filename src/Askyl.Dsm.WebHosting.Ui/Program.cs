@@ -3,15 +3,17 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Converters;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
-using Askyl.Dsm.WebHosting.Ui;
 using Askyl.Dsm.WebHosting.Ui.Components;
+using Askyl.Dsm.WebHosting.Ui.Extensions;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Hosting;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
@@ -42,8 +44,7 @@ builder.Services.ConfigureGlobalizationRequestLocalization();
 builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
 // Add controllers WITHOUT API versioning (simpler routes)
-builder.Services.AddControllers()
-                .AddJsonOptions(options => options.JsonSerializerOptions.PropertyNamingPolicy = null);
+builder.Services.AddControllers();
 
 // Register FluentValidation validators from Globalization assembly
 builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
@@ -93,9 +94,8 @@ builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 // Register website hosting services
 builder.Services.AddSingleton<IReverseProxyManagerService, ReverseProxyManagerService>();
 builder.Services.AddSingleton<IWebSitesConfigurationService, WebSitesConfigurationService>();
-builder.Services.AddSingleton<WebSiteHostingService>();
-builder.Services.AddSingleton<IWebSiteHostingService>(sp => (IWebSiteHostingService)sp.GetRequiredService<WebSiteHostingService>());
-builder.Services.AddHostedService(sp => sp.GetRequiredService<WebSiteHostingService>());
+builder.Services.AddSingleton<IWebSiteHostingService, WebSiteHostingService>();
+builder.Services.AddSingleton<IHostedService>(sp => (IHostedService)sp.GetRequiredService<IWebSiteHostingService>());
 
 // Rate limiting for login endpoint (brute-force protection)
 builder.Services.AddRateLimiter(options =>
@@ -110,6 +110,13 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+// Wire system culture from DSM settings (no auth needed)
+using (var scope = app.Services.CreateScope())
+{
+    var apiClient = scope.ServiceProvider.GetRequiredService<DsmApiClient>();
+    GlobalizationSettings.SystemCulture = DsmLanguageToCultureConverter.Convert(apiClient.SystemPreferences.Language);
+}
 
 // Apply path base FIRST - before any middleware that needs to know about the prefix
 app.UsePathBase(ApplicationConstants.ApplicationUrlSubPath);
