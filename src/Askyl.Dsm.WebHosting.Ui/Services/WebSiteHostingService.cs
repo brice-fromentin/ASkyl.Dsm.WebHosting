@@ -89,7 +89,7 @@ public class WebSiteHostingService(
             if (!permissionResult.Success)
             {
                 logger.PermissionSettingFailedAdd(configuration.Name, permissionResult.Message);
-                return WebSiteInstanceResult.CreateFailure($"Failed to set permissions: {permissionResult.Message}");
+                return WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToSetPermissions, permissionResult.Message ?? localizer[L.Error.Unknown]]);
             }
 
             // STEP 2: Create reverse proxy rule (CRITICAL - must succeed)
@@ -98,7 +98,7 @@ public class WebSiteHostingService(
             if (!proxyResult.Success)
             {
                 logger.ReverseProxyCreationFailedAdd(configuration.Name, proxyResult.Message);
-                return WebSiteInstanceResult.CreateFailure($"Failed to create reverse proxy: {proxyResult.Message}");
+                return WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToCreateReverseProxy, proxyResult.Message ?? localizer[L.Error.Unknown]]);
             }
 
             // STEP 3: Add website configuration (persistent storage)
@@ -151,7 +151,7 @@ public class WebSiteHostingService(
             if (!permissionResult.Success)
             {
                 logger.PermissionSettingFailedUpdate(configuration.Name, permissionResult.Message);
-                return WebSiteInstanceResult.CreateFailure($"Failed to set permissions: {permissionResult.Message}");
+                return WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToSetPermissions, permissionResult.Message ?? localizer[L.Error.Unknown]]);
             }
 
             // STEP 2: Update reverse proxy rule (CRITICAL - must succeed)
@@ -160,7 +160,7 @@ public class WebSiteHostingService(
             if (!proxyResult.Success)
             {
                 logger.ReverseProxyUpdateFailed(configuration.Name, proxyResult.Message);
-                return WebSiteInstanceResult.CreateFailure($"Failed to update reverse proxy: {proxyResult.Message}");
+                return WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToUpdateReverseProxy, proxyResult.Message ?? localizer[L.Error.Unknown]]);
             }
 
             // STEP 3: Update configuration (persistent storage)

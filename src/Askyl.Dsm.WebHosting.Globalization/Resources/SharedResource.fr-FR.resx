@@ -90,6 +90,12 @@
   <data name="Common_Modified" xml:space="preserve">
     <value>Modifié</value>
   </data>
+  <data name="Common_ApplicationTitle" xml:space="preserve">
+    <value>.NET Web Hosting</value>
+  </data>
+  <data name="Common_UnhandledError" xml:space="preserve">
+    <value>Une erreur non gérée s'est produite.</value>
+  </data>
 
   <!-- Login -->
   <data name="Login_PageTitle" xml:space="preserve">
@@ -232,6 +238,12 @@
   </data>
   <data name="WebsiteConfig_ErrorModifying" xml:space="preserve">
     <value>Erreur lors de la {0} du site web : {1}</value>
+  </data>
+  <data name="WebsiteConfig_ActionUpdating" xml:space="preserve">
+    <value>mise à jour</value>
+  </data>
+  <data name="WebsiteConfig_ActionCreating" xml:space="preserve">
+    <value>création</value>
   </data>
 
   <!-- AspNetReleases -->
@@ -429,6 +441,15 @@
   </data>
   <data name="Error_SessionExpired" xml:space="preserve">
     <value>Session expirée sur le serveur</value>
+  </data>
+  <data name="Error_FailedToSetPermissions" xml:space="preserve">
+    <value>Échec de la configuration des permissions : {0}</value>
+  </data>
+  <data name="Error_FailedToCreateReverseProxy" xml:space="preserve">
+    <value>Échec de la création du proxy inverse : {0}</value>
+  </data>
+  <data name="Error_FailedToUpdateReverseProxy" xml:space="preserve">
+    <value>Échec de la mise à jour du proxy inverse : {0}</value>
   </data>
 
   <!-- Success -->

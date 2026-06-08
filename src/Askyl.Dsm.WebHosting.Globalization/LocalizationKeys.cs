@@ -20,6 +20,8 @@ public static class L
         public const string Size = "Common_Size";
         public const string Type = "Common_Type";
         public const string Modified = "Common_Modified";
+        public const string ApplicationTitle = "Common_ApplicationTitle";
+        public const string UnhandledError = "Common_UnhandledError";
     }
 
     /// <summary>Authentication and login page strings.</summary>
@@ -86,6 +88,8 @@ public static class L
         public const string CreateButton = "WebsiteConfig_CreateButton";
         public const string FrameworkNotInstalled = "WebsiteConfig_FrameworkNotInstalled";
         public const string ErrorModifying = "WebsiteConfig_ErrorModifying";
+        public const string ActionUpdating = "WebsiteConfig_ActionUpdating";
+        public const string ActionCreating = "WebsiteConfig_ActionCreating";
     }
 
     /// <summary>ASP.NET releases dialog strings.</summary>
@@ -197,6 +201,9 @@ public static class L
         public const string FailedToSetACL = "Error_FailedToSetACL";
         public const string NoSessionFound = "Error_NoSessionFound";
         public const string SessionExpired = "Error_SessionExpired";
+        public const string FailedToSetPermissions = "Error_FailedToSetPermissions";
+        public const string FailedToCreateReverseProxy = "Error_FailedToCreateReverseProxy";
+        public const string FailedToUpdateReverseProxy = "Error_FailedToUpdateReverseProxy";
     }
 
     /// <summary>Success messages displayed to the user.</summary>

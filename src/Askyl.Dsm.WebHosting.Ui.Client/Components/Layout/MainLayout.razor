@@ -1,6 +1,9 @@
 ﻿@inherits LayoutComponentBase
 
 @using System.Reflection
+@using Askyl.Dsm.WebHosting.Globalization
+
+@inject ILocalizer localizer
 
 <HeadContent>
     <link rel="stylesheet" href="@Assets["css/app.css"]" />
@@ -14,7 +17,7 @@
 
 <FluentMainLayout class="full-size">
     <Header>
-        .NET Web Hosting @Assembly.GetExecutingAssembly().GetName().Version
+        @localizer[L.Common.ApplicationTitle] @Assembly.GetExecutingAssembly().GetName().Version
     </Header>
 
     <Body>

@@ -39,13 +39,13 @@ public class AuthenticationService(IHttpClientFactory httpClientFactory, ILocali
 
         if (!response.IsSuccessStatusCode)
         {
-            return AuthenticationResult.CreateNotAuthenticated("Failed to login");
+            return AuthenticationResult.CreateNotAuthenticated(localizer[L.Error.FailedToLogin]);
         }
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<AuthenticationResult>(json, JsonOptionsCache.Options);
 
-        return result ?? AuthenticationResult.CreateNotAuthenticated("Failed to login");
+        return result ?? AuthenticationResult.CreateNotAuthenticated(localizer[L.Error.FailedToLogin]);
     }
 
     /// <inheritdoc/>

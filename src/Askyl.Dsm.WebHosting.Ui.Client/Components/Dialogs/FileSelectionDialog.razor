@@ -42,7 +42,7 @@
                         @(GetFileSize(context))
                     </TemplateColumn>
                     <TemplateColumn TGridItem="FsEntry" Title="@localizer[L.Common.Type]" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
-                        @(GetFileType(context))
+                        @(GetFileType(context, localizer))
                     </TemplateColumn>
                     <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="@localizer[L.Common.Modified]" Property="@(f => f.Modified)" Format="yyyy-MM-dd HH:mm" Align="Align.Center" Sortable="true" />
                 </ChildContent>
@@ -290,7 +290,7 @@
         return $"{(bytes / FileSizeConstants.BytesPerGibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.GibibytesSuffix}";
     }
 
-    private static string GetFileType(FsEntry file) => file.IsDirectory ? "Directory" : "File";
+    private static string GetFileType(FsEntry file, ILocalizer localizer) => file.IsDirectory ? localizer[L.FileSelection.Directory] : localizer[L.FileSelection.File];
 
     private static Icon GetFileIcon(FsEntry file)
     {
