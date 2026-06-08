@@ -8,6 +8,11 @@ public static class ApiMethods
     #region CRUD Operations
 
     /// <summary>
+    /// Method for retrieving resources.
+    /// </summary>
+    public const string Get = "get";
+
+    /// <summary>
     /// Method for creating new resources.
     /// </summary>
     public const string Create = "create";

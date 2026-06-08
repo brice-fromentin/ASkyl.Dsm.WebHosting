@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Askyl.Dsm.WebHosting.Constants.DSM.System;
 
 /// <summary>
@@ -11,7 +13,7 @@ public static class DsmLanguageCodes
     /// All DSM language codes mapped to .NET culture names (sorted alphabetically by code).
     /// Includes both user language codes and supplang variants.
     /// </summary>
-    public static readonly Dictionary<string, string> All = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly ImmutableDictionary<string, string> All = new Dictionary<string, string>()
     {
         { "ces", "cs-CZ" },
         { "chs", "zh-CN" },
@@ -48,5 +50,5 @@ public static class DsmLanguageCodes
         { "zht", "zh-TW" },
         { "zhcn", "zh-CN" },
         { "zhtw", "zh-TW" },
-    };
+    }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
 }

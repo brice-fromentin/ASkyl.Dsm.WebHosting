@@ -44,7 +44,7 @@ public static class SystemDefaults
     /// <summary>
     /// Value for language field in synoinfo.conf when browser language should be used.
     /// </summary>
-    public const string LanguageDefault = "def";
+    public const string DefaultLanguage = "def";
 
     #endregion
 }

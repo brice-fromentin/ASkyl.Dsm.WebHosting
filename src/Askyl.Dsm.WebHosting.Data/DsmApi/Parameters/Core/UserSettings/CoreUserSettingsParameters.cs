@@ -1,7 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.UserSettings;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.UserSettings;
 
@@ -16,7 +15,7 @@ public class CoreUserSettingsParameters(ApiInformationCollection informations)
 
     public override int Version => 1;
 
-    public override string Method => "get";
+    public override string Method => ApiMethods.Get;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }

@@ -6,7 +6,7 @@ using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
-using Askyl.Dsm.WebHosting.Data.Domain.System;
+using Askyl.Dsm.WebHosting.Data.Domain.DsmSystem;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.User;

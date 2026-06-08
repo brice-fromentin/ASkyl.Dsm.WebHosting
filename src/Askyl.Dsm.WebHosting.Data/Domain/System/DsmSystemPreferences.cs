@@ -1,4 +1,4 @@
-namespace Askyl.Dsm.WebHosting.Data.Domain.System;
+namespace Askyl.Dsm.WebHosting.Data.Domain.DsmSystem;
 
 /// <summary>
 /// System-level DSM preferences extracted from /etc/synoinfo.conf.

@@ -6,15 +6,23 @@ namespace Askyl.Dsm.WebHosting.Data.Results;
 /// Result of an authentication operation (login attempt).
 /// Used by API endpoints to return success/failure status with message.
 /// </summary>
-public sealed class AuthenticationResult(bool success, string? message, string? culture = null, ApiErrorCode errorCode = default)
-    : ApiResult(success, message, errorCode)
+public sealed class AuthenticationResult : ApiResult
 {
+    [JsonConstructor]
+    private AuthenticationResult() : base() { }
+
+    private AuthenticationResult(bool success, string? message, string? culture, ApiErrorCode errorCode)
+        : base(success, message, errorCode)
+    {
+        Culture = culture;
+    }
+
     /// <summary>
     /// The resolved culture in .NET format (e.g. "en-US").
     /// The server chooses between user preference and system fallback.
     /// Only populated on successful authentication.
     /// </summary>
-    public string? Culture { get; set; } = culture;
+    public string? Culture { get; set; }
 
     /// <summary>
     /// Indicates whether the user is authenticated. This property is an alias for Success

@@ -22,19 +22,32 @@ public static class GlobalizationSettings
     /// <summary>
     /// Gets or sets the DSM system culture (converted from DSM language code).
     /// Populated at server startup from /etc/synoinfo.conf.
+    /// Written once during startup — no synchronization needed.
     /// </summary>
     public static string? SystemCulture { get; set; }
 
     private static CultureInfo[] DiscoverSupportedCultures()
     {
         var assembly = typeof(SharedResource).Assembly;
-        var assemblyDirectory = Path.GetDirectoryName(assembly.Location)!;
-        var satelliteAssemblyName = $"{assembly.GetName().Name}.resources.dll";
+        var assemblyPath = assembly.Location;
+        var assemblyName = assembly.GetName().Name;
+
+        if (String.IsNullOrWhiteSpace(assemblyPath))
+        {
+            throw new InvalidOperationException($"Cannot determine assembly location for '{assemblyName}'.");
+        }
+
+        var assemblyDirectory = Path.GetDirectoryName(assemblyPath)!;
+        var satelliteAssemblyName = $"{assemblyName}.resources.dll";
+
+        var validCultures = CultureInfo.GetCultures(CultureTypes.AllCultures)
+                                       .Select(c => c.Name)
+                                       .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var cultureNames = Directory.GetDirectories(assemblyDirectory)
                                     .Select(dir => Path.GetFileName(dir)!)
                                     .Where(name => !name.StartsWith('.')
-                                                   && CultureInfo.GetCultures(CultureTypes.AllCultures).Any(c => String.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase))
+                                                   && validCultures.Contains(name)
                                                    && File.Exists(Path.Combine(assemblyDirectory, name, satelliteAssemblyName)))
                                     .Concat([GlobalizationServiceCollectionExtensions.DefaultCulture])
                                     .Distinct(StringComparer.OrdinalIgnoreCase)

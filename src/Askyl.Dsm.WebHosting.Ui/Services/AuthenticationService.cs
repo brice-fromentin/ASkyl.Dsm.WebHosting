@@ -106,7 +106,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     {
         // UserSettings.Personal.lang handles user vs. system resolution server-side
         // Only skip to browser fallback if explicitly "def"
-        string? cultureCode = apiClient.UserLanguage is { Length: > 0 } userLang && userLang != SystemDefaults.LanguageDefault
+        var cultureCode = apiClient.UserLanguage is { Length: > 0 } userLang && userLang != SystemDefaults.DefaultLanguage
             ? userLang
             : null;
 
