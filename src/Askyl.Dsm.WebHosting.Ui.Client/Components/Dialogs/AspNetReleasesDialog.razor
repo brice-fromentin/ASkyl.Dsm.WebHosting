@@ -53,7 +53,7 @@
                 <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[L.AspNetReleases.GridColumnSecurity]" Align="Align.Center">
                     @(context.IsSecurity ? "⚠" : String.Empty)
                 </TemplateColumn>
-                <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="@localizer[L.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="yyyy-MM-dd" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending" />
+                <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="@localizer[L.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="d" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending" />
             </ChildContent>
         </AutoDataGrid>
     </div>

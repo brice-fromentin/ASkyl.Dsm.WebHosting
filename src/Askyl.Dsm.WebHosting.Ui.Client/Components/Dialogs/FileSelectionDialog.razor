@@ -44,7 +44,7 @@
                     <TemplateColumn TGridItem="FsEntry" Title="@localizer[L.Common.Type]" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
                         @(GetFileType(context, localizer))
                     </TemplateColumn>
-                    <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="@localizer[L.Common.Modified]" Property="@(f => f.Modified)" Format="yyyy-MM-dd HH:mm" Align="Align.Center" Sortable="true" />
+                    <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="@localizer[L.Common.Modified]" Property="@(f => f.Modified)" Format="g" Align="Align.Center" Sortable="true" />
                 </ChildContent>
 
                 <EmptyContent>

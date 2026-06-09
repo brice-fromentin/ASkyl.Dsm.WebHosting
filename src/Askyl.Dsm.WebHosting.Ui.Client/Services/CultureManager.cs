@@ -52,26 +52,52 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
     #region ICultureManager Implementation
 
     /// <inheritdoc/>
-    public void InitializeFromLogin(string? culture)
+    public void InitializeFromLogin(string? culture, string? dateFormat, string? timeFormat)
     {
         // If user has a specific culture, apply it; otherwise fall back to system resolution
-        if (String.IsNullOrWhiteSpace(culture))
+        CultureInfo targetCulture;
+
+        if (!String.IsNullOrWhiteSpace(culture))
         {
-            return;
+            try
+            {
+                var cultureInfo = new CultureInfo(culture);
+                var match = FindMatchingCulture(cultureInfo);
+
+                if (match is not null)
+                {
+                    logger.CultureResolvedFromLogin(match.Name);
+                    targetCulture = match;
+                }
+                else
+                {
+                    // Unsupported culture — fall back to system resolution (system → browser → default)
+                    targetCulture = ResolveSystemCulture();
+                }
+            }
+            catch (CultureNotFoundException)
+            {
+                // Invalid culture name from server — fall back to system resolution
+                targetCulture = ResolveSystemCulture();
+            }
+            catch (ArgumentException)
+            {
+                // Invalid culture name format — fall back to system resolution
+                targetCulture = ResolveSystemCulture();
+            }
+        }
+        else
+        {
+            targetCulture = ResolveSystemCulture();
         }
 
-        var cultureInfo = new CultureInfo(culture);
-        var match = FindMatchingCulture(cultureInfo);
-
-        if (match is null)
+        // Apply user-specific date/time format overrides
+        if (!String.IsNullOrWhiteSpace(dateFormat) || !String.IsNullOrWhiteSpace(timeFormat))
         {
-            // Unsupported culture — fall back to system resolution (system → browser → default)
-            ApplyCulture(ResolveSystemCulture());
-            return;
+            targetCulture = CloneCultureWithFormats(targetCulture, dateFormat, timeFormat, logger);
         }
 
-        logger.CultureResolvedFromLogin(match.Name);
-        ApplyCulture(match);
+        ApplyCulture(targetCulture);
     }
 
     /// <inheritdoc/>
@@ -185,6 +211,44 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
         ApplyCultureToThread(culture);
         CurrentCulture = culture;
         logger.CultureApplied(culture.Name);
+    }
+
+    /// <summary>
+    /// Creates a clone of the given culture with custom date/time format patterns applied.
+    /// </summary>
+    private static CultureInfo CloneCultureWithFormats(CultureInfo culture, string? dateFormat, string? timeFormat, ILogger<ILogCultureManager> logger)
+    {
+        // Clone the culture to avoid modifying the shared static CultureInfo
+        var cloned = (CultureInfo)culture.Clone();
+        var dtfi = cloned.DateTimeFormat;
+
+        if (!String.IsNullOrWhiteSpace(dateFormat))
+        {
+            try
+            {
+                dtfi.ShortDatePattern = dateFormat;
+                dtfi.LongDatePattern = dateFormat;
+            }
+            catch (FormatException)
+            {
+                logger.InvalidDateFormatIgnored(dateFormat);
+            }
+        }
+
+        if (!String.IsNullOrWhiteSpace(timeFormat))
+        {
+            try
+            {
+                dtfi.ShortTimePattern = timeFormat;
+                dtfi.LongTimePattern = timeFormat;
+            }
+            catch (FormatException)
+            {
+                logger.InvalidTimeFormatIgnored(timeFormat);
+            }
+        }
+
+        return cloned;
     }
 
     #endregion

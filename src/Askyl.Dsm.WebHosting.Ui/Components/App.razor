@@ -1,9 +1,11 @@
 ﻿@using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Ui
+@using Microsoft.AspNetCore.Localization
+
+@inject IHttpContextAccessor HttpContextAccessor
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@(GetLanguageTag())">
 
 <head>
     <meta charset="utf-8" />
@@ -51,4 +53,10 @@
 @code
 {
     IComponentRenderMode wasm = new InteractiveWebAssemblyRenderMode(false);
+
+    private string GetLanguageTag()
+    {
+        var culture = HttpContextAccessor?.HttpContext?.Features.Get<IRequestCultureFeature>()?.RequestCulture.UICulture;
+        return culture?.TwoLetterISOLanguageName ?? "en";
+    }
 }

@@ -1,6 +1,6 @@
 # Globalization (Multi-Language) Plan
 
-## Status: In Progress (Phase 8 next)
+## Status: In Progress (Phase 10 next)
 
 ---
 
@@ -690,11 +690,41 @@ Post-logout:   SystemCulture (env var) → BrowserCulture (WASM runtime) → en-
 
 > **Commit:** `TBD`
 
-### Phase 9: Culture-Aware Formatting
+### Phase 9: Culture-Aware Formatting ✅ Done
 
-- [ ] Ensure dates render per culture (FluentUI date components)
-- [ ] Ensure numbers render per culture
-- [ ] Verify pluralization rules work per culture
+- [x] Replace hardcoded ISO date formats with culture-aware standard format specifiers
+  - `FileSelectionDialog.razor`: `Format="yyyy-MM-dd HH:mm"` → `Format="g"` (short date+time)
+  - `AspNetReleasesDialog.razor`: `Format="yyyy-MM-dd"` → `Format="d"` (short date)
+- [x] Make `html lang` attribute dynamic in `App.razor` — reads from `IRequestCultureFeature`
+- [x] Wire complete date/time format flow from DSM UserSettings to WASM culture
+  - `AuthenticationResult` now carries `DateFormat` and `TimeFormat` (converted on server)
+  - `PhpDateFormatToDotNetConverter` and `PhpTimeFormatToDotNetConverter` are now wired in `AuthenticationService.LoginAsync()`
+  - `ICultureManager.InitializeFromLogin()` accepts `dateFormat` and `timeFormat` parameters
+  - `CultureManager` clones the active `CultureInfo` and overrides `DateTimeFormat` patterns
+  - Numbers already culture-aware via `FileSizeConstants.DecimalFormat = "F2"` (respects `CultureInfo` at runtime)
+- [x] Verify pluralization rules work per culture (handled by .NET `IStringLocalizer` fallback)
+
+> **Architecture:** User's DSM date/time format preferences flow end-to-end:
+>
+> ```text
+> SYNO.Core.UserSettings.get → Personal.dateFormat ("Y/m/d"), Personal.timeFormat ("H:i")
+>   ↓ (server-side conversion)
+> PhpDateFormatToDotNetConverter → "yyyy/MM/dd"
+> PhpTimeFormatToDotNetConverter → "H:mm"
+>   ↓ (via AuthenticationResult)
+> WASM CultureManager.InitializeFromLogin(culture, dateFormat, timeFormat)
+>   ↓ (clones CultureInfo, overrides DateTimeFormat)
+> CultureInfo.DateTimeFormat.ShortDatePattern = "yyyy/MM/dd"
+> CultureInfo.DateTimeFormat.ShortTimePattern = "H:mm"
+> ```
+>
+> **Result:** `Format="d"` and `Format="g"` in UI components now respect user-specific preferences, not just culture defaults.
+
+### Known Limitation: SystemCulture date/time format
+
+`SystemCulture` does not include date/time format preferences from system config.
+The date/time format flow only applies when the user has explicit preferences in `SYNO.Core.UserSettings.get`.
+System-level date/time format discovery is a future enhancement.
 
 ### Phase 10: Testing & Validation
 
@@ -1169,10 +1199,14 @@ public async Task<ApiResult> CallApiAsync()
 | 2026-06-08 | `GlobalizationSettings` in Globalization assembly | Static settings belong where the resources are — not in Ui project |
 | 2026-06-08 | `GlobalizationExtensions` in `Ui/Extensions/` | ASP.NET Core extensions belong in the project that uses them |
 | 2026-06-08 | `ResetToSystem()` resets to system resolution chain | Logout should restore system/browser culture — not just browser |
+| 2026-06-09 | `AuthenticationResult` carries `DateFormat` and `TimeFormat` | DSM UserSettings already provides date/time formats; converting on server and passing to WASM eliminates dead code |
+| 2026-06-09 | Culture-aware date formats via `CultureInfo.DateTimeFormat` override | User-specific preferences (e.g. ISO dates) differ from culture defaults; cloning culture and overriding patterns is cleanest approach |
+| 2026-06-09 | Standard format specifiers `"d"` and `"g"` in UI | Leverages `CultureInfo.DateTimeFormat` automatically — no custom formatting logic in components |
+| 2026-06-09 | `SystemCulture` does not include date/time format from system config | Formats only flow from per-user UserSettings; system-level discovery is deferred |
+| 2026-06-09 | Dynamic `html lang` attribute via `IRequestCultureFeature` | Accessibility and SEO require accurate language tag; server-side request culture is the source of truth |
 
 ---
 
 ## 8. Next Steps
 
-1. Begin Phase 9: Verify culture-aware formatting (dates, numbers, pluralization)
-2. Begin Phase 10: End-to-end testing & validation
+1. Begin Phase 10: End-to-end testing & validation

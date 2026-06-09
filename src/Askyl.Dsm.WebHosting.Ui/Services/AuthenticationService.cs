@@ -38,12 +38,14 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         await apiClient.FetchUserLanguageAsync();
 
         var culture = ResolveCulture(apiClient);
+        var dateFormat = PhpDateFormatToDotNetConverter.Convert(apiClient.UserDateFormat);
+        var timeFormat = PhpTimeFormatToDotNetConverter.Convert(apiClient.UserTimeFormat);
 
         // Store DSM SID and username in server-side session for persistence
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmSessionKey, apiClient.Sid);
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmUsernameKey, login);
         logger.LoginSuccessful(login);
-        return AuthenticationResult.CreateAuthenticated(null, culture);
+        return AuthenticationResult.CreateAuthenticated(null, culture, dateFormat, timeFormat);
     }
 
     /// <inheritdoc/>

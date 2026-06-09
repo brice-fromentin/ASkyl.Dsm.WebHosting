@@ -89,7 +89,7 @@
         }
 
         // Initialize culture from login response (user preference or system fallback)
-        cultureManager.InitializeFromLogin(result.Culture);
+        cultureManager.InitializeFromLogin(result.Culture, result.DateFormat, result.TimeFormat);
 
         ToastService.ShowSuccess(localizer[L.Success.AuthenticationSuccessful]);
         navigation.NavigateTo(ApplicationConstants.HomePagePath);

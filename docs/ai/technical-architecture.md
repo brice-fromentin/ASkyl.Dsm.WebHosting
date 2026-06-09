@@ -2,10 +2,10 @@
 
 **Version:** 0.5.9
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** June 8, 2026 (Globalization refinement — `GlobalizationSettings` in Globalization assembly,
-`ILocalizer` abstraction, `CultureManager` with pre-resolved static fields, pure C# browser detection,
-synchronous culture methods, `AuthenticationResult` JSON serialization fixes, camelCase JSON,
-`DsmLanguageToCultureConverter` returns `null` for `"def"`, `ResetToSystem()` on logout)
+**Last Updated:** June 9, 2026 (Globalization Phase 9 complete — culture-aware date/time formatting,
+`AuthenticationResult` carries `DateFormat`/`TimeFormat`, `CultureManager` clones culture and overrides
+`DateTimeFormat` patterns, defensive try-catch for `CultureNotFoundException`/`ArgumentException`/`FormatException`,
+dynamic `html lang` attribute, structured logging for invalid formats)
 
 ---
 
@@ -68,14 +68,16 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
   - ✅ Async `WaitForExitAsync` with linked cancellation token replaces blocking `WaitForExit(timeoutMs)`
   - ✅ Reduced timeouts: HttpClient (90→15s), Process (60→10s) — eliminates DSM reverse proxy 504 errors
 - ⏳ TODO: Certificate management for reverse proxy
-- ⏳ **Multi-language support** (June 2026 — Phases 1-6 complete, 7-10 remaining):
+- ⏳ **Multi-language support** (June 2026 — Phases 1-9 complete, Phase 10 remaining):
   - ✅ Globalization assembly with `SharedResource.resx` + satellite assemblies (fr-FR)
   - ✅ Server-side culture discovery via satellite assembly directory scanning
   - ✅ Culture injection to WASM via `Blazor.start()` environment variable
   - ✅ `ICultureManager` — resolves culture once at login (DSM-controlled, no runtime switching)
   - ✅ `AcceptLanguageHandler` — propagates culture to server via HTTP headers
   - ✅ `RequestLocalization` middleware — server reads `Accept-Language` from WASM
-  - ⏳ FluentValidation migration (Phase 7), culture-aware formatting (Phase 9), testing (Phase 10)
+  - ✅ FluentValidation migration (Phase 7) — shared validators in Globalization assembly
+  - ✅ Culture-aware formatting (Phase 9) — date/time format preferences flow from DSM UserSettings to WASM
+  - ⏳ End-to-end testing & validation (Phase 10)
 - ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
 - ✅ **LoggerMessage migration** — 224 source-generated `[LoggerMessage]` extension methods across 19 source files; zero CA2254 warnings
@@ -128,11 +130,11 @@ All projects share common build settings from `Directory.Build.props`:
 
 ```xml
 <!-- Centralized versioning -->
-<Version>0.5.10</Version>
-<AssemblyVersion>0.5.10.0</AssemblyVersion>
-<FileVersion>0.5.10.0</FileVersion>
-<InformationalVersion>0.5.10</InformationalVersion>
-<PackageVersion>0.5.10</PackageVersion>
+<Version>0.5.9</Version>
+<AssemblyVersion>0.5.9.0</AssemblyVersion>
+<FileVersion>0.5.9.0</FileVersion>
+<InformationalVersion>0.5.9</InformationalVersion>
+<PackageVersion>0.5.9</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -1257,11 +1259,32 @@ The Globalization assembly serves two purposes:
 7. **WASM propagates to server** — `AcceptLanguageHandler` attaches `Accept-Language` header to all HTTP requests
 8. **Server reads header** — `RequestLocalization` middleware sets thread culture per request
 
+### Date/Time Format Flow
+
+User-specific date/time format preferences flow from DSM UserSettings through to the WASM culture:
+
+1. **Server fetches UserSettings** — `SYNO.Core.UserSettings.get` (best-effort, post-auth) extracts `Personal.dateFormat` and `Personal.timeFormat` (PHP-style format strings)
+2. **Server converts formats** — `PhpDateFormatToDotNetConverter` and `PhpTimeFormatToDotNetConverter` convert PHP tokens to .NET format strings (e.g., `"Y/m/d"` → `"yyyy/MM/dd"`, `"H:i"` → `"H:mm"`)
+3. **Server passes to WASM** — `AuthenticationResult` carries `DateFormat` and `TimeFormat` properties alongside `Culture`
+4. **WASM applies formats** — `CultureManager.InitializeFromLogin()` clones the resolved `CultureInfo` and overrides `DateTimeFormat` patterns:
+   - `ShortDatePattern` / `LongDatePattern` ← `DateFormat`
+   - `ShortTimePattern` / `LongTimePattern` ← `TimeFormat`
+5. **UI uses standard formats** — date columns use `Format="d"` (short date) and `Format="g"` (short date+time), which automatically respect the user's custom patterns
+
+**Defensive coding:** All culture/format operations are wrapped in try-catch:
+
+- `CultureNotFoundException` / `ArgumentException` → fall back to system culture
+- `FormatException` → keep culture default patterns, log warning via `InvalidDateFormatIgnored` / `InvalidTimeFormatIgnored`
+
+**Known limitation:** `SystemCulture` does not include date/time format preferences from system config.
+The date/time format flow only applies when the user has explicit preferences in `SYNO.Core.UserSettings.get`.
+System-level date/time format discovery is a future enhancement.
+
 ### Key Components
 
 | Component | Location | Purpose |
 |---|---|---|
-| `ICultureManager` | `Globalization` | Interface: `InitializeFromLogin(string?)`, `ResetToSystem()`, `CurrentCulture`, `CurrentUICulture` |
+| `ICultureManager` | `Globalization` | Interface: `InitializeFromLogin(string?, string?, string?)`, `ResetToSystem()`, `CurrentCulture`, `CurrentUICulture` |
 | `CultureManager` | `Ui.Client` | WASM implementation with pre-resolved static fields (`BrowserCulture`, `SystemCulture`, `SupportedCultures`) |
 | `GlobalizationSettings` | `Globalization` | Static settings: `SupportedCultures`, `SupportedCultureNamesJson`, `SystemCulture` |
 | `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header |
@@ -1352,8 +1375,14 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 - **Static `SupportedCultures`**: Initialized at class load, available before login
 - **`MarkupString` in `App.razor`**: Required to avoid HTML-encoding of JSON double quotes inside `<script>` block
 - **Shared validators in Globalization**: Single source of truth — server auto-validation and client Blazilla validation use the same rules
-- **Model-scoped localization keys**: `L.WebSiteConfiguration.*` and `L.LoginCredentials.*` make it clear which model each message belongs to
+- **Model-scoped localization keys**: `L.WebSiteConfiguration.*` and `L.LoginCredentials.*` clarify model ownership
 - **No DataAnnotations**: All validation migrated to FluentValidation — DataAnnotations cannot use runtime-localized messages
+- **`AuthenticationResult` carries `DateFormat` and `TimeFormat`**: Formats converted on server, passed to WASM alongside culture
+- **Culture-aware date formats via `CultureInfo.DateTimeFormat` override**: Clones culture and overrides patterns for user-specific preferences
+- **Standard format specifiers `"d"` and `"g"` in UI**: Leverages `CultureInfo.DateTimeFormat` automatically — no custom formatting logic in components
+- **Dynamic `html lang` attribute**: Reads from `IRequestCultureFeature` for accessibility and SEO — server-side request culture is the source of truth
+- **Defensive try-catch for culture operations**: `CultureNotFoundException`/`ArgumentException` fall back to system culture; `FormatException` keeps culture defaults with warning log
+- **Same format applied to short/long patterns**: DSM provides one date and one time format per user; applying to both short/long variants is the pragmatic trade-off
 
 ---
 
