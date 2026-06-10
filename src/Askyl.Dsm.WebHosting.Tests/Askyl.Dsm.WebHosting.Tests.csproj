@@ -24,6 +24,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Askyl.Dsm.WebHosting.Constants\Askyl.Dsm.WebHosting.Constants.csproj" />
     <ProjectReference Include="..\Askyl.Dsm.WebHosting.Data\Askyl.Dsm.WebHosting.Data.csproj" />
+    <ProjectReference Include="..\Askyl.Dsm.WebHosting.Globalization\Askyl.Dsm.WebHosting.Globalization.csproj" />
     <ProjectReference Include="..\Askyl.Dsm.WebHosting.Tools\Askyl.Dsm.WebHosting.Tools.csproj" />
     <ProjectReference Include="..\Askyl.Dsm.WebHosting.Ui\Askyl.Dsm.WebHosting.Ui.csproj" />
   </ItemGroup>

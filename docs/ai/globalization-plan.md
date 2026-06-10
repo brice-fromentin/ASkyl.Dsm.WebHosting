@@ -726,17 +726,109 @@ Post-logout:   SystemCulture (env var) → BrowserCulture (WASM runtime) → en-
 The date/time format flow only applies when the user has explicit preferences in `SYNO.Core.UserSettings.get`.
 System-level date/time format discovery is a future enhancement.
 
+### Phase 9 Verification (2026-06-10)
+
+All 8 verification checks passed — Phase 9 is fully implemented.
+
+| # | Check | Status | File |
+|---|-------|--------|------|
+| 1 | `FileSelectionDialog.razor` uses `Format="g"` | ✅ PASS | `Ui.Client/Components/Dialogs/FileSelectionDialog.razor:47` |
+| 2 | `AspNetReleasesDialog.razor` uses `Format="d"` | ✅ PASS | `Ui.Client/Components/Dialogs/AspNetReleasesDialog.razor:65` |
+| 3 | Dynamic `html lang` from `IRequestCultureFeature` | ✅ PASS | `Ui/Components/App.razor:42` |
+| 4 | `AuthenticationResult` carries `DateFormat` + `TimeFormat` | ✅ PASS | `Data/Results/AuthenticationResult.cs` |
+| 5 | Server `AuthenticationService` wires both PHP-to-.NET converters | ✅ PASS | `Ui/Services/AuthenticationService.cs:41-42` |
+| 6 | `ICultureManager.InitializeFromLogin` accepts format params | ✅ PASS | `Globalization/ICultureManager.cs` |
+| 7 | `CultureManager` clones `CultureInfo` and overrides `DateTimeFormat` | ✅ PASS | `Ui.Client/Services/CultureManager.cs:219` |
+| 8 | No hardcoded date format strings in `.razor` files | ✅ PASS | Zero matches for `yyyy-MM-dd`, `MM-dd`, `HH:mm` |
+
+**French translation coverage:** 100% — all 159 keys translated, no gaps, no empty values.
+**Build status:** Clean — zero errors, zero warnings (`dotnet build /nr:false`).
+
 ### Phase 10: Testing & Validation
 
-- [ ] Test culture resolution from login response (DSM preference)
-- [ ] Test fallback to browser language when login response lacks culture
-- [ ] Test fallback to English for missing translations
-- [ ] Test browser culture detection on first visit
-- [ ] Test server-side messages are localized in API responses
-- [ ] Test FluentValidation messages are localized (French)
-- [ ] Test culture propagates via Accept-Language header to server
-- [ ] Build passes with no warnings
-- [ ] Format passes (`dotnet format`)
+#### 10a: Unit Tests for Converters ✅ Done (2026-06-10)
+
+**`DsmLanguageToCultureConverter`** (49 test cases)
+
+- [x] Valid DSM codes: `"enu"` → `"en-US"`, `"fra"` → `"fr-FR"`, `"deu"` → `"de-DE"` (21 codes)
+- [x] Supplang variants: `"fre"` → `"fr-FR"`, `"ger"` → `"de-DE"`, `"spn"` → `"es-ES"` (8 variants)
+- [x] Chinese variants: `"chs"` → `"zh-CN"`, `"cht"` → `"zh-TW"`, `"zhcn"` → `"zh-CN"`, `"zhtw"` → `"zh-TW"` (6 variants)
+- [x] Browser default: `"def"` → `null` (3 cases: def, DEF, Def)
+- [x] Null/empty/whitespace input → `null` (4 cases)
+- [x] Unknown code → `null` (3 cases)
+- [x] Case insensitivity (3 cases)
+- [x] `DefaultBrowser` constant value
+
+**`PhpDateFormatToDotNetConverter`** (26 test cases)
+
+- [x] Common patterns: `"Y/m/d"` → `"yyyy/MM/dd"`, `"d/m/Y"` → `"dd/MM/yyyy"` (5 cases)
+- [x] Year tokens: `"Y"` → `"yyyy"`, `"y"` → `"yy"` (2 cases)
+- [x] Month tokens: `"m"` → `"MM"`, `"n"` → `"M"`, `"M"` → `"MMM"`, `"F"` → `"MMMM"` (4 cases)
+- [x] Day tokens: `"d"` → `"dd"`, `"j"` → `"d"`, `"l"` → `"dddd"`, `"D"` → `"ddd"` (4 cases)
+- [x] Day of year tokens: `"z"` → `"%j"`, `"w"` → `"%u"`, `"N"` → `"%u"` (3 cases)
+- [x] Complex patterns with separators preserved (4 cases)
+- [x] Null/empty/whitespace → `null` (3 cases)
+- [x] Unknown characters preserved (1 case)
+
+**`PhpTimeFormatToDotNetConverter`** (19 test cases)
+
+- [x] Common patterns: `"H:i"` → `"H:mm"`, `"h:i a"` → `"h:mm tt"` (6 cases)
+- [x] 24-hour tokens: `"H"` → `"H"`, `"G"` → `"H"` (2 cases)
+- [x] 12-hour tokens: `"h"` → `"h"`, `"g"` → `"h"` (2 cases)
+- [x] Minutes/seconds: `"i"` → `"mm"`, `"s"` → `"ss"` (2 cases)
+- [x] AM/PM tokens: `"a"` → `"tt"`, `"A"` → `"tt"` (2 cases)
+- [x] Ordinal suffix `"S"` → `"\th\st\nd\rd\th"` (1 case)
+- [x] Null/empty/whitespace → `null` (3 cases)
+- [x] Unknown characters preserved (1 case)
+
+**Test files:**
+
+- `Tests/Tools/Converters/DsmLanguageToCultureConverterTests.cs`
+- `Tests/Tools/Converters/PhpDateFormatToDotNetConverterTests.cs`
+- `Tests/Tools/Converters/PhpTimeFormatToDotNetConverterTests.cs`
+
+#### 10b: Localizer Wrapper Tests ✅ Done (2026-06-10)
+
+- [x] `Localizer` correctly delegates simple key lookup to `IStringLocalizer<SharedResource>`
+- [x] `Localizer` correctly delegates key + args lookup (string formatting) — single arg
+- [x] `Localizer` correctly delegates key + args lookup (string formatting) — multiple args
+- [x] `Localizer` returns `LocalizedString` with correct value
+
+**Test file:** `Tests/Globalization/LocalizerTests.cs`
+
+#### 10c: Resource Completeness Tests ✅ Done (2026-06-10)
+
+- [x] All keys in default (English) `.resx` have corresponding entries in French `.resx` — **159/159 keys**
+- [x] No empty values in French `.resx` — **zero empty values**
+- [x] Key names in `L` class match actual `.resx` keys — **all 159 keys verified**
+
+**Test file:** `Tests/Globalization/ResourceCompletenessTests.cs`
+
+**Changes to Globalization project:**
+
+- Added `InternalsVisibleTo("Askyl.Dsm.WebHosting.Tests")` to enable test access to `Resources.SharedResource`
+- Added project reference `Tests → Globalization`
+
+**Verification:** Build ✅ (0 warnings), Tests ✅ (312/312)
+
+#### 10d: Manual Validation Checklist (Requires deployed instance)
+
+- [ ] Culture resolution from login response (DSM preference)
+- [ ] Fallback to browser language when login response lacks culture
+- [ ] Fallback to English for missing translations
+- [ ] Browser culture detection on first visit (pre-login)
+- [ ] Server-side messages are localized in API responses (French)
+- [ ] FluentValidation messages are localized in UI (French)
+- [ ] Culture propagates via `Accept-Language` header to server
+- [ ] Date/time formatting respects user-specific DSM preferences
+- [ ] System culture applied correctly on logout (`ResetToSystem()`)
+
+#### 10e: Hard-to-Test Items (Deferred — require refactoring)
+
+| Item | Why it's hard | Mitigation |
+|------|---------------|------------|
+| `CultureManager` | Lives in WASM project, uses `Environment.GetEnvironmentVariable`, `Thread.CurrentThread` | Manual validation covers resolution chain; logic is simple enough for code review |
+| `GlobalizationSettings` | Depends on file system scanning of satellite assemblies | Manual validation; tested indirectly via `CultureManager.SupportedCultures` |
 
 ---
 
@@ -1204,9 +1296,12 @@ public async Task<ApiResult> CallApiAsync()
 | 2026-06-09 | Standard format specifiers `"d"` and `"g"` in UI | Leverages `CultureInfo.DateTimeFormat` automatically — no custom formatting logic in components |
 | 2026-06-09 | `SystemCulture` does not include date/time format from system config | Formats only flow from per-user UserSettings; system-level discovery is deferred |
 | 2026-06-09 | Dynamic `html lang` attribute via `IRequestCultureFeature` | Accessibility and SEO require accurate language tag; server-side request culture is the source of truth |
+| 2026-06-10 | `InternalsVisibleTo` for Tests project | Enables test access to `Resources.SharedResource` for Localizer mocking and resource completeness verification |
+| 2026-06-10 | xUnit Theory for converter tests | Maximizes coverage with minimal code via `[InlineData]` attributes - 94 test cases across 3 converters |
+| 2026-06-10 | Resource completeness via embedded resource scanning | Reads `.resources` assembly manifest rather than relying on ResourceManager culture fallback |
 
 ---
 
 ## 8. Next Steps
 
-1. Begin Phase 10: End-to-end testing & validation
+1. **Phase 10d** — Manual validation on deployed instance (requires DSM environment)
