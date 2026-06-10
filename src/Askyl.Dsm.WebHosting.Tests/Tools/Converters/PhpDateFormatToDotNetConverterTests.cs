@@ -133,7 +133,7 @@ public class PhpDateFormatToDotNetConverterTests
     public void Convert_UnknownCharacters_PreservesSeparators()
     {
         // Arrange
-        var phpFormat = "Y.m.d";
+        const string phpFormat = "Y.m.d";
 
         // Act
         var result = PhpDateFormatToDotNetConverter.Convert(phpFormat);

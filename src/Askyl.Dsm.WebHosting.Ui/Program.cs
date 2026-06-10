@@ -13,7 +13,6 @@ using Askyl.Dsm.WebHosting.Ui.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Hosting;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
@@ -95,7 +94,7 @@ builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 builder.Services.AddSingleton<IReverseProxyManagerService, ReverseProxyManagerService>();
 builder.Services.AddSingleton<IWebSitesConfigurationService, WebSitesConfigurationService>();
 builder.Services.AddSingleton<IWebSiteHostingService, WebSiteHostingService>();
-builder.Services.AddSingleton<IHostedService>(sp => (IHostedService)sp.GetRequiredService<IWebSiteHostingService>());
+builder.Services.AddSingleton(sp => (IHostedService)sp.GetRequiredService<IWebSiteHostingService>());
 
 // Rate limiting for login endpoint (brute-force protection)
 builder.Services.AddRateLimiter(options =>

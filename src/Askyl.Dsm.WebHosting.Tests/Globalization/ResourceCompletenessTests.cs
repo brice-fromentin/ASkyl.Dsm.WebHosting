@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using System.Resources;
@@ -14,7 +13,7 @@ public class ResourceCompletenessTests
     {
         return new ResourceManager(
             "Askyl.Dsm.WebHosting.Globalization.Resources.SharedResource",
-            typeof(Askyl.Dsm.WebHosting.Globalization.Resources.SharedResource).Assembly);
+            typeof(WebHosting.Globalization.Resources.SharedResource).Assembly);
     }
 
     #region Key Parity
@@ -51,7 +50,7 @@ public class ResourceCompletenessTests
         var emptyKeys = new List<string>();
         using (var reader = resourceManager.GetResourceSet(frenchCulture, true, false))
         {
-            foreach (System.Collections.DictionaryEntry entry in reader!)
+            foreach (DictionaryEntry entry in reader!)
             {
                 var value = entry.Value?.ToString();
                 if (string.IsNullOrWhiteSpace(value))
@@ -73,11 +72,11 @@ public class ResourceCompletenessTests
     public void Resources_LocalizationKeys_MatchResxKeys()
     {
         // Arrange - read .resx file directly to get all keys
-        var assembly = typeof(Askyl.Dsm.WebHosting.Globalization.Resources.SharedResource).Assembly;
+        var assembly = typeof(WebHosting.Globalization.Resources.SharedResource).Assembly;
         var resxKeys = GetEmbeddedResxKeys(assembly);
 
         // Act — collect all key values from L.cs via reflection
-        var keysType = typeof(Askyl.Dsm.WebHosting.Globalization.L);
+        var keysType = typeof(WebHosting.Globalization.L);
         var localizationKeys = CollectLocalizationKeys(keysType);
 
         // Assert — every key in L should exist in the .resx
@@ -96,7 +95,7 @@ public class ResourceCompletenessTests
         {
             if (resourceSet is not null)
             {
-                foreach (System.Collections.DictionaryEntry entry in resourceSet)
+                foreach (DictionaryEntry entry in resourceSet)
                 {
                     keys.Add(entry.Key.ToString()!);
                 }

@@ -94,7 +94,7 @@ public class PhpTimeFormatToDotNetConverterTests
     public void Convert_OrdinalSuffix_ReturnsPlaceholder()
     {
         // Arrange
-        var phpFormat = "S";
+        const string phpFormat = "S";
 
         // Act
         var result = PhpTimeFormatToDotNetConverter.Convert(phpFormat);
@@ -128,7 +128,7 @@ public class PhpTimeFormatToDotNetConverterTests
     public void Convert_UnknownCharacters_PreservesSeparators()
     {
         // Arrange
-        var phpFormat = "H:i:s";
+        const string phpFormat = "H:i:s";
 
         // Act
         var result = PhpTimeFormatToDotNetConverter.Convert(phpFormat);

@@ -1,36 +1,28 @@
+using System.Globalization;
 using Askyl.Dsm.WebHosting.Globalization;
-using Microsoft.Extensions.Localization;
-using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Globalization;
 
 public class LocalizerTests
 {
-    private readonly Mock<IStringLocalizer<Askyl.Dsm.WebHosting.Globalization.Resources.SharedResource>> _mockLocalizer;
-    private readonly Localizer _localizer;
-
-    public LocalizerTests()
-    {
-        _mockLocalizer = new Mock<IStringLocalizer<Askyl.Dsm.WebHosting.Globalization.Resources.SharedResource>>();
-        _localizer = new Localizer(_mockLocalizer.Object);
-    }
-
     #region Simple Key Lookup
 
     [Fact]
-    public void Indexer_SimpleKey_DelegatesToLocalizer()
+    public void Indexer_ExistingKey_ReturnsTranslatedValue()
     {
         // Arrange
-        var key = "Common.OK";
-        var expected = new LocalizedString(key, "OK");
-        _mockLocalizer.Setup(l => l[key]).Returns(expected);
+        var original = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
+        var localizer = new Localizer(ResourceManagerCache.SharedResource);
 
         // Act
-        var result = _localizer[key];
+        var result = localizer["Login_PageTitle"];
+
+        // Cleanup
+        CultureInfo.CurrentUICulture = original;
 
         // Assert
-        Assert.Equal(expected, result);
-        _mockLocalizer.Verify(l => l[key], Times.Once);
+        Assert.Equal("ADWH - Login", result.Value);
     }
 
     #endregion
@@ -38,58 +30,88 @@ public class LocalizerTests
     #region Key With Arguments
 
     [Fact]
-    public void Indexer_WithArgs_DelegatesToLocalizerWithArgs()
+    public void Indexer_WithArgs_FormatsString()
     {
         // Arrange
-        var key = "Home.DeleteConfirmation";
-        var arg = "TestSite";
-        var expected = new LocalizedString(key, "Are you sure you want to delete 'TestSite'?");
-        _mockLocalizer.Setup(l => l[key, It.IsAny<object[]>()]).Returns(expected);
+        var original = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
+        var localizer = new Localizer(ResourceManagerCache.SharedResource);
 
         // Act
-        var result = _localizer[key, arg];
+        var result = localizer["Home_DeleteConfirmation", "TestSite"];
+
+        // Cleanup
+        CultureInfo.CurrentUICulture = original;
 
         // Assert
-        Assert.Equal(expected, result);
-        _mockLocalizer.Verify(l => l[key, It.Is<object[]>(a => a.Length == 1 && a[0].Equals(arg))], Times.Once);
-    }
-
-    [Fact]
-    public void Indexer_WithMultipleArgs_DelegatesToLocalizerWithArgs()
-    {
-        // Arrange
-        var key = "WebsiteConfig.ErrorModifying";
-        var arg1 = "Updating";
-        var arg2 = "Connection timeout";
-        var expected = new LocalizedString(key, "Error Updating website: Connection timeout");
-        _mockLocalizer.Setup(l => l[key, It.IsAny<object[]>()]).Returns(expected);
-
-        // Act
-        var result = _localizer[key, arg1, arg2];
-
-        // Assert
-        Assert.Equal(expected, result);
-        _mockLocalizer.Verify(l => l[key, It.Is<object[]>(a => a.Length == 2)], Times.Once);
+        Assert.NotNull(result.Value);
+        Assert.Contains("TestSite", result.Value);
     }
 
     #endregion
 
-    #region Returns LocalizedString
+    #region Missing Key Fallback
 
     [Fact]
-    public void Indexer_ReturnsLocalizedString_WithCorrectValue()
+    public void Indexer_MissingKey_ReturnsKeyAsFallback()
     {
         // Arrange
-        var key = "Login.PageTitle";
-        var value = "ADWH - Login";
-        var expected = new LocalizedString(key, value);
-        _mockLocalizer.Setup(l => l[key]).Returns(expected);
+        var localizer = new Localizer(ResourceManagerCache.SharedResource);
 
         // Act
-        var result = _localizer[key];
+        var result = localizer["NonExistent.Key.That.Does.Not.Exist"];
 
         // Assert
-        Assert.Equal(value, result.Value);
+        Assert.Equal("NonExistent.Key.That.Does.Not.Exist", result.Value);
+    }
+
+    #endregion
+
+    #region Culture Awareness
+
+    [Fact]
+    public void Indexer_RespectsCurrentUICulture()
+    {
+        // Arrange
+        var localizer = new Localizer(ResourceManagerCache.SharedResource);
+        var originalCulture = CultureInfo.CurrentUICulture;
+
+        // Act — English
+        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
+        var enValue = localizer["Login_PageTitle"].Value;
+
+        // Act — French
+        CultureInfo.CurrentUICulture = new CultureInfo("fr-FR");
+        var frValue = localizer["Login_PageTitle"].Value;
+
+        // Cleanup
+        CultureInfo.CurrentUICulture = originalCulture;
+
+        // Assert
+        Assert.Equal("ADWH - Login", enValue);
+        Assert.Equal("ADWH - Connexion", frValue);
+    }
+
+    #endregion
+
+    #region Implicit Conversion
+
+    [Fact]
+    public void ImplicitOperator_ConvertsToString()
+    {
+        // Arrange
+        var original = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
+        var localizer = new Localizer(ResourceManagerCache.SharedResource);
+
+        // Act
+        string text = localizer["Login_PageTitle"];
+
+        // Cleanup
+        CultureInfo.CurrentUICulture = original;
+
+        // Assert
+        Assert.Equal("ADWH - Login", text);
     }
 
     #endregion

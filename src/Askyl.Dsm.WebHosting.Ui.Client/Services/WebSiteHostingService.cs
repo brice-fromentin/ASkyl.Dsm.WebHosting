@@ -19,19 +19,19 @@ public class WebSiteHostingService(IHttpClientFactory httpClientFactory, ILocali
 
     /// <inheritdoc/>
     public async Task<WebSiteInstancesResult> GetAllWebsitesAsync()
-        => await _httpClient.GetJsonOrDefaultAsync<WebSiteInstancesResult>(WebsiteHostingRoutes.AllFullRoute, () => WebSiteInstancesResult.CreateFailure(localizer[L.Error.FailedToLoadWebsites]));
+        => await _httpClient.GetJsonOrDefaultAsync(WebsiteHostingRoutes.AllFullRoute, () => WebSiteInstancesResult.CreateFailure(localizer[L.Error.FailedToLoadWebsites]));
 
     /// <inheritdoc/>
     public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration)
-        => await _httpClient.PostJsonOrDefaultAsync<WebSiteConfiguration, WebSiteInstanceResult>(WebsiteHostingRoutes.AddFullRoute, configuration, () => WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToAddWebsite]));
+        => await _httpClient.PostJsonOrDefaultAsync(WebsiteHostingRoutes.AddFullRoute, configuration, () => WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToAddWebsite]));
 
     /// <inheritdoc/>
     public async Task<WebSiteInstanceResult> UpdateWebsiteAsync(WebSiteConfiguration configuration)
-        => await _httpClient.PostJsonOrDefaultAsync<WebSiteConfiguration, WebSiteInstanceResult>(WebsiteHostingRoutes.UpdateFullRoute, configuration, () => WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToUpdateWebsite]));
+        => await _httpClient.PostJsonOrDefaultAsync(WebsiteHostingRoutes.UpdateFullRoute, configuration, () => WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToUpdateWebsite]));
 
     /// <inheritdoc/>
     public async Task<ApiResult> RemoveWebsiteAsync(Guid id)
-        => await _httpClient.DeleteJsonOrDefaultAsync<ApiResult>(WebsiteHostingRoutes.RemoveFullRoute + "/" + id, () => ApiResult.CreateFailure(localizer[L.Error.FailedToRemoveWebsite]));
+        => await _httpClient.DeleteJsonOrDefaultAsync(WebsiteHostingRoutes.RemoveFullRoute + "/" + id, () => ApiResult.CreateFailure(localizer[L.Error.FailedToRemoveWebsite]));
 
     /// <inheritdoc/>
     public async Task<ApiResult> StartWebsiteAsync(Guid id)

@@ -27,7 +27,7 @@ public class ExtensionMethodsTests : IDisposable
         ApiResponseBase<EmptyResponse>? response = null;
 
         // Act & Assert
-        Assert.False(response.IsValid<EmptyResponse>());
+        Assert.False(response.IsValid());
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class ExtensionMethodsTests : IDisposable
         var response = new ApiResponseBase<EmptyResponse> { Success = true };
 
         // Act & Assert
-        Assert.True(response.IsValid<EmptyResponse>());
+        Assert.True(response.IsValid());
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class ExtensionMethodsTests : IDisposable
         var response = new ApiResponseBase<EmptyResponse> { Success = false };
 
         // Act & Assert
-        Assert.False(response.IsValid<EmptyResponse>());
+        Assert.False(response.IsValid());
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class ExtensionMethodsTests : IDisposable
         var response = new ApiResponseBase<EmptyResponse> { Success = true, Data = null };
 
         // Act & Assert
-        Assert.False(response.IsValid<EmptyResponse>(hasData: true));
+        Assert.False(response.IsValid(hasData: true));
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class ExtensionMethodsTests : IDisposable
         var response = new ApiResponseBase<EmptyResponse> { Success = true, Data = new EmptyResponse() };
 
         // Act & Assert
-        Assert.True(response.IsValid<EmptyResponse>(hasData: true));
+        Assert.True(response.IsValid(hasData: true));
     }
 
     #endregion
@@ -96,7 +96,7 @@ public class ExtensionMethodsTests : IDisposable
     public void WithQuery_NoParameters_ReturnsOriginalUri()
     {
         // Arrange
-        string uri = "https://example.com/api";
+        const string uri = "https://example.com/api";
 
         // Act
         var result = uri.WithQuery();
@@ -109,7 +109,7 @@ public class ExtensionMethodsTests : IDisposable
     public void WithQuery_SingleParameter_AppendsQueryString()
     {
         // Arrange
-        string uri = "https://example.com/api";
+        const string uri = "https://example.com/api";
 
         // Act
         var result = uri.WithQuery(("key", "value"));
@@ -122,7 +122,7 @@ public class ExtensionMethodsTests : IDisposable
     public void WithQuery_MultipleParameters_AppendsAll()
     {
         // Arrange
-        string uri = "https://example.com/api";
+        const string uri = "https://example.com/api";
 
         // Act
         var result = uri.WithQuery(("key1", "val1"), ("key2", "val2"));
@@ -135,7 +135,7 @@ public class ExtensionMethodsTests : IDisposable
     public void WithQuery_NullValue_SkipsParameter()
     {
         // Arrange
-        string uri = "https://example.com/api";
+        const string uri = "https://example.com/api";
 
         // Act
         var result = uri.WithQuery(("key1", "val1"), ("key2", null!));
@@ -148,7 +148,7 @@ public class ExtensionMethodsTests : IDisposable
     public void WithQuery_AllNullValues_ReturnsOriginalUri()
     {
         // Arrange
-        string uri = "https://example.com/api";
+        const string uri = "https://example.com/api";
 
         // Act
         var result = uri.WithQuery(("key", null!));
@@ -161,7 +161,7 @@ public class ExtensionMethodsTests : IDisposable
     public void WithQuery_EscapesSpecialCharacters()
     {
         // Arrange
-        string uri = "https://example.com/api";
+        const string uri = "https://example.com/api";
 
         // Act
         var result = uri.WithQuery(("key", "value with spaces"));
@@ -212,7 +212,7 @@ public class ExtensionMethodsTests : IDisposable
         var client = CreateClient();
 
         // Act
-        var result = await client.GetJsonOrDefaultAsync<TestModel>("/default", () => new TestModel());
+        var result = await client.GetJsonOrDefaultAsync("/default", () => new TestModel());
 
         // Assert
         Assert.NotNull(result);
@@ -227,7 +227,7 @@ public class ExtensionMethodsTests : IDisposable
         var client = CreateClient();
 
         // Act
-        var result = await client.GetJsonOrDefaultAsync<TestModel>("/", () => new TestModel { Name = "fallback" });
+        var result = await client.GetJsonOrDefaultAsync("/", () => new TestModel { Name = "fallback" });
 
         // Assert
         Assert.NotNull(result);
@@ -314,7 +314,7 @@ public class ExtensionMethodsTests : IDisposable
         var client = CreateClient();
 
         // Act
-        var result = await client.DeleteJsonOrDefaultAsync<TestModel>("/", () => new TestModel { Name = "fallback" });
+        var result = await client.DeleteJsonOrDefaultAsync("/", () => new TestModel { Name = "fallback" });
 
         // Assert
         Assert.NotNull(result);
@@ -329,7 +329,7 @@ public class ExtensionMethodsTests : IDisposable
         var client = CreateClient();
 
         // Act
-        var result = await client.PostJsonOrDefaultAsync<TestModel, TestModel>("/", new TestModel(), () => new TestModel { Name = "fallback" });
+        var result = await client.PostJsonOrDefaultAsync("/", new TestModel(), () => new TestModel { Name = "fallback" });
 
         // Assert
         Assert.NotNull(result);
@@ -340,7 +340,7 @@ public class ExtensionMethodsTests : IDisposable
     public async Task ReadFromJsonAsync_DeserializesContent()
     {
         // Arrange
-        var json = "{\"name\":\"test\",\"value\":42}";
+        const string json = "{\"name\":\"test\",\"value\":42}";
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         // Act

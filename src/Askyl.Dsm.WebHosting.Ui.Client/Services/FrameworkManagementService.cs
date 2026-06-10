@@ -21,7 +21,7 @@ public class FrameworkManagementService(IHttpClientFactory httpClientFactory, IL
     public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel, CancellationToken cancellationToken = default)
     {
         var model = new InstallFramework(version, channel);
-        return await _httpClient.PostJsonOrDefaultAsync<InstallFramework, InstallationResult>(FrameworkManagementRoutes.InstallFullRoute, model, () => InstallationResult.CreateFailure(localizer[L.Error.FailedToInstallFramework]), cancellationToken);
+        return await _httpClient.PostJsonOrDefaultAsync(FrameworkManagementRoutes.InstallFullRoute, model, () => InstallationResult.CreateFailure(localizer[L.Error.FailedToInstallFramework]), cancellationToken);
     }
 
     /// <inheritdoc/>

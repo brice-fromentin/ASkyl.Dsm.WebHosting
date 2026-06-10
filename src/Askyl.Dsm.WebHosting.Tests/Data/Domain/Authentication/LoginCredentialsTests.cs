@@ -1,7 +1,6 @@
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Validators;
-using Microsoft.Extensions.Localization;
 using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Data.Domain.Authentication;
@@ -12,7 +11,7 @@ public class LoginCredentialsTests
     {
         var localizerMock = new Mock<ILocalizer>();
         localizerMock.Setup(x => x[It.IsAny<string>(), It.IsAny<object[]>()])
-            .Returns((string name, object[]? args) => new LocalizedString(name, name));
+                     .Returns((string name, object[]? args) => new LocalizedText(name, name));
         return new LoginCredentialsValidator(localizerMock.Object);
     }
 
@@ -166,9 +165,9 @@ public class LoginCredentialsTests
     public void Constructor_WithParameters_SetsProperties()
     {
         // Arrange
-        var login = "admin";
-        var password = "secret";
-        var otp = "123456";
+        const string login = "admin";
+        const string password = "secret";
+        const string otp = "123456";
 
         // Act
         var credentials = new LoginCredentials(login, password, otp);

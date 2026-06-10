@@ -59,7 +59,7 @@ public class AuthenticationService(IHttpClientFactory httpClientFactory, ILocali
     public async Task<ApiResultBool> IsAuthenticatedAsync()
     {
         var httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
-        return await httpClient.GetJsonOrDefaultAsync<ApiResultBool>(AuthenticationRoutes.StatusFullRoute, () => ApiResultBool.CreateFailure(localizer[L.Error.FailedToCheckAuthStatus]));
+        return await httpClient.GetJsonOrDefaultAsync(AuthenticationRoutes.StatusFullRoute, () => ApiResultBool.CreateFailure(localizer[L.Error.FailedToCheckAuthStatus]));
     }
 
     public Task<bool> IsSessionValidAsync()
