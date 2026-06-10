@@ -2,10 +2,9 @@
 
 **Version:** 0.5.9
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** June 9, 2026 (Globalization Phase 9 complete — culture-aware date/time formatting,
-`AuthenticationResult` carries `DateFormat`/`TimeFormat`, `CultureManager` clones culture and overrides
-`DateTimeFormat` patterns, defensive try-catch for `CultureNotFoundException`/`ArgumentException`/`FormatException`,
-dynamic `html lang` attribute, structured logging for invalid formats)
+**Last Updated:** June 10, 2026 (Globalization Phase 10 complete — ResourceManager-based localizer fixes
+WASM culture caching, server-side Accept-Language parsing handles neutral languages, early CultureManager
+resolution in WASM startup, full page reload on logout resets to system/browser culture)
 
 ---
 
@@ -1255,9 +1254,20 @@ The Globalization assembly serves two purposes:
 3. **Server injects to WASM** — supported cultures as JSON + system culture, injected via `Blazor.start()` using `dotnet.withEnvironmentVariable()` for `ADWH_SUPPORTED_CULTURES` and `ADWH_SYSTEM_CULTURE`
 4. **WASM parses cultures** — `GlobalizationSettings` static properties deserialize JSON at class load (DI registration time)
 5. **CultureManager pre-resolves** — static fields capture `BrowserCulture` (from WASM runtime's auto-set `CurrentUICulture`), `SystemCulture`, and `SupportedCultures` (from env var) as `CultureInfo?`
-6. **Login resolves culture** — priority: login response `Culture` → system culture → browser culture → default `en-US`
-7. **WASM propagates to server** — `AcceptLanguageHandler` attaches `Accept-Language` header to all HTTP requests
-8. **Server reads header** — `RequestLocalization` middleware sets thread culture per request
+6. **Early CultureManager resolution** — `Program.cs` forces DI resolution of `ICultureManager` before `host.RunAsync()` — sets `CurrentUICulture` before any page renders
+7. **Login resolves culture** — priority: login response `Culture` → system culture → browser culture → default `en-US`
+8. **WASM propagates to server** — `AcceptLanguageHandler` attaches `Accept-Language` header to all HTTP requests
+9. **Server reads header** — `RequestLocalization` middleware sets thread culture per request
+
+**html lang attribute** — set server-side in `App.razor` via `GetLanguageTag()`:
+
+1. **DSM system culture** — from `GlobalizationSettings.SystemCulture`
+2. **Accept-Language header** — parsed directly, matched against supported cultures (handles neutral languages like `fr` → `fr-FR`)
+3. **Default** — `en`
+
+**Why not `IRequestCultureFeature`?** — ASP.NET Core request localization doesn't match neutral languages (`fr`) to specific cultures (`fr-FR`), so we parse `Accept-Language` directly.
+
+**Logout flow** — `forceLoad: true` triggers full page reload, which resets culture to system/browser resolution.
 
 ### Date/Time Format Flow
 
@@ -1290,8 +1300,8 @@ System-level date/time format discovery is a future enhancement.
 | `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header |
 | `GlobalizationExtensions` | `Ui/Extensions/` | Server-side `RequestLocalization` config (file-scoped extension methods) |
 | `LocalizationKeys.cs` | `Globalization` | Strongly-typed keys organized by model (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`) |
-| `ILocalizer` | `Globalization` | Abstraction interface — hides `IStringLocalizer` from consumer projects |
-| `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `IStringLocalizer<SharedResource>` |
+| `ILocalizer` | `Globalization` | Abstraction interface — hides `ResourceManager` from consumer projects |
+| `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `ResourceManager` (not `IStringLocalizer`) — reads `CurrentUICulture` at call time, so culture changes after login work without re-rendering |
 | `WebSiteConfigurationValidator` | `Globalization/Validators/` | FluentValidation rules for `WebSiteConfiguration` (7 properties) |
 | `LoginCredentialsValidator` | `Globalization/Validators/` | FluentValidation rules for `LoginCredentials` (2 properties) |
 
@@ -1366,7 +1376,14 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 - **`DsmLanguageToCultureConverter` returns `null` for `"def"`**: `"def"` means "use browser default" — not English
 - **`GlobalizationSettings` in Globalization assembly**: Static settings (supported cultures, system culture) belong where the resources are — not in Ui project
 - **`GlobalizationExtensions` in `Ui/Extensions/`**: ASP.NET Core extensions belong in the project that uses them, uses .NET 10 file-scoped `extension` pattern
-- **`ILocalizer` abstraction**: Hides `IStringLocalizer` from consumer projects — enforces consistent usage via single indexer
+- **`ILocalizer` abstraction**: Hides `ResourceManager` from consumer projects — enforces consistent usage via single indexer
+- **`ResourceManager` instead of `IStringLocalizer<T>`**: `IStringLocalizer<T>` caches culture at construction in WASM. `ResourceManager` reads `CurrentUICulture` at call time
+- **`LocalizedText` instead of `LocalizedString`**: Name collision with `Microsoft.Extensions.Localization.LocalizedString`
+- **`BlazorWebAssemblyLoadAllGlobalizationData`**: Required for dynamic culture changes at WASM startup — without it, changing culture before first page render throws `AggregateException`
+- **Early `CultureManager` resolution**: `Program.cs` forces DI resolution before `host.RunAsync()` — ensures `CurrentUICulture` is set before login page renders
+- **Full page reload on logout**: `forceLoad: true` resets WASM circuit, culture re-resolves to system/browser
+- **Server-side Accept-Language parsing**: `IRequestCultureFeature` doesn't match neutral languages (`fr`) to specific cultures (`fr-FR`) — `GetLanguageTag()` parses header directly
+- **No client-side `setHtmlLang` JS interop**: Server sets `html lang` correctly at page load; full page reload on logout resets it
 - **`AuthenticationResult.Culture` is `{ get; set; }`**: System.Text.Json requires setters for deserialization into properties
 - **`IsAuthenticated` marked `[JsonIgnore]`**: Redundant alias for `Success` — pollutes JSON response
 - **ASP.NET Core default camelCase JSON**: Removed `PropertyNamingPolicy = null` — camelCase is industry standard and matches WASM client defaults

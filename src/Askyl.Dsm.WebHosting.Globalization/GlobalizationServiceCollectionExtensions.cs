@@ -1,6 +1,4 @@
-using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
 
 namespace Askyl.Dsm.WebHosting.Globalization;
 
@@ -15,20 +13,14 @@ public static class GlobalizationServiceCollectionExtensions
     public const string DefaultCulture = "en-US";
 
     /// <summary>
-    /// Adds localization services for the SharedResource resource file.
+    /// Adds the <see cref="ILocalizer"/> service for accessing SharedResource translations.
     /// Call this in both server and client <c>Program.cs</c>.
     /// </summary>
     public static IServiceCollection AddGlobalization(this IServiceCollection services)
     {
-        // AddLocalization registers IStringLocalizer<> factory.
-        // ResourcesPath is intentionally omitted — resources are discovered by the
-        // full type name (Askyl.Dsm.WebHosting.Globalization.Resources.SharedResource),
-        // which matches the embedded resource name from the .resx files in Resources/ folder.
-        services.AddLocalization();
-
-        // Wrap IStringLocalizer<SharedResource> behind ILocalizer to hide Microsoft internals.
-        // Singleton is safe — LocalizedString is immutable and culture is resolved at call time.
-        services.AddSingleton<ILocalizer>(sp => new Localizer(sp.GetRequiredService<IStringLocalizer<SharedResource>>()));
+        // ResourceManager-based localizer — reads CurrentUICulture at call time,
+        // so culture changes after login are picked up without re-rendering.
+        services.AddSingleton<ILocalizer>(new Localizer(ResourceManagerCache.SharedResource));
 
         return services;
     }

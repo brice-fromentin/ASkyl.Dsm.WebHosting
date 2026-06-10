@@ -58,4 +58,8 @@ builder.Services.AddScoped<ITreeContentService, TreeContentService>();
 
 var host = builder.Build();
 
+// Force CultureManager to resolve early — sets CurrentUICulture before any page renders
+using var scope = host.Services.CreateScope();
+scope.ServiceProvider.GetRequiredService<ICultureManager>();
+
 await host.RunAsync();

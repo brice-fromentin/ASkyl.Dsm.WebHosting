@@ -108,5 +108,19 @@ public static class ApplicationConstants
     /// </summary>
     public const string SystemCultureEnvironmentVariable = "ADWH_SYSTEM_CULTURE";
 
+    /// <summary>
+    /// Default fallback language tag when no culture can be determined.
+    /// </summary>
+    public const string DefaultLanguageTag = "en";
+
+    #endregion
+
+    #region HTTP Headers
+
+    /// <summary>
+    /// HTTP header name for client language preference.
+    /// </summary>
+    public const string AcceptLanguageHeader = "Accept-Language";
+
     #endregion
 }

@@ -1,6 +1,6 @@
 ﻿@using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Globalization
-@using Microsoft.AspNetCore.Localization
+@using System.Globalization
 
 @inject IHttpContextAccessor HttpContextAccessor
 
@@ -56,7 +56,34 @@
 
     private string GetLanguageTag()
     {
-        var culture = HttpContextAccessor?.HttpContext?.Features.Get<IRequestCultureFeature>()?.RequestCulture.UICulture;
-        return culture?.TwoLetterISOLanguageName ?? "en";
+        // Priority 1: DSM system culture (from /etc/synoinfo.conf)
+        if (!String.IsNullOrWhiteSpace(GlobalizationSettings.SystemCulture))
+        {
+            return new CultureInfo(GlobalizationSettings.SystemCulture).TwoLetterISOLanguageName;
+        }
+
+        // Priority 2: parse Accept-Language header directly
+        // IRequestCultureFeature doesn't match neutral languages (e.g. "fr" -> "fr-FR"),
+        // so we parse the header ourselves and match against supported cultures.
+        var acceptLanguage = HttpContextAccessor?.HttpContext?.Request.Headers[ApplicationConstants.AcceptLanguageHeader].ToString();
+
+        if (!String.IsNullOrWhiteSpace(acceptLanguage))
+        {
+            var language = acceptLanguage.Split(',')[0].Split(';')[0].Trim();
+
+            // Handle neutral languages (e.g. "fr") — match to supported culture
+            if (GlobalizationSettings.SupportedCultures.Any(c => String.Equals(c.TwoLetterISOLanguageName, language, StringComparison.OrdinalIgnoreCase)))
+            {
+                return language;
+            }
+
+            // Return the first 2 chars if it looks like a valid BCP-47 tag
+            if (language.Length >= 2 && CultureInfo.GetCultures(CultureTypes.NeutralCultures).Any(c => String.Equals(c.TwoLetterISOLanguageName, language, StringComparison.OrdinalIgnoreCase)))
+            {
+                return language;
+            }
+        }
+
+        return ApplicationConstants.DefaultLanguageTag;
     }
 }

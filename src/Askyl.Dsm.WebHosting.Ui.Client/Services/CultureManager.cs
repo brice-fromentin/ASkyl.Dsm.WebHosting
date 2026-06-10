@@ -143,8 +143,11 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
             return SystemCulture;
         }
 
-        // Priority 2: browser culture (pre-resolved at class load)
-        return BrowserCulture;
+        // Priority 2: browser culture matched against supported cultures
+        // Browser may send neutral language (e.g. "fr") — match to supported culture (e.g. "fr-FR")
+        var matched = FindMatchingCulture(BrowserCulture);
+
+        return matched ?? BrowserCulture;
     }
 
     /// <summary>

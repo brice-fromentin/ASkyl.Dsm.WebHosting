@@ -39,6 +39,7 @@
       "Bash(cd *)",
       "Bash(coverlet *)",
       "Bash(curl *)",
+      "Bash(diff *)",
       "Bash(dotnet *)",
       "Bash(echo *)",
       "Bash(find *)",
@@ -58,8 +59,12 @@
       "Bash(markdownlint *)",
       "Bash(mkdir *)",
       "Bash(sed *)",
+      "Bash(sort)",
+      "Bash(sort *)",
       "Bash(strings *)",
-      "Bash(tail *)"
+      "Bash(tail *)",
+      "Bash(timeout *)",
+      "Bash(true)"
     ],
     "deny": [
       "Bash(git clean -f)",
