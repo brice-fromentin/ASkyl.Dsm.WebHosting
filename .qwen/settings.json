@@ -42,7 +42,9 @@
       "Bash(diff *)",
       "Bash(dotnet *)",
       "Bash(echo *)",
+      "Bash(else)",
       "Bash(find *)",
+      "Bash(fi)",
       "Bash(git add *)",
       "Bash(git add <specific-file>)",
       "Bash(git branch *)",
@@ -59,12 +61,15 @@
       "Bash(markdownlint *)",
       "Bash(mkdir *)",
       "Bash(sed *)",
+      "Bash(sleep *)",
       "Bash(sort)",
       "Bash(sort *)",
       "Bash(strings *)",
       "Bash(tail *)",
+      "Bash(then)",
       "Bash(timeout *)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(wait *)"
     ],
     "deny": [
       "Bash(git clean -f)",

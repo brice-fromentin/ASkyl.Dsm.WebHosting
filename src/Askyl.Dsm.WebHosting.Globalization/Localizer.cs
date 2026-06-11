@@ -65,6 +65,6 @@ public sealed class LocalizedText(string name, string value)
     /// <summary>The localized value (falls back to key name if not found).</summary>
     public string Value { get; } = value;
 
-    /// <summary>Implicit conversion to string.</summary>
-    public static implicit operator string(LocalizedText text) => text.Value;
+    /// <summary>Implicit conversion to string — returns empty string if text is null (defensive for test mocks).</summary>
+    public static implicit operator string(LocalizedText? text) => text?.Value ?? String.Empty;
 }
