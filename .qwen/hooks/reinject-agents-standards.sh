@@ -1,7 +1,15 @@
 #!/bin/bash
-# SessionStart hook (source: compact) - re-injects AGENTS.md + syncs workspace memories
+# SessionStart hook - re-injects AGENTS.md context + syncs workspace memories
+# Uses git to resolve project root (no $QWEN_PROJECT_DIR dependency)
 
-PROJECT_ROOT="$QWEN_PROJECT_DIR"
+PROJECT_ROOT="${QWEN_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
+
+if [ -z "$PROJECT_ROOT" ] || [ ! -f "$PROJECT_ROOT/AGENTS.md" ]; then
+    jq -n '{hookSpecificOutput: {additionalContext: "Context compacted. AGENTS.md not found."}}'
+    exit 0
+fi
+
+# Build global memory path
 GLOBAL_MEMORY="$HOME/.qwen/projects/$(echo "$PROJECT_ROOT" | sed 's|[^a-zA-Z0-9]|-|g')/memory"
 WORKSPACE_MEMORY="$PROJECT_ROOT/.qwen/memory"
 
@@ -16,15 +24,8 @@ if [ -d "$WORKSPACE_MEMORY" ]; then
     done < <(find "$WORKSPACE_MEMORY" -name '*.md' -type f -print0)
 fi
 
-CONTEXT=""
-
-if [ -f "$PROJECT_ROOT/AGENTS.md" ]; then
-    CONTEXT="Project standards re-injected from AGENTS.md:\n\n$(cat "$PROJECT_ROOT/AGENTS.md")"
-fi
-
-if [ -z "$CONTEXT" ]; then
-    CONTEXT="Context compacted. AGENTS.md not found."
-fi
+# Re-inject AGENTS.md context
+CONTEXT="Project standards re-injected from AGENTS.md:\n\n$(cat "$PROJECT_ROOT/AGENTS.md")"
 
 jq -n --arg msg "$CONTEXT" '{
     hookSpecificOutput: {

@@ -15,13 +15,32 @@ Trigger when the user says "start session", "session start", or begins a new pha
 
 1. **Sync workspace memories to global memory**
 
-   Run the sync script to copy workspace memories (`.qwen/memory/`) into the global project memory so the AI session can load them:
+   Copy memories from `.qwen/memory/` (git-tracked, travels with repo) to the global memory directory so the AI session can load them.
 
-   ```bash
-   bash "$QWEN_PROJECT_DIR/.qwen/skills/session-start/sync.sh"
-   ```
+   **Global memory path:** `~/.qwen/projects/<sanitized-project-path>/memory`
 
-   This copies `.qwen/memory/` → `~/.qwen/projects/<path>/memory/` — the reverse of the end-session sync.
+   The sanitized path replaces all non-alphanumeric characters with `-`. For example:
+   `/Users/brice/Documents/Dev/github/ASkyl.Dsm.WebHosting` → `-Users-brice-Documents-Dev-github-ASkyl-Dsm-WebHosting`
+
+   **Procedure:**
+
+   a. Discover workspace memory files:
+      ```
+      glob pattern: ".qwen/memory/**/*.md"
+      ```
+
+   b. For each `.md` file found (except `MEMORY.md`):
+      - Read the workspace file with `read_file`
+      - Read the corresponding global file with `read_file` (required before writing)
+      - **Compare content** — only write if different
+      - Write to global memory using `write_file` (preserves relative path: `feedback/`, `project/`, etc.)
+
+   c. Sync `MEMORY.md` last (same read-compare-write pattern)
+
+   d. Report: "Synced N/N memory files" (N synced / N total)
+
+   **Note:** `write_file` requires reading the target file first. Always read before write.
+   **Skip silently** if `.qwen/memory/` does not exist or is empty.
 
 2. **Read AGENTS.md**
 
@@ -37,6 +56,6 @@ Trigger when the user says "start session", "session start", or begins a new pha
 
 ## Notes
 
-- The SessionStart hook (`hooks/reinject-agents-standards.sh`) also performs this sync automatically
-- This skill provides an explicit, auditable step in the session workflow
+- The SessionStart hook (`hooks/reinject-agents-standards.sh`) also performs AGENTS.md reinjection
+- This skill provides explicit, auditable memory sync via tool calls (no shell scripts)
 - The end-session skill handles the reverse direction: global → workspace
