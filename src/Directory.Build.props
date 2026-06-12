@@ -24,4 +24,9 @@
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Enable C# 14 preview features (scoped extension keyword) -->
+    <EnablePreviewFeatures>true</EnablePreviewFeatures>
+  </PropertyGroup>
 </Project>

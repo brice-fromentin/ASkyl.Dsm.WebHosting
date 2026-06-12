@@ -87,4 +87,10 @@ public static partial class DsmApiLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2000013, Level = LogLevel.Warning, Message = "DSM API handshake failed")]
     public static partial void HandshakeFailure(this ILogger<ILogDsmApiClient> logger);
+
+    /// <summary>
+    /// Logs that fetching user preferences failed (best-effort, non-blocking).
+    /// </summary>
+    [LoggerMessage(EventId = 2000014, Level = LogLevel.Debug, Message = "Failed to fetch user preferences, falling back to system defaults: {Error}")]
+    public static partial void FetchUserPreferencesFailed(this ILogger<ILogDsmApiClient> logger, string error);
 }

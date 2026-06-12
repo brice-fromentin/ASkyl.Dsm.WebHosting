@@ -53,6 +53,22 @@ public static class GlobalizationSettings
                                     .Distinct(StringComparer.OrdinalIgnoreCase)
                                     .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
 
-        return [.. cultureNames.Select(name => new CultureInfo(name))];
+        // Handle CultureNotFoundException for cultures that exist in file system but not in runtime
+        var cultures = new List<CultureInfo>();
+
+        foreach (var name in cultureNames)
+        {
+            try
+            {
+                cultures.Add(new(name));
+            }
+            catch (CultureNotFoundException)
+            {
+                // Culture directory exists but not supported by runtime — skip gracefully
+                // Note: No logging available here (static initialization, DI not ready)
+            }
+        }
+
+        return [.. cultures];
     }
 }

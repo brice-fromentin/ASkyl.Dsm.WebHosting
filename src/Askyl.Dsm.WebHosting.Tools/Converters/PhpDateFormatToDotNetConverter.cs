@@ -29,11 +29,13 @@ public static class PhpDateFormatToDotNetConverter
         ['j'] = "d",     // Day without leading zero (1-31)
         ['l'] = "dddd",  // Full weekday name (Monday-Sunday)
         ['D'] = "ddd",   // Abbreviated weekday name (Mon-Sun)
-        ['w'] = "%u",    // Day of week as number (0=Sun, 6=Sat) — not directly mappable
-        ['N'] = "%u",    // ISO-8601 day of week (1=Mon, 7=Sun) — not directly mappable
 
-        // Day of year
-        ['z'] = "%j",    // Day of year (0-366)
+        // Day of week — PHP 'w' (0=Sun..6=Sat) and 'N' (1=Mon..7=Sun)
+        // have no direct .NET custom format equivalent — passed through as literal
+
+        // Day of year — PHP 'z' (0-365) vs .NET %j (1-366) — offset differs by 1
+        // This is a known limitation; consumers should add 1 if exact day-of-year needed
+        ['z'] = "%j",
     };
 
     /// <summary>
@@ -43,7 +45,7 @@ public static class PhpDateFormatToDotNetConverter
     /// <returns>.NET format string (e.g. "yyyy/MM/dd", "dd/MM/yyyy", "d MMM yyyy"), or null if unrecognized.</returns>
     public static string? Convert(string? phpFormat)
     {
-        if (string.IsNullOrWhiteSpace(phpFormat))
+        if (String.IsNullOrWhiteSpace(phpFormat))
         {
             return null;
         }
@@ -53,6 +55,17 @@ public static class PhpDateFormatToDotNetConverter
         for (var i = 0; i < phpFormat.Length; i++)
         {
             var ch = phpFormat[i];
+
+            // Handle PHP escape mechanism: \x means literal 'x'
+            if (ch == '\\')
+            {
+                if (i + 1 < phpFormat.Length)
+                {
+                    result.Append(phpFormat[++i]);
+                }
+
+                continue;
+            }
 
             if (TokenMap.TryGetValue(ch, out var replacement))
             {

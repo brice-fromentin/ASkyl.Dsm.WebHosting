@@ -233,7 +233,8 @@ public static class L
         public const string NameLength = "WebSiteConfiguration_NameLength";
         public const string ApplicationPathRequired = "WebSiteConfiguration_ApplicationPathRequired";
         public const string PortRequired = "WebSiteConfiguration_PortRequired";
-        public const string PortRange = "WebSiteConfiguration_PortRange";
+        public const string InternalPortRange = "WebSiteConfiguration_InternalPortRange";
+        public const string PublicPortRange = "WebSiteConfiguration_PublicPortRange";
         public const string EnvironmentRequired = "WebSiteConfiguration_EnvironmentRequired";
         public const string ProcessTimeoutRange = "WebSiteConfiguration_ProcessTimeoutRange";
         public const string HostNameRequired = "WebSiteConfiguration_HostNameRequired";

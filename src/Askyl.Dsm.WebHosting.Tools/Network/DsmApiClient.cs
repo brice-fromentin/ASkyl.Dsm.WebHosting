@@ -176,7 +176,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
 
         var lines = File.ReadAllLines(SystemDefaults.ConfigurationFileName);
         var settings = lines.Where(x => x.Contains('='))
-                            .ToDictionary(key => key.Split('=')[0], value => value.Split('=')[1].Replace("\"", String.Empty));
+                            .ToDictionary(k => k.Split(['='], 2)[0], v => v.Split(['='], 2)[1].Replace("\"", String.Empty));
 
         logger.ConfigurationLoaded(settings.Count);
 
@@ -232,9 +232,10 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
 
             return UserLanguage;
         }
-        catch
+        catch (Exception ex)
         {
-            // Best-effort: silently ignore failures; system preferences are used as fallback
+            // Best-effort: log and fall back to system preferences
+            logger.FetchUserPreferencesFailed(ex.Message);
         }
 
         return null;

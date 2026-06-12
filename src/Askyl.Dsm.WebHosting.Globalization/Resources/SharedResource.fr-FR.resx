@@ -404,7 +404,7 @@
     <value>Échec de l'installation</value>
   </data>
   <data name="Error_UninstallationFailed" xml:space="preserve">
-    <value>Échec de la désinstallation</value>
+    <value>Échec de la désinstallation de la version {0}</value>
   </data>
   <data name="Error_SiteConfigUpdating" xml:space="preserve">
     <value>La configuration du site est en cours de mise à jour</value>
@@ -501,6 +501,12 @@
   </data>
   <data name="WebSiteConfiguration_PortRange" xml:space="preserve">
     <value>Le port doit être compris entre 1024 et 65535</value>
+  </data>
+  <data name="WebSiteConfiguration_InternalPortRange" xml:space="preserve">
+    <value>Le port interne doit être compris entre 1024 et 65535</value>
+  </data>
+  <data name="WebSiteConfiguration_PublicPortRange" xml:space="preserve">
+    <value>Le port public doit être 80, 443, ou compris entre 1024 et 65535</value>
   </data>
   <data name="WebSiteConfiguration_EnvironmentRequired" xml:space="preserve">
     <value>L'environnement est requis</value>

@@ -22,19 +22,19 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
     /// <summary>
     /// Gets the supported cultures discovered from the server-injected environment variable.
     /// </summary>
-    private static CultureInfo[] SupportedCultures { get; } = ParseSupportedCultures();
+    private static CultureInfo[] SupportedCultures { get; } = SafeParseSupportedCultures();
 
     /// <summary>
     /// Gets the browser's initial culture, captured at class load time before any override.
     /// The WASM runtime sets <see cref="CultureInfo.CurrentUICulture"/> from the Accept-Language header at startup.
     /// </summary>
-    private static CultureInfo BrowserCulture { get; } = new(CultureInfo.CurrentUICulture.Name);
+    private static CultureInfo BrowserCulture { get; } = SafeGetBrowserCulture();
 
     /// <summary>
     /// Gets the DSM system culture injected by the server via <c>Blazor.start()</c>.
     /// Returns <c>null</c> when DSM language is set to "def" (browser default).
     /// </summary>
-    private static CultureInfo? SystemCulture { get; } = ResolveSystemCultureFromEnv();
+    private static CultureInfo? SystemCulture { get; } = SafeResolveSystemCultureFromEnv();
 
     #endregion
 
@@ -186,6 +186,26 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
 
     #region Environment Parsing
 
+    private static CultureInfo[] SafeParseSupportedCultures()
+    {
+        try
+        {
+            return ParseSupportedCultures();
+        }
+        catch (JsonException)
+        {
+            return [new CultureInfo(GlobalizationServiceCollectionExtensions.DefaultCulture)];
+        }
+        catch (CultureNotFoundException)
+        {
+            return [new CultureInfo(GlobalizationServiceCollectionExtensions.DefaultCulture)];
+        }
+        catch (ArgumentException)
+        {
+            return [new CultureInfo(GlobalizationServiceCollectionExtensions.DefaultCulture)];
+        }
+    }
+
     private static CultureInfo[] ParseSupportedCultures()
     {
         var json = Environment.GetEnvironmentVariable(ApplicationConstants.SupportedCulturesEnvironmentVariable);
@@ -203,6 +223,38 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
         }
 
         return [.. names.Select(n => new CultureInfo(n))];
+    }
+
+    private static CultureInfo SafeGetBrowserCulture()
+    {
+        try
+        {
+            return new(CultureInfo.CurrentUICulture.Name);
+        }
+        catch (CultureNotFoundException)
+        {
+            return new(GlobalizationServiceCollectionExtensions.DefaultCulture);
+        }
+        catch (ArgumentException)
+        {
+            return new(GlobalizationServiceCollectionExtensions.DefaultCulture);
+        }
+    }
+
+    private static CultureInfo? SafeResolveSystemCultureFromEnv()
+    {
+        try
+        {
+            return ResolveSystemCultureFromEnv();
+        }
+        catch (CultureNotFoundException)
+        {
+            return null;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
     }
 
     #endregion
@@ -236,6 +288,10 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
             {
                 logger.InvalidDateFormatIgnored(dateFormat);
             }
+            catch (NotSupportedException)
+            {
+                logger.InvalidDateFormatIgnored(dateFormat);
+            }
         }
 
         if (!String.IsNullOrWhiteSpace(timeFormat))
@@ -246,6 +302,10 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
                 dtfi.LongTimePattern = timeFormat;
             }
             catch (FormatException)
+            {
+                logger.InvalidTimeFormatIgnored(timeFormat);
+            }
+            catch (NotSupportedException)
             {
                 logger.InvalidTimeFormatIgnored(timeFormat);
             }

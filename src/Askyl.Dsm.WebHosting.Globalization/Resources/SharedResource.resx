@@ -404,7 +404,7 @@
     <value>Installation failed</value>
   </data>
   <data name="Error_UninstallationFailed" xml:space="preserve">
-    <value>Uninstallation failed</value>
+    <value>Failed to uninstall version {0}</value>
   </data>
   <data name="Error_SiteConfigUpdating" xml:space="preserve">
     <value>Site configuration is being updated</value>
@@ -501,6 +501,12 @@
   </data>
   <data name="WebSiteConfiguration_PortRange" xml:space="preserve">
     <value>Port must be between 1024 and 65535</value>
+  </data>
+  <data name="WebSiteConfiguration_InternalPortRange" xml:space="preserve">
+    <value>Internal port must be between 1024 and 65535</value>
+  </data>
+  <data name="WebSiteConfiguration_PublicPortRange" xml:space="preserve">
+    <value>Public port must be 80, 443, or between 1024 and 65535</value>
   </data>
   <data name="WebSiteConfiguration_EnvironmentRequired" xml:space="preserve">
     <value>Environment is required</value>

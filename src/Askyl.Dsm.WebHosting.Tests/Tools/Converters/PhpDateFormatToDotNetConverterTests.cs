@@ -75,13 +75,53 @@ public class PhpDateFormatToDotNetConverterTests
 
     #endregion
 
+    #region Day of Week Tokens
+
+    /// <summary>
+    /// PHP 'w' (0=Sun..6=Sat) and 'N' (1=Mon..7=Sun) have no direct .NET equivalent.
+    /// Both tokens are passed through unchanged as literals.
+    /// </summary>
+    [Theory]
+    [InlineData("w", "w")]
+    [InlineData("N", "N")]
+    public void Convert_DayOfWeekTokens_PassThrough(string phpFormat, string expected)
+    {
+        // Act
+        var result = PhpDateFormatToDotNetConverter.Convert(phpFormat);
+
+        // Assert — not mapped, so passed through as-is
+        Assert.Equal(expected, result);
+    }
+
+    #endregion
+
     #region Day of Year Tokens
 
     [Theory]
     [InlineData("z", "%j")]
-    [InlineData("w", "%u")]
-    [InlineData("N", "%u")]
     public void Convert_DayOfYearTokens_ReturnsExpected(string phpFormat, string expected)
+    {
+        // Act
+        var result = PhpDateFormatToDotNetConverter.Convert(phpFormat);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    #endregion
+
+    #region PHP Escape Mechanism
+
+    /// <summary>
+    /// In PHP date formats, \x means literal 'x'. Test that escape handling works.
+    /// Note: In C# strings, \\ represents a single backslash.
+    /// </summary>
+    [Theory]
+    [InlineData("\\m", "m")]       // \m → literal m (not month MM)
+    [InlineData("\\Y", "Y")]       // \Y → literal Y (not year yyyy)
+    [InlineData("\\d", "d")]       // \d → literal d (not day dd)
+    [InlineData("Y\\-m", "yyyy-MM")]  // Y\-m → yyyy-literal dash-MM
+    public void Convert_EscapedCharacters_ReturnsLiterals(string phpFormat, string expected)
     {
         // Act
         var result = PhpDateFormatToDotNetConverter.Convert(phpFormat);

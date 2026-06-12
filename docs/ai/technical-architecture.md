@@ -103,10 +103,11 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 ### Solution Structure
 
 ```text
-Askyl.Dsm.WebHosting.slnx (Version 0.5.3)
+Askyl.Dsm.WebHosting.slnx (Version 0.5.9)
 ├── Askyl.Dsm.WebHosting.Benchmarks         # Performance benchmarks (BenchmarkDotNet)
 ├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
 ├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
+├── Askyl.Dsm.WebHosting.Globalization      # Localization resources, validators, culture management
 ├── Askyl.Dsm.WebHosting.Logging            # Logging extensions (source-generated log methods)
 ├── Askyl.Dsm.WebHosting.Tools              # Utility tools & DSM API client
 ├── Askyl.Dsm.WebHosting.Tests              # Unit tests (xUnit, Moq, FluentAssertions)
@@ -146,6 +147,9 @@ All projects share common build settings from `Directory.Build.props`:
 <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
 <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
+
+<!-- Enable C# 14 preview features (scoped extension keyword) -->
+<EnablePreviewFeatures>true</EnablePreviewFeatures>
 ```
 
 **Analyzer Packages:**
@@ -253,7 +257,7 @@ Constants/
 | Category | Key Constants | Count |
 |----------|---------------|-------|
 | **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), DsmSid, DsmUsername, SessionValidationTtlMinutes | ~37 |
-| **Websites** | Process timeouts, port range (1024-65535), environment vars, validation messages | ~25 |
+| **Websites** | Process timeouts, port range (1024-65535), WellKnownWebPorts [80, 443], environment vars, validation messages | ~26 |
 | **DSM APIs** | 8 API names (incl. Core.User), CRUD methods, version ranges, shared error codes | ~37 + 1 enum |
 | **FileStation** | Listing patterns, sorting, pagination (100 limit) | ~15 |
 | **Network** | Cookie header ("Cookie"), SSID prefix ("_SSID="), localhost | 6 + 1 enum |
@@ -420,6 +424,10 @@ Data/
 
 ```text
 Tools/
+├── Converters/                             # Format/language converters
+│   ├── DsmLanguageToCultureConverter.cs    # DSM 3-letter language code → .NET culture name (returns null for "def")
+│   ├── PhpDateFormatToDotNetConverter.cs   # PHP date tokens (Y, m, d) → .NET format (yyyy, MM, dd)
+│   └── PhpTimeFormatToDotNetConverter.cs   # PHP time tokens (H, G, h, g, i, s, a, A) → .NET format (HH, H, hh, h, mm, ss, tt)
 ├── Extensions/                             # Extension methods
 │   ├── ApiResponseExtensions.cs            # Response mapping helpers
 │   ├── HttpClientExtensions.cs             # HTTP client helpers
@@ -503,6 +511,7 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
   - HTTP request timing (method, URL, status code, duration in milliseconds)
   - Authentication failure logging with error reason from response
   - API error logging for `Success: false` responses (error code + reason)
+  - User preferences fetch failure logging (best-effort, Debug level) via `FetchUserPreferencesFailed` (EventId 2000014)
 - HttpClient factory integration for proper lifecycle management
 - All infrastructure services testable via interface abstractions
 
@@ -511,6 +520,8 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
 Defined in `Data/DsmApi/Responses/ApiResponseBase.cs`. All DSM API response types implement `IApiResponse` via `ApiResponseBase<T>`.
 
 This enables compile-time access to `Success` and `Error` properties — replacing reflection with type-safe error handling.
+
+**Config Parsing:** `ReadSettings()` uses `Split(new[] { '=' }, 2)` to preserve values containing `=` (base64 data, URLs). Keys consumed: `external_host_ip`, `language`, `external_port_dsm_https`.
 
 **Connection Flow:** See `DsmApiClient.cs` lines 85-120
 
@@ -617,8 +628,10 @@ Ui.Client/
 ├── Extensions/                             # Client-side extension methods
 │   └── FsEntryExtensions.cs                # File system entry extension methods
 ├── Interfaces/                             # C# interfaces for JS interop
-├── Services/                               # HTTP client wrappers (7 services)
+├── Services/                               # HTTP client wrappers + culture management (9 services)
+│   ├── AcceptLanguageHandler.cs            # DelegatingHandler — attaches Accept-Language header from ICultureManager
 │   ├── AuthenticationService.cs            # Singleton - POST /api/authentication/login, logout, status
+│   ├── CultureManager.cs                   # ICultureManager impl — safe static init, resolves culture at login, clones with date/time formats
 │   ├── DotnetVersionService.cs             # GET /api/runtime-management/{versions,channels,releases}
 │   ├── FileSystemService.cs                # GET /api/file-management/{shared-folders,directory-contents}
 │   ├── FrameworkManagementService.cs       # POST /api/framework-management/{install,uninstall}
@@ -767,7 +780,7 @@ Each service owns a dedicated 100K range at 1M spacing to prevent cross-service 
 | `1700001–1700016` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` | `Server/ReverseProxy/` |
 | `1800001–1800044` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` | `Server/WebsiteHosting/` |
 | `1900001–1900018` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` | `Server/WebsiteHosting/` |
-| `2000001–2000012` | DsmApiClient | `DsmApiLoggingExtensions.cs` | `Server/DsmApi/` |
+| `2000001–2000014` | DsmApiClient | `DsmApiLoggingExtensions.cs` | `Server/DsmApi/` |
 | `2100001–2100008` | ArchiveExtractorService | `ArchiveExtractorLoggingExtensions.cs` | `Server/Infrastructure/` |
 | `2200001–2200004` | VersionsDetectorService | `VersionsDetectorLoggingExtensions.cs` | `Server/Infrastructure/` |
 | `2300001–2300002` | PlatformInfoService | `PlatformInfoLoggingExtensions.cs` | `Server/Infrastructure/` |
@@ -1295,14 +1308,19 @@ System-level date/time format discovery is a future enhancement.
 | Component | Location | Purpose |
 |---|---|---|
 | `ICultureManager` | `Globalization` | Interface: `InitializeFromLogin(string?, string?, string?)`, `ResetToSystem()`, `CurrentCulture`, `CurrentUICulture` |
-| `CultureManager` | `Ui.Client` | WASM implementation with pre-resolved static fields (`BrowserCulture`, `SystemCulture`, `SupportedCultures`) |
+| `CultureManager` | `Ui.Client` | WASM implementation — safe static init (`SafeParseSupportedCultures`, `SafeGetBrowserCulture`, `SafeResolveSystemCultureFromEnv`), resolves culture at login, clones with date/time formats |
 | `GlobalizationSettings` | `Globalization` | Static settings: `SupportedCultures`, `SupportedCultureNamesJson`, `SystemCulture` |
-| `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header |
-| `GlobalizationExtensions` | `Ui/Extensions/` | Server-side `RequestLocalization` config (file-scoped extension methods) |
+| `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header from `ICultureManager` |
+| `GlobalizationExtensions` | `Ui/Extensions/` | Server-side `RequestLocalization` config (C# 14 scoped `extension` keyword) |
 | `LocalizationKeys.cs` | `Globalization` | Strongly-typed keys organized by model (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`) |
 | `ILocalizer` | `Globalization` | Abstraction interface — hides `ResourceManager` from consumer projects |
 | `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `ResourceManager` (not `IStringLocalizer`) — reads `CurrentUICulture` at call time, so culture changes after login work without re-rendering |
-| `WebSiteConfigurationValidator` | `Globalization/Validators/` | FluentValidation rules for `WebSiteConfiguration` (7 properties) |
+| `ResourceManagerCache` | `Globalization` | Static class holding shared `ResourceManager` instance for `SharedResource` |
+| `LocalizedText` | `Globalization` | Replacement for `LocalizedString` (avoids namespace collision) — `Name`, `Value`, implicit `string` conversion |
+| `DsmLanguageToCultureConverter` | `Tools/Converters/` | Static converter: DSM 3-letter language code → .NET culture name (returns `null` for `"def"`) |
+| `PhpDateFormatToDotNetConverter` | `Tools/Converters/` | Static converter: PHP date tokens (Y, m, d, etc.) → .NET format strings (yyyy, MM, dd) |
+| `PhpTimeFormatToDotNetConverter` | `Tools/Converters/` | Static converter: PHP time tokens (H, G, h, g, i, s, a, A) → .NET format strings (HH, H, hh, h, mm, ss, tt) |
+| `WebSiteConfigurationValidator` | `Globalization/Validators/` | FluentValidation rules for `WebSiteConfiguration` (8 properties, separate messages for InternalPort/PublicPort) |
 | `LoginCredentialsValidator` | `Globalization/Validators/` | FluentValidation rules for `LoginCredentials` (2 properties) |
 
 ### Validation Architecture
@@ -1372,6 +1390,14 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 - **DSM-controlled culture**: No runtime switching — culture locked after login, reset to system on logout
 - **Synchronous culture methods**: `InitializeFromLogin()` and `ResetToSystem()` are `void` — no I/O involved
 - **Pre-resolved static fields**: `BrowserCulture`, `SystemCulture`, and `SupportedCultures` captured at class load — `ResolveSystemCulture()` is allocation-free at runtime
+- **Safe static initialization**: Each static field uses a `Safe*` wrapper
+  (`SafeParseSupportedCultures`, `SafeGetBrowserCulture`,
+  `SafeResolveSystemCultureFromEnv`) that catches `CultureNotFoundException`,
+  `ArgumentException`, and `JsonException` — prevents `TypeInitializationException`
+  from crashing WASM on malformed env vars
+- **`NotSupportedException` on pattern setters**: Date/time pattern overrides
+  catch both `FormatException` and `NotSupportedException` — cloned cultures
+  are mutable, but defensive coding guards against rare immutable culture variants
 - **Pure C# browser detection**: WASM runtime auto-sets `CultureInfo.CurrentUICulture` from Accept-Language header — no JS interop needed
 - **`DsmLanguageToCultureConverter` returns `null` for `"def"`**: `"def"` means "use browser default" — not English
 - **`GlobalizationSettings` in Globalization assembly**: Static settings (supported cultures, system culture) belong where the resources are — not in Ui project
@@ -1394,6 +1420,10 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 - **Shared validators in Globalization**: Single source of truth — server auto-validation and client Blazilla validation use the same rules
 - **Model-scoped localization keys**: `L.WebSiteConfiguration.*` and `L.LoginCredentials.*` clarify model ownership
 - **No DataAnnotations**: All validation migrated to FluentValidation — DataAnnotations cannot use runtime-localized messages
+- **Separate port validation messages**: `InternalPort` (1024-65535) and
+  `PublicPort` (80, 443, or 1024-65535) have distinct validation keys
+  (`InternalPortRange`, `PublicPortRange`) since `WellKnownWebPorts` allows
+  standard web ports below the minimum application port
 - **`AuthenticationResult` carries `DateFormat` and `TimeFormat`**: Formats converted on server, passed to WASM alongside culture
 - **Culture-aware date formats via `CultureInfo.DateTimeFormat` override**: Clones culture and overrides patterns for user-specific preferences
 - **Standard format specifiers `"d"` and `"g"` in UI**: Leverages `CultureInfo.DateTimeFormat` automatically — no custom formatting logic in components

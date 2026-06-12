@@ -26,9 +26,9 @@ public class ResourceCompletenessTests
         var englishCulture = new CultureInfo("en-US");
         var frenchCulture = new CultureInfo("fr-FR");
 
-        // Act
-        var englishKeys = GetResourceKeys(resourceManager, englishCulture);
-        var frenchKeys = GetResourceKeys(resourceManager, frenchCulture);
+        // Act — use tryParents=false to prevent fallback masking missing translations
+        var englishKeys = GetResourceKeys(resourceManager, englishCulture, tryParents: false);
+        var frenchKeys = GetResourceKeys(resourceManager, frenchCulture, tryParents: false);
 
         // Assert
         var missing = englishKeys.Except(frenchKeys).OrderBy(k => k).ToList();
@@ -46,11 +46,17 @@ public class ResourceCompletenessTests
         var resourceManager = GetResourceManager();
         var frenchCulture = new CultureInfo("fr-FR");
 
-        // Act
+        // Act — use tryParents=true to get French resources (with fallback to parent culture if needed)
+        // This ensures we catch empty values while allowing culture fallback
         var emptyKeys = new List<string>();
         using (var reader = resourceManager.GetResourceSet(frenchCulture, true, false))
         {
-            foreach (DictionaryEntry entry in reader!)
+            if (reader is null)
+            {
+                throw new InvalidOperationException($"French resource set not found for culture '{frenchCulture.Name}' (including fallback).");
+            }
+
+            foreach (DictionaryEntry entry in reader)
             {
                 var value = entry.Value?.ToString();
                 if (string.IsNullOrWhiteSpace(value))
@@ -88,10 +94,10 @@ public class ResourceCompletenessTests
 
     #region Helpers
 
-    private static HashSet<string> GetResourceKeys(ResourceManager resourceManager, CultureInfo culture)
+    private static HashSet<string> GetResourceKeys(ResourceManager resourceManager, CultureInfo culture, bool tryParents)
     {
         var keys = new HashSet<string>();
-        using (var resourceSet = resourceManager.GetResourceSet(culture, true, false))
+        using (var resourceSet = resourceManager.GetResourceSet(culture, tryParents, false))
         {
             if (resourceSet is not null)
             {

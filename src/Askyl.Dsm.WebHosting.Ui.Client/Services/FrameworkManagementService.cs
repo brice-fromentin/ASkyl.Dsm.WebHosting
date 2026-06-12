@@ -26,5 +26,5 @@ public class FrameworkManagementService(IHttpClientFactory httpClientFactory, IL
 
     /// <inheritdoc/>
     public async Task<InstallationResult> UninstallFrameworkAsync(string version, CancellationToken cancellationToken = default)
-        => await _httpClient.PostJsonOrDefaultAsync<object, InstallationResult>(FrameworkManagementRoutes.UninstallWithVersionFullRoute(version), new(), () => InstallationResult.CreateFailure(localizer[L.Error.Unknown]), cancellationToken);
+        => await _httpClient.PostJsonOrDefaultAsync<object, InstallationResult>(FrameworkManagementRoutes.UninstallWithVersionFullRoute(version), new(), () => InstallationResult.CreateFailure(localizer[L.Error.UninstallationFailed, version]), cancellationToken);
 }

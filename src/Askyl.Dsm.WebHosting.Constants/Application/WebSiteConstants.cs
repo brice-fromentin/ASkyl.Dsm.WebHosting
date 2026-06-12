@@ -70,6 +70,12 @@ public static class WebSiteConstants
     public const int DefaultPublicPort = 443;
 
     /// <summary>
+    /// Well-known web ports that are valid for public-facing websites
+    /// even though they fall below <see cref="MinWebApplicationPort"/>.
+    /// </summary>
+    public static readonly int[] WellKnownWebPorts = [80, 443];
+
+    /// <summary>
     /// Minimum port number for web applications (avoiding system services).
     /// </summary>
     public const int MinWebApplicationPort = 1024;

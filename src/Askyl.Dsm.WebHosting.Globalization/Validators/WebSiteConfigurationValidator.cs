@@ -18,7 +18,7 @@ public sealed class WebSiteConfigurationValidator : AbstractValidator<WebSiteCon
         RuleFor(x => x.InternalPort)
             .GreaterThan(0).WithMessage(localizer[L.WebSiteConfiguration.PortRequired].Value)
             .InclusiveBetween(WebSiteConstants.MinWebApplicationPort, WebSiteConstants.MaxWebApplicationPort)
-            .WithMessage(localizer[L.WebSiteConfiguration.PortRange].Value);
+            .WithMessage(localizer[L.WebSiteConfiguration.InternalPortRange].Value);
 
         RuleFor(x => x.Environment)
             .NotEmpty().WithMessage(localizer[L.WebSiteConfiguration.EnvironmentRequired].Value);
@@ -32,7 +32,7 @@ public sealed class WebSiteConfigurationValidator : AbstractValidator<WebSiteCon
 
         RuleFor(x => x.PublicPort)
             .GreaterThan(0).WithMessage(localizer[L.WebSiteConfiguration.PortRequired].Value)
-            .InclusiveBetween(WebSiteConstants.MinWebApplicationPort, WebSiteConstants.MaxWebApplicationPort)
-            .WithMessage(localizer[L.WebSiteConfiguration.PortRange].Value);
+            .Must(port => WebSiteConstants.WellKnownWebPorts.Contains(port) || port is >= WebSiteConstants.MinWebApplicationPort and <= WebSiteConstants.MaxWebApplicationPort)
+            .WithMessage(localizer[L.WebSiteConfiguration.PublicPortRange].Value);
     }
 }
