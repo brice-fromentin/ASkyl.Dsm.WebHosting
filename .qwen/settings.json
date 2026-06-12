@@ -50,6 +50,7 @@
       "Bash(git branch *)",
       "Bash(git diff)",
       "Bash(git fetch *)",
+      "Bash(jq *)",
       "Bash(git log *)",
       "Bash(git pull)",
       "Bash(git push)",
