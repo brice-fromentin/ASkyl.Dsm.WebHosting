@@ -32,7 +32,7 @@ public class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocaliz
     public async Task<ApiResultBool> IsVersionInstalledAsync(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore, CancellationToken cancellationToken = default)
     {
         var url = RuntimeManagementRoutes.VersionInstalledFullRoute(version);
-        return await _httpClient.GetJsonOrDefaultAsync(url, () => ApiResultBool.CreateFailure(localizer[L.Error.Unknown]), cancellationToken);
+        return await _httpClient.GetJsonOrDefaultAsync(url, () => ApiResultBool.CreateFailure(localizer[L.Error.FailedToCheckVersionInstalled, version]), cancellationToken);
     }
 
     /// <inheritdoc/>

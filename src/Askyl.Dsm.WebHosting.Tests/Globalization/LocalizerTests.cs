@@ -12,17 +12,21 @@ public class LocalizerTests
     {
         // Arrange
         var original = CultureInfo.CurrentUICulture;
-        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
-        var localizer = new Localizer(ResourceManagerCache.SharedResource);
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("en-US");
+            var localizer = new Localizer(ResourceManagerCache.SharedResource);
 
-        // Act
-        var result = localizer["Login_PageTitle"];
+            // Act
+            var result = localizer["Login_PageTitle"];
 
-        // Cleanup
-        CultureInfo.CurrentUICulture = original;
-
-        // Assert
-        Assert.Equal("ADWH - Login", result.Value);
+            // Assert
+            Assert.Equal("ADWH - Login", result.Value);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
     }
 
     #endregion
@@ -34,18 +38,22 @@ public class LocalizerTests
     {
         // Arrange
         var original = CultureInfo.CurrentUICulture;
-        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
-        var localizer = new Localizer(ResourceManagerCache.SharedResource);
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("en-US");
+            var localizer = new Localizer(ResourceManagerCache.SharedResource);
 
-        // Act
-        var result = localizer["Home_DeleteConfirmation", "TestSite"];
+            // Act
+            var result = localizer["Home_DeleteConfirmation", "TestSite"];
 
-        // Cleanup
-        CultureInfo.CurrentUICulture = original;
-
-        // Assert
-        Assert.NotNull(result.Value);
-        Assert.Contains("TestSite", result.Value);
+            // Assert
+            Assert.NotNull(result.Value);
+            Assert.Contains("TestSite", result.Value);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
     }
 
     #endregion
@@ -76,20 +84,24 @@ public class LocalizerTests
         var localizer = new Localizer(ResourceManagerCache.SharedResource);
         var originalCulture = CultureInfo.CurrentUICulture;
 
-        // Act — English
-        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
-        var enValue = localizer["Login_PageTitle"].Value;
+        try
+        {
+            // Act — English
+            CultureInfo.CurrentUICulture = new CultureInfo("en-US");
+            var enValue = localizer["Login_PageTitle"].Value;
 
-        // Act — French
-        CultureInfo.CurrentUICulture = new CultureInfo("fr-FR");
-        var frValue = localizer["Login_PageTitle"].Value;
+            // Act — French
+            CultureInfo.CurrentUICulture = new CultureInfo("fr-FR");
+            var frValue = localizer["Login_PageTitle"].Value;
 
-        // Cleanup
-        CultureInfo.CurrentUICulture = originalCulture;
-
-        // Assert
-        Assert.Equal("ADWH - Login", enValue);
-        Assert.Equal("ADWH - Connexion", frValue);
+            // Assert
+            Assert.Equal("ADWH - Login", enValue);
+            Assert.Equal("ADWH - Connexion", frValue);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalCulture;
+        }
     }
 
     #endregion
@@ -101,17 +113,21 @@ public class LocalizerTests
     {
         // Arrange
         var original = CultureInfo.CurrentUICulture;
-        CultureInfo.CurrentUICulture = new CultureInfo("en-US");
-        var localizer = new Localizer(ResourceManagerCache.SharedResource);
+        try
+        {
+            CultureInfo.CurrentUICulture = new CultureInfo("en-US");
+            var localizer = new Localizer(ResourceManagerCache.SharedResource);
 
-        // Act
-        string text = localizer["Login_PageTitle"];
+            // Act
+            string text = localizer["Login_PageTitle"];
 
-        // Cleanup
-        CultureInfo.CurrentUICulture = original;
-
-        // Assert
-        Assert.Equal("ADWH - Login", text);
+            // Assert
+            Assert.Equal("ADWH - Login", text);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
     }
 
     #endregion

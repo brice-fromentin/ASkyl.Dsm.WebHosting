@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # SessionStart hook - re-injects AGENTS.md context + syncs workspace memories
 # Uses git to resolve project root (no $QWEN_PROJECT_DIR dependency)
 
@@ -20,14 +21,14 @@ if [ -d "$WORKSPACE_MEMORY" ]; then
         relpath="${f#$WORKSPACE_MEMORY/}"
         target="$GLOBAL_MEMORY/$relpath"
         mkdir -p "$(dirname "$target")"
-        cp "$f" "$target" 2>/dev/null
-    done < <(find "$WORKSPACE_MEMORY" -name '*.md' -type f -print0)
+        cp -- "$f" "$target" 2>/dev/null || true
+    done < <(find "$WORKSPACE_MEMORY" -name '*.md' -type f -print0 2>/dev/null || true)
 fi
 
-# Re-inject AGENTS.md context
-CONTEXT="Project standards re-injected from AGENTS.md:\n\n$(cat "$PROJECT_ROOT/AGENTS.md")"
+# Re-inject AGENTS.md context via null-delimited pipe to avoid argument length limits
+CONTEXT="$(cat -- "$PROJECT_ROOT/AGENTS.md")"
 
-jq -n --arg msg "$CONTEXT" '{
+jq -n --arg msg "Project standards re-injected from AGENTS.md:\n\n${CONTEXT}" '{
     hookSpecificOutput: {
         additionalContext: $msg
     }

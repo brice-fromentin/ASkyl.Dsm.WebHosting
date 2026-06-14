@@ -376,6 +376,9 @@
   <data name="Error_FailedToCheckChannelInstalled" xml:space="preserve">
     <value>Failed to check if channel '{0}' is installed</value>
   </data>
+  <data name="Error_FailedToCheckVersionInstalled" xml:space="preserve">
+    <value>Failed to check if version '{0}' is installed</value>
+  </data>
   <data name="Error_FailedToLoadChannels" xml:space="preserve">
     <value>Failed to load available channels</value>
   </data>

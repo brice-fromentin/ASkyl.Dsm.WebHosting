@@ -115,7 +115,7 @@ public class ResourceCompletenessTests
     {
         var keys = new HashSet<string>();
         var resourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith(".SharedResource.resources"));
+            .FirstOrDefault(n => n == "Askyl.Dsm.WebHosting.Globalization.Resources.SharedResource.resources");
 
         if (resourceName is not null)
         {

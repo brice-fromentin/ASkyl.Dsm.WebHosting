@@ -179,6 +179,7 @@ public static class L
         public const string FailedToLoadDirectoryContentsWithPath = "Error_FailedToLoadDirectoryContentsWithPath";
         public const string FailedToLoadInstalledVersions = "Error_FailedToLoadInstalledVersions";
         public const string FailedToCheckChannelInstalled = "Error_FailedToCheckChannelInstalled";
+        public const string FailedToCheckVersionInstalled = "Error_FailedToCheckVersionInstalled";
         public const string FailedToLoadChannels = "Error_FailedToLoadChannels";
         public const string FailedToLoadReleases = "Error_FailedToLoadReleases";
         public const string FailedToLoadReleasesForChannel = "Error_FailedToLoadReleasesForChannel";
