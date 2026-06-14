@@ -5,12 +5,12 @@ namespace Askyl.Dsm.WebHosting.Globalization.Validators;
 
 public sealed class LoginCredentialsValidator : AbstractValidator<LoginCredentials>
 {
-    public LoginCredentialsValidator(ILocalizer localizer)
+    public LoginCredentialsValidator()
     {
         RuleFor(x => x.Login)
-            .NotEmpty().WithMessage(localizer[L.LoginCredentials.LoginRequired].Value);
+            .NotEmpty().WithLocalizedMessage(L.LoginCredentials.LoginRequired);
 
         RuleFor(x => x.Password)
-            .NotEmpty().WithMessage(localizer[L.LoginCredentials.PasswordRequired].Value);
+            .NotEmpty().WithLocalizedMessage(L.LoginCredentials.PasswordRequired);
     }
 }

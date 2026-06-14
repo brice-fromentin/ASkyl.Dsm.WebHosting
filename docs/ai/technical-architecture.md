@@ -2,7 +2,7 @@
 
 **Version:** 0.5.9
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** June 10, 2026 (Globalization Phase 10 complete — ResourceManager-based localizer fixes
+**Last Updated:** June 14, 2026 (Globalization complete — deferred `WithLocalizedMessage()` fix, Phase 10d manual validation passed
 WASM culture caching, server-side Accept-Language parsing handles neutral languages, early CultureManager
 resolution in WASM startup, full page reload on logout resets to system/browser culture)
 
@@ -1322,6 +1322,7 @@ System-level date/time format discovery is a future enhancement.
 | `PhpTimeFormatToDotNetConverter` | `Tools/Converters/` | Static converter: PHP time tokens (H, G, h, g, i, s, a, A) → .NET format strings (HH, H, hh, h, mm, ss, tt) |
 | `WebSiteConfigurationValidator` | `Globalization/Validators/` | FluentValidation rules for `WebSiteConfiguration` (8 properties, separate messages for InternalPort/PublicPort) |
 | `LoginCredentialsValidator` | `Globalization/Validators/` | FluentValidation rules for `LoginCredentials` (2 properties) |
+| `DeferredMessageExtensions` | `Globalization/Validators/` | `WithLocalizedMessage()` extension — defers resource key resolution to validation time via `WithMessage(Func&lt;T, string&gt;)` so culture changes after login are respected |
 
 ### Validation Architecture
 
@@ -1329,7 +1330,7 @@ Validators are defined once in Globalization and consumed by both server and cli
 
 | Layer | Package | Registration | Behavior |
 |-------|---------|--------------|----------|
-| **Globalization** | `FluentValidation` + `FluentValidation.DependencyInjectionExtensions` | Contains both validators | Defines all rules with localized messages via `IStringLocalizer<SharedResource>` |
+| **Globalization** | `FluentValidation` + `FluentValidation.DependencyInjectionExtensions` | Contains both validators | Defines all rules with deferred localized messages via `WithLocalizedMessage()` extension — uses `WithMessage(Func<T, string>)` to resolve resource keys at validation time, ensuring culture changes after login are respected |
 | **Server (Ui)** | `FluentValidation.AspNetCore` | `AddFluentValidationAutoValidation()` | Auto-populates ModelState; invalid POST returns 400 Bad Request |
 | **Client (WASM)** | `Blazilla` | `<FluentValidator />` in EditForm | Real-time field-level validation with localized messages |
 

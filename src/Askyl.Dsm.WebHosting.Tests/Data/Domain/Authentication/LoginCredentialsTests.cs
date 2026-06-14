@@ -1,7 +1,5 @@
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
-using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Validators;
-using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Data.Domain.Authentication;
 
@@ -9,10 +7,7 @@ public class LoginCredentialsTests
 {
     private static LoginCredentialsValidator CreateValidator()
     {
-        var localizerMock = new Mock<ILocalizer>();
-        localizerMock.Setup(x => x[It.IsAny<string>(), It.IsAny<object[]>()])
-                     .Returns((string name, object[]? args) => new LocalizedText(name, name));
-        return new LoginCredentialsValidator(localizerMock.Object);
+        return new();
     }
 
     #region Login

@@ -1,6 +1,6 @@
 # Globalization (Multi-Language) Plan
 
-## Status: In Progress (Phase 10 next)
+## Status: Complete (2026-06-14)
 
 ---
 
@@ -813,15 +813,15 @@ All 8 verification checks passed — Phase 9 is fully implemented.
 
 #### 10d: Manual Validation Checklist (Requires deployed instance)
 
-- [ ] Culture resolution from login response (DSM preference)
-- [ ] Fallback to browser language when login response lacks culture
-- [ ] Fallback to English for missing translations
-- [ ] Browser culture detection on first visit (pre-login)
-- [ ] Server-side messages are localized in API responses (French)
-- [ ] FluentValidation messages are localized in UI (French)
-- [ ] Culture propagates via `Accept-Language` header to server
-- [ ] Date/time formatting respects user-specific DSM preferences
-- [ ] System culture applied correctly on logout (`ResetToSystem()`)
+- [x] Culture resolution from login response (DSM preference) — ✅ PASS (2026-06-14)
+- [x] Fallback to browser language when login response lacks culture — ✅ PASS (2026-06-14)
+- [ ] Fallback to English for missing translations — ⚠ UNTESTABLE (requires removing a translation from .resx and redeploying)
+- [x] Browser culture detection on first visit (pre-login) — ✅ PASS (2026-06-14)
+- [x] Server-side messages are localized in API responses (French) — ✅ PASS (2026-06-14)
+- [x] FluentValidation messages are localized in UI (French) — ✅ PASS (2026-06-14) (deferred `WithLocalizedMessage()` fix validated)
+- [x] Culture propagates via `Accept-Language` header to server — ✅ PASS (2026-06-14)
+- [x] Date/time formatting respects user-specific DSM preferences — ✅ PASS (2026-06-14)
+- [x] System culture applied correctly on logout (`ResetToSystem()`) — ✅ PASS (2026-06-14)
 
 #### 10e: Hard-to-Test Items (Deferred — require refactoring)
 

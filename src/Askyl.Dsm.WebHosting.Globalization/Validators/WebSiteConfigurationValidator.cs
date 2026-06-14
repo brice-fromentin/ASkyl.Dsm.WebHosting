@@ -6,33 +6,33 @@ namespace Askyl.Dsm.WebHosting.Globalization.Validators;
 
 public sealed class WebSiteConfigurationValidator : AbstractValidator<WebSiteConfiguration>
 {
-    public WebSiteConfigurationValidator(ILocalizer localizer)
+    public WebSiteConfigurationValidator()
     {
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage(localizer[L.WebSiteConfiguration.NameRequired].Value)
-            .Length(1, 100).WithMessage(localizer[L.WebSiteConfiguration.NameLength].Value);
+            .NotEmpty().WithLocalizedMessage(L.WebSiteConfiguration.NameRequired)
+            .Length(1, 100).WithLocalizedMessage(L.WebSiteConfiguration.NameLength);
 
         RuleFor(x => x.ApplicationPath)
-            .NotEmpty().WithMessage(localizer[L.WebSiteConfiguration.ApplicationPathRequired].Value);
+            .NotEmpty().WithLocalizedMessage(L.WebSiteConfiguration.ApplicationPathRequired);
 
         RuleFor(x => x.InternalPort)
-            .GreaterThan(0).WithMessage(localizer[L.WebSiteConfiguration.PortRequired].Value)
+            .GreaterThan(0).WithLocalizedMessage(L.WebSiteConfiguration.PortRequired)
             .InclusiveBetween(WebSiteConstants.MinWebApplicationPort, WebSiteConstants.MaxWebApplicationPort)
-            .WithMessage(localizer[L.WebSiteConfiguration.InternalPortRange].Value);
+            .WithLocalizedMessage(L.WebSiteConfiguration.InternalPortRange);
 
         RuleFor(x => x.Environment)
-            .NotEmpty().WithMessage(localizer[L.WebSiteConfiguration.EnvironmentRequired].Value);
+            .NotEmpty().WithLocalizedMessage(L.WebSiteConfiguration.EnvironmentRequired);
 
         RuleFor(x => x.ProcessTimeoutSeconds)
             .InclusiveBetween(WebSiteConstants.MinProcessTimeoutSeconds, WebSiteConstants.MaxProcessTimeoutSeconds)
-            .WithMessage(localizer[L.WebSiteConfiguration.ProcessTimeoutRange].Value);
+            .WithLocalizedMessage(L.WebSiteConfiguration.ProcessTimeoutRange);
 
         RuleFor(x => x.HostName)
-            .NotEmpty().WithMessage(localizer[L.WebSiteConfiguration.HostNameRequired].Value);
+            .NotEmpty().WithLocalizedMessage(L.WebSiteConfiguration.HostNameRequired);
 
         RuleFor(x => x.PublicPort)
-            .GreaterThan(0).WithMessage(localizer[L.WebSiteConfiguration.PortRequired].Value)
+            .GreaterThan(0).WithLocalizedMessage(L.WebSiteConfiguration.PortRequired)
             .Must(port => WebSiteConstants.WellKnownWebPorts.Contains(port) || port is >= WebSiteConstants.MinWebApplicationPort and <= WebSiteConstants.MaxWebApplicationPort)
-            .WithMessage(localizer[L.WebSiteConfiguration.PublicPortRange].Value);
+            .WithLocalizedMessage(L.WebSiteConfiguration.PublicPortRange);
     }
 }

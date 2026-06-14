@@ -1,7 +1,5 @@
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
-using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Validators;
-using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Data.Domain.WebSites;
 
@@ -15,10 +13,7 @@ public class WebSiteConfigurationTests
 
     private static WebSiteConfigurationValidator CreateValidator()
     {
-        var localizerMock = new Mock<ILocalizer>();
-        localizerMock.Setup(x => x[It.IsAny<string>(), It.IsAny<object[]>()])
-                     .Returns((string name, object[]? args) => new LocalizedText(name, name));
-        return new WebSiteConfigurationValidator(localizerMock.Object);
+        return new();
     }
 
     #region Name
