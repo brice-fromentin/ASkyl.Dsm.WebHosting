@@ -307,7 +307,7 @@
     <value>No items found.</value>
   </data>
   <data name="AutoDataGrid_ItemsCount" xml:space="preserve">
-    <value>Items : {0}</value>
+    <value>Items: {0}</value>
   </data>
 
   <!-- Loading -->

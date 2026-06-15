@@ -3,7 +3,7 @@
 **Date:** 2026-06-14
 **Branch:** feature/globalization
 **Reviewer:** Qwen Code (8-agent parallel review)
-**Status:** Critical findings resolved — 1 High remaining (H7 kept global per request)
+**Status:** Critical and High findings resolved — Medium findings in progress
 
 ---
 
@@ -30,6 +30,16 @@
 | **H7** | **Kept global** — `EnablePreviewFeatures` remains in `Directory.Build.props` per owner request (scoped approach caused CA2252 cascade in all consumer projects) | — |
 | **H8** | Added 10 PublicPort validator tests: zero, negative, well-known ports (80, 443), valid high port, between ranges, above max, boundaries | `WebSiteConfigurationTests.cs` (+`CreateValidConfig` sets `PublicPort = 443`) |
 | **H9** | Added 4 deferred message tests: resolves in current culture, respects culture switch at validation time, fallback to key for missing resource, resolves existing resource correctly | `DeferredMessageExtensionsTests.cs` (new) |
+
+### Medium — 5 Resolved (2026-06-15)
+
+| ID | Resolution | Files |
+|----|-----------|-------|
+| **M1** | `GetLanguageTag()` returns `culture.Name` (full BCP-47 tag) instead of `TwoLetterISOLanguageName`; added `CultureNotFoundException` fallback | `App.razor` |
+| **M4** | Cached `CultureInfo.GetCultures(CultureTypes.NeutralCultures)` in static `CultureInfo[]` field (eliminates per-render allocation) | `App.razor` |
+| **M7** | Renamed file to match class name | `DeferredMessageExtensions.cs` (renamed from `DeferredMessageFormatter.cs`) |
+| **M8** | Simplified `ResolveCulture` to pass `UserLanguage` directly to converter (removed redundant null/empty/"def" pre-checks) | `AuthenticationService.cs` |
+| **M9** | Removed space before colon in `AutoDataGrid_ItemsCount` resource value | `SharedResource.resx` |
 
 ### Architectural Changes
 
@@ -190,11 +200,11 @@
 
 ## Medium Findings
 
-### M1. HTML `lang` attribute uses 2-letter code instead of full BCP-47 tag
+### M1. HTML `lang` attribute uses 2-letter code instead of full BCP-47 tag — ✅ RESOLVED
 
 - **File:** `src/Askyl.Dsm.WebHosting.Ui/Components/App.razor:~101`
 - **Issue:** `GetLanguageTag()` returns `TwoLetterISOLanguageName` (e.g., "en", "fr"). The HTML spec recommends full BCP-47 tags (e.g., "en-US", "fr-FR") for screen readers and SEO.
-- **Fix:** Return `culture.Name` instead of `TwoLetterISOLanguageName`.
+- **Fix:** Return `culture.Name` instead of `TwoLetterISOLanguageName`. Added `CultureNotFoundException` fallback to Accept-Language parsing.
 
 ### M2. `GlobalizationSettings.SystemCulture` static mutable property
 
@@ -208,17 +218,17 @@
 - **Issue:** Hebrew (`he-IL`) is in supported cultures, but no `dir="rtl"` attribute is set and FluentUI may not auto-adapt.
 - **Fix:** Set `dir` attribute on `<html>` based on `culture.TextInfo.IsRightToLeft`.
 
-### M4. `GetLanguageTag()` calls `CultureInfo.GetCultures()` on every render
+### M4. `GetLanguageTag()` calls `CultureInfo.GetCultures()` on every render — ✅ RESOLVED
 
 - **File:** `src/Askyl.Dsm.WebHosting.Ui/Components/App.razor:81`
 - **Issue:** Enumerates all neutral cultures on every invocation. Unnecessary allocation during initial render.
-- **Fix:** Cache neutral culture names in a static `HashSet<string>` or use lightweight validation.
+- **Fix:** Cached `CultureInfo.GetCultures(CultureTypes.NeutralCultures)` in static `CultureInfo[]` field.
 
-### M5. Dead resource key `WebSiteConfiguration_PortRange`
+### M5. Dead resource key `WebSiteConfiguration_PortRange` — ✅ RESOLVED
 
 - **Files:** `SharedResource.resx`, `SharedResource.fr-FR.resx`
 - **Issue:** Key exists in both resource files but is not referenced by any validator or `L` class constant. Leftover from before the split into `InternalPortRange` and `PublicPortRange`.
-- **Fix:** Remove from both `.resx` files.
+- **Fix:** Key is now used by the InternalPort validator.
 
 ### M6. Redundant globalization data loading configuration
 
@@ -226,23 +236,23 @@
 - **Issue:** `BlazorWebAssemblyLoadAllGlobalizationData=true` (project) AND `loadAllGlobalizationData: true` (Blazor.start) are redundant. Similarly for satellite resources.
 - **Fix:** Remove `loadAllGlobalizationData` from `Blazor.start()`. Consider loading only `en-US` and `fr-FR` instead of all cultures (~3-5 MB savings).
 
-### M7. File/class name mismatch: `DeferredMessageFormatter.cs`
+### M7. File/class name mismatch: `DeferredMessageFormatter.cs` — ✅ RESOLVED
 
-- **File:** `src/Askyl.Dsm.WebHosting.Globalization/Validators/DeferredMessageFormatter.cs`
+- **File:** `src/Askyl.Dsm.WebHosting.Globalization/Validators/DeferredMessageExtensions.cs`
 - **Issue:** File contains `DeferredMessageExtensions` class, not a formatter.
-- **Fix:** Rename file to `DeferredMessageExtensions.cs`.
+- **Fix:** Renamed file to `DeferredMessageExtensions.cs`.
 
-### M8. Server `ResolveCulture` has redundant null checks
+### M8. Server `ResolveCulture` has redundant null checks — ✅ RESOLVED
 
 - **File:** `src/Askyl.Dsm.WebHosting.Ui/Services/AuthenticationService.cs:100-106`
 - **Issue:** Checks `apiClient.UserLanguage is { Length: > 0 }` and `!= DefaultLanguage` before calling converter, which already handles null/empty/whitespace/"def".
 - **Fix:** Simplify to direct converter call.
 
-### M9. `AutoDataGrid_ItemsCount` non-standard English spacing
+### M9. `AutoDataGrid_ItemsCount` non-standard English spacing — ✅ RESOLVED
 
 - **File:** `Resources/SharedResource.resx`
 - **Issue:** `"Items : {0}"` has space before colon (non-standard English typography).
-- **Fix:** Change to `"Items: {0}"`.
+- **Fix:** Changed to `"Items: {0}"`.
 
 ### M10. `ValidateEnvironmentVariables` changed from static to instance
 

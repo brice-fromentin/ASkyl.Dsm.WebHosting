@@ -1,5 +1,4 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
@@ -106,12 +105,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// </summary>
     private static string? ResolveCulture(DsmApiClient apiClient)
     {
-        // UserSettings.Personal.lang handles user vs. system resolution server-side
-        // Only skip to browser fallback if explicitly "def"
-        var cultureCode = apiClient.UserLanguage is { Length: > 0 } userLang && userLang != SystemDefaults.DefaultLanguage
-            ? userLang
-            : null;
-
-        return DsmLanguageToCultureConverter.Convert(cultureCode);
+        // Converter handles null, empty, whitespace, and "def" internally.
+        return DsmLanguageToCultureConverter.Convert(apiClient.UserLanguage);
     }
 }

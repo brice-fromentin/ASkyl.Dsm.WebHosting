@@ -56,12 +56,21 @@
 {
     IComponentRenderMode wasm = new InteractiveWebAssemblyRenderMode(false);
 
+    private static readonly CultureInfo[] NeutralCultures = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
+
     private string GetLanguageTag()
     {
         // Priority 1: DSM system culture (from /etc/synoinfo.conf)
         if (!String.IsNullOrWhiteSpace(GlobalizationSettings.SystemCulture))
         {
-            return new CultureInfo(GlobalizationSettings.SystemCulture).TwoLetterISOLanguageName;
+            try
+            {
+                return new CultureInfo(GlobalizationSettings.SystemCulture).Name;
+            }
+            catch (CultureNotFoundException)
+            {
+                // Fall through to Accept-Language parsing
+            }
         }
 
         // Priority 2: parse Accept-Language header directly
@@ -80,7 +89,7 @@
             }
 
             // Return the first 2 chars if it looks like a valid BCP-47 tag
-            if (language.Length >= 2 && CultureInfo.GetCultures(CultureTypes.NeutralCultures).Any(c => String.Equals(c.TwoLetterISOLanguageName, language, StringComparison.OrdinalIgnoreCase)))
+            if (language.Length >= 2 && NeutralCultures.Any(c => String.Equals(c.TwoLetterISOLanguageName, language, StringComparison.OrdinalIgnoreCase)))
             {
                 return language;
             }
