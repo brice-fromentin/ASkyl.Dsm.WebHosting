@@ -1,36 +1,37 @@
 using System.Globalization;
 using System.Text.Json;
+using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
+using Askyl.Dsm.WebHosting.Logging;
 
-namespace Askyl.Dsm.WebHosting.Globalization;
+namespace Askyl.Dsm.WebHosting.Ui.Infrastructure;
 
 /// <summary>
-/// Static settings for globalization — populated at server startup and injected to WASM.
+/// Server-only globalization settings — discovers supported cultures from satellite resources at construction time.
 /// </summary>
-public static class GlobalizationSettings
+public class GlobalizationSettings : IGlobalizationSettings
 {
-    /// <summary>
-    /// Gets the discovered supported cultures from embedded satellite resources.
-    /// </summary>
-    public static CultureInfo[] SupportedCultures { get; } = DiscoverSupportedCultures();
+    public GlobalizationSettings(ILogger<ILogGlobalizationSettings> logger)
+    {
+        SupportedCultures = DiscoverSupportedCultures(logger);
+        SupportedCultureNamesJson = JsonSerializer.Serialize(SupportedCultures.Select(c => c.Name).ToArray());
+    }
 
-    /// <summary>
-    /// Gets the discovered supported culture names as a JSON array (for App.razor injection).
-    /// </summary>
-    public static string SupportedCultureNamesJson { get; } = JsonSerializer.Serialize(SupportedCultures.Select(c => c.Name).ToArray());
+    public CultureInfo[] SupportedCultures { get; }
 
-    /// <summary>
-    /// Gets or sets the DSM system culture (converted from DSM language code).
-    /// Populated at server startup from /etc/synoinfo.conf.
-    /// Written once during startup — no synchronization needed.
-    /// </summary>
-    public static string? SystemCulture { get; set; }
+    public string SupportedCultureNamesJson { get; }
 
-    private static CultureInfo[] DiscoverSupportedCultures()
+    public string? SystemCulture { get; set; }
+
+    private static CultureInfo[] DiscoverSupportedCultures(ILogger<ILogGlobalizationSettings> logger)
     {
         var assembly = typeof(SharedResource).Assembly;
+        var assemblyName = assembly.GetName().Name!;
+
+        logger.DiscoveringCultures(assemblyName);
+
         var assemblyPath = assembly.Location;
-        var assemblyName = assembly.GetName().Name;
 
         if (String.IsNullOrWhiteSpace(assemblyPath))
         {
@@ -53,7 +54,6 @@ public static class GlobalizationSettings
                                     .Distinct(StringComparer.OrdinalIgnoreCase)
                                     .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
 
-        // Handle CultureNotFoundException for cultures that exist in file system but not in runtime
         var cultures = new List<CultureInfo>();
 
         foreach (var name in cultureNames)
@@ -64,10 +64,11 @@ public static class GlobalizationSettings
             }
             catch (CultureNotFoundException)
             {
-                // Culture directory exists but not supported by runtime — skip gracefully
-                // Note: No logging available here (static initialization, DI not ready)
+                logger.CultureSkippedNotSupported(name);
             }
         }
+
+        logger.CulturesDiscovered(cultures.Count);
 
         return [.. cultures];
     }

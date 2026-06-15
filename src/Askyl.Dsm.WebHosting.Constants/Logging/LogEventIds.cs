@@ -73,7 +73,7 @@ static class LogEventIds
 
     #endregion
 
-    #region Infrastructure — 2100000–2600999
+    #region Infrastructure — 2100000–2700999
 
     /// <summary>ArchiveExtractorService — IDs 2100001–2100008.</summary>
     public const int ArchiveExtractorBase = 2100000;
@@ -95,6 +95,9 @@ static class LogEventIds
 
     /// <summary>SystemProcessHandle (incl. ProcessTerminator) — IDs 2600001–2600005.</summary>
     public const int ProcessHandleBase = 2600000;
+
+    /// <summary>GlobalizationSettings — IDs 2700001–2700004.</summary>
+    public const int GlobalizationSettingsBase = 2700000;
 
     #endregion
 

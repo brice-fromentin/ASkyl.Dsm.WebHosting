@@ -205,14 +205,14 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
     /// Note: All API calls request AdditionalPathSizeTimeFields, so Additional is guaranteed to be populated.
     /// </summary>
     private static FsEntry CreateFsEntry(FileStationFile file)
-        => new(file.Path, file.Name, file.IsDirectory, file.Additional!.RealPath!, Size: file.IsDirectory ? null : file.Additional!.Size!, Modified: DateTimeOffset.FromUnixTimeSeconds(file.Additional!.Time!.ModifyTime!.Value).UtcDateTime);
+        => new(file.Path, file.Name, file.IsDirectory, file.Additional!.RealPath!, Size: file.IsDirectory ? null : file.Additional!.Size!, Modified: DateTimeOffset.FromUnixTimeSeconds(file.Additional!.Time!.ModifyTime!.Value).LocalDateTime);
 
     /// <summary>
     /// Creates an FsEntry from a FileStationShare.
     /// Note: All API calls request AdditionalPathSizeTimeFields, so Additional is guaranteed to be populated.
     /// </summary>
     private static FsEntry CreateFsEntry(FileStationShare share)
-        => new(share.Path, share.Name, share.IsDirectory, share.Additional!.RealPath!, Size: null, Modified: DateTimeOffset.FromUnixTimeSeconds(share.Additional!.Time!.ModifyTime!.Value).UtcDateTime);
+        => new(share.Path, share.Name, share.IsDirectory, share.Additional!.RealPath!, Size: null, Modified: DateTimeOffset.FromUnixTimeSeconds(share.Additional!.Time!.ModifyTime!.Value).LocalDateTime);
 
     /// <summary>
     /// Validates a DSM virtual path to prevent path traversal attacks.

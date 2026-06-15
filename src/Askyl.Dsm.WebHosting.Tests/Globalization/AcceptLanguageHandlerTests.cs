@@ -1,7 +1,6 @@
 using System.Globalization;
-using System.Net;
 using System.Net.Http.Headers;
-using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Moq;
 
@@ -102,7 +101,7 @@ public class AcceptLanguageHandlerTests
         {
         }
 
-        public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        public new Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             // Set a dummy InnerHandler to prevent InvalidOperationException
             InnerHandler ??= new DummyHttpMessageHandler();

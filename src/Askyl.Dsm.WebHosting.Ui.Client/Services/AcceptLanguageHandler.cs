@@ -1,5 +1,5 @@
 using System.Net.Http.Headers;
-using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 

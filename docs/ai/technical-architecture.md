@@ -71,7 +71,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
   - ✅ Globalization assembly with `SharedResource.resx` + satellite assemblies (fr-FR)
   - ✅ Server-side culture discovery via satellite assembly directory scanning
   - ✅ Culture injection to WASM via `Blazor.start()` environment variable
-  - ✅ `ICultureManager` — resolves culture once at login (DSM-controlled, no runtime switching)
+  - ✅ `ICultureManager` (in `Data.Contracts`) — resolves culture once at login (DSM-controlled, no runtime switching)
   - ✅ `AcceptLanguageHandler` — propagates culture to server via HTTP headers
   - ✅ `RequestLocalization` middleware — server reads `Accept-Language` from WASM
   - ✅ FluentValidation migration (Phase 7) — shared validators in Globalization assembly
@@ -1262,10 +1262,10 @@ The Globalization assembly serves two purposes:
 
 ### Culture Flow
 
-1. **Server discovers cultures** — scans `Globalization` assembly directory for satellite assembly subdirectories (e.g., `fr-FR/`)
-2. **Server reads DSM system culture** — extracts `language` from `/etc/synoinfo.conf`, converts via `DsmLanguageToCultureConverter` (returns `null` for `"def"`)
+1. **Server discovers cultures** — `GlobalizationSettings` singleton (in `Ui/Infrastructure/`) scans `Globalization` assembly directory for satellite assembly subdirectories at construction time
+2. **Server reads DSM system culture** — `ApplyDsmSystemCulture()` extension extracts `language` from DSM API, converts via `DsmLanguageToCultureConverter`, sets `IGlobalizationSettings.SystemCulture`
 3. **Server injects to WASM** — supported cultures as JSON + system culture, injected via `Blazor.start()` using `dotnet.withEnvironmentVariable()` for `ADWH_SUPPORTED_CULTURES` and `ADWH_SYSTEM_CULTURE`
-4. **WASM parses cultures** — `GlobalizationSettings` static properties deserialize JSON at class load (DI registration time)
+4. **WASM parses cultures** — `CultureManager` static initializer deserializes `ADWH_SUPPORTED_CULTURES` JSON env var (no server-side `GlobalizationSettings` dependency)
 5. **CultureManager pre-resolves** — static fields capture `BrowserCulture` (from WASM runtime's auto-set `CurrentUICulture`), `SystemCulture`, and `SupportedCultures` (from env var) as `CultureInfo?`
 6. **Early CultureManager resolution** — `Program.cs` forces DI resolution of `ICultureManager` before `host.RunAsync()` — sets `CurrentUICulture` before any page renders
 7. **Login resolves culture** — priority: login response `Culture` → system culture → browser culture → default `en-US`
@@ -1274,7 +1274,7 @@ The Globalization assembly serves two purposes:
 
 **html lang attribute** — set server-side in `App.razor` via `GetLanguageTag()`:
 
-1. **DSM system culture** — from `GlobalizationSettings.SystemCulture`
+1. **DSM system culture** — from `IGlobalizationSettings.SystemCulture` (injected singleton)
 2. **Accept-Language header** — parsed directly, matched against supported cultures (handles neutral languages like `fr` → `fr-FR`)
 3. **Default** — `en`
 
@@ -1307,11 +1307,12 @@ System-level date/time format discovery is a future enhancement.
 
 | Component | Location | Purpose |
 |---|---|---|
-| `ICultureManager` | `Globalization` | Interface: `InitializeFromLogin(string?, string?, string?)`, `ResetToSystem()`, `CurrentCulture`, `CurrentUICulture` |
+| `ICultureManager` | `Data.Contracts` | Interface: `InitializeFromLogin(string?, string?, string?)`, `ResetToSystem()`, `CurrentCulture`, `CurrentUICulture` |
 | `CultureManager` | `Ui.Client` | WASM implementation — safe static init (`SafeParseSupportedCultures`, `SafeGetBrowserCulture`, `SafeResolveSystemCultureFromEnv`), resolves culture at login, clones with date/time formats |
-| `GlobalizationSettings` | `Globalization` | Static settings: `SupportedCultures`, `SupportedCultureNamesJson`, `SystemCulture` |
+| `IGlobalizationSettings` | `Data.Contracts` | Interface: `SupportedCultures`, `SupportedCultureNamesJson`, `SystemCulture` |
+| `GlobalizationSettings` | `Ui/Infrastructure/` | Singleton service implementing `IGlobalizationSettings` — discovers cultures from satellite resources at construction, logs via `ILogger<ILogGlobalizationSettings>` |
 | `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header from `ICultureManager` |
-| `GlobalizationExtensions` | `Ui/Extensions/` | Server-side `RequestLocalization` config (C# 14 scoped `extension` keyword) |
+| `GlobalizationExtensions` | `Ui/Extensions/` | `ApplyDsmSystemCulture()` — fetches DSM language and sets `SystemCulture`; `UseGlobalizationRequestLocalization()` — configures and adds middleware |
 | `LocalizationKeys.cs` | `Globalization` | Strongly-typed keys organized by model (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`) |
 | `ILocalizer` | `Globalization` | Abstraction interface — hides `ResourceManager` from consumer projects |
 | `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `ResourceManager` (not `IStringLocalizer`) — reads `CurrentUICulture` at call time, so culture changes after login work without re-rendering |
@@ -1332,15 +1333,14 @@ Validators are defined once in Globalization and consumed by both server and cli
 |-------|---------|--------------|----------|
 | **Globalization** | `FluentValidation` + `FluentValidation.DependencyInjectionExtensions` | Contains both validators | Defines all rules with deferred localized messages via `WithLocalizedMessage()` extension — uses `WithMessage(Func<T, string>)` to resolve resource keys at validation time, ensuring culture changes after login are respected |
 | **Server (Ui)** | `FluentValidation.AspNetCore` | `AddFluentValidationAutoValidation()` | Auto-populates ModelState; invalid POST returns 400 Bad Request |
-| **Client (WASM)** | `Blazilla` | `<FluentValidator />` in EditForm | Real-time field-level validation with localized messages |
 
 **Dependency Graph:**
 
 ```text
 Globalization → Data (for domain models)
 Globalization → FluentValidation, FluentValidation.DependencyInjectionExtensions
-Ui (server) → Globalization + FluentValidation.AspNetCore
-Ui.Client (WASM) → Globalization + Blazilla
+Ui (server) → Globalization + FluentValidation.AspNetCore + Data.Contracts (IGlobalizationSettings)
+Ui.Client (WASM) → Globalization + Data.Contracts (ICultureManager)
 ```
 
 **Registration (Program.cs):**
@@ -1401,8 +1401,8 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
   are mutable, but defensive coding guards against rare immutable culture variants
 - **Pure C# browser detection**: WASM runtime auto-sets `CultureInfo.CurrentUICulture` from Accept-Language header — no JS interop needed
 - **`DsmLanguageToCultureConverter` returns `null` for `"def"`**: `"def"` means "use browser default" — not English
-- **`GlobalizationSettings` in Globalization assembly**: Static settings (supported cultures, system culture) belong where the resources are — not in Ui project
-- **`GlobalizationExtensions` in `Ui/Extensions/`**: ASP.NET Core extensions belong in the project that uses them, uses .NET 10 file-scoped `extension` pattern
+- **`GlobalizationSettings` as singleton in Ui/Infrastructure/**: Server-only `IGlobalizationSettings` implementation — avoids WASM file system API crashes; discovery logged via `[LoggerMessage]`
+- **`GlobalizationExtensions` in `Ui/Extensions/`**: `ApplyDsmSystemCulture()` fetches DSM language; `UseGlobalizationRequestLocalization()` resolves settings from DI and adds middleware
 - **`ILocalizer` abstraction**: Hides `ResourceManager` from consumer projects — enforces consistent usage via single indexer
 - **`ResourceManager` instead of `IStringLocalizer<T>`**: `IStringLocalizer<T>` caches culture at construction in WASM. `ResourceManager` reads `CurrentUICulture` at call time
 - **`LocalizedText` instead of `LocalizedString`**: Name collision with `Microsoft.Extensions.Localization.LocalizedString`
@@ -1416,9 +1416,9 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 - **ASP.NET Core default camelCase JSON**: Removed `PropertyNamingPolicy = null` — camelCase is industry standard and matches WASM client defaults
 - **Satellite assembly discovery**: `Directory.GetDirectories()` on assembly location, filtered by project satellite assembly name
 - **`dotnet.withEnvironmentVariable()`**: Pure .NET approach, no JS variables or JS interop needed for culture discovery
-- **Static `SupportedCultures`**: Initialized at class load, available before login
+- **`SupportedCultures` discovered at construction**: `GlobalizationSettings` singleton discovers cultures in its constructor (logged via `[LoggerMessage]`), available through DI before login
 - **`MarkupString` in `App.razor`**: Required to avoid HTML-encoding of JSON double quotes inside `<script>` block
-- **Shared validators in Globalization**: Single source of truth — server auto-validation and client Blazilla validation use the same rules
+- **Shared validators in Globalization**: Single source of truth — server auto-validation uses the same FluentValidation rules defined in the Globalization assembly
 - **Model-scoped localization keys**: `L.WebSiteConfiguration.*` and `L.LoginCredentials.*` clarify model ownership
 - **No DataAnnotations**: All validation migrated to FluentValidation — DataAnnotations cannot use runtime-localized messages
 - **Separate port validation messages**: `InternalPort` (1024-65535) and

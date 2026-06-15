@@ -1,37 +1,46 @@
-using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Ui.Infrastructure;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Globalization;
 
 public class GlobalizationSettingsTests
 {
+    private static GlobalizationSettings CreateSettings()
+    {
+        var loggerMock = new Mock<ILogger<ILogGlobalizationSettings>>();
+        return new(loggerMock.Object);
+    }
+
     #region Supported Cultures
 
     [Fact]
     public void SupportedCultures_ContainsDefaultCulture()
     {
-        // Act
-        var cultures = GlobalizationSettings.SupportedCultures;
+        // Arrange
+        var settings = CreateSettings();
 
         // Assert
-        Assert.Contains(cultures, c => c.Name == "en-US");
+        Assert.Contains(settings.SupportedCultures, c => c.Name == "en-US");
     }
 
     [Fact]
     public void SupportedCultures_HasAtLeastOneCulture()
     {
-        // Act
-        var cultures = GlobalizationSettings.SupportedCultures;
+        // Arrange
+        var settings = CreateSettings();
 
         // Assert
-        Assert.NotEmpty(cultures);
+        Assert.NotEmpty(settings.SupportedCultures);
     }
 
     [Fact]
     public void SupportedCultures_NoDuplicates()
     {
-        // Act
-        var cultures = GlobalizationSettings.SupportedCultures;
-        var names = cultures.Select(c => c.Name).ToList();
+        // Arrange
+        var settings = CreateSettings();
+        var names = settings.SupportedCultures.Select(c => c.Name).ToList();
 
         // Assert
         Assert.Equal(names.Count, names.Distinct(StringComparer.OrdinalIgnoreCase).Count());
@@ -40,11 +49,11 @@ public class GlobalizationSettingsTests
     [Fact]
     public void SupportedCultures_ContainsFrench()
     {
-        // Act
-        var cultures = GlobalizationSettings.SupportedCultures;
+        // Arrange
+        var settings = CreateSettings();
 
         // Assert
-        Assert.Contains(cultures, c => c.Name == "fr-FR");
+        Assert.Contains(settings.SupportedCultures, c => c.Name == "fr-FR");
     }
 
     #endregion
@@ -54,8 +63,11 @@ public class GlobalizationSettingsTests
     [Fact]
     public void SupportedCultureNamesJson_IsValidJson()
     {
+        // Arrange
+        var settings = CreateSettings();
+
         // Act & Assert
-        var exception = Record.Exception(() => System.Text.Json.JsonSerializer.Deserialize<string[]>(GlobalizationSettings.SupportedCultureNamesJson));
+        var exception = Record.Exception(() => System.Text.Json.JsonSerializer.Deserialize<string[]>(settings.SupportedCultureNamesJson));
 
         Assert.Null(exception);
     }
@@ -63,18 +75,24 @@ public class GlobalizationSettingsTests
     [Fact]
     public void SupportedCultureNamesJson_MatchesSupportedCultures()
     {
+        // Arrange
+        var settings = CreateSettings();
+
         // Act
-        var names = System.Text.Json.JsonSerializer.Deserialize<string[]>(GlobalizationSettings.SupportedCultureNamesJson)!;
+        var names = System.Text.Json.JsonSerializer.Deserialize<string[]>(settings.SupportedCultureNamesJson)!;
 
         // Assert
-        Assert.Equal(GlobalizationSettings.SupportedCultures.Select(c => c.Name).OrderBy(n => n), names.OrderBy(n => n));
+        Assert.Equal(settings.SupportedCultures.Select(c => c.Name).OrderBy(n => n), names.OrderBy(n => n));
     }
 
     [Fact]
     public void SupportedCultureNamesJson_ContainsDefaultCulture()
     {
+        // Arrange
+        var settings = CreateSettings();
+
         // Act
-        var names = System.Text.Json.JsonSerializer.Deserialize<string[]>(GlobalizationSettings.SupportedCultureNamesJson)!;
+        var names = System.Text.Json.JsonSerializer.Deserialize<string[]>(settings.SupportedCultureNamesJson)!;
 
         // Assert
         Assert.Contains("en-US", names);
@@ -85,12 +103,26 @@ public class GlobalizationSettingsTests
     #region SystemCulture
 
     [Fact]
-    public void SystemCulture_IsNullable()
+    public void SystemCulture_IsNullByDefault()
     {
-        // Act & Assert - SystemCulture starts null (set at server startup)
-        // This test validates the property exists and is nullable
-        var value = GlobalizationSettings.SystemCulture;
-        Assert.Null(value); // Null by default in tests (no server startup)
+        // Arrange
+        var settings = CreateSettings();
+
+        // Assert
+        Assert.Null(settings.SystemCulture);
+    }
+
+    [Fact]
+    public void SystemCulture_IsSettable()
+    {
+        // Arrange
+        var settings = CreateSettings();
+
+        // Act
+        settings.SystemCulture = "fr-FR";
+
+        // Assert
+        Assert.Equal("fr-FR", settings.SystemCulture);
     }
 
     #endregion

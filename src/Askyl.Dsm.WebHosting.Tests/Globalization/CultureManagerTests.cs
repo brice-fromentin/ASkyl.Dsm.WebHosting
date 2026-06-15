@@ -1,5 +1,4 @@
 using System.Globalization;
-using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Microsoft.Extensions.Logging;

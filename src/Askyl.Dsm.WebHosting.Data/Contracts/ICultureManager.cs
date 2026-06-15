@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Askyl.Dsm.WebHosting.Globalization;
+namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 /// <summary>
 /// Manages culture for the application. Implemented on the WASM client side
