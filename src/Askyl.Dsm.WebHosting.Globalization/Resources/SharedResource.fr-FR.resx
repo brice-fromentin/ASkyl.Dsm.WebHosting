@@ -96,6 +96,15 @@
   <data name="Common_UnhandledError" xml:space="preserve">
     <value>Une erreur non gérée s'est produite.</value>
   </data>
+  <data name="Common_Dash" xml:space="preserve">
+    <value>-</value>
+  </data>
+  <data name="Common_CheckMark" xml:space="preserve">
+    <value>✓</value>
+  </data>
+  <data name="Common_WarningIcon" xml:space="preserve">
+    <value>⚠</value>
+  </data>
 
   <!-- Login -->
   <data name="Login_PageTitle" xml:space="preserve">
@@ -244,6 +253,12 @@
   </data>
   <data name="WebsiteConfig_ActionCreating" xml:space="preserve">
     <value>création</value>
+  </data>
+  <data name="WebsiteConfig_ProtocolHttp" xml:space="preserve">
+    <value>HTTP</value>
+  </data>
+  <data name="WebsiteConfig_ProtocolHttps" xml:space="preserve">
+    <value>HTTPS</value>
   </data>
 
   <!-- AspNetReleases -->

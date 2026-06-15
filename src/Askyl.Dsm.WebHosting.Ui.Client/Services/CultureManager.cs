@@ -74,17 +74,20 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
                 {
                     // Unsupported culture — fall back to system resolution (system → browser → default)
                     targetCulture = ResolveSystemCulture();
+                    logger.UserCultureUnsupported(culture, targetCulture.Name);
                 }
             }
             catch (CultureNotFoundException)
             {
                 // Invalid culture name from server — fall back to system resolution
                 targetCulture = ResolveSystemCulture();
+                logger.UserCultureUnsupported(culture, targetCulture.Name);
             }
             catch (ArgumentException)
             {
                 // Invalid culture name format — fall back to system resolution
                 targetCulture = ResolveSystemCulture();
+                logger.UserCultureUnsupported(culture, targetCulture.Name);
             }
         }
         else
@@ -280,6 +283,9 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
 
         if (!String.IsNullOrWhiteSpace(dateFormat))
         {
+            // DSM only exposes a short date format — no long date format is available.
+            // Apply the user's preference to both Short and Long patterns so that
+            // components using DateTime.ToString("D") (long date) match user expectations.
             try
             {
                 dtfi.ShortDatePattern = dateFormat;
@@ -297,6 +303,7 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
 
         if (!String.IsNullOrWhiteSpace(timeFormat))
         {
+            // Same rationale as date — DSM provides no long time format.
             try
             {
                 dtfi.ShortTimePattern = timeFormat;

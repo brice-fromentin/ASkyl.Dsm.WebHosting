@@ -264,5 +264,11 @@ public static partial class ClientLoggingExtensions
     [LoggerMessage(EventId = 7600009, Level = LogLevel.Warning, Message = "Invalid time format ignored, using culture default: {TimeFormat}")]
     public static partial void InvalidTimeFormatIgnored(this ILogger<ILogCultureManager> logger, string timeFormat);
 
+    /// <summary>
+    /// Logs that the user's culture from login was not supported and fell back to system resolution.
+    /// </summary>
+    [LoggerMessage(EventId = 7600010, Level = LogLevel.Warning, Message = "User culture '{UserCulture}' not supported, falling back to '{FallbackCulture}'")]
+    public static partial void UserCultureUnsupported(this ILogger<ILogCultureManager> logger, string userCulture, string fallbackCulture);
+
     #endregion
 }

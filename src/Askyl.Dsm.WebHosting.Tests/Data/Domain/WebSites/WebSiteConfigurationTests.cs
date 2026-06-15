@@ -7,6 +7,8 @@ public class WebSiteConfigurationTests
 {
     private const int PortMin = 1024;
     private const int PortMax = 65535;
+    private const int PublicPortWellKnownHttp = 80;
+    private const int PublicPortWellKnownHttps = 443;
     private const int TimeoutMin = 10;
     private const int TimeoutMax = 120;
     private const int NameMaxLength = 100;
@@ -376,6 +378,165 @@ public class WebSiteConfigurationTests
 
     #endregion
 
+    #region PublicPort
+
+    [Fact]
+    public void Validate_PublicPort_Zero_Fails()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = 0;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_Negative_Fails()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = -1;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_WellKnownHttp_Passes()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PublicPortWellKnownHttp;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_WellKnownHttps_Passes()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PublicPortWellKnownHttps;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_ValidHighPort_Passes()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PortMin;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_BelowWellKnown_Fails()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = 1;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_BetweenWellKnownAndHighPort_Fails()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = 500; // Between well-known ports (80, 443) and high port range (1024+)
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_AboveMax_Fails()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PortMax + 1;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_MinHighPortBoundary_Passes()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PortMin;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_MaxPortBoundary_Passes()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PortMax;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    #endregion
+
     #region Helpers
 
     private static WebSiteConfiguration CreateValidConfig()
@@ -385,6 +546,7 @@ public class WebSiteConfigurationTests
             Name = "TestSite",
             ApplicationPath = "/path/to/app.dll",
             InternalPort = 5000,
+            PublicPort = PublicPortWellKnownHttps,
             HostName = "example.com",
             Environment = "Production",
             ProcessTimeoutSeconds = 30

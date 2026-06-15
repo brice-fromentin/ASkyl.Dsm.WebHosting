@@ -22,6 +22,9 @@ public static class L
         public const string Modified = "Common_Modified";
         public const string ApplicationTitle = "Common_ApplicationTitle";
         public const string UnhandledError = "Common_UnhandledError";
+        public const string Dash = "Common_Dash";
+        public const string CheckMark = "Common_CheckMark";
+        public const string WarningIcon = "Common_WarningIcon";
     }
 
     /// <summary>Authentication and login page strings.</summary>
@@ -90,6 +93,8 @@ public static class L
         public const string ErrorModifying = "WebsiteConfig_ErrorModifying";
         public const string ActionUpdating = "WebsiteConfig_ActionUpdating";
         public const string ActionCreating = "WebsiteConfig_ActionCreating";
+        public const string ProtocolHttp = "WebsiteConfig_ProtocolHttp";
+        public const string ProtocolHttps = "WebsiteConfig_ProtocolHttps";
     }
 
     /// <summary>ASP.NET releases dialog strings.</summary>

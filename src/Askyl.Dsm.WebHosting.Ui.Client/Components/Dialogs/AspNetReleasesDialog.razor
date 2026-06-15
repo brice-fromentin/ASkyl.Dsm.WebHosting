@@ -48,10 +48,10 @@
             <ChildContent>
                 <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="@localizer[L.AspNetReleases.GridColumnVersion]" Property="@(r => r.Version)" Sortable="true" />
                 <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[L.AspNetReleases.GridColumnInstalled]" Align="Align.Center">
-                    @(context.IsInstalled ? "✓" : String.Empty)
+                    @(context.IsInstalled ? localizer[L.Common.CheckMark] : String.Empty)
                 </TemplateColumn>
                 <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[L.AspNetReleases.GridColumnSecurity]" Align="Align.Center">
-                    @(context.IsSecurity ? "⚠" : String.Empty)
+                    @(context.IsSecurity ? localizer[L.Common.WarningIcon] : String.Empty)
                 </TemplateColumn>
                 <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="@localizer[L.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="d" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending" />
             </ChildContent>

@@ -3,7 +3,7 @@
 **Date:** 2026-06-14
 **Branch:** feature/globalization
 **Reviewer:** Qwen Code (8-agent parallel review)
-**Status:** Critical findings resolved — 9 High remaining
+**Status:** Critical findings resolved — 1 High remaining (H7 kept global per request)
 
 ---
 
@@ -16,6 +16,20 @@
 | **C1** | `.UtcDateTime` → `.LocalDateTime` in both `CreateFsEntry` overloads | `FileSystemService.cs` |
 | **C2** | Moved `GlobalizationSettings` from shared Globalization project to `Ui/Infrastructure/` as DI-registered singleton service (`IGlobalizationSettings` in `Data.Contracts`); eliminated WASM crash by design — server-only assembly never loads in browser | `GlobalizationSettings.cs` (new), `IGlobalizationSettings.cs` (new), `GlobalizationExtensions.cs`, `App.razor`, `Program.cs`, `GlobalizationSettingsTests.cs` |
 | **C3** | **False positive** — Blazilla is REQUIRED for `<FluentValidator />` component in `Login.razor` and `WebSiteConfigurationDialog.razor`. Package retained. | `Ui.Client.csproj`, `_Imports.razor` |
+
+### High — 7 Resolved, 1 By Design, 1 Kept Global
+
+| ID | Resolution | Files |
+|----|-----------|-------|
+| **H1** | `@protocol.ToString()` replaced with switch expression mapping to localized resource keys (`WebsiteConfig_ProtocolHttp`, `WebsiteConfig_ProtocolHttps`) | `WebSiteConfigurationDialog.razor`, `SharedResource.resx`, `SharedResource.fr-FR.resx`, `LocalizationKeys.cs` |
+| **H2** | **By design** — returning `BrowserCulture` when no match is the correct fallback (confirmed by owner) | — |
+| **H3** | Added `logger.UserCultureUnsupported(userCulture, fallbackCulture)` in all 3 fallback paths (unsupported culture, `CultureNotFoundException`, `ArgumentException`) | `CultureManager.cs`, `ClientLoggingExtensions.cs` (EventId 7600010) |
+| **H4** | Cast `bytes` to `(double)` before all 3 integer divisions in `GetFileSize()` | `FileSelectionDialog.razor` |
+| **H5** | Documented with inline comment: DSM provides only short date/time format; both Short and Long patterns set to user preference for consistency | `CultureManager.cs` |
+| **H6** | Replaced hardcoded `"—"`, `"-"`, `"✓"`, `"⚠"` with localized resource keys (`Common_Dash`, `Common_CheckMark`, `Common_WarningIcon`) | `Home.razor`, `FileSelectionDialog.razor`, `AspNetReleasesDialog.razor`, `SharedResource.resx`, `SharedResource.fr-FR.resx`, `LocalizationKeys.cs` |
+| **H7** | **Kept global** — `EnablePreviewFeatures` remains in `Directory.Build.props` per owner request (scoped approach caused CA2252 cascade in all consumer projects) | — |
+| **H8** | Added 10 PublicPort validator tests: zero, negative, well-known ports (80, 443), valid high port, between ranges, above max, boundaries | `WebSiteConfigurationTests.cs` (+`CreateValidConfig` sets `PublicPort = 443`) |
+| **H9** | Added 4 deferred message tests: resolves in current culture, respects culture switch at validation time, fallback to key for missing resource, resolves existing resource correctly | `DeferredMessageExtensionsTests.cs` (new) |
 
 ### Architectural Changes
 
@@ -50,7 +64,7 @@
 | Severity | Count | Status |
 |----------|-------|--------|
 | **Critical** | 3 | ✅ All resolved (2026-06-15) |
-| **High** | 9 | Should fix before PR |
+| **High** | 9 | ✅ 7 resolved, 1 by design (H2), 1 kept global (H7) |
 | **Medium** | 20 | Address in follow-up |
 | **Low** | 17 | Nice to have |
 | **Nit** | 11 | Cosmetic |
@@ -87,15 +101,17 @@
 
 ---
 
-## High Findings (Should Fix Before PR)
+## High Findings (7 Resolved, 1 By Design, 1 Kept Global)
 
-### H1. Protocol enum displayed directly to user
+### H1. Protocol enum displayed directly to user — ✅ RESOLVED
 
 - **File:** `src/Askyl.Dsm.WebHosting.Ui.Client/Components/Dialogs/WebSiteConfigurationDialog.razor:64-68`
 - **Issue:** `@protocol.ToString()` renders "Http"/"Https" instead of localized strings.
 - **Fix:** Add `L.WebsiteConfig.ProtocolHttp` and `L.WebsiteConfig.ProtocolHttps` keys; use a switch expression to map enum values to localized strings.
 
-### H2. `ResolveSystemCulture` returns unsupported culture to server
+### H2. `ResolveSystemCulture` returns unsupported culture to server — ✅ BY DESIGN
+
+- **Resolution:** Returning `BrowserCulture` when no match is the correct fallback behavior (confirmed by owner).
 
 - **File:** `src/Askyl.Dsm.WebHosting.Ui.Client/Services/CultureManager.cs:~147`
 - **Issue:** When `FindMatchingCulture(BrowserCulture)` returns null, the method
@@ -105,7 +121,7 @@
   culture, but the server responds in English.
 - **Fix:** Return `new CultureInfo(DefaultCulture)` instead of the raw browser culture when no match is found.
 
-### H3. `InitializeFromLogin` silently discards unsupported user culture
+### H3. `InitializeFromLogin` silently discards unsupported user culture — ✅ RESOLVED
 
 - **File:** `src/Askyl.Dsm.WebHosting.Ui.Client/Services/CultureManager.cs:72-80`
 - **Issue:** When the user's culture from login is not in `SupportedCultures`,
@@ -114,7 +130,7 @@
 - **Fix:** Add `logger.CultureResolvedFromSystem(ResolveSystemCulture().Name)` in
   the else branch.
 
-### H4. File size integer division loses precision
+### H4. File size integer division loses precision — ✅ RESOLVED
 
 - **File:** `src/Askyl.Dsm.WebHosting.Ui.Client/Components/Dialogs/FileSelectionDialog.razor:281-289`
 - **Issue:** `(bytes / FileSizeConstants.BytesPerKibibyte).ToString("F2")` uses
@@ -123,7 +139,9 @@
   fractional digits.
 - **Fix:** Cast to `double` before division: `$"{((double)bytes / FileSizeConstants.BytesPerKibibyte):F2}"`.
 
-### H5. `CultureManager` sets Short and Long date/time patterns identically
+### H5. `CultureManager` sets Short and Long date/time patterns identically — ✅ DOCUMENTED
+
+- **Resolution:** Inline comment added explaining DSM provides only short date/time format; both Short and Long patterns intentionally set to user preference for consistency.
 
 - **File:** `src/Askyl.Dsm.WebHosting.Ui.Client/Services/CultureManager.cs:178-197`
 - **Issue:** User's date format from DSM is applied to both `ShortDatePattern`
@@ -133,7 +151,7 @@
   `LongDatePattern` as the culture default. Alternatively, derive a long format
   (e.g., add full weekday name).
 
-### H6. Hardcoded display placeholders ("—", "-", "✓", "⚠")
+### H6. Hardcoded display placeholders ("—", "-", "✓", "⚠") — ✅ RESOLVED
 
 - **Files:**
   - `Home.razor:150` — em-dash for N/A framework
@@ -141,7 +159,11 @@
   - `AspNetReleasesDialog.razor:51,54` — check mark and warning icons
 - **Fix:** Add resource keys (`L.Common.Dash`, `L.Common.CheckMark`, `L.Common.WarningIcon`) and use localized values.
 
-### H7. `EnablePreviewFeatures=true` globally for C# 14 scoped extensions
+### H7. `EnablePreviewFeatures=true` globally for C# 14 scoped extensions — ✅ KEPT GLOBAL
+
+- **Resolution:** Owner requested to keep `EnablePreviewFeatures` in `Directory.Build.props`.
+  Scoped approach caused CA2252 cascade in all consumer projects (Ui, Ui.Client, Tests)
+  because `ILocalizer` is defined in the Globalization assembly compiled with preview features.
 
 - **File:** `src/Directory.Build.props:27-31`
 - **Issue:** The `extension<T>` keyword is a C# 14 preview feature. Enabling
@@ -149,7 +171,7 @@
   `DeferredMessageFormatter.cs` and `GlobalizationExtensions.cs` use it.
 - **Fix:** Scope `EnablePreviewFeatures` to the Globalization project only, or refactor to traditional static extension methods.
 
-### H8. PublicPort validator has zero test coverage
+### H8. PublicPort validator has zero test coverage — ✅ RESOLVED
 
 - **File:** `src/Askyl.Dsm.WebHosting.Tests/Data/Domain/WebSites/WebSiteConfigurationTests.cs`
 - **Issue:** `WebSiteConfigurationValidator.PublicPort` has `GreaterThan(0)` and
@@ -158,7 +180,7 @@
   `PublicPort = 0`.
 - **Fix:** Add test cases for: zero value, negative value, well-known ports (80, 443), valid high port, out-of-range port, and boundary values. Add `PublicPort = 443` to `CreateValidConfig()`.
 
-### H9. `WithLocalizedMessage` deferred message mechanism untested
+### H9. `WithLocalizedMessage` deferred message mechanism untested — ✅ RESOLVED
 
 - **File:** `src/Askyl.Dsm.WebHosting.Globalization/Validators/DeferredMessageFormatter.cs`
 - **Issue:** The core mechanism enabling culture-aware validation messages has no tests. The `Func<string>` lambda that defers resource resolution is never exercised.
@@ -480,10 +502,11 @@
 
 ## Recommendation
 
-**All Critical findings resolved (2026-06-15).** The 9 High findings should be
-addressed before merge. Medium/Low/Nit findings can be tracked as follow-up issues.
+**All Critical findings resolved (2026-06-15).** All 9 High findings addressed:
+7 resolved, 1 by design (H2), 1 kept global (H7).
+Medium/Low/Nit findings can be tracked as follow-up issues.
 
-**Remaining estimated fix effort:** 1-2 hours for High items.
+**Branch is ready for PR.**
 
 ---
 

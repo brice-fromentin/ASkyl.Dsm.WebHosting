@@ -63,7 +63,7 @@
                     <FluentSelect TOption="string" @bind-Value="ProtocolProxy" Label="@localizer[L.WebsiteConfig.ProtocolLabel]" Class="full-size">
                         @foreach (var protocol in Enum.GetValues<ProtocolType>())
                         {
-                            <FluentOption Value="@(((int)protocol).ToString())">@protocol.ToString()</FluentOption>
+                            <FluentOption Value="@(((int)protocol).ToString())">@localizer[protocol switch { ProtocolType.HTTP => L.WebsiteConfig.ProtocolHttp, ProtocolType.HTTPS => L.WebsiteConfig.ProtocolHttps, _ => protocol.ToString() }]</FluentOption>
                         }
                     </FluentSelect>
                     <FluentValidationMessage For="@(() => Configuration.Protocol)" />

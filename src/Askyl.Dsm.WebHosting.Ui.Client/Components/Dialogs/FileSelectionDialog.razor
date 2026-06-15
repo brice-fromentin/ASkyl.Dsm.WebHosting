@@ -39,7 +39,7 @@
                         </ChildContent>
                     </TemplateColumn>
                     <TemplateColumn TGridItem="FsEntry" Title="@localizer[L.Common.Size]" Align="Align.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
-                        @(GetFileSize(context))
+                        @(GetFileSize(context, localizer))
                     </TemplateColumn>
                     <TemplateColumn TGridItem="FsEntry" Title="@localizer[L.Common.Type]" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
                         @(GetFileType(context, localizer))
@@ -263,11 +263,11 @@
 
     #region Display Helpers
 
-    private static string GetFileSize(FsEntry file)
+    private static string GetFileSize(FsEntry file, ILocalizer localizer)
     {
         if (file.IsDirectory || file.Size is null)
         {
-            return "-";
+            return localizer[L.Common.Dash];
         }
 
         var bytes = file.Size.Value;
@@ -279,15 +279,15 @@
 
         if (bytes < FileSizeConstants.BytesPerMebibyte)
         {
-            return $"{(bytes / FileSizeConstants.BytesPerKibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.KibibytesSuffix}";
+            return $"{((double)bytes / FileSizeConstants.BytesPerKibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.KibibytesSuffix}";
         }
 
         if (bytes < FileSizeConstants.BytesPerGibibyte)
         {
-            return $"{(bytes / FileSizeConstants.BytesPerMebibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.MebibytesSuffix}";
+            return $"{((double)bytes / FileSizeConstants.BytesPerMebibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.MebibytesSuffix}";
         }
 
-        return $"{(bytes / FileSizeConstants.BytesPerGibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.GibibytesSuffix}";
+        return $"{((double)bytes / FileSizeConstants.BytesPerGibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.GibibytesSuffix}";
     }
 
     private static string GetFileType(FsEntry file, ILocalizer localizer) => file.IsDirectory ? localizer[L.FileSelection.Directory] : localizer[L.FileSelection.File];

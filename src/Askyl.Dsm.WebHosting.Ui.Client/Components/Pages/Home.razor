@@ -64,7 +64,9 @@
     <ChildContent>
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[L.Home.GridColumnName]" Property="@(i => i.Configuration.Name)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[L.Home.GridColumnPath]" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[L.Home.GridColumnFramework]" Property="@(i => GetFrameworkDisplay(i))" Sortable="false" />
+        <TemplateColumn TGridItem="WebSiteInstance" Title="@localizer[L.Home.GridColumnFramework]">
+            @(GetFrameworkDisplay(context))
+        </TemplateColumn>
         <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="@localizer[L.Home.GridColumnInternalPort]" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[L.Home.GridColumnState]" Property="@(i => i.State)" Sortable="true" />
     </ChildContent>
@@ -143,11 +145,11 @@
 
     private void HandleInstanceSelected(WebSiteInstance instance) => SelectedInstance = instance;
 
-    private static string GetFrameworkDisplay(WebSiteInstance instance)
+    private string GetFrameworkDisplay(WebSiteInstance instance)
     {
         if (String.IsNullOrEmpty(instance.RequiredFramework))
         {
-            return "—";
+            return localizer[L.Common.Dash];
         }
 
         return instance.RequiredFramework;
