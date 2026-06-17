@@ -425,9 +425,9 @@ Data/
 ```text
 Tools/
 ├── Converters/                             # Format/language converters
-│   ├── DsmLanguageToCultureConverter.cs    # DSM 3-letter language code → .NET culture name (returns null for "def")
-│   ├── PhpDateFormatToDotNetConverter.cs   # PHP date tokens (Y, m, d) → .NET format (yyyy, MM, dd)
-│   └── PhpTimeFormatToDotNetConverter.cs   # PHP time tokens (H, G, h, g, i, s, a, A) → .NET format (HH, H, hh, h, mm, ss, tt)
+│   ├── DsmLanguageToCultureConverter.cs    # DSM 3-letter language code → .NET culture name (returns null for "def", logs on trim)
+│   ├── PhpDateFormatToDotNetConverter.cs   # PHP date tokens (Y, m, d) → .NET format (yyyy, MM, dd); timezone token P → zzz; 8 timezone tokens unmappable (e,T,O,I,Z,c,r,u)
+│   └── PhpTimeFormatToDotNetConverter.cs   # PHP time tokens (H, G, h, g, i, s, a, A) → .NET format (HH, H, hh, h, mm, ss, tt); timezone tokens handled by date converter
 ├── Extensions/                             # Extension methods
 │   ├── ApiResponseExtensions.cs            # Response mapping helpers
 │   ├── HttpClientExtensions.cs             # HTTP client helpers
@@ -622,7 +622,7 @@ Ui.Client/
 │   │   │   └── Services: IWebSiteHostingService, IAuthenticationService, ILogDownloadService
 │   │   ├── Login.razor                     # Authentication form with platform check (Linux/macOS warning)
 │   │   │   └── Services: IAuthenticationService.LoginAsync(), DataAnnotationsValidator
-│   │   └── NotFound.razor                  # 404 handler
+│   │   └── NotFound.razor                  # 404 handler — FluentUI centered page with localized home link
 │   └── Patterns/                           # UI patterns
 │       └── WorkingState/                   # IWorkingState interface and CreateWorkingState extension
 ├── Extensions/                             # Client-side extension methods
@@ -1127,7 +1127,7 @@ App.razor (Root)
     └── Page Content
         ├── Home.razor (Dashboard with website grid)
         ├── Login.razor (Authentication)
-        └── NotFound.razor (404 handler)
+        └── NotFound.razor (404 — FluentUI centered page with localized home link)
 
 Dialogs (Overlay)
 ├── WebSiteConfigurationDialog.razor
@@ -1308,19 +1308,19 @@ System-level date/time format discovery is a future enhancement.
 | Component | Location | Purpose |
 |---|---|---|
 | `ICultureManager` | `Data.Contracts` | Interface: `InitializeFromLogin(string?, string?, string?)`, `ResetToSystem()`, `CurrentCulture`, `CurrentUICulture` |
-| `CultureManager` | `Ui.Client` | WASM implementation — safe static init (`SafeParseSupportedCultures`, `SafeGetBrowserCulture`, `SafeResolveSystemCultureFromEnv`), resolves culture at login, clones with date/time formats |
+| `CultureManager` | `Ui.Client` | WASM implementation — safe static init (`SafeParseSupportedCultures`, `SafeGetBrowserCulture`, `SafeResolveSystemCultureFromEnv`), resolves culture at login, clones with date/time formats, injects `IJSRuntime` to update `html lang` and `dir` (RTL/LTR) on every culture change |
 | `IGlobalizationSettings` | `Data.Contracts` | Interface: `SupportedCultures`, `SupportedCultureNamesJson`, `SystemCulture` |
 | `GlobalizationSettings` | `Ui/Infrastructure/` | Singleton service implementing `IGlobalizationSettings` — discovers cultures from satellite resources at construction, logs via `ILogger<ILogGlobalizationSettings>` |
 | `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header from `ICultureManager` |
 | `GlobalizationExtensions` | `Ui/Extensions/` | `ApplyDsmSystemCulture()` — fetches DSM language and sets `SystemCulture`; `UseGlobalizationRequestLocalization()` — configures and adds middleware |
 | `LocalizationKeys.cs` | `Globalization` | Strongly-typed keys organized by model (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`) |
 | `ILocalizer` | `Globalization` | Abstraction interface — hides `ResourceManager` from consumer projects |
-| `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `ResourceManager` (not `IStringLocalizer`) — reads `CurrentUICulture` at call time, so culture changes after login work without re-rendering |
+| `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `ResourceManager` (not `IStringLocalizer`) — reads `CurrentUICulture` at call time, so culture changes after login work without re-rendering; missing keys return `[{key}]` |
 | `ResourceManagerCache` | `Globalization` | Static class holding shared `ResourceManager` instance for `SharedResource` |
 | `LocalizedText` | `Globalization` | Replacement for `LocalizedString` (avoids namespace collision) — `Name`, `Value`, implicit `string` conversion |
-| `DsmLanguageToCultureConverter` | `Tools/Converters/` | Static converter: DSM 3-letter language code → .NET culture name (returns `null` for `"def"`) |
-| `PhpDateFormatToDotNetConverter` | `Tools/Converters/` | Static converter: PHP date tokens (Y, m, d, etc.) → .NET format strings (yyyy, MM, dd) |
-| `PhpTimeFormatToDotNetConverter` | `Tools/Converters/` | Static converter: PHP time tokens (H, G, h, g, i, s, a, A) → .NET format strings (HH, H, hh, h, mm, ss, tt) |
+| `DsmLanguageToCultureConverter` | `Tools/Converters/` | Static converter: DSM 3-letter language code → .NET culture name (returns `null` for `"def"`, logs via `Debug.WriteLine` when input is trimmed) |
+| `PhpDateFormatToDotNetConverter` | `Tools/Converters/` | Static converter: PHP date tokens (Y, m, d, etc.) → .NET format strings (yyyy, MM, dd); maps timezone token `P` to `zzz`; 8 timezone tokens (e, T, O, I, Z, c, r, u) have no .NET equivalent |
+| `PhpTimeFormatToDotNetConverter` | `Tools/Converters/` | Static converter: PHP time tokens (H, G, h, g, i, s, a, A) → .NET format strings (HH, H, hh, h, mm, ss, tt); timezone tokens handled by date converter |
 | `WebSiteConfigurationValidator` | `Globalization/Validators/` | FluentValidation rules for `WebSiteConfiguration` (8 properties, separate messages for InternalPort/PublicPort) |
 | `LoginCredentialsValidator` | `Globalization/Validators/` | FluentValidation rules for `LoginCredentials` (2 properties) |
 | `DeferredMessageExtensions` | `Globalization/Validators/` | `WithLocalizedMessage()` extension — defers resource key resolution to validation time via `WithMessage(Func&lt;T, string&gt;)` so culture changes after login are respected |
@@ -1410,7 +1410,9 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 - **Early `CultureManager` resolution**: `Program.cs` forces DI resolution before `host.RunAsync()` — ensures `CurrentUICulture` is set before login page renders
 - **Full page reload on logout**: `forceLoad: true` resets WASM circuit, culture re-resolves to system/browser
 - **Server-side Accept-Language parsing**: `IRequestCultureFeature` doesn't match neutral languages (`fr`) to specific cultures (`fr-FR`) — `GetLanguageTag()` parses header directly
-- **No client-side `setHtmlLang` JS interop**: Server sets `html lang` correctly at page load; full page reload on logout resets it
+- **`CultureManager` updates `html lang` and `dir` via `IJSRuntime`**: Sets `document.documentElement.lang` and `dir` (`rtl`/`ltr`) on every culture change — enables RTL support
+- **Missing translation bracketed format**: `Localizer` and `DeferredMessageExtensions` return `[{key}]` for missing keys — makes absent translations visible in UI without crashing
+- **No client-side `setHtmlLang` JS interop (legacy)**: Replaced by `CultureManager.UpdateHtmlLangAndDir()` via `IJSRuntime` which updates both `lang` and `dir` attributes
 - **`AuthenticationResult.Culture` is `{ get; set; }`**: System.Text.Json requires setters for deserialization into properties
 - **`IsAuthenticated` marked `[JsonIgnore]`**: Redundant alias for `Success` — pollutes JSON response
 - **ASP.NET Core default camelCase JSON**: Removed `PropertyNamingPolicy = null` — camelCase is industry standard and matches WASM client defaults
