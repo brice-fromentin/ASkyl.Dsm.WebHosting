@@ -34,44 +34,18 @@ public class CultureManagerTests
         Assert.Equal("fr-FR", cultureManager.CurrentUICulture.Name);
     }
 
-    [Fact]
-    public void InitializeFromLogin_NullCulture_KeepsCurrentCulture()
-    {
-        // Arrange
-        var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
-        var initialCulture = cultureManager.CurrentCulture.Name;
-
-        // Act
-        cultureManager.InitializeFromLogin(null, null, null);
-
-        // Assert - should keep the initial culture (no crash, no null ref)
-        Assert.NotNull(cultureManager.CurrentCulture);
-    }
-
-    [Fact]
-    public void InitializeFromLogin_WhitespaceCulture_KeepsCurrentCulture()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    [InlineData("xx-XX")]
+    public void InitializeFromLogin_InvalidInput_FallsBackGracefully(string? cultureName)
     {
         // Arrange
         var logger = CreateLoggerMock();
         var cultureManager = new CultureManager(logger.Object);
 
         // Act
-        cultureManager.InitializeFromLogin("   ", null, null);
-
-        // Assert
-        Assert.NotNull(cultureManager.CurrentCulture);
-    }
-
-    [Fact]
-    public void InitializeFromLogin_InvalidCulture_FallsBackGracefully()
-    {
-        // Arrange
-        var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
-
-        // Act
-        cultureManager.InitializeFromLogin("xx-XX", null, null);
+        cultureManager.InitializeFromLogin(cultureName, null, null);
 
         // Assert - should fall back to a valid culture, not throw
         Assert.NotNull(cultureManager.CurrentCulture);
@@ -208,6 +182,40 @@ public class CultureManagerTests
 
     #endregion
 
+    #region Null/Empty Format Handling
+
+    [Fact]
+    public void InitializeFromLogin_EmptyDateFormat_KeepsCultureDefault()
+    {
+        // Arrange
+        var logger = CreateLoggerMock();
+        var cultureManager = new CultureManager(logger.Object);
+        var originalPattern = new CultureInfo("en-US").DateTimeFormat.ShortDatePattern;
+
+        // Act — empty string is treated as null by IsNullOrWhiteSpace guard
+        cultureManager.InitializeFromLogin("en-US", String.Empty, null);
+
+        // Assert — empty format is ignored, culture keeps its default pattern
+        Assert.Equal(originalPattern, cultureManager.CurrentCulture.DateTimeFormat.ShortDatePattern);
+    }
+
+    [Fact]
+    public void InitializeFromLogin_WhiteSpaceTimeFormat_KeepsCultureDefault()
+    {
+        // Arrange
+        var logger = CreateLoggerMock();
+        var cultureManager = new CultureManager(logger.Object);
+        var originalPattern = new CultureInfo("en-US").DateTimeFormat.ShortTimePattern;
+
+        // Act — whitespace is treated as null by IsNullOrWhiteSpace guard
+        cultureManager.InitializeFromLogin("en-US", null, "   ");
+
+        // Assert — whitespace format is ignored, culture keeps its default pattern
+        Assert.Equal(originalPattern, cultureManager.CurrentCulture.DateTimeFormat.ShortTimePattern);
+    }
+
+    #endregion
+
     #region CurrentCulture Property
 
     [Fact]
@@ -243,19 +251,12 @@ public class CultureManagerTests
     [Fact]
     public void StaticInitialization_SupportedCultures_FallsBackToDefaultCulture()
     {
-        // The static SupportedCultures field is initialized via SafeParseSupportedCultures().
-        // In the test environment, no ADWH_SUPPORTED_CULTURES env var is set,
-        // so it should fall back to [en-US].
+        // Act — force static initialization
+        _ = new CultureManager(CreateLoggerMock().Object);
 
-        // Act — construct CultureManager to force static initialization
-        var logger = CreateLoggerMock();
-        _ = new CultureManager(logger.Object);
-
-        // Assert — the fallback ensures at least one supported culture exists
-        // We verify this by checking that InitializeFromLogin with en-US succeeds
-        var cultureManager = new CultureManager(logger.Object);
-        cultureManager.InitializeFromLogin("en-US", null, null);
-        Assert.Equal("en-US", cultureManager.CurrentCulture.Name);
+        // Assert — direct access to internal static field
+        Assert.Single(CultureManager.SupportedCultures);
+        Assert.Equal("en-US", CultureManager.SupportedCultures[0].Name);
     }
 
     /// <summary>
@@ -265,17 +266,11 @@ public class CultureManagerTests
     [Fact]
     public void StaticInitialization_BrowserCulture_FallsBackToDefaultCultureNotInvariant()
     {
-        // The static BrowserCulture field is initialized via SafeGetBrowserCulture().
-        // In the test environment, the WASM runtime sets CurrentUICulture to a valid culture,
-        // so BrowserCulture should be valid. But we verify the fallback is en-US,
-        // not InvariantCulture (which would produce a non-localized UI).
+        // Act — force static initialization
+        _ = new CultureManager(CreateLoggerMock().Object);
 
-        // Act
-        var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
-
-        // Assert — CurrentCulture should never be InvariantCulture in normal operation
-        Assert.NotEqual(CultureInfo.InvariantCulture.Name, cultureManager.CurrentCulture.Name);
+        // Assert — direct access to internal static field
+        Assert.NotEqual(CultureInfo.InvariantCulture.Name, CultureManager.BrowserCulture.Name);
     }
 
     /// <summary>
@@ -285,17 +280,11 @@ public class CultureManagerTests
     [Fact]
     public void StaticInitialization_SystemCulture_NullWhenNoEnvVarSet()
     {
-        // The static SystemCulture field is initialized via SafeResolveSystemCultureFromEnv().
-        // In the test environment, no ADWH_SYSTEM_CULTURE env var is set,
-        // so SystemCulture should be null, and resolution falls through to BrowserCulture.
+        // Act — force static initialization
+        _ = new CultureManager(CreateLoggerMock().Object);
 
-        // Act
-        var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
-
-        // Assert — CurrentCulture should be resolved (not null, not InvariantCulture)
-        Assert.NotNull(cultureManager.CurrentCulture);
-        Assert.NotEqual(CultureInfo.InvariantCulture.Name, cultureManager.CurrentCulture.Name);
+        // Assert — direct access to internal static field
+        Assert.Null(CultureManager.SystemCulture);
     }
 
     /// <summary>
@@ -308,13 +297,13 @@ public class CultureManagerTests
     [Fact]
     public void StaticInitialization_AllFallbacks_ConvergeOnUserFriendlyCultureNotInvariant()
     {
-        // Act
-        var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        // Act — force static initialization
+        _ = new CultureManager(CreateLoggerMock().Object);
 
-        // Assert — the resolved culture should never be InvariantCulture (non-localized UI)
-        Assert.NotEqual(CultureInfo.InvariantCulture.Name, cultureManager.CurrentCulture.Name);
-        Assert.NotEqual("Invariant-Language", cultureManager.CurrentCulture.Name);
+        // Assert — direct access to internal static fields
+        Assert.NotEqual(CultureInfo.InvariantCulture.Name, CultureManager.BrowserCulture.Name);
+        Assert.NotEqual("Invariant-Language", CultureManager.BrowserCulture.Name);
+        Assert.NotEmpty(CultureManager.SupportedCultures);
     }
 
     #endregion

@@ -7,13 +7,26 @@ using System.Runtime.Versioning;
 namespace Askyl.Dsm.WebHosting.Tests.Globalization;
 
 [UnsupportedOSPlatform("browser")]
+[Trait("Category", "Integration")]
 public class ResourceCompletenessTests
 {
     private static ResourceManager GetResourceManager()
     {
-        return new ResourceManager(
+        var assembly = typeof(WebHosting.Globalization.Resources.SharedResource).Assembly;
+        var resourceManager = new ResourceManager(
             "Askyl.Dsm.WebHosting.Globalization.Resources.SharedResource",
-            typeof(WebHosting.Globalization.Resources.SharedResource).Assembly);
+            assembly);
+
+        // Precondition: embedded resource must exist (requires full build).
+        // Uses manifest inspection rather than GetResourceSet to avoid satellite assembly timing issues.
+        var hasResource = assembly.GetManifestResourceNames()
+            .Any(n => n.Contains("SharedResource"));
+        if (!hasResource)
+        {
+            throw new InvalidOperationException("Embedded SharedResource not found — run a full build before executing resource completeness tests.");
+        }
+
+        return resourceManager;
     }
 
     #region Key Parity
@@ -88,6 +101,26 @@ public class ResourceCompletenessTests
         // Assert — every key in L should exist in the .resx
         var missing = localizationKeys.Except(resxKeys).OrderBy(k => k).ToList();
         Assert.Empty(missing);
+    }
+
+    #endregion
+
+    #region No Orphaned Resx Keys
+
+    [Fact]
+    public void Resources_NoOrphanedResxKeys()
+    {
+        // Arrange
+        var assembly = typeof(WebHosting.Globalization.Resources.SharedResource).Assembly;
+        var resxKeys = GetEmbeddedResxKeys(assembly);
+
+        // Act — collect all key values from L.cs via reflection
+        var keysType = typeof(WebHosting.Globalization.L);
+        var localizationKeys = CollectLocalizationKeys(keysType);
+
+        // Assert — every key in .resx should be referenced by L.cs (no orphaned translations)
+        var orphaned = resxKeys.Except(localizationKeys).OrderBy(k => k).ToList();
+        Assert.Empty(orphaned);
     }
 
     #endregion

@@ -15,14 +15,16 @@ public class GlobalizationSettingsTests
 
     #region Supported Cultures
 
-    [Fact]
-    public void SupportedCultures_ContainsDefaultCulture()
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("fr-FR")]
+    public void SupportedCultures_ContainsExpectedCulture(string cultureName)
     {
         // Arrange
         var settings = CreateSettings();
 
         // Assert
-        Assert.Contains(settings.SupportedCultures, c => c.Name == "en-US");
+        Assert.Contains(settings.SupportedCultures, c => c.Name == cultureName);
     }
 
     [Fact]
@@ -44,16 +46,6 @@ public class GlobalizationSettingsTests
 
         // Assert
         Assert.Equal(names.Count, names.Distinct(StringComparer.OrdinalIgnoreCase).Count());
-    }
-
-    [Fact]
-    public void SupportedCultures_ContainsFrench()
-    {
-        // Arrange
-        var settings = CreateSettings();
-
-        // Assert
-        Assert.Contains(settings.SupportedCultures, c => c.Name == "fr-FR");
     }
 
     #endregion
@@ -85,8 +77,10 @@ public class GlobalizationSettingsTests
         Assert.Equal(settings.SupportedCultures.Select(c => c.Name).OrderBy(n => n), names.OrderBy(n => n));
     }
 
-    [Fact]
-    public void SupportedCultureNamesJson_ContainsDefaultCulture()
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("fr-FR")]
+    public void SupportedCultureNamesJson_ContainsExpectedCulture(string cultureName)
     {
         // Arrange
         var settings = CreateSettings();
@@ -95,7 +89,7 @@ public class GlobalizationSettingsTests
         var names = System.Text.Json.JsonSerializer.Deserialize<string[]>(settings.SupportedCultureNamesJson)!;
 
         // Assert
-        Assert.Contains("en-US", names);
+        Assert.Contains(cultureName, names);
     }
 
     #endregion

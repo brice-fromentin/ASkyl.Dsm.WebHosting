@@ -517,9 +517,6 @@
   <data name="WebSiteConfiguration_PortRequired" xml:space="preserve">
     <value>Le port est requis</value>
   </data>
-  <data name="WebSiteConfiguration_PortRange" xml:space="preserve">
-    <value>Le port doit être compris entre 1024 et 65535</value>
-  </data>
   <data name="WebSiteConfiguration_InternalPortRange" xml:space="preserve">
     <value>Le port interne doit être compris entre 1024 et 65535</value>
   </data>

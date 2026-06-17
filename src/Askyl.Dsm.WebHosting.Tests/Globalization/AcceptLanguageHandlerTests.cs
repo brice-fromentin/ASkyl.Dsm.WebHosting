@@ -33,6 +33,8 @@ public class AcceptLanguageHandlerTests
     [InlineData("fr-FR")]
     [InlineData("de-DE")]
     [InlineData("ja-JP")]
+    [InlineData("fr")]
+    [InlineData("de")]
     public async Task SendAsync_RespectsCurrentCulture(string cultureName)
     {
         // Arrange
@@ -96,11 +98,6 @@ public class AcceptLanguageHandlerTests
     private sealed class TestableAcceptLanguageHandler(ICultureManager cultureManager)
         : AcceptLanguageHandler(cultureManager)
     {
-        public TestableAcceptLanguageHandler()
-            : this(new Mock<ICultureManager>().Object)
-        {
-        }
-
         public new Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             // Set a dummy InnerHandler to prevent InvalidOperationException

@@ -3,6 +3,12 @@ using Askyl.Dsm.WebHosting.Globalization;
 
 namespace Askyl.Dsm.WebHosting.Tests.Globalization;
 
+[CollectionDefinition(nameof(LocalizerTests))]
+public class LocalizerTestsCollection
+{
+}
+
+[Collection(nameof(LocalizerTests))]
 public class LocalizerTests
 {
     #region Simple Key Lookup
@@ -128,6 +134,23 @@ public class LocalizerTests
         {
             CultureInfo.CurrentUICulture = original;
         }
+    }
+
+    #endregion
+
+    #region Null Handling
+
+    [Fact]
+    public void ImplicitOperator_NullReturnsEmptyString()
+    {
+        // Arrange
+        LocalizedText? localizableText = null;
+
+        // Act
+        string text = localizableText;
+
+        // Assert
+        Assert.Equal(String.Empty, text);
     }
 
     #endregion

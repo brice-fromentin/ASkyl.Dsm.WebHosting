@@ -143,10 +143,10 @@ public class PhpTimeFormatToDotNetConverterTests
 
     #endregion
 
-    #region Unknown Characters Preserved
+    #region Separator Preservation
 
     [Fact]
-    public void Convert_UnknownCharacters_PreservesSeparators()
+    public void Convert_KnownTokens_PreservesSeparators()
     {
         // Arrange
         const string phpFormat = "H:i:s";
@@ -154,7 +154,7 @@ public class PhpTimeFormatToDotNetConverterTests
         // Act
         var result = PhpTimeFormatToDotNetConverter.Convert(phpFormat);
 
-        // Assert — H maps to HH (with leading zero)
+        // Assert — colon separators are preserved between converted tokens
         Assert.Equal("HH:mm:ss", result);
     }
 

@@ -23,19 +23,19 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
     /// <summary>
     /// Gets the supported cultures discovered from the server-injected environment variable.
     /// </summary>
-    private static CultureInfo[] SupportedCultures { get; } = SafeParseSupportedCultures();
+    internal static CultureInfo[] SupportedCultures { get; } = SafeParseSupportedCultures();
 
     /// <summary>
     /// Gets the browser's initial culture, captured at class load time before any override.
     /// The WASM runtime sets <see cref="CultureInfo.CurrentUICulture"/> from the Accept-Language header at startup.
     /// </summary>
-    private static CultureInfo BrowserCulture { get; } = SafeGetBrowserCulture();
+    internal static CultureInfo BrowserCulture { get; } = SafeGetBrowserCulture();
 
     /// <summary>
     /// Gets the DSM system culture injected by the server via <c>Blazor.start()</c>.
     /// Returns <c>null</c> when DSM language is set to "def" (browser default).
     /// </summary>
-    private static CultureInfo? SystemCulture { get; } = SafeResolveSystemCultureFromEnv();
+    internal static CultureInfo? SystemCulture { get; } = SafeResolveSystemCultureFromEnv();
 
     #endregion
 
