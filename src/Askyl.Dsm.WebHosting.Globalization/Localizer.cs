@@ -31,7 +31,7 @@ public sealed class Localizer(ResourceManager resourceManager) : ILocalizer
         get
         {
             var culture = CultureInfo.CurrentUICulture;
-            var value = resourceManager.GetString(name, culture) ?? name;
+            var value = resourceManager.GetString(name, culture) ?? $"[{name}]";
             return arguments.Length == 0
                 ? new LocalizedText(name, value)
                 : new LocalizedText(name, String.Format(culture, value, arguments));

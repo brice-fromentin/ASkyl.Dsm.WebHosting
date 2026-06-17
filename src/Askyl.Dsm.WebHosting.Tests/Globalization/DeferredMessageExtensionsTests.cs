@@ -73,9 +73,9 @@ public class DeferredMessageExtensionsTests
         // Act
         var result = validator.TestValidate(new TestObject());
 
-        // Assert - missing key falls back to the key name itself
+        // Assert - missing key falls back to bracketed key name
         result.ShouldHaveValidationErrorFor(x => x.Value)
-            .WithErrorMessage("NonExistent_Resource_Key_That_Does_Not_Exist");
+              .WithErrorMessage("[NonExistent_Resource_Key_That_Does_Not_Exist]");
     }
 
     [Fact]

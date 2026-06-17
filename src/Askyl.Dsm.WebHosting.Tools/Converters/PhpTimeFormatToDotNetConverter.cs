@@ -32,6 +32,9 @@ public static class PhpTimeFormatToDotNetConverter
         // AM/PM
         ['a'] = "tt",  // Lowercase am/pm
         ['A'] = "tt",  // Uppercase AM/PM
+
+        // Timezone tokens are handled by PhpDateFormatToDotNetConverter.
+        // If timezone tokens appear in time-only formats, they pass through as-is.
     };
 
     /// <summary>

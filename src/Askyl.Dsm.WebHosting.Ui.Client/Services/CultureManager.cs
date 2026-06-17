@@ -4,6 +4,7 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
+using Microsoft.JSInterop;
 
 namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 
@@ -15,8 +16,9 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// Supported cultures are discovered from the environment variable injected by the server via <c>Blazor.start()</c>.
 /// Browser language is detected from <see cref="CultureInfo.CurrentUICulture"/> auto-set by the WASM runtime.
 /// </summary>
+/// <param name="jsRuntime">JS runtime for updating HTML lang/dir attributes.</param>
 /// <param name="logger">Logger for culture resolution debugging.</param>
-public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManager
+public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> logger) : ICultureManager
 {
     #region Static Fields
 
@@ -269,7 +271,21 @@ public class CultureManager(ILogger<ILogCultureManager> logger) : ICultureManage
     {
         ApplyCultureToThread(culture);
         CurrentCulture = culture;
+        UpdateHtmlLangAndDir(culture);
         logger.CultureApplied(culture.Name);
+    }
+
+    private async void UpdateHtmlLangAndDir(CultureInfo culture)
+    {
+        try
+        {
+            await jsRuntime.InvokeVoidAsync("document.documentElement.setAttribute", "lang", culture.Name);
+            await jsRuntime.InvokeVoidAsync("document.documentElement.setAttribute", "dir", culture.TextInfo.IsRightToLeft ? "rtl" : "ltr");
+        }
+        catch (JSException)
+        {
+            // JS interop may fail during early startup (before DOM is ready) — non-critical, safe to ignore.
+        }
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
 
 namespace Askyl.Dsm.WebHosting.Tools.Converters;
@@ -26,6 +27,13 @@ public static class DsmLanguageToCultureConverter
             return null;
         }
 
-        return DsmLanguageCodes.All.TryGetValue(languageCode.Trim(), out var cultureName) ? cultureName : null;
+        var trimmed = languageCode.Trim();
+
+        if (trimmed != languageCode)
+        {
+            Debug.WriteLine($"DsmLanguageToCultureConverter: input was trimmed from '{languageCode}' to '{trimmed}'");
+        }
+
+        return DsmLanguageCodes.All.TryGetValue(trimmed, out var cultureName) ? cultureName : null;
     }
 }

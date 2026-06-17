@@ -3,7 +3,7 @@ using Askyl.Dsm.WebHosting.Globalization;
 
 namespace Askyl.Dsm.WebHosting.Tests.Globalization;
 
-[CollectionDefinition(nameof(LocalizerTests))]
+[CollectionDefinition(nameof(LocalizerTests), DisableParallelization = true)]
 public class LocalizerTestsCollection
 {
 }
@@ -76,7 +76,7 @@ public class LocalizerTests
         var result = localizer["NonExistent.Key.That.Does.Not.Exist"];
 
         // Assert
-        Assert.Equal("NonExistent.Key.That.Does.Not.Exist", result.Value);
+        Assert.Equal("[NonExistent.Key.That.Does.Not.Exist]", result.Value);
     }
 
     #endregion

@@ -2,6 +2,7 @@ using System.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Globalization;
@@ -9,6 +10,11 @@ namespace Askyl.Dsm.WebHosting.Tests.Globalization;
 public class CultureManagerTests
 {
     #region Setup
+
+    private Mock<IJSRuntime> CreateJsRuntimeMock()
+    {
+        return new Mock<IJSRuntime>();
+    }
 
     private Mock<ILogger<ILogCultureManager>> CreateLoggerMock()
     {
@@ -23,8 +29,9 @@ public class CultureManagerTests
     public void InitializeFromLogin_ValidCulture_AppliesCulture()
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
         // Act
         cultureManager.InitializeFromLogin("fr-FR", null, null);
@@ -41,8 +48,9 @@ public class CultureManagerTests
     public void InitializeFromLogin_InvalidInput_FallsBackGracefully(string? cultureName)
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
         // Act
         cultureManager.InitializeFromLogin(cultureName, null, null);
@@ -57,8 +65,9 @@ public class CultureManagerTests
     public void InitializeFromLogin_SyncsCurrentAndUICulture(string cultureName)
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
         // Act
         cultureManager.InitializeFromLogin(cultureName, null, null);
@@ -75,8 +84,9 @@ public class CultureManagerTests
     public void InitializeFromLogin_WithDateFormat_AppliesCustomFormat()
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
         // Act
         cultureManager.InitializeFromLogin("en-US", "yyyy/MM/dd", null);
@@ -90,8 +100,9 @@ public class CultureManagerTests
     public void InitializeFromLogin_WithTimeFormat_AppliesCustomFormat()
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
         // Act
         cultureManager.InitializeFromLogin("en-US", null, "H:mm");
@@ -105,8 +116,9 @@ public class CultureManagerTests
     public void InitializeFromLogin_WithBothFormats_AppliesBoth()
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
         // Act
         cultureManager.InitializeFromLogin("en-US", "dd/MM/yyyy", "HH:mm:ss");
@@ -120,8 +132,9 @@ public class CultureManagerTests
     public void InitializeFromLogin_NullFormats_UsesCultureDefaults()
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
         // Act
         cultureManager.InitializeFromLogin("en-US", null, null);
@@ -138,8 +151,9 @@ public class CultureManagerTests
     public void ResetToSystem_ResetsToValidCulture()
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
         cultureManager.InitializeFromLogin("fr-FR", null, null);
 
         // Act
@@ -153,8 +167,9 @@ public class CultureManagerTests
     public void ResetToSystem_DoesNotThrow()
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
         // Act & Assert - should not throw
         cultureManager.ResetToSystem();
@@ -168,8 +183,9 @@ public class CultureManagerTests
     public void InitializeFromLogin_WithDateFormat_DoesNotModifySharedCultureInfo()
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
         var originalCulture = new CultureInfo("en-US");
         var originalShortDatePattern = originalCulture.DateTimeFormat.ShortDatePattern;
 
@@ -182,36 +198,69 @@ public class CultureManagerTests
 
     #endregion
 
-    #region Null/Empty Format Handling
+    #region Null/Empty/Invalid Format Handling
 
-    [Fact]
-    public void InitializeFromLogin_EmptyDateFormat_KeepsCultureDefault()
+    [Theory]
+    [InlineData("", null)]
+    [InlineData("   ", null)]
+    [InlineData(null, "")]
+    [InlineData(null, "   ")]
+    public void InitializeFromLogin_NullOrWhitespaceFormat_KeepsCultureDefault(string? dateFormat, string? timeFormat)
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
-        var originalPattern = new CultureInfo("en-US").DateTimeFormat.ShortDatePattern;
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
+        var originalCulture = new CultureInfo("en-US");
 
-        // Act — empty string is treated as null by IsNullOrWhiteSpace guard
-        cultureManager.InitializeFromLogin("en-US", String.Empty, null);
+        // Act — null/whitespace is treated as absent by IsNullOrWhiteSpace guard
+        cultureManager.InitializeFromLogin("en-US", dateFormat, timeFormat);
 
-        // Assert — empty format is ignored, culture keeps its default pattern
-        Assert.Equal(originalPattern, cultureManager.CurrentCulture.DateTimeFormat.ShortDatePattern);
+        // Assert — format is ignored, culture keeps its default pattern
+        Assert.Equal(originalCulture.DateTimeFormat.ShortDatePattern, cultureManager.CurrentCulture.DateTimeFormat.ShortDatePattern);
+        Assert.Equal(originalCulture.DateTimeFormat.ShortTimePattern, cultureManager.CurrentCulture.DateTimeFormat.ShortTimePattern);
     }
 
-    [Fact]
-    public void InitializeFromLogin_WhiteSpaceTimeFormat_KeepsCultureDefault()
+    [Theory]
+    [InlineData("@@@")]
+    [InlineData("xx-YY")]
+    [InlineData("H:mm:zz")]
+    [InlineData("invalid-format-string")]
+    public void InitializeFromLogin_ArbitraryDateFormat_HandlesGracefully(string dateFormat)
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
-        var originalPattern = new CultureInfo("en-US").DateTimeFormat.ShortTimePattern;
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
-        // Act — whitespace is treated as null by IsNullOrWhiteSpace guard
-        cultureManager.InitializeFromLogin("en-US", null, "   ");
+        // Act — arbitrary format strings should not throw
+        // Note: DateTimeFormatInfo.ShortDatePattern is very permissive in .NET and accepts
+        // most strings as custom format patterns. The try/catch in CloneCultureWithFormats
+        // is defensive against theoretical edge cases (FormatException/NotSupportedException)
+        // that are not triggerable with standard format strings in unit tests.
+        cultureManager.InitializeFromLogin("en-US", dateFormat, null);
 
-        // Assert — whitespace format is ignored, culture keeps its default pattern
-        Assert.Equal(originalPattern, cultureManager.CurrentCulture.DateTimeFormat.ShortTimePattern);
+        // Assert — method completes without throwing, format is applied (or kept as default if rejected)
+        Assert.NotNull(cultureManager.CurrentCulture);
+    }
+
+    [Theory]
+    [InlineData("@@@")]
+    [InlineData("xx-YY")]
+    [InlineData("H:mm:zz")]
+    [InlineData("invalid-format-string")]
+    public void InitializeFromLogin_ArbitraryTimeFormat_HandlesGracefully(string timeFormat)
+    {
+        // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
+        var logger = CreateLoggerMock();
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
+
+        // Act — arbitrary format strings should not throw
+        cultureManager.InitializeFromLogin("en-US", null, timeFormat);
+
+        // Assert — method completes without throwing
+        Assert.NotNull(cultureManager.CurrentCulture);
     }
 
     #endregion
@@ -222,8 +271,9 @@ public class CultureManagerTests
     public void CurrentCulture_ReturnsValidCulture()
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
         // Act & Assert
         Assert.NotNull(cultureManager.CurrentCulture);
@@ -233,8 +283,9 @@ public class CultureManagerTests
     public void CurrentUICulture_EqualsCurrentCulture()
     {
         // Arrange
+        var jsRuntime = CreateJsRuntimeMock();
         var logger = CreateLoggerMock();
-        var cultureManager = new CultureManager(logger.Object);
+        var cultureManager = new CultureManager(jsRuntime.Object, logger.Object);
 
         // Act & Assert
         Assert.Same(cultureManager.CurrentCulture, cultureManager.CurrentUICulture);
@@ -252,7 +303,7 @@ public class CultureManagerTests
     public void StaticInitialization_SupportedCultures_FallsBackToDefaultCulture()
     {
         // Act — force static initialization
-        _ = new CultureManager(CreateLoggerMock().Object);
+        _ = new CultureManager(CreateJsRuntimeMock().Object, CreateLoggerMock().Object);
 
         // Assert — direct access to internal static field
         Assert.Single(CultureManager.SupportedCultures);
@@ -267,7 +318,7 @@ public class CultureManagerTests
     public void StaticInitialization_BrowserCulture_FallsBackToDefaultCultureNotInvariant()
     {
         // Act — force static initialization
-        _ = new CultureManager(CreateLoggerMock().Object);
+        _ = new CultureManager(CreateJsRuntimeMock().Object, CreateLoggerMock().Object);
 
         // Assert — direct access to internal static field
         Assert.NotEqual(CultureInfo.InvariantCulture.Name, CultureManager.BrowserCulture.Name);
@@ -281,7 +332,7 @@ public class CultureManagerTests
     public void StaticInitialization_SystemCulture_NullWhenNoEnvVarSet()
     {
         // Act — force static initialization
-        _ = new CultureManager(CreateLoggerMock().Object);
+        _ = new CultureManager(CreateJsRuntimeMock().Object, CreateLoggerMock().Object);
 
         // Assert — direct access to internal static field
         Assert.Null(CultureManager.SystemCulture);
@@ -298,7 +349,7 @@ public class CultureManagerTests
     public void StaticInitialization_AllFallbacks_ConvergeOnUserFriendlyCultureNotInvariant()
     {
         // Act — force static initialization
-        _ = new CultureManager(CreateLoggerMock().Object);
+        _ = new CultureManager(CreateJsRuntimeMock().Object, CreateLoggerMock().Object);
 
         // Assert — direct access to internal static fields
         Assert.NotEqual(CultureInfo.InvariantCulture.Name, CultureManager.BrowserCulture.Name);

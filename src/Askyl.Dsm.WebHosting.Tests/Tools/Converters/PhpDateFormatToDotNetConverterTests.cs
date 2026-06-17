@@ -167,6 +167,45 @@ public class PhpDateFormatToDotNetConverterTests
 
     #endregion
 
+    #region Timezone Tokens
+
+    /// <summary>
+    /// PHP 'P' (GMT offset with colon, e.g. +02:00) maps to .NET 'zzz'.
+    /// </summary>
+    [Theory]
+    [InlineData("P", "zzz")]
+    [InlineData("Y-m-d P", "yyyy-MM-dd zzz")]
+    public void Convert_TimezoneTokenP_ReturnsExpected(string phpFormat, string expected)
+    {
+        // Act
+        var result = PhpDateFormatToDotNetConverter.Convert(phpFormat);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    /// <summary>
+    /// PHP timezone tokens with no .NET equivalent are passed through as-is:
+    /// 'e' (timezone identifier), 'T' (timezone abbreviation),
+    /// 'O' (GMT offset without colon), 'I' (DST flag), 'Z' (offset in seconds).
+    /// </summary>
+    [Theory]
+    [InlineData("e", "e")]
+    [InlineData("T", "T")]
+    [InlineData("O", "O")]
+    [InlineData("I", "I")]
+    [InlineData("Z", "Z")]
+    public void Convert_UnmappedTimezoneTokens_PassThrough(string phpFormat, string expected)
+    {
+        // Act
+        var result = PhpDateFormatToDotNetConverter.Convert(phpFormat);
+
+        // Assert — no .NET equivalent, passed through as literal
+        Assert.Equal(expected, result);
+    }
+
+    #endregion
+
     #region Unknown Characters Preserved
 
     [Fact]

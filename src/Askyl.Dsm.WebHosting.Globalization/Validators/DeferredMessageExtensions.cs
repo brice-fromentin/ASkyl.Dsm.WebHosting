@@ -12,7 +12,7 @@ public static class DeferredMessageExtensions
     {
         /// <summary>
         /// Sets a localized error message that is resolved at validation time (not constructor time).
-        /// Use this instead of <c>.WithMessage(localizer[key].Value)</c> to support runtime culture switches.
+        /// Use this instead of <c>.WithMessage(localizer[someKey])</c> to support runtime culture switches.
         /// </summary>
         public IRuleBuilderOptions<T, TValue> WithLocalizedMessage(string resourceKey)
         {
@@ -25,6 +25,6 @@ public static class DeferredMessageExtensions
     static string ResolveResource(string key)
     {
         var culture = CultureInfo.CurrentUICulture;
-        return ResourceManagerCache.SharedResource.GetString(key, culture) ?? key;
+        return ResourceManagerCache.SharedResource.GetString(key, culture) ?? $"[{key}]";
     }
 }

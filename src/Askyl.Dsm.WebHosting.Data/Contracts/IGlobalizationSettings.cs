@@ -19,6 +19,7 @@ public interface IGlobalizationSettings
 
     /// <summary>
     /// Gets or sets the DSM system culture (converted from DSM language code).
+    /// Set once at startup by <see cref="Extensions.GlobalizationExtensions.ApplyDsmSystemCulture"/>.
     /// </summary>
     string? SystemCulture { get; set; }
 }

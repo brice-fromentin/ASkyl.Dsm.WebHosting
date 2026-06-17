@@ -311,6 +311,7 @@ if (condition)  // Don't separate comment from code!
 - Use explicit type declarations with `[]` when type clarity is needed
 - Always use `new()` when type can be inferred and constructor parameters are provided
 - Prefer collection expressions `[..]` over `.ToList()`, `.ToArray()` for materializing LINQ queries or spreading existing collections - enforced by dotnet format
+- **Keep parameterized constructors on DTOs/records** when they enable one-line declarations (e.g., `new AuthenticateLogin(login, password, otp)`) — do not remove them in favor of object initializers
 
 ### 6.5 Using Directives (Enforced by dotnet format)
 

@@ -36,6 +36,19 @@ public static class PhpDateFormatToDotNetConverter
         // Day of year — PHP 'z' (0-365) vs .NET %j (1-366) — offset differs by 1
         // This is a known limitation; consumers should add 1 if exact day-of-year needed
         ['z'] = "%j",
+
+        // Timezone — PHP timezone tokens with .NET equivalents
+        ['P'] = "zzz",   // GMT offset with colon (e.g. +02:00)
+
+        // Timezone tokens with NO .NET custom format equivalent (documented, not mapped):
+        //   'e' — Timezone identifier (e.g. "Europe/Paris") — no .NET equivalent
+        //   'T' — Timezone abbreviation (e.g. "CEST") — no .NET equivalent
+        //   'O' — GMT offset without colon (e.g. "+0200") — no exact .NET equivalent
+        //   'I' — DST indicator (0 or 1) — no .NET equivalent
+        //   'Z' — Timezone offset in seconds (-43200 to 50400) — no .NET equivalent
+        //   'c' — ISO 8601 format (compound, not a single token) — not applicable
+        //   'r' — RFC 2822 format (compound, not a single token) — not applicable
+        //   'u' — Unix timestamp (compound, not a single token) — not applicable
     };
 
     /// <summary>

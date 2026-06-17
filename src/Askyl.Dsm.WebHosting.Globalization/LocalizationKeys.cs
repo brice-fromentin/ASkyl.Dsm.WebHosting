@@ -67,6 +67,7 @@ public static class L
     {
         public const string PageTitle = "NotFound_PageTitle";
         public const string Content = "NotFound_Content";
+        public const string GoHome = "NotFound_GoHome";
     }
 
     /// <summary>Website configuration dialog strings.</summary>
@@ -238,7 +239,8 @@ public static class L
         public const string NameRequired = "WebSiteConfiguration_NameRequired";
         public const string NameLength = "WebSiteConfiguration_NameLength";
         public const string ApplicationPathRequired = "WebSiteConfiguration_ApplicationPathRequired";
-        public const string PortRequired = "WebSiteConfiguration_PortRequired";
+        public const string InternalPortRequired = "WebSiteConfiguration_InternalPortRequired";
+        public const string PublicPortRequired = "WebSiteConfiguration_PublicPortRequired";
         public const string InternalPortRange = "WebSiteConfiguration_InternalPortRange";
         public const string PublicPortRange = "WebSiteConfiguration_PublicPortRange";
         public const string EnvironmentRequired = "WebSiteConfiguration_EnvironmentRequired";

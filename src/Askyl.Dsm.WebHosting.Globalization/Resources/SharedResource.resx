@@ -189,6 +189,9 @@
   <data name="NotFound_Content" xml:space="preserve">
     <value>Page not found</value>
   </data>
+  <data name="NotFound_GoHome" xml:space="preserve">
+    <value>Go home</value>
+  </data>
 
   <!-- WebsiteConfig -->
   <data name="WebsiteConfig_EditTitle" xml:space="preserve">
@@ -514,8 +517,11 @@
   <data name="WebSiteConfiguration_ApplicationPathRequired" xml:space="preserve">
     <value>Application path is required</value>
   </data>
-  <data name="WebSiteConfiguration_PortRequired" xml:space="preserve">
-    <value>Port is required</value>
+  <data name="WebSiteConfiguration_InternalPortRequired" xml:space="preserve">
+    <value>Internal port is required</value>
+  </data>
+  <data name="WebSiteConfiguration_PublicPortRequired" xml:space="preserve">
+    <value>Public port is required</value>
   </data>
   <data name="WebSiteConfiguration_InternalPortRange" xml:space="preserve">
     <value>Internal port must be between 1024 and 65535</value>
