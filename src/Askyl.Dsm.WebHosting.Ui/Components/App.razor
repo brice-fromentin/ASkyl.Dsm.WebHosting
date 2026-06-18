@@ -1,13 +1,15 @@
-﻿@using Askyl.Dsm.WebHosting.Constants.Application
+﻿@using System.Globalization
+@using Askyl.Dsm.WebHosting.Constants.Application
+@using Askyl.Dsm.WebHosting.Constants.Globalization
 @using Askyl.Dsm.WebHosting.Data.Contracts
-@using Askyl.Dsm.WebHosting.Globalization
-@using System.Globalization
+@using Askyl.Dsm.WebHosting.Globalization.Extensions
+@using Microsoft.FluentUI.AspNetCore.Components
 
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IGlobalizationSettings GlobalizationSettings
 
 <!DOCTYPE html>
-<html lang="@(GetLanguageTag())">
+<html lang="@(ResolvedCulture.Name)" dir="@(ResolvedCulture.GetTextDirection())">
 
 <head>
     <meta charset="utf-8" />
@@ -28,18 +30,23 @@
 </head>
 
 <body>
-    <Routes @rendermode="@wasm" />
+    <FluentDesignTheme Mode="@DesignThemeModes.System" />
+
+    <FluentLayout Class="full-size">
+        <Routes @rendermode="@wasm" />
+    </FluentLayout>
+    
     <script src="@Assets["_framework/blazor.web.js"]" autostart="false"></script>
     <script>
         Blazor.start({
             webAssembly: {
                 configureRuntime: dotnet => {
                     dotnet.withEnvironmentVariable(
-                        '@ApplicationConstants.SupportedCulturesEnvironmentVariable',
+                        '@GlobalizationConstants.SupportedCulturesEnvironmentVariable',
                         '@((MarkupString)GlobalizationSettings.SupportedCultureNamesJson)'
                     );
                     dotnet.withEnvironmentVariable(
-                        '@ApplicationConstants.SystemCultureEnvironmentVariable',
+                        '@GlobalizationConstants.SystemCultureEnvironmentVariable',
                         '@(GlobalizationSettings.SystemCulture ?? "")'
                     );
                 }
@@ -57,14 +64,18 @@
 
     private static readonly CultureInfo[] NeutralCultures = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
 
-    private string GetLanguageTag()
+    private CultureInfo? _resolvedCulture;
+
+    private CultureInfo ResolvedCulture => _resolvedCulture ??= ResolveCulture();
+
+    private CultureInfo ResolveCulture()
     {
         // Priority 1: DSM system culture (from /etc/synoinfo.conf)
         if (!String.IsNullOrWhiteSpace(GlobalizationSettings.SystemCulture))
         {
             try
             {
-                return new CultureInfo(GlobalizationSettings.SystemCulture).Name;
+                return new CultureInfo(GlobalizationSettings.SystemCulture);
             }
             catch (CultureNotFoundException)
             {
@@ -75,7 +86,7 @@
         // Priority 2: parse Accept-Language header directly
         // IRequestCultureFeature doesn't match neutral languages (e.g. "fr" -> "fr-FR"),
         // so we parse the header ourselves and match against supported cultures.
-        var acceptLanguage = HttpContextAccessor?.HttpContext?.Request.Headers[ApplicationConstants.AcceptLanguageHeader].ToString();
+        var acceptLanguage = HttpContextAccessor?.HttpContext?.Request.Headers[GlobalizationConstants.AcceptLanguageHeader].ToString();
 
         if (!String.IsNullOrWhiteSpace(acceptLanguage))
         {
@@ -84,16 +95,16 @@
             // Handle neutral languages (e.g. "fr") — match to supported culture
             if (GlobalizationSettings.SupportedCultures.Any(c => String.Equals(c.TwoLetterISOLanguageName, language, StringComparison.OrdinalIgnoreCase)))
             {
-                return language;
+                return new CultureInfo(language);
             }
 
             // Return the first 2 chars if it looks like a valid BCP-47 tag
             if (language.Length >= 2 && NeutralCultures.Any(c => String.Equals(c.TwoLetterISOLanguageName, language, StringComparison.OrdinalIgnoreCase)))
             {
-                return language;
+                return new CultureInfo(language);
             }
         }
 
-        return ApplicationConstants.DefaultLanguageTag;
+        return GlobalizationConstants.DefaultCultureInfo;
     }
 }

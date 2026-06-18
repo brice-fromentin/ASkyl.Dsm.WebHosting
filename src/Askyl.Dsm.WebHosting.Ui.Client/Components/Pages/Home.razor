@@ -90,13 +90,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var authResult = await AuthService.IsAuthenticatedAsync();
-        if (!authResult.Success || authResult.Value != true)
-        {
-            navigation.NavigateTo(ApplicationConstants.LoginPagePath);
-            return;
-        }
-
         await LoadInstancesAsync();
         await base.OnInitializedAsync();
     }

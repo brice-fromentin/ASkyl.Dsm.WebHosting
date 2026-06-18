@@ -1,10 +1,9 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.9
+**Version:** 0.5.10
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** June 14, 2026 (Globalization complete — deferred `WithLocalizedMessage()` fix, Phase 10d manual validation passed
-WASM culture caching, server-side Accept-Language parsing handles neutral languages, early CultureManager
-resolution in WASM startup, full page reload on logout resets to system/browser culture)
+**Last Updated:** June 18, 2026 (Globalization constants consolidated, C# 14 scoped extensions,
+router-level auth navigation guard, FluentLayout/FluentMainLayout app shell, RTL dir attribute SSR support)
 
 ---
 
@@ -107,7 +106,7 @@ Askyl.Dsm.WebHosting.slnx (Version 0.5.9)
 ├── Askyl.Dsm.WebHosting.Benchmarks         # Performance benchmarks (BenchmarkDotNet)
 ├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
 ├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
-├── Askyl.Dsm.WebHosting.Globalization      # Localization resources, validators, culture management
+├── Askyl.Dsm.WebHosting.Globalization      # Localization resources, validators, culture management, C# 14 scoped extensions
 ├── Askyl.Dsm.WebHosting.Logging            # Logging extensions (source-generated log methods)
 ├── Askyl.Dsm.WebHosting.Tools              # Utility tools & DSM API client
 ├── Askyl.Dsm.WebHosting.Tests              # Unit tests (xUnit, Moq, FluentAssertions)
@@ -207,8 +206,8 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 ```text
 
 Constants/
-├── Application/                            # Application-wide constants (8 files)
-│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session (DsmSid, DsmUsername, TTL), auth messages
+├── Application/                            # Application-wide constants (7 files)
+│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session (DsmSid, DsmUsername, TTL)
 │   ├── DotnetInfoParserConstants.cs        # dotnet --info section headers and framework identifiers
 │   ├── InfrastructureConstants.cs          # Directory names (Downloads)
 │   ├── LicenseConstants.cs                 # License file management
@@ -216,6 +215,8 @@ Constants/
 │   ├── SecurityHeaders.cs                  # HTTP security header values (CSP, X-Frame-Options, etc.)
 │   ├── ValidationConstants.cs              # Validation message constants (path traversal, version format, env vars)
 │   └── WebSiteConstants.cs                 # Website config, process lifecycle, port validation
+├── Globalization/                          # Culture and localization constants (1 file)
+│   └── GlobalizationConstants.cs           # Default culture/language, text direction (LTR/RTL), env var names, Accept-Language header
 ├── DSM/                                    # Synology DSM-specific constants (8 files)
 │   ├── API/                                # API-related constants
 │   │   ├── ApiMethods.cs                   # CRUD operation names (Create, Get, List, etc.)
@@ -256,7 +257,8 @@ Constants/
 
 | Category | Key Constants | Count |
 |----------|---------------|-------|
-| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), DsmSid, DsmUsername, SessionValidationTtlMinutes | ~37 |
+| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), DsmSid, DsmUsername, SessionValidationTtlMinutes | ~30 |
+| **Globalization** | DefaultCulture, DefaultCultureInfo, DefaultLanguageTag, TextDirectionLtr/Rtl, SupportedCultures/SystemCulture env vars, AcceptLanguageHeader | 7 |
 | **Websites** | Process timeouts, port range (1024-65535), WellKnownWebPorts [80, 443], environment vars, validation messages | ~26 |
 | **DSM APIs** | 8 API names (incl. Core.User), CRUD methods, version ranges, shared error codes | ~37 + 1 enum |
 | **FileStation** | Listing patterns, sorting, pagination (100 limit) | ~15 |
@@ -430,7 +432,7 @@ Tools/
 │   └── PhpTimeFormatToDotNetConverter.cs   # PHP time tokens (H, G, h, g, i, s, a, A) → .NET format (HH, H, hh, h, mm, ss, tt); timezone tokens handled by date converter
 ├── Extensions/                             # Extension methods
 │   ├── ApiResponseExtensions.cs            # Response mapping helpers
-│   ├── HttpClientExtensions.cs             # HTTP client helpers
+│   ├── HttpClientExtensions.cs             # HTTP client helpers (C# 14 scoped `extension(HttpClient)`)
 │   └── UriExtensions.cs                    # URI manipulation helpers
 ├── Infrastructure/                         # Infrastructure utilities
 │   ├── ArchiveExtractorService.cs          # gzip + tar extraction (implements IArchiveExtractorService)
@@ -625,12 +627,15 @@ Ui.Client/
 │   │   └── NotFound.razor                  # 404 handler — FluentUI centered page with localized home link
 │   └── Patterns/                           # UI patterns
 │       └── WorkingState/                   # IWorkingState interface and CreateWorkingState extension
+├── Contracts/                              # Client-side service contracts
+│   └── INavigationGuard.cs                 # Router navigation guard interface (OnNavigateAsync, OnNavigate)
 ├── Extensions/                             # Client-side extension methods
 │   └── FsEntryExtensions.cs                # File system entry extension methods
 ├── Interfaces/                             # C# interfaces for JS interop
-├── Services/                               # HTTP client wrappers + culture management (9 services)
+├── Services/                               # HTTP client wrappers + culture management (10 services)
 │   ├── AcceptLanguageHandler.cs            # DelegatingHandler — attaches Accept-Language header from ICultureManager
 │   ├── AuthenticationService.cs            # Singleton - POST /api/authentication/login, logout, status
+│   ├── AuthenticationNavigationGuard.cs    # Singleton - INavigationGuard impl, Router OnNavigateAsync guard, enforces auth before render (no flash)
 │   ├── CultureManager.cs                   # ICultureManager impl — safe static init, resolves culture at login, clones with date/time formats
 │   ├── DotnetVersionService.cs             # GET /api/runtime-management/{versions,channels,releases}
 │   ├── FileSystemService.cs                # GET /api/file-management/{shared-folders,directory-contents}
@@ -642,7 +647,7 @@ Ui.Client/
 │   └── appsettings.json                    # Client Serilog config (BrowserConsole sink)
 ├── _Imports.razor                          # Global using directives (System.Net.Http, Microsoft.FluentUI, Icons namespaces)
 ├── Program.cs                              # WASM entry point (service registration, HttpClient configuration)
-└── Routes.razor                            # Router with AppAssembly route discovery, MainLayout default
+└── Routes.razor                            # Router with OnNavigateAsync auth guard, AppAssembly route discovery, MainLayout default
 ```
 
 **Key Features:**
@@ -682,6 +687,9 @@ Ui.Client/
 ```csharp
 // Singleton - Authentication state managed server-side via session cookies
 builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
+
+// Singleton - Router navigation guard (enforces auth before render)
+builder.Services.AddSingleton<AuthenticationNavigationGuard>();
 
 // Scoped - HTTP client wrappers for REST API calls
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
@@ -1122,12 +1130,15 @@ builder.Services.AddRazorComponents()
 ### Component Hierarchy
 
 ```text
-App.razor (Root)
-└── MainLayout.razor
-    └── Page Content
-        ├── Home.razor (Dashboard with website grid)
-        ├── Login.razor (Authentication)
-        └── NotFound.razor (404 — FluentUI centered page with localized home link)
+App.razor (Root — server-rendered shell)
+├── FluentDesignTheme (System mode — light/dark theme)
+└── FluentLayout (full-viewport layout container)
+    └── Routes (InteractiveWebAssembly)
+        └── MainLayout.razor (FluentMainLayout with Header/Body)
+            └── Page Content
+                ├── Home.razor (Dashboard with website grid)
+                ├── Login.razor (Authentication)
+                └── NotFound.razor (404 — FluentUI centered page with localized home link)
 
 Dialogs (Overlay)
 ├── WebSiteConfigurationDialog.razor
@@ -1176,24 +1187,31 @@ Input components with immediate validation feedback:
 
 ### Authentication & Session Management
 
-1. **Server-Side Session Storage**
+1. **Router-Level Navigation Guard**
+   - `AuthenticationNavigationGuard` intercepts all navigation via `<Router OnNavigateAsync>`
+   - Async auth check (`IsAuthenticatedAsync`) runs before any component renders
+   - Login page path excluded from guard — all other routes require authentication
+   - No cached auth state — re-checks on every navigation to avoid stale state after login
+   - Eliminates flash of protected content before redirect to login
+
+2. **Server-Side Session Storage**
    - DSM SID stored in server session (not client storage)
    - Username stored alongside SID for defense-in-depth (`DsmUsername`)
    - HttpOnly cookies prevent XSS attacks
    - SameSite=Strict prevents CSRF
 
-2. **Server-Side Session Validation**
+3. **Server-Side Session Validation**
    - `IsAuthenticatedAsync()` validates both session keys and calls `SYNO.Core.User.get`
    - 1-minute TTL cache matches DSM minimum session timeout
    - Detects expired or revoked sessions via DSM server (error `-4`)
    - Clears session keys and redirects to login on validation failure
 
-3. **Antiforgery & CSRF Protection**
+4. **Antiforgery & CSRF Protection**
    - Enabled for all Blazor components and API endpoints
    - SameSite=Strict documented on all 5 API controllers as primary CSRF defense
    - Token validation on state-changing operations
 
-4. **HTTPS & HSTS Enforcement**
+5. **HTTPS & HSTS Enforcement**
    - `UseHttpsRedirection()` in middleware pipeline
    - `UseHsts()` enabled for non-development environments (30-day max-age)
    - Default protocol for reverse proxy is HTTPS
@@ -1308,11 +1326,14 @@ System-level date/time format discovery is a future enhancement.
 | Component | Location | Purpose |
 |---|---|---|
 | `ICultureManager` | `Data.Contracts` | Interface: `InitializeFromLogin(string?, string?, string?)`, `ResetToSystem()`, `CurrentCulture`, `CurrentUICulture` |
-| `CultureManager` | `Ui.Client` | WASM implementation — safe static init (`SafeParseSupportedCultures`, `SafeGetBrowserCulture`, `SafeResolveSystemCultureFromEnv`), resolves culture at login, clones with date/time formats, injects `IJSRuntime` to update `html lang` and `dir` (RTL/LTR) on every culture change |
+| `CultureManager` | `Ui.Client` | WASM implementation — safe static init (`SafeParseSupportedCultures`, `SafeGetBrowserCulture`, `SafeResolveSystemCultureFromEnv`), resolves culture at login, clones with date/time formats, updates `html lang` and `dir` via `GetTextDirection()` extension on every culture change |
 | `IGlobalizationSettings` | `Data.Contracts` | Interface: `SupportedCultures`, `SupportedCultureNamesJson`, `SystemCulture` |
 | `GlobalizationSettings` | `Ui/Infrastructure/` | Singleton service implementing `IGlobalizationSettings` — discovers cultures from satellite resources at construction, logs via `ILogger<ILogGlobalizationSettings>` |
 | `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header from `ICultureManager` |
 | `GlobalizationExtensions` | `Ui/Extensions/` | `ApplyDsmSystemCulture()` — fetches DSM language and sets `SystemCulture`; `UseGlobalizationRequestLocalization()` — configures and adds middleware |
+| `GlobalizationConstants` | `Constants/Globalization/` | `DefaultCulture`/`DefaultCultureInfo`, `TextDirectionLtr`/`TextDirectionRtl`, env var names, `AcceptLanguageHeader` |
+| `CultureInfoExtensions` | `Globalization/Extensions/` | C# 14 scoped `extension(CultureInfo)` — `GetTextDirection()` returns LTR/RTL from `TextInfo.IsRightToLeft` |
+| `GlobalizationServiceCollectionExtensions` | `Globalization/Extensions/` | C# 14 scoped `extension(IServiceCollection)` — `AddGlobalization()` registers `ILocalizer` singleton |
 | `LocalizationKeys.cs` | `Globalization` | Strongly-typed keys organized by model (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`) |
 | `ILocalizer` | `Globalization` | Abstraction interface — hides `ResourceManager` from consumer projects |
 | `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `ResourceManager` (not `IStringLocalizer`) — reads `CurrentUICulture` at call time, so culture changes after login work without re-rendering; missing keys return `[{key}]` |
@@ -1433,6 +1454,11 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 - **Dynamic `html lang` attribute**: Reads from `IRequestCultureFeature` for accessibility and SEO — server-side request culture is the source of truth
 - **Defensive try-catch for culture operations**: `CultureNotFoundException`/`ArgumentException` fall back to system culture; `FormatException` keeps culture defaults with warning log
 - **Same format applied to short/long patterns**: DSM provides one date and one time format per user; applying to both short/long variants is the pragmatic trade-off
+- **`AuthenticationNavigationGuard` enforces auth before render**: Router `OnNavigateAsync` guard eliminates UI flash; no auth caching to avoid stale state; sync `OnNavigate` throws
+- **`FluentDesignTheme` + `FluentLayout` in App.razor**: App-level theme (System mode) and full-viewport layout; `FluentMainLayout` in MainLayout.razor provides Header/Body structure with background theming
+- **`GlobalizationConstants` centralizes culture defaults**: `DefaultCulture`, `DefaultCultureInfo`, text direction, env var names and `Accept-Language` header moved from `ApplicationConstants` to `Constants/Globalization/`
+- **C# 14 scoped extensions in `Extensions/` folders**: `CultureInfoExtensions` and `GlobalizationServiceCollectionExtensions` use `extension(T)` syntax
+- **`GetTextDirection()` extension**: Centralizes RTL/LTR logic (`culture.TextInfo.IsRightToLeft`); used by SSR `App.razor` and WASM `CultureManager`
 
 ---
 

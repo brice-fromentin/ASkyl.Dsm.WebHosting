@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Text.Json;
-using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.Globalization;
 using Askyl.Dsm.WebHosting.Data.Contracts;
-using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Extensions;
 using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.JSInterop;
 
@@ -178,7 +178,7 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
     /// </summary>
     private static CultureInfo? ResolveSystemCultureFromEnv()
     {
-        var name = Environment.GetEnvironmentVariable(ApplicationConstants.SystemCultureEnvironmentVariable);
+        var name = Environment.GetEnvironmentVariable(GlobalizationConstants.SystemCultureEnvironmentVariable);
 
         if (String.IsNullOrWhiteSpace(name))
         {
@@ -200,32 +200,32 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
         }
         catch (JsonException)
         {
-            return [new CultureInfo(GlobalizationServiceCollectionExtensions.DefaultCulture)];
+            return [GlobalizationConstants.DefaultCultureInfo];
         }
         catch (CultureNotFoundException)
         {
-            return [new CultureInfo(GlobalizationServiceCollectionExtensions.DefaultCulture)];
+            return [GlobalizationConstants.DefaultCultureInfo];
         }
         catch (ArgumentException)
         {
-            return [new CultureInfo(GlobalizationServiceCollectionExtensions.DefaultCulture)];
+            return [GlobalizationConstants.DefaultCultureInfo];
         }
     }
 
     private static CultureInfo[] ParseSupportedCultures()
     {
-        var json = Environment.GetEnvironmentVariable(ApplicationConstants.SupportedCulturesEnvironmentVariable);
+        var json = Environment.GetEnvironmentVariable(GlobalizationConstants.SupportedCulturesEnvironmentVariable);
 
         if (String.IsNullOrWhiteSpace(json))
         {
-            return [new CultureInfo(GlobalizationServiceCollectionExtensions.DefaultCulture)];
+            return [GlobalizationConstants.DefaultCultureInfo];
         }
 
         var names = JsonSerializer.Deserialize<string[]>(json);
 
         if (names is null or { Length: 0 })
         {
-            return [new CultureInfo(GlobalizationServiceCollectionExtensions.DefaultCulture)];
+            return [GlobalizationConstants.DefaultCultureInfo];
         }
 
         return [.. names.Select(n => new CultureInfo(n))];
@@ -239,11 +239,11 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
         }
         catch (CultureNotFoundException)
         {
-            return new(GlobalizationServiceCollectionExtensions.DefaultCulture);
+            return GlobalizationConstants.DefaultCultureInfo;
         }
         catch (ArgumentException)
         {
-            return new(GlobalizationServiceCollectionExtensions.DefaultCulture);
+            return GlobalizationConstants.DefaultCultureInfo;
         }
     }
 
@@ -280,7 +280,7 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
         try
         {
             await jsRuntime.InvokeVoidAsync("document.documentElement.setAttribute", "lang", culture.Name);
-            await jsRuntime.InvokeVoidAsync("document.documentElement.setAttribute", "dir", culture.TextInfo.IsRightToLeft ? "rtl" : "ltr");
+            await jsRuntime.InvokeVoidAsync("document.documentElement.setAttribute", "dir", culture.GetTextDirection());
         }
         catch (JSException)
         {

@@ -1,5 +1,6 @@
 using System.Globalization;
 using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Askyl.Dsm.WebHosting.Tests.Globalization;

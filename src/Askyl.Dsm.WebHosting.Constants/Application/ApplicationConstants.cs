@@ -98,29 +98,5 @@ public static class ApplicationConstants
     /// </summary>
     public const int DoubleClickTimeoutMilliseconds = 400;
 
-    /// <summary>
-    /// Environment variable name for supported cultures passed from server to WASM client via <c>Blazor.start()</c>.
-    /// </summary>
-    public const string SupportedCulturesEnvironmentVariable = "ADWH_SUPPORTED_CULTURES";
-
-    /// <summary>
-    /// Environment variable name for DSM system culture passed from server to WASM client via <c>Blazor.start()</c>.
-    /// </summary>
-    public const string SystemCultureEnvironmentVariable = "ADWH_SYSTEM_CULTURE";
-
-    /// <summary>
-    /// Default fallback language tag when no culture can be determined.
-    /// </summary>
-    public const string DefaultLanguageTag = "en";
-
-    #endregion
-
-    #region HTTP Headers
-
-    /// <summary>
-    /// HTTP header name for client language preference.
-    /// </summary>
-    public const string AcceptLanguageHeader = "Accept-Language";
-
     #endregion
 }

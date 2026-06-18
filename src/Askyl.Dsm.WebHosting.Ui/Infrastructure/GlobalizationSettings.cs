@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
+using Askyl.Dsm.WebHosting.Constants.Globalization;
 using Askyl.Dsm.WebHosting.Data.Contracts;
-using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
 
@@ -50,7 +50,7 @@ public class GlobalizationSettings : IGlobalizationSettings
                                     .Where(name => !name.StartsWith('.')
                                                    && validCultures.Contains(name)
                                                    && File.Exists(Path.Combine(assemblyDirectory, name, satelliteAssemblyName)))
-                                    .Concat([GlobalizationServiceCollectionExtensions.DefaultCulture])
+                                    .Concat([GlobalizationConstants.DefaultCulture])
                                     .Distinct(StringComparer.OrdinalIgnoreCase)
                                     .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
 

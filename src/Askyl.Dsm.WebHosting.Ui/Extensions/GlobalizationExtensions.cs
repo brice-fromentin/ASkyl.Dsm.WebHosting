@@ -1,5 +1,5 @@
+using Askyl.Dsm.WebHosting.Constants.Globalization;
 using Askyl.Dsm.WebHosting.Data.Contracts;
-using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Converters;
 using Askyl.Dsm.WebHosting.Tools.Network;
@@ -43,7 +43,7 @@ public static class GlobalizationExtensions
 
         var options = new RequestLocalizationOptions
         {
-            DefaultRequestCulture = new(GlobalizationServiceCollectionExtensions.DefaultCulture),
+            DefaultRequestCulture = new(GlobalizationConstants.DefaultCultureInfo),
             SupportedCultures = settings.SupportedCultures,
             SupportedUICultures = settings.SupportedCultures
         };

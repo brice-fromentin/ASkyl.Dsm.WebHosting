@@ -1,7 +1,8 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
-using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Extensions;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
+using Askyl.Dsm.WebHosting.Ui.Client.Contracts;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using FluentValidation;
@@ -45,6 +46,9 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 // Register authentication service as Singleton for app lifetime
 // Authentication state is managed server-side via session cookies, not client storage
 builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
+
+// Register navigation guard to intercept routing before components render
+builder.Services.AddScoped<INavigationGuard, AuthenticationNavigationGuard>();
 
 // Register services that call REST API endpoints
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
