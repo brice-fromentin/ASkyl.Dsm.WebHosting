@@ -401,9 +401,9 @@ Constants scope reduced from ~400 lines/15 files to ~35 lines/2 files.
 | 16 | shrink Logging project | ✅ PARTIAL (dropped Starting/Duration events: 30 methods, 18 OperationTimer callbacks; dropped client UI logging: 35 methods across Home/Dialogs; kept LicenseService + CultureManager client logs) |
 | 17 | native AspNetCoreReleaseType | SKIPPED (justified: Data project avoids external library dependency; enum mirrors library values for clean boundary) |
 | 18 | delete EmptyResponse | ✅ DONE |
-| 19 | shrink AspNetChannel | ⬜ PENDING |
-| 20 | shrink WebSiteInstance inheritance | ⬜ PENDING |
-| 21 | shrink WebSiteRuntimeState factories | ⬜ PENDING |
+| 19 | shrink AspNetChannel | ✅ DONE |
+| 20 | shrink WebSiteInstance inheritance | ✅ DONE |
+| 21 | shrink WebSiteRuntimeState factories | ✅ DONE |
 | 22 | shrink DsmParameterNameAttribute | ⬜ PENDING |
 | 23 | shrink LocalizedText + ResourceManagerCache | ⬜ PENDING |
 

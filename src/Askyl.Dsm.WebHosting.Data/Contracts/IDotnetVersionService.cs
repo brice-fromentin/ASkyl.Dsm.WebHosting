@@ -37,7 +37,7 @@ public interface IDotnetVersionService
     /// Gets the list of available ASP.NET channels.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A ChannelsResult containing a list of AspNetChannel objects representing available channels.</returns>
+    /// <returns>A ChannelsResult containing a list of AspNetCoreReleaseInfo objects representing available channels.</returns>
     Task<ChannelsResult> GetChannelsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

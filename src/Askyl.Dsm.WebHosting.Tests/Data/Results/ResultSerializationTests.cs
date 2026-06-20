@@ -144,8 +144,8 @@ public class ResultSerializationTests
     public void ChannelsResult_RoundTrip_DeserializesCorrectly()
     {
         // Arrange
-        var channel = new AspNetChannel(CreateReleaseInfo("8.0.1", "8.0", isLts: true));
-        var channels = new List<AspNetChannel> { channel };
+        var channel = CreateReleaseInfo("8.0.1", "8.0", isLts: true);
+        var channels = new List<AspNetCoreReleaseInfo> { channel };
         var result = ChannelsResult.CreateSuccess(channels, "Fetched");
         var json = JsonSerializer.Serialize(result, JsonOptions);
 

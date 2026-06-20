@@ -90,8 +90,8 @@
 | **Critical** | 3 | ✅ All resolved (2026-06-15) |
 | **High** | 9 | ✅ 7 resolved, 1 by design (H2), 1 kept global (H7) |
 | **Medium** | 20 | ✅ 19 resolved, 1 by design (M6) |
-| **Low** | 17 | Nice to have |
-| **Nit** | 11 | Cosmetic |
+| **Low** | 17 | 9 resolved, 8 remaining cosmetic |
+| **Nit** | 11 | 1 resolved (N7), 10 remaining cosmetic |
 
 ---
 
@@ -480,11 +480,9 @@
 - **Issue:** Doc shows `localizer[key].Value` but consumers use `L.*` constants.
 - **Suggestion:** Update doc comment.
 
-### N7. `Html lang` attribute never updates after login
+### N7. `Html lang` attribute never updates after login — ✅ RESOLVED
 
-- **File:** `App.razor`
-- **Issue:** Server-side `lang` attribute set at initial render. Never updated when culture changes on login.
-- **Suggestion:** Use `IJSRuntime` to update `document.documentElement.lang`.
+- **Resolution:** `CultureManager` updates `lang` and `dir` via `IJSRuntime` on every culture change (`CultureManager.cs:282-283`). SSR `App.razor` sets initial value; WASM keeps it in sync post-login.
 
 ### N8. `markdownlint.yaml` minor additions
 
@@ -529,7 +527,8 @@
 **All Critical findings resolved (2026-06-15).** All 9 High findings addressed:
 7 resolved, 1 by design (H2), 1 kept global (H7).
 19 of 20 Medium findings resolved, 1 by design (M6).
-Remaining Low (17) and Nit (11) findings are cosmetic and can be tracked as follow-up issues.
+Remaining Low (17) and Nit (10) findings are cosmetic and can be tracked as follow-up issues.
+N7 (html lang update post-login) resolved via `CultureManager.UpdateHtmlLangAndDir()` in WASM.
 
 **Branch is ready for PR.**
 
@@ -556,6 +555,7 @@ A full codebase audit confirmed all "resolved" items are actually present in cod
 | M18 | ✅ Neutral culture tests (`"fr"`, `"de"`) in `AcceptLanguageHandlerTests.cs` |
 | M19 | ✅ Timezone token documentation in both converter files |
 | M20 | ✅ 2 invalid format tests in `CultureManagerTests.cs` |
+| N7 | ✅ `CultureManager` updates `html lang` and `dir` via `IJSRuntime` on every culture change (`CultureManager.cs:282-283`) |
 
 ---
 

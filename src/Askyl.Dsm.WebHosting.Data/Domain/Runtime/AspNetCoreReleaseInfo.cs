@@ -76,4 +76,10 @@ public sealed class AspNetCoreReleaseInfo
     /// </summary>
     public static AspNetCoreReleaseInfo CreateChannel(string productVersion, bool isLts, AspNetCoreReleaseType releaseType)
         => new(String.Empty, productVersion, null, false, isLts, releaseType);
+
+    /// <summary>
+    /// Returns a display-friendly string for UI rendering (e.g., "8.0 (LTS)" or "9.0").
+    /// </summary>
+    public override string ToString()
+        => IsLts ? $"{ProductVersion} (LTS)" : ProductVersion;
 }

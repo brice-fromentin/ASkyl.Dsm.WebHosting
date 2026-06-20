@@ -50,9 +50,9 @@ public class RuntimeManagementController(IDotnetVersionService dotnetVersionServ
     /// <summary>
     /// Gets the list of available ASP.NET channels.
     /// </summary>
-    /// <returns>A list of AspNetChannel objects representing available channels.</returns>
+    /// <returns>A list of AspNetCoreReleaseInfo objects representing available channels.</returns>
     [HttpGet(RuntimeManagementRoutes.ChannelsRoute)]
-    public async Task<ActionResult<List<AspNetChannel>>> GetChannelsAsync()
+    public async Task<ActionResult<List<AspNetCoreReleaseInfo>>> GetChannelsAsync()
         => Ok(await dotnetVersionService.GetChannelsAsync());
 
     /// <summary>

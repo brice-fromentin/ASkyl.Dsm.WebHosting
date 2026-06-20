@@ -37,9 +37,9 @@ public class WebSiteHostingService(
     /// <summary>
     /// Pairs a website instance with its lifecycle manager, eliminating parallel dictionary synchronization.
     /// </summary>
-    private sealed class SiteEntry(WebSiteInstanceDetails instance, SiteLifecycleManager lifecycleManager)
+    private sealed class SiteEntry(WebSiteInstance instance, SiteLifecycleManager lifecycleManager)
     {
-        public WebSiteInstanceDetails Instance { get; } = instance;
+        public WebSiteInstance Instance { get; } = instance;
         public SiteLifecycleManager LifecycleManager { get; set; } = lifecycleManager;
     }
 
@@ -265,7 +265,7 @@ public class WebSiteHostingService(
 
         foreach (var site in allSites)
         {
-            var instance = new WebSiteInstanceDetails(site);
+            var instance = new WebSiteInstance(site);
 
             // Detect framework from assembly
             if (!String.IsNullOrEmpty(site.ApplicationRealPath))
@@ -303,7 +303,7 @@ public class WebSiteHostingService(
 
     public async Task<WebSiteInstance> AddInstanceAsync(WebSiteConfiguration configuration)
     {
-        var instance = new WebSiteInstanceDetails(configuration);
+        var instance = new WebSiteInstance(configuration);
         var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), localizer, processRunner, assemblyRuntimeDetector, configuration);
         _sites[instance.Id] = new SiteEntry(instance, lifecycleManager);
 
@@ -412,7 +412,7 @@ public class WebSiteHostingService(
     /// Updates the runtime state of a WebSiteInstance from WebSiteRuntimeState.
     /// Helper method for synchronizing instance state with lifecycle manager state.
     /// </summary>
-    private static void UpdateInstanceRuntimeState(WebSiteInstanceDetails instance, WebSiteRuntimeState runtimeState)
+    private static void UpdateInstanceRuntimeState(WebSiteInstance instance, WebSiteRuntimeState runtimeState)
     {
         instance.IsRunning = runtimeState.IsRunning;
         instance.Process = runtimeState.ProcessDetails;

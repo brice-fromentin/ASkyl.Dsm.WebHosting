@@ -25,7 +25,7 @@
     <FluentToolbar Class="full-width">
         <FluentLabel>@localizer[L.AspNetReleases.ChannelLabel]</FluentLabel>
 
-        <FluentSelect TOption="AspNetChannel" Items="@Channels" SelectedOption="@SelectedChannel" SelectedOptionChanged="OnChannelChanged" Width="140px" Disabled="@IsWorking" />
+        <FluentSelect TOption="AspNetCoreReleaseInfo" Items="@Channels" SelectedOption="@SelectedChannel" SelectedOptionChanged="OnChannelChanged" Width="140px" Disabled="@IsWorking" />
 
         <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="@localizer[L.Common.Refresh]" Disabled="@IsWorking">
             <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
@@ -78,11 +78,11 @@
     [Parameter]
     public string? Content { get; set; }
 
-    private List<AspNetChannel> Channels { get; set; } = [];
+    private List<AspNetCoreReleaseInfo> Channels { get; set; } = [];
 
     private IQueryable<AspNetRelease> Releases { get; set; } = AutoDataGrid<AspNetRelease>.Empty();
 
-    private AspNetChannel? SelectedChannel { get; set; }
+    private AspNetCoreReleaseInfo? SelectedChannel { get; set; }
 
     private AspNetRelease? SelectedItem { get; set; }
 
@@ -127,7 +127,7 @@
         StateHasChanged();
     }
 
-    private async Task OnChannelChanged(AspNetChannel? channel)
+    private async Task OnChannelChanged(AspNetCoreReleaseInfo? channel)
     {
         SelectedChannel = channel;
         await LoadReleasesAsync(channel);
@@ -164,7 +164,7 @@
         }
     }
 
-    private async Task LoadReleasesAsync(AspNetChannel? channel)
+    private async Task LoadReleasesAsync(AspNetCoreReleaseInfo? channel)
     {
         SelectedItem = null;
 

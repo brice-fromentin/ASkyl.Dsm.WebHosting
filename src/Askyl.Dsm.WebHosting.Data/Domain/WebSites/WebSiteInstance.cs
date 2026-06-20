@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
 /// <summary>
@@ -22,6 +24,12 @@ public class WebSiteInstance
     /// This is the serialized state sent to clients (independent of Process object).
     /// </summary>
     public bool IsRunning { get; set; }
+
+    /// <summary>
+    /// Gets or sets the runtime process information (server-side only, not serialized to client).
+    /// </summary>
+    [JsonIgnore]
+    public ProcessInfo? Process { get; set; }
 
     public WebSiteInstance()
     {

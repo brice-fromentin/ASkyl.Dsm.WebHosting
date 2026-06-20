@@ -98,13 +98,13 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (_isDisposing)
         {
-            return WebSiteRuntimeState.Stopped;
+            return new WebSiteRuntimeState(false, null);
         }
 
         var tcs = new TaskCompletionSource<WebSiteRuntimeState>();
         if (!_channel.Writer.TryWrite(new GetStateCommand(tcs)))
         {
-            return WebSiteRuntimeState.Stopped;
+            return new WebSiteRuntimeState(false, null);
         }
 
         return await tcs.Task.WaitAsync(cancellationToken);
@@ -242,12 +242,12 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (_process?.HasExited != false)
         {
-            return WebSiteRuntimeState.Stopped;
+            return new WebSiteRuntimeState(false, null);
         }
 
         var processInfo = new ProcessInfo(_process.Id);
 
-        return WebSiteRuntimeState.Running(processInfo);
+        return new WebSiteRuntimeState(true, processInfo);
     }
 
     private async Task ProcessDisposeCommand()

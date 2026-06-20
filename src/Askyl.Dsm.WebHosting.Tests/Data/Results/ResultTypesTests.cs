@@ -158,8 +158,8 @@ public class ResultTypesTests
         var directoryContents = new List<FsEntry> { new("/path/subdir", "subdir", true, "/real/subdir", null, DateTime.UtcNow) };
         yield return new object[] { "DirectoryContentsResult", directoryContents, (Func<object, string, object>)((v, _) => DirectoryContentsResult.CreateSuccess((List<FsEntry>)v)) };
 
-        var channels = new List<AspNetChannel> { new(CreateReleaseInfo("8.0.1", "8.0", isLts: true)) };
-        yield return new object[] { "ChannelsResult", channels, (Func<object, string, object>)((v, m) => ChannelsResult.CreateSuccess((List<AspNetChannel>)v, m)) };
+        var channels = new List<AspNetCoreReleaseInfo> { CreateReleaseInfo("8.0.1", "8.0", isLts: true) };
+        yield return new object[] { "ChannelsResult", channels, (Func<object, string, object>)((v, m) => ChannelsResult.CreateSuccess((List<AspNetCoreReleaseInfo>)v, m)) };
 
         var releases = new List<AspNetRelease> { AspNetRelease.Create(CreateReleaseInfo("8.0.1", "8.0")) };
         yield return new object[] { "ReleasesResult", releases, (Func<object, string, object>)((v, _) => ReleasesResult.CreateSuccess((List<AspNetRelease>)v)) };
