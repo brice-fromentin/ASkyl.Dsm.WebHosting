@@ -1,8 +1,8 @@
-using Askyl.Dsm.WebHosting.Tools.Converters;
+using Askyl.Dsm.WebHosting.Constants.DSM.System;
 
 namespace Askyl.Dsm.WebHosting.Tests.Tools.Converters;
 
-public class DsmLanguageToCultureConverterTests
+public class DsmLanguageCodesTests
 {
     #region Valid DSM Codes
 
@@ -31,7 +31,7 @@ public class DsmLanguageToCultureConverterTests
     public void Convert_ValidCodes_ReturnsCulture(string code, string expected)
     {
         // Act
-        var result = DsmLanguageToCultureConverter.Convert(code);
+        var result = DsmLanguageCodes.Convert(code);
 
         // Assert
         Assert.Equal(expected, result);
@@ -53,7 +53,7 @@ public class DsmLanguageToCultureConverterTests
     public void Convert_SupplangVariants_ReturnsCulture(string code, string expected)
     {
         // Act
-        var result = DsmLanguageToCultureConverter.Convert(code);
+        var result = DsmLanguageCodes.Convert(code);
 
         // Assert
         Assert.Equal(expected, result);
@@ -73,7 +73,7 @@ public class DsmLanguageToCultureConverterTests
     public void Convert_ChineseVariants_ReturnsCulture(string code, string expected)
     {
         // Act
-        var result = DsmLanguageToCultureConverter.Convert(code);
+        var result = DsmLanguageCodes.Convert(code);
 
         // Assert
         Assert.Equal(expected, result);
@@ -90,7 +90,7 @@ public class DsmLanguageToCultureConverterTests
     public void Convert_BrowserDefault_ReturnsNull(string code)
     {
         // Act
-        var result = DsmLanguageToCultureConverter.Convert(code);
+        var result = DsmLanguageCodes.Convert(code);
 
         // Assert
         Assert.Null(result);
@@ -108,7 +108,7 @@ public class DsmLanguageToCultureConverterTests
     public void Convert_NullOrWhitespace_ReturnsNull(string? code)
     {
         // Act
-        var result = DsmLanguageToCultureConverter.Convert(code);
+        var result = DsmLanguageCodes.Convert(code);
 
         // Assert
         Assert.Null(result);
@@ -125,7 +125,7 @@ public class DsmLanguageToCultureConverterTests
     public void Convert_UnknownCode_ReturnsNull(string code)
     {
         // Act
-        var result = DsmLanguageToCultureConverter.Convert(code);
+        var result = DsmLanguageCodes.Convert(code);
 
         // Assert
         Assert.Null(result);
@@ -142,7 +142,7 @@ public class DsmLanguageToCultureConverterTests
     public void Convert_CaseInsensitive_Matches(string code, string expected)
     {
         // Act
-        var result = DsmLanguageToCultureConverter.Convert(code);
+        var result = DsmLanguageCodes.Convert(code);
 
         // Assert
         Assert.Equal(expected, result);
@@ -156,7 +156,7 @@ public class DsmLanguageToCultureConverterTests
     public void DefaultBrowser_HasExpectedValue()
     {
         // Assert
-        Assert.Equal("def", DsmLanguageToCultureConverter.DefaultBrowser);
+        Assert.Equal("def", DsmLanguageCodes.DefaultBrowser);
     }
 
     #endregion

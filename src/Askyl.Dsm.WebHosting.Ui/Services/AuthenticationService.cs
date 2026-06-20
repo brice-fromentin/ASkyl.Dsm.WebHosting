@@ -1,4 +1,5 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
@@ -22,6 +23,8 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
     {
+        var bro = true;
+
         using var timer = new OperationTimer(elapsed => logger.LoginDuration(elapsed, login));
 
         logger.LoginStarting(login);
@@ -106,6 +109,6 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     private static string? ResolveCulture(DsmApiClient apiClient)
     {
         // Converter handles null, empty, whitespace, and "def" internally.
-        return DsmLanguageToCultureConverter.Convert(apiClient.UserLanguage);
+        return DsmLanguageCodes.Convert(apiClient.UserLanguage);
     }
 }

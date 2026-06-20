@@ -23,8 +23,7 @@ public class FileSystemService(IHttpClientFactory httpClientFactory, ILocalizer 
     /// <inheritdoc/>
     public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly)
     {
-        var parameters = new[] { ("path", path), ("directoryOnly", directoryOnly.ToLower()) };
-        var url = FileManagementRoutes.DirectoryContentsFullRoute.WithQuery(parameters);
+        var url = $"{FileManagementRoutes.DirectoryContentsFullRoute}?path={Uri.EscapeDataString(path)}&directoryOnly={(directoryOnly ? "true" : "false")}";
         return await _httpClient.GetJsonOrDefaultAsync(url, () => DirectoryContentsResult.CreateFailure(localizer[L.Error.FailedToLoadDirectoryContentsWithPath, path]));
     }
 

@@ -12,5 +12,5 @@ public static class ApiResponseExtensions
     /// Can optionally also check if the response contains data.
     /// </summary>
     public static bool IsValid<E>(this ApiResponseBase<E>? response, bool hasData = false) where E : class, new()
-        => response is not null && response.Success && (!hasData || response.Data is not null);
+        => response?.Success == true && (!hasData || response.Data is not null);
 }

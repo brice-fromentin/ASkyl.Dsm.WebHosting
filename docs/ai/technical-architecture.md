@@ -103,7 +103,6 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 
 ```text
 Askyl.Dsm.WebHosting.slnx (Version 0.5.9)
-├── Askyl.Dsm.WebHosting.Benchmarks         # Performance benchmarks (BenchmarkDotNet)
 ├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
 ├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
 ├── Askyl.Dsm.WebHosting.Globalization      # Localization resources, validators, culture management, C# 14 scoped extensions
@@ -706,18 +705,7 @@ builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
 });
 ```
 
-### 6. Askyl.Dsm.WebHosting.Benchmarks
-
-**Purpose:** Performance benchmarking with BenchmarkDotNet
-
-**Key Features:**
-
-- **MemoryDiagnoser** for GC analysis and memory allocation tracking
-- **Comparison tests** for string concatenation strategies
-- **Real-world scenarios** (URL building, parameter encoding)
-- **BenchmarkDotNet 0.15.8** for accurate performance measurements
-
-### 7. Askyl.Dsm.WebHosting.Logging
+### 6. Askyl.Dsm.WebHosting.Logging
 
 **Purpose:** Logging extensions with source-generated logger methods
 
