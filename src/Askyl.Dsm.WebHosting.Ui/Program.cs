@@ -60,7 +60,7 @@ builder.Services.AddSingleton<DsmApiClient>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 // Register platform info service (singleton - platform detection happens once at startup)
-builder.Services.AddSingleton<IPlatformInfoService, PlatformInfoService>();
+builder.Services.AddSingleton<PlatformInfoService>();
 
 // Register file manager service with configured root path for runtimes
 builder.Services.AddScoped<IFileManagerService>(sp => new FileManagerService(sp.GetRequiredService<ILogger<ILogFileManagerService>>(), ApplicationConstants.RuntimesRootPath));
@@ -92,7 +92,7 @@ builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 
 // Register website hosting services
 builder.Services.AddSingleton<IReverseProxyManagerService, ReverseProxyManagerService>();
-builder.Services.AddSingleton<IWebSitesConfigurationService, WebSitesConfigurationService>();
+builder.Services.AddSingleton<WebSitesConfigurationService>();
 builder.Services.AddSingleton<IWebSiteHostingService, WebSiteHostingService>();
 builder.Services.AddSingleton(sp => (IHostedService)sp.GetRequiredService<IWebSiteHostingService>());
 

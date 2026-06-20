@@ -112,35 +112,35 @@ Each finding is scored on three axes (1–5 scale), then ranked:
 
 ---
 
-### 8. [P1] shrink Constants project (~400 lines, 15 files)
+### 8. [P1] shrink Constants project (~35 lines, 2 files) ✅ DONE
 
 **Score:** Impact 4 / Risk 2 / Effort 2 → **1.0**
 
 **What:** 31 files, 1,530 lines. Many files contain 2-4 trivial constants that could be inlined or consolidated.
 
-**Cut (15 files to inline or merge):**
+**Consumer analysis revised the scope dramatically.** Of 14 candidate files, only 2 had ≤1 consumer. The remaining 12 are justified by their consumer count:
 
-| File | Lines | Reason |
+| File | Consumers | Decision |
 |---|---|---|
-| `ProtocolTypes.cs` | 19 | 2-value enum (HTTP/HTTPS), inline as `bool isHttps` or in consumer |
-| `ApiVersions.cs` | 17 | 2 constants (Min/Max), fold into `ApiMethods.cs` |
-| `SerializationFormats.cs` | 17 | 2-value enum (Form/Json), inline into `ApiParametersBase` |
-| `DialogConstants.cs` | 22 | 3 CSS width strings, inline at usage |
-| `LicenseConstants.cs` | 18 | 4 file names, inline into `LicenseService` |
-| `DotNetFrameworkTypes.cs` | 27 | 4 string identifiers, inline into `VersionsDetectorService` |
-| `FileSizeConstants.cs` | 59 | Byte math + suffixes, inline or single utility method |
-| `JsonOptionsCache.cs` | 35 | Use `System.Text.Json.JsonSerializer.DefaultOptions` |
-| `InfrastructureConstants.cs` | 17 | 2 directory names, fold into `ApplicationConstants.cs` |
-| `ValidationConstants.cs` | 18 | 2 int limits, fold into `ApplicationConstants.cs` |
-| `LogConstants.cs` | 18 | 3 path strings, fold into `ApplicationConstants.cs` |
-| `NetworkConstants.cs` | 28 | 4 strings, fold into `DsmConstants.cs` |
-| `RuntimeConstants.cs` | 98 | Arch/OS identifiers, fold into `PlatformInfoService` |
-| `GlobalizationConstants.cs` | 60 | Default culture + text direction, fold into `CultureManager` |
-| `ApiNames.cs` | 78 | Large but defensible; keep as-is |
+| `ApiVersions.cs` | 1 | ✅ Merged into `ApiConstants` |
+| `ApiMethods.cs` | 5 | ✅ Merged into `ApiConstants` |
+| `LicenseConstants.cs` | 1 | ✅ Inlined into `LicenseService` |
+| `ProtocolTypes.cs` | 3 | KEEP |
+| `SerializationFormats.cs` | 12 | KEEP |
+| `DialogConstants.cs` | 5 | KEEP |
+| `DotNetFrameworkTypes.cs` | 13 | KEEP |
+| `FileSizeConstants.cs` | 7 | KEEP |
+| `JsonOptionsCache.cs` | 11 | KEEP |
+| `InfrastructureConstants.cs` | 5 | KEEP |
+| `ValidationConstants.cs` | 4 | KEEP |
+| `LogConstants.cs` | 7 | KEEP |
+| `NetworkConstants.cs` | 6 | KEEP |
+| `RuntimeConstants.cs` | 18 | KEEP |
+| `GlobalizationConstants.cs` | 14 | KEEP |
 
 **Replacement:** Inline into consumer or merge into parent namespace file.
 
-**Files:** `src/Askyl.Dsm.WebHosting.Constants/` (31 files → ~16 files)
+**Files:** `src/Askyl.Dsm.WebHosting.Constants/` (31 files → 29 files)
 
 ---
 
@@ -267,18 +267,40 @@ Each finding is scored on three axes (1–5 scale), then ranked:
 | Priority | Items | Lines | Files | Rationale |
 |---|---|---|---|---|
 | **P0 — Do now** | 7 | ~502 | 11 | Low risk, mechanical replacements, quick wins |
-| **P1 — Do next** | 5 | ~761 | ~23 | Moderate risk, dedicated PR per item |
+| **P1 — Do next** | 5 | ~726 | ~23 | Moderate risk, dedicated PR per item |
 | **P2 — Do later** | 4 | ~837 | ~11 | High risk, defer until related work is underway |
-| **Total** | **16** | **~2,100** | **~45** | |
+| **Total** | **16** | **~2,065** | **~45** | |
+
+**Revised after consumer analysis:** Several P0 items skipped
+(ApiResponseExtensions: 8, JsonOptionsCache: 11, OperationTimer: 17,
+HttpClientExtensions: 20). Constants scope reduced from ~400 lines/15 files
+to ~35 lines/2 files.
 
 ## Summary by Tag
 
 | Tag | Items | Lines | Files |
 |---|---|---|---|
-| shrink | 7 | ~1,755 | ~30 |
+| shrink | 7 | ~1,720 | ~30 |
 | yagni | 3 | ~220 | ~10 |
 | stdlib | 4 | ~272 | 4 |
 | delete | 3 | ~311 | 5 |
+
+## Status
+
+| # | Item | Status |
+|---|---|---|
+| 1 | delete Benchmarks project | ✅ DONE |
+| 2 | delete ApiResponseExtensions | SKIPPED (8 consumers) |
+| 3 | delete JsonOptionsCache | SKIPPED (11 consumers) |
+| 4 | stdlib OperationTimer | SKIPPED (17 consumers) |
+| 5 | stdlib HttpClientExtensions | SKIPPED (20 consumers) |
+| 6 | stdlib UriExtensions.WithQuery | ✅ DONE |
+| 7 | shrink DsmLanguageToCultureConverter | ✅ DONE |
+| 8 | shrink Constants project | ✅ PARTIAL (2/14 files) |
+| 9 | shrink PHP format converters | ✅ DONE |
+| 10 | shrink WorkingState pattern | SKIPPED (10+ consumers) |
+| 11 | stdlib SemaphoreLock | SKIPPED (7 consumers) |
+| 12 | yagni 7 single-impl interfaces | ✅ DONE (5 kept, 2 dropped) |
 
 ## Dependencies Removable
 
@@ -289,12 +311,17 @@ Each finding is scored on three axes (1–5 scale), then ranked:
 
 ## Execution Order (By Priority)
 
-1. **P0 — Week 1 (7 items, ~500 lines):** Delete Benchmarks, ApiResponseExtensions,
-   JsonOptionsCache, OperationTimer, HttpClientExtensions, UriExtensions,
-   shrink DsmLanguageToCultureConverter. All isolated, low-risk, mechanical.
-2. **P1 — Week 2-3 (5 items, ~760 lines):** Constants consolidation, PHP converter
-   collapse, WorkingState removal, SemaphoreLock replacement,
-   7 single-impl interface removal. Each gets its own PR.
+1. **P0 — Done (3/7 items, ~334 lines):** Benchmarks deleted, UriExtensions inlined,
+   DsmLanguageToCultureConverter folded into DsmLanguageCodes. 4 items skipped
+   after consumer analysis showed they are justified.
+2. **P1 — Done (5/5 items, ~260 lines):** Constants: ApiVersions + ApiMethods
+   merged into ApiConstants (renamed from ApiNames), LicenseConstants inlined
+   into LicenseService (12 of 14 kept). PHP converters merged (2→1 file),
+   TokenMap extracted to Constants project as ImmutableDictionary.
+   DsmLanguageToCultureConverter restored to Tools (logic separated from
+   DsmLanguageCodes constants). WorkingState/SemaphoreLock skipped
+   (6-7 consumers each). 7 single-impl interfaces: 5 kept (3 tested, 2 had
+   tests), 2 dropped (IPlatformInfoService, IWebSitesConfigurationService).
 3. **P2 — Week 4+ (4 items, ~840 lines):** Result hierarchy collapse,
    ApiParametersBase shrink, ProcessRunner/ProcessHandle yagni,
    Logging project shrink. High consumer count — pair with feature work

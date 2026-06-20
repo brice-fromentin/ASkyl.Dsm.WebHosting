@@ -19,7 +19,7 @@ public class WebSiteHostingService(
     ILogger<ILogWebSiteHostingService> logger,
     ILoggerFactory loggerFactory,
     IProcessRunner processRunner,
-    IWebSitesConfigurationService configService,
+    WebSitesConfigurationService configService,
     IFileSystemService fileSystemService,
     IReverseProxyManagerService reverseProxyManager,
     IAssemblyRuntimeDetector assemblyRuntimeDetector,

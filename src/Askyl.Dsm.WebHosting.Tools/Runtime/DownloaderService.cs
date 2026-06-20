@@ -4,6 +4,7 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Microsoft.Deployment.DotNet.Releases;
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +13,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Runtime;
 /// <summary>
 /// Service for downloading and managing .NET runtime releases.
 /// </summary>
-public sealed class DownloaderService(ILogger<ILogDownloaderService> logger, IPlatformInfoService platformInfo, IFileManagerService fileManager) : IDownloaderService
+public sealed class DownloaderService(ILogger<ILogDownloaderService> logger, PlatformInfoService platformInfo, IFileManagerService fileManager) : IDownloaderService
 {
     /// <summary>
     /// Downloads a specific version of ASP.NET Core runtime.

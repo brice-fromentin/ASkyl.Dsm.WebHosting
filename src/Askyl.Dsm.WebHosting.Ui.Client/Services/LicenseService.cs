@@ -13,6 +13,14 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// <param name="logger">Logger instance for error reporting.</param>
 public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<ILogLicenseService> logger) : ILicenseService
 {
+    private static readonly string[] LicenseFileNames =
+    [
+        "Application.txt",
+        "FluentUI Blazor.txt",
+        "NET.txt",
+        "Serilog.txt"
+    ];
+
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     private Task<IReadOnlyList<LicenseInfo>>? _loadLicensesTask;
@@ -32,7 +40,7 @@ public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<ILogLi
 
     private async Task<IReadOnlyList<LicenseInfo>> LoadLicensesInternalAsync()
     {
-        var tasks = LicenseConstants.LicenseFileNames.Select(async fileName => await LoadLicenseAsync(fileName));
+        var tasks = LicenseFileNames.Select(async fileName => await LoadLicenseAsync(fileName));
         var results = await Task.WhenAll(tasks);
 
         return results.Where(result => result is not null).Cast<LicenseInfo>().ToList().AsReadOnly();

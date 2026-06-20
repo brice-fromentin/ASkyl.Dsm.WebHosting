@@ -1,5 +1,4 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
@@ -23,8 +22,6 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
     {
-        var bro = true;
-
         using var timer = new OperationTimer(elapsed => logger.LoginDuration(elapsed, login));
 
         logger.LoginStarting(login);
@@ -40,8 +37,8 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         await apiClient.FetchUserLanguageAsync();
 
         var culture = ResolveCulture(apiClient);
-        var dateFormat = PhpDateFormatToDotNetConverter.Convert(apiClient.UserDateFormat);
-        var timeFormat = PhpTimeFormatToDotNetConverter.Convert(apiClient.UserTimeFormat);
+        var dateFormat = PhpFormatToDotNetConverter.Convert(apiClient.UserDateFormat);
+        var timeFormat = PhpFormatToDotNetConverter.Convert(apiClient.UserTimeFormat);
 
         // Store DSM SID and username in server-side session for persistence
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmSessionKey, apiClient.Sid);
@@ -109,6 +106,6 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     private static string? ResolveCulture(DsmApiClient apiClient)
     {
         // Converter handles null, empty, whitespace, and "def" internally.
-        return DsmLanguageCodes.Convert(apiClient.UserLanguage);
+        return DsmLanguageToCultureConverter.Convert(apiClient.UserLanguage);
     }
 }

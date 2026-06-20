@@ -6,7 +6,7 @@ namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.Acl;
 
 public class CoreAclSetParameters(ApiInformationCollection informations, CoreAclSet? entry = null) : ApiParametersBase<CoreAclSet>(informations, entry)
 {
-    public override string Name => ApiNames.CoreAcl;
+    public override string Name => ApiConstants.CoreAcl;
 
     public override int Version => 1;
 

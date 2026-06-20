@@ -5,7 +5,7 @@ namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Info;
 
 public class InformationsQueryParameters(ApiInformationCollection informations) : ApiParametersBase<ApiInformationQuery>(informations)
 {
-    public override string Name => ApiNames.Info;
+    public override string Name => ApiConstants.Info;
 
     public override int Version => 1;
 

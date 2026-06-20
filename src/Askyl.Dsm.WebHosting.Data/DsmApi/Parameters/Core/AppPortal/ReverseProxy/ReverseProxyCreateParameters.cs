@@ -8,11 +8,11 @@ namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.AppPortal.ReverseProx
 public class ReverseProxyCreateParameters(ApiInformationCollection informations, Models.ReverseProxy.ReverseProxy? entry = null)
     : ApiParametersBase<Models.ReverseProxy.ReverseProxy>(informations, entry)
 {
-    public override string Name => ApiNames.AppPortalReverseProxy;
+    public override string Name => ApiConstants.AppPortalReverseProxy;
 
     public override int Version => 1;
 
-    public override string Method => ApiMethods.Create;
+    public override string Method => ApiConstants.MethodCreate;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Json;
 }

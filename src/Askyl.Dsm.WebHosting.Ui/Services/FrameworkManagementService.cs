@@ -5,12 +5,13 @@ using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
 public class FrameworkManagementService(
     IDotnetVersionService dotnetVersionService,
-    IPlatformInfoService platformInfo,
+    PlatformInfoService platformInfo,
     IDownloaderService downloader,
     IFileManagerService fileManager,
     IArchiveExtractorService archiveExtractor,

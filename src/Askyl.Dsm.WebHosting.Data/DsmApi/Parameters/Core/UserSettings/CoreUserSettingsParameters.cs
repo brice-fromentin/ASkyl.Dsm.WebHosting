@@ -11,11 +11,11 @@ namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.UserSettings;
 public class CoreUserSettingsParameters(ApiInformationCollection informations)
     : ApiParametersBase<CoreUserSettingsEntry>(informations)
 {
-    public override string Name => ApiNames.CoreUserSettings;
+    public override string Name => ApiConstants.CoreUserSettings;
 
     public override int Version => 1;
 
-    public override string Method => ApiMethods.Get;
+    public override string Method => ApiConstants.MethodGet;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }

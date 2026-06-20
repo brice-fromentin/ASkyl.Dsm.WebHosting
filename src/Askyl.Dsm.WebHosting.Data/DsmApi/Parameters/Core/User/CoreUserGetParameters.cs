@@ -11,7 +11,7 @@ namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.User;
 public class CoreUserGetParameters(ApiInformationCollection informations, CoreUserGetEntry? entry = null)
     : ApiParametersBase<CoreUserGetEntry>(informations, entry)
 {
-    public override string Name => ApiNames.CoreUser;
+    public override string Name => ApiConstants.CoreUser;
 
     public override int Version => 1;
 

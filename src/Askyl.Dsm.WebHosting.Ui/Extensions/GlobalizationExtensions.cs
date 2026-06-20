@@ -1,7 +1,7 @@
-using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.Globalization;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Converters;
 using Askyl.Dsm.WebHosting.Tools.Network;
 
 namespace Askyl.Dsm.WebHosting.Ui.Extensions;
@@ -22,7 +22,7 @@ public static class GlobalizationExtensions
 
         var apiClient = serviceProvider.GetRequiredService<DsmApiClient>();
         var settings = serviceProvider.GetRequiredService<IGlobalizationSettings>();
-        var systemCulture = DsmLanguageCodes.Convert(apiClient.SystemPreferences.Language);
+        var systemCulture = DsmLanguageToCultureConverter.Convert(apiClient.SystemPreferences.Language);
         settings.SystemCulture = systemCulture;
 
         if (!String.IsNullOrWhiteSpace(systemCulture))

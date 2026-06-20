@@ -21,7 +21,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 
     public ApiParametersBase(ApiInformationCollection informations, T? entry = null)
     {
-        var infos = (Name == ApiNames.Info)
+        var infos = (Name == ApiConstants.Info)
                         ? CreateDefaultHandshakeInfo()
                         : informations.Get(Name) ?? throw new NullReferenceException("Empty API Information.");
 
@@ -35,7 +35,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
     }
 
     private static ApiInformation CreateDefaultHandshakeInfo()
-        => new() { Path = ApiNames.Handshake, MinVersion = ApiVersions.MinVersion, MaxVersion = ApiVersions.MaxVersion };
+        => new() { Path = ApiConstants.Handshake, MinVersion = ApiConstants.MinVersion, MaxVersion = ApiConstants.MaxVersion };
 
     #region Reflections Caches
 
