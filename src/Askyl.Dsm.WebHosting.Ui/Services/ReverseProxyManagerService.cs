@@ -24,8 +24,6 @@ public class ReverseProxyManagerService(
     /// </summary>
     public async Task CreateAsync(WebSiteConfiguration site)
     {
-        using var timer = new OperationTimer(elapsed => logger.CreateDuration(elapsed, site.Name));
-
         logger.CreatingReverseProxy(site.Name);
 
         // Idempotency check: See if proxy already exists using composite key
@@ -72,8 +70,6 @@ public class ReverseProxyManagerService(
     /// </summary>
     public async Task UpdateAsync(WebSiteConfiguration config)
     {
-        using var timer = new OperationTimer(elapsed => logger.UpdateDuration(elapsed, config.Name));
-
         logger.UpdatingReverseProxy(config.Name);
 
         // Find the proxy using composite key (backend port + frontend config)
@@ -119,8 +115,6 @@ public class ReverseProxyManagerService(
             logger.NoReverseProxyToDelete(site.Name);
             return; // Graceful no-op
         }
-
-        using var timer = new OperationTimer(elapsed => logger.DeleteDuration(elapsed, site.Name));
 
         logger.DeletingReverseProxy(proxy.UUID, site.Name);
 

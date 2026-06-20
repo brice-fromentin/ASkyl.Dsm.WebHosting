@@ -51,16 +51,4 @@ public static partial class DotnetVersionServiceLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1500007, Level = LogLevel.Error, Message = "Failed to retrieve releases for channel {Channel}")]
     public static partial void FailedToGetReleases(this ILogger<ILogDotnetVersionService> logger, Exception ex, string channel);
-
-    /// <summary>
-    /// Logs the start of a refresh cache operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1500008, Level = LogLevel.Debug, Message = "Refreshing framework cache")]
-    public static partial void RefreshCacheStarting(this ILogger<ILogDotnetVersionService> logger);
-
-    /// <summary>
-    /// Logs the duration of a refresh cache operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1500009, Level = LogLevel.Debug, Message = "Framework cache refresh completed in {Duration}ms")]
-    public static partial void RefreshCacheDuration(this ILogger<ILogDotnetVersionService> logger, long duration);
 }

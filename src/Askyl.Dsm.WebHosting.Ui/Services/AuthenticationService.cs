@@ -22,9 +22,6 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
     {
-        using var timer = new OperationTimer(elapsed => logger.LoginDuration(elapsed, login));
-
-        logger.LoginStarting(login);
         var model = new LoginCredentials(login, password, otpCode);
 
         if (!await apiClient.ConnectAsync(model))
@@ -50,10 +47,6 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// <inheritdoc/>
     public async Task<ApiResult> LogoutAsync()
     {
-        using var timer = new OperationTimer(elapsed => logger.LogoutDuration(elapsed));
-
-        logger.LogoutStarting();
-
         try
         {
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmSessionKey);
@@ -72,8 +65,6 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
     /// <inheritdoc/>
     public async Task<ApiResultBool> IsAuthenticatedAsync()
     {
-        logger.SessionValidationStarting();
-
         var sessionId = httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmSessionKey);
         var username = httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmUsernameKey);
 

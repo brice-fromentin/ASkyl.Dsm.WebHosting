@@ -71,26 +71,20 @@ public static partial class DsmApiLoggingExtensions
     public static partial void Disconnected(this ILogger<ILogDsmApiClient> logger);
 
     /// <summary>
-    /// Logs the start of a handshake with the DSM API.
-    /// </summary>
-    [LoggerMessage(EventId = 2000011, Level = LogLevel.Debug, Message = "Starting DSM API handshake")]
-    public static partial void HandshakeStarting(this ILogger<ILogDsmApiClient> logger);
-
-    /// <summary>
     /// Logs successful handshake with the DSM API.
     /// </summary>
-    [LoggerMessage(EventId = 2000012, Level = LogLevel.Debug, Message = "DSM API handshake completed successfully")]
+    [LoggerMessage(EventId = 2000011, Level = LogLevel.Debug, Message = "DSM API handshake completed successfully")]
     public static partial void HandshakeSuccess(this ILogger<ILogDsmApiClient> logger);
 
     /// <summary>
     /// Logs failed handshake with the DSM API.
     /// </summary>
-    [LoggerMessage(EventId = 2000013, Level = LogLevel.Warning, Message = "DSM API handshake failed")]
+    [LoggerMessage(EventId = 2000012, Level = LogLevel.Warning, Message = "DSM API handshake failed")]
     public static partial void HandshakeFailure(this ILogger<ILogDsmApiClient> logger);
 
     /// <summary>
     /// Logs that fetching user preferences failed (best-effort, non-blocking).
     /// </summary>
-    [LoggerMessage(EventId = 2000014, Level = LogLevel.Debug, Message = "Failed to fetch user preferences, falling back to system defaults: {Error}")]
+    [LoggerMessage(EventId = 2000013, Level = LogLevel.Debug, Message = "Failed to fetch user preferences, falling back to system defaults: {Error}")]
     public static partial void FetchUserPreferencesFailed(this ILogger<ILogDsmApiClient> logger, string error);
 }

@@ -184,10 +184,6 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
 
     public async Task AddSiteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default)
     {
-        using var timer = new OperationTimer(elapsed => logger.AddSiteDuration(elapsed, site.Name));
-
-        logger.AddSiteStarting(site.Name);
-
         using (await SemaphoreLock.AcquireAsync(this, () => EnsureInitializedAndLoadedAsync(cancellationToken), cancellationToken))
         {
             if (_cachedConfiguration!.Sites.Any(s => s.Name == site.Name))
@@ -204,10 +200,6 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
 
     public async Task UpdateSiteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default)
     {
-        using var timer = new OperationTimer(elapsed => logger.UpdateSiteDuration(elapsed, site.Name));
-
-        logger.UpdateSiteStarting(site.Name);
-
         using (await SemaphoreLock.AcquireAsync(this, () => EnsureInitializedAndLoadedAsync(cancellationToken), cancellationToken))
         {
             var existingSiteIndex = _cachedConfiguration!.Sites.FindIndex(s => s.Id == site.Id);
@@ -233,10 +225,6 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
         using (await SemaphoreLock.AcquireAsync(this, () => EnsureInitializedAndLoadedAsync(cancellationToken), cancellationToken))
         {
             var site = _cachedConfiguration!.Sites.FirstOrDefault(s => s.Id == siteId) ?? throw new InvalidOperationException($"Site with Id '{siteId}' not found");
-
-            using var timer = new OperationTimer(elapsed => logger.RemoveSiteDuration(elapsed, site.Name));
-
-            logger.RemoveSiteStarting(site.Name);
 
             _cachedConfiguration.Sites.Remove(site);
 

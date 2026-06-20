@@ -170,10 +170,6 @@ public sealed class SiteLifecycleManager : IDisposable
 
     private ApiResult ProcessStartCommand()
     {
-        using var timer = new OperationTimer(elapsed => _logger.StartDuration(_configuration.Name, elapsed));
-
-        _logger.StartAttempt(_configuration.Name);
-
         if (_process?.HasExited == false)
         {
             _logger.SiteAlreadyRunning(_configuration.Name);
@@ -214,10 +210,6 @@ public sealed class SiteLifecycleManager : IDisposable
 
     private async Task<ApiResult> ProcessStopCommand(CancellationToken cancellationToken)
     {
-        using var timer = new OperationTimer(elapsed => _logger.StopDuration(_configuration.Name, elapsed));
-
-        _logger.StopAttempt(_configuration.Name);
-
         if (_process?.HasExited != false)
         {
             _logger.SiteAlreadyStopped(_configuration.Name);

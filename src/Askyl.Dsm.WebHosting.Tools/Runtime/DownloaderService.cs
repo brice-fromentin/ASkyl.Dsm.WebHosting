@@ -153,8 +153,6 @@ public sealed class DownloaderService(ILogger<ILogDownloaderService> logger, Pla
             return fullDestinationPath;
         }
 
-        using var timer = new OperationTimer(elapsed => logger.DownloadDuration(elapsed, file.FileName));
-
         logger.DownloadStarted(file.FileName, fullDestinationPath);
 
         try

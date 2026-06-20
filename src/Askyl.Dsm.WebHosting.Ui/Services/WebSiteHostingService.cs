@@ -70,10 +70,6 @@ public class WebSiteHostingService(
     /// </summary>
     public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration)
     {
-        using var timer = new OperationTimer(elapsed => logger.AddWebsiteDuration(elapsed, configuration.Name));
-
-        logger.AddWebsiteStarting(configuration.Name);
-
         // Validate environment variables before any side effects
         var envVarResult = ValidateEnvironmentVariables(configuration.AdditionalEnvironmentVariables);
         if (envVarResult is not null)
@@ -131,10 +127,6 @@ public class WebSiteHostingService(
         }
 
         var existingInstance = entry.Instance;
-
-        using var timer = new OperationTimer(elapsed => logger.UpdateWebsiteDuration(elapsed, configuration.Name));
-
-        logger.UpdateWebsiteStarting(configuration.Name);
 
         // Validate environment variables before any side effects
         var envVarResult = ValidateEnvironmentVariables(configuration.AdditionalEnvironmentVariables);
@@ -196,10 +188,6 @@ public class WebSiteHostingService(
             return ApiResult.CreateFailure(localizer[L.Error.SiteNotFound, id]);
         }
 
-        using var timer = new OperationTimer(elapsed => logger.StartWebsiteDuration(elapsed, entry.Instance.Configuration.Name));
-
-        logger.StartWebsiteStarting(entry.Instance.Configuration.Name);
-
         var result = await entry.LifecycleManager.StartAsync();
 
         if (result.Success)
@@ -222,10 +210,6 @@ public class WebSiteHostingService(
             return ApiResult.CreateFailure(localizer[L.Error.SiteNotFound, id]);
         }
 
-        using var timer = new OperationTimer(elapsed => logger.StopWebsiteDuration(elapsed, entry.Instance.Configuration.Name));
-
-        logger.StopWebsiteStarting(entry.Instance.Configuration.Name);
-
         var result = await entry.LifecycleManager.StopAsync();
 
         if (result.Success)
@@ -243,8 +227,6 @@ public class WebSiteHostingService(
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        logger.HostingServiceStarting();
-
         await versionsDetector.RefreshCacheAsync(cancellationToken);
         await InitializeAllInstancesAsync();
         await StartEligibleSitesAsync();
@@ -386,10 +368,6 @@ public class WebSiteHostingService(
 
         var instance = entry.Instance;
         var siteName = instance.Configuration.Name;
-
-        using var timer = new OperationTimer(elapsed => logger.RemoveWebsiteDuration(elapsed, siteName));
-
-        logger.RemoveWebsiteStarting(siteName);
 
         try
         {

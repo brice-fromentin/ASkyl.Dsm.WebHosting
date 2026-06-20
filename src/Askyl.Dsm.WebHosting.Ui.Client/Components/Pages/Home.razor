@@ -8,12 +8,10 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Logging
 
 @inject IDialogService DialogService
 @inject IAuthenticationService AuthService
 @inject IWebSiteHostingService WebsiteHostingService
-@inject ILogger<ILogHome> Logger
 @inject NavigationManager navigation
 @inject IToastService ToastService
 @inject ILocalizer localizer
@@ -104,18 +102,15 @@
 
             if (!result.Success || result.Value is null)
             {
-                Logger.FailedToLoadWebsites(result.Message ?? localizer[L.Error.Unknown]);
                 Instances = [];
                 ShowSafeErrorToast($"{localizer[L.Error.FailedToLoadWebsites]}: {result.Message}");
                 return;
             }
 
             Instances = result.Value;
-            Logger.LoadedWebsites(Instances.Count);
         }
         catch (Exception ex)
         {
-            Logger.ErrorLoadingWebsites(ex);
             Instances = [];
             ShowSafeErrorToast($"{localizer[L.Error.FailedToLoadWebsites]}: {ex.Message}");
         }
@@ -175,18 +170,15 @@
 
             if (!deleteResult.Success)
             {
-                Logger.FailedToDeleteWebsite(deleteResult.Message ?? localizer[L.Error.Unknown]);
                 ShowSafeErrorToast(deleteResult.Message ?? localizer[L.Error.FailedToDeleteWebsite]);
                 return;
             }
 
-            Logger.WebsiteDeleted(selectedName);
             Instances.RemoveAll(i => i.Id == selectedId);
             SelectedInstance = null;
         }
         catch (Exception ex)
         {
-            Logger.ErrorDeletingWebsite(ex);
             ShowSafeErrorToast(localizer[L.Home.ErrorDeleting, ex.Message]);
         }
     }
@@ -228,17 +220,14 @@
 
             if (!result.Success)
             {
-                Logger.FailedToStartWebsite(result.Message ?? localizer[L.Error.Unknown]);
                 ShowSafeErrorToast(result.Message ?? localizer[L.Error.FailedToStartWebsite]);
                 return;
             }
 
-            Logger.WebsiteStarted(selectedName);
             await LoadInstancesAsync();
         }
         catch (Exception ex)
         {
-            Logger.ErrorStartingWebsite(ex);
             ShowSafeErrorToast(localizer[L.Home.ErrorStarting, ex.Message]);
         }
     }
@@ -261,17 +250,14 @@
 
             if (!result.Success)
             {
-                Logger.FailedToStopWebsite(result.Message ?? localizer[L.Error.Unknown]);
                 ShowSafeErrorToast(result.Message ?? localizer[L.Error.FailedToStopWebsite]);
                 return;
             }
 
-            Logger.WebsiteStopped(selectedName);
             await LoadInstancesAsync();
         }
         catch (Exception ex)
         {
-            Logger.ErrorStoppingWebsite(ex);
             ShowSafeErrorToast(localizer[L.Home.ErrorStopping, ex.Message]);
         }
     }
@@ -297,18 +283,15 @@
 
             if (!result.Success)
             {
-                Logger.LogoutFailed(result.Message ?? localizer[L.Error.Unknown]);
                 ShowSafeErrorToast(result.Message ?? localizer[L.Error.FailedToLogout]);
                 return;
             }
 
-            Logger.LoggedOut();
             CultureManager.ResetToSystem();
             navigation.NavigateTo(ApplicationConstants.LoginPagePath);
         }
         catch (Exception ex)
         {
-            Logger.ErrorDuringLogout(ex);
             ShowSafeErrorToast(localizer[L.Home.ErrorLoggingOut, ex.Message]);
         }
     }

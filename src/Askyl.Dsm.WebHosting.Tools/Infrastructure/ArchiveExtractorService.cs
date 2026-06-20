@@ -28,10 +28,6 @@ public sealed class ArchiveExtractorService(IFileManagerService fileManager, ILo
         var targetDirectory = fileManager.GetDirectory(String.Empty);
         var doExclusion = !String.IsNullOrWhiteSpace(exclude);
 
-        using var timer = new OperationTimer(elapsed => logger.ExtractDuration(elapsed, inputFile));
-
-        logger.ExtractStarting(inputFile, targetDirectory);
-
         try
         {
             using var archiveStream = File.OpenRead(inputFile);

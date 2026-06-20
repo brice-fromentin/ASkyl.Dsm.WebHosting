@@ -2,7 +2,6 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Logging
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -11,7 +10,6 @@
 @inject IFileSystemService FileSystemService
 @inject ITreeContentService TreeContentService
 @inject IJSRuntime JSRuntime
-@inject ILogger<ILogFileSelectionDialog> Logger
 @inject ILocalizer localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
@@ -134,7 +132,6 @@
         }
         catch (Exception ex)
         {
-            Logger.FailedToLoadSharedFolders(ex);
             await ShowErrorAsync(ex.Message);
             TreeItems = [];
         }
@@ -147,9 +144,8 @@
             // Pass the same callback for nested lazy loading
             return await TreeContentService.LoadChildDirectoriesAsync(path, ShowErrorAsync, LoadChildDirectoriesAsync);
         }
-        catch (Exception ex)
+        catch
         {
-            Logger.FailedToLoadChildDirectories(ex, path);
             return [];
         }
     }
@@ -195,7 +191,6 @@
         }
         catch (Exception ex)
         {
-            Logger.FailedToLoadDirectoryContents(ex, selectedPath);
             await HandleDirectoryLoadErrorAsync($"{localizer[L.Error.FailedToLoadDirectoryContents]}: {ex.Message}");
         }
     }
@@ -213,8 +208,6 @@
 
     private async Task OnFileDoubleClick(FsEntry file)
     {
-        Logger.FileDoubleClicked(file.Name, file.IsDirectory);
-
         if (file.IsDirectory)
         {
             await JSRuntime.InvokeVoidAsync("selectChildItem", file.Path, Path.GetDirectoryName(file.Path));

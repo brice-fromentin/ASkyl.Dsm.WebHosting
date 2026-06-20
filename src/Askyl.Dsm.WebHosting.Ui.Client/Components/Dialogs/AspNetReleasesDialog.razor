@@ -1,7 +1,6 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Logging
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -10,7 +9,6 @@
 @inject IDotnetVersionService DotnetVersionService
 @inject IFrameworkManagementService ManagementService
 @inject IToastService ToastService
-@inject ILogger<ILogAspNetReleasesDialog> Logger
 @inject ILocalizer localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
@@ -160,7 +158,6 @@
         }
         catch (Exception ex)
         {
-            Logger.FailedToLoadChannels(ex);
             await ShowErrorAsync(ex.Message);
             Channels.Clear();
             SelectedChannel = null;
@@ -193,7 +190,6 @@
         }
         catch (Exception ex)
         {
-            Logger.FailedToLoadReleases(ex, channel?.ProductVersion);
             await ShowErrorAsync(ex.Message);
             Releases = AutoDataGrid<AspNetRelease>.Empty();
         }
@@ -234,7 +230,6 @@
         }
         catch (Exception ex)
         {
-            Logger.InstallationError(ex, SelectedItem?.Version);
             await DialogService.ShowErrorAsync(localizer[L.AspNetReleases.InstallationError, ex.Message]);
         }
     }
@@ -273,7 +268,6 @@
         }
         catch (Exception ex)
         {
-            Logger.UninstallationError(ex, SelectedItem?.Version);
             await DialogService.ShowErrorAsync(localizer[L.AspNetReleases.UninstallationError, ex.Message]);
         }
     }

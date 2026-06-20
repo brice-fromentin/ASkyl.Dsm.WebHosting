@@ -2,13 +2,11 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Logging
 
 @implements IDialogContentComponent
 
 @inject IDotnetVersionService DotnetVersionService
 @inject IToastService ToastService
-@inject ILogger<ILogDotnetVersionsDialog> Logger
 @inject ILocalizer localizer
 
 <FluentDialogHeader ShowDismiss="true">
@@ -98,7 +96,6 @@
         }
         catch (Exception ex)
         {
-            Logger.ErrorSearchingDotnetVersion(ex);
             ErrorMessage = localizer[L.DotnetVersions.ErrorSearching, ex.Message];
             DotnetVersions = [];
         }

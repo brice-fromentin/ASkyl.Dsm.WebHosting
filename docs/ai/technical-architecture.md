@@ -1,9 +1,9 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.10
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** June 18, 2026 (Globalization constants consolidated, C# 14 scoped extensions,
-router-level auth navigation guard, FluentLayout/FluentMainLayout app shell, RTL dir attribute SSR support)
+**Last Updated:** June 20, 2026 (Over-engineering reduction: Benchmarks removed, API constants merged,
+PHP converters consolidated, UriExtensions inlined, LicenseConstants inlined, two interfaces dropped,
+13 new tests added for LogDownload/License/TreeContent services)
 
 ---
 
@@ -78,7 +78,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
   - ⏳ End-to-end testing & validation (Phase 10)
 - ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
-- ✅ **LoggerMessage migration** — 224 source-generated `[LoggerMessage]` extension methods across 19 source files; zero CA2254 warnings
+- ✅ **LoggerMessage migration** — 168 source-generated `[LoggerMessage]` extension methods across 19 source files; zero CA2254 warnings
 - ✅ **DSM API logging** — request timing, authentication failures, and API errors logged via `[LoggerMessage]` extensions; compile-time `IApiResponse` constraint replaces reflection
 - ✅ **Serilog configuration** — output template with `{EventId}`, `Log.CloseAndFlush()` on graceful shutdown, `WithActivity` enricher for correlation tracking
 - ✅ **OperationTimer** — value-type disposable timer for scope-based duration logging across all services; replaced manual `Stopwatch` boilerplate with single-line `using var` pattern
@@ -102,7 +102,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 ### Solution Structure
 
 ```text
-Askyl.Dsm.WebHosting.slnx (Version 0.5.9)
+Askyl.Dsm.WebHosting.slnx
 ├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
 ├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
 ├── Askyl.Dsm.WebHosting.Globalization      # Localization resources, validators, culture management, C# 14 scoped extensions
@@ -127,12 +127,12 @@ Askyl.Dsm.WebHosting.slnx (Version 0.5.9)
 All projects share common build settings from `Directory.Build.props`:
 
 ```xml
-<!-- Centralized versioning -->
-<Version>0.5.9</Version>
-<AssemblyVersion>0.5.9.0</AssemblyVersion>
-<FileVersion>0.5.9.0</FileVersion>
-<InformationalVersion>0.5.9</InformationalVersion>
-<PackageVersion>0.5.9</PackageVersion>
+<!-- Centralized versioning (see src/Directory.Build.props for current value) -->
+<Version>0.5.x</Version>
+<AssemblyVersion>0.5.x.0</AssemblyVersion>
+<FileVersion>0.5.x.0</FileVersion>
+<InformationalVersion>0.5.x</InformationalVersion>
+<PackageVersion>0.5.x</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -205,23 +205,21 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 ```text
 
 Constants/
-├── Application/                            # Application-wide constants (7 files)
+├── Application/                            # Application-wide constants (6 files)
 │   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session (DsmSid, DsmUsername, TTL)
 │   ├── DotnetInfoParserConstants.cs        # dotnet --info section headers and framework identifiers
 │   ├── InfrastructureConstants.cs          # Directory names (Downloads)
-│   ├── LicenseConstants.cs                 # License file management
 │   ├── LogConstants.cs                     # Log directory and file paths
 │   ├── SecurityHeaders.cs                  # HTTP security header values (CSP, X-Frame-Options, etc.)
 │   ├── ValidationConstants.cs              # Validation message constants (path traversal, version format, env vars)
 │   └── WebSiteConstants.cs                 # Website config, process lifecycle, port validation
 ├── Globalization/                          # Culture and localization constants (1 file)
 │   └── GlobalizationConstants.cs           # Default culture/language, text direction (LTR/RTL), env var names, Accept-Language header
-├── DSM/                                    # Synology DSM-specific constants (8 files)
+├── DSM/                                    # Synology DSM-specific constants (7 files)
 │   ├── API/                                # API-related constants
-│   │   ├── ApiMethods.cs                   # CRUD operation names (Create, Get, List, etc.)
-│   │   ├── ApiNames.cs                     # 8 DSM API identifiers (SYNO.API.Auth, FileStation, Core.User, etc.)
-│   │   ├── ApiVersions.cs                  # Version range constants (Min: 1, Max: 7)
+│   │   ├── ApiConstants.cs                 # Merged API names, methods, and version ranges (ImmutableDictionary + const fields)
 │   │   ├── DsmConstants.cs                 # Shared DSM error codes (ErrorCodeAuthenticationFailed = -4)
+│   │   ├── PhpDotNetFormatTokens.cs        # PHP → .NET format token mappings (ImmutableDictionary, data only)
 │   │   ├── ReverseProxyConstants.cs        # Proxy error codes and description prefix
 │   │   └── SerializationFormats.cs         # Enum: Form, Json
 │   ├── FileStation/                        # FileStation-specific constants (1 file)
@@ -259,7 +257,7 @@ Constants/
 | **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), DsmSid, DsmUsername, SessionValidationTtlMinutes | ~30 |
 | **Globalization** | DefaultCulture, DefaultCultureInfo, DefaultLanguageTag, TextDirectionLtr/Rtl, SupportedCultures/SystemCulture env vars, AcceptLanguageHeader | 7 |
 | **Websites** | Process timeouts, port range (1024-65535), WellKnownWebPorts [80, 443], environment vars, validation messages | ~26 |
-| **DSM APIs** | 8 API names (incl. Core.User), CRUD methods, version ranges, shared error codes | ~37 + 1 enum |
+| **DSM APIs** | 8 API names (incl. Core.User), CRUD methods, version ranges (merged ApiConstants), PHP→.NET format tokens, shared error codes | ~37 + 1 enum + 1 ImmutableDictionary |
 | **FileStation** | Listing patterns, sorting, pagination (100 limit) | ~15 |
 | **Network** | Cookie header ("Cookie"), SSID prefix ("_SSID="), localhost | 6 + 1 enum |
 | **Runtime** | Architecture IDs (x64/arm/arm64), OS IDs (linux/osx/windows) | ~15 |
@@ -276,7 +274,7 @@ Constants/
 
 ### 2. Askyl.Dsm.WebHosting.Data
 
-**Purpose:** Core data layer, API definitions, domain services, and result types (14 service contracts)
+**Purpose:** Core data layer, API definitions, domain services, and result types (12 service contracts)
 
 **Complete Service Contracts Inventory:**
 
@@ -289,10 +287,6 @@ Constants/
 | **ILogDownloadService** | `Contracts/ILogDownloadService.cs` | CreateLogZipStreamAsync() | Ui.Services.LogDownloadService |
 | **IReverseProxyManagerService** | `Contracts/IReverseProxyManagerService.cs` | CreateAsync(), UpdateAsync(), DeleteAsync() | Ui.Services.ReverseProxyManagerService |
 | **IWebSiteHostingService** | `Contracts/IWebSiteHostingService.cs` | GetAllWebsitesAsync(), AddWebsiteAsync() | Ui.Services.WebSiteHostingService, Ui.Client.Services.WebSiteHostingService |
-
-**Note:** `FindByCompositeKeyAsync()` is a private helper method in the implementation, not part of the public interface.
-| **IWebSitesConfigurationService** | `Contracts/IWebSitesConfigurationService.cs` | GetAllSitesAsync(), AddSiteAsync(), RemoveSiteAsync() | Ui.Services.WebSitesConfigurationService |
-| **IPlatformInfoService** | `Contracts/IPlatformInfoService.cs` | (Properties: ChannelVersion, CurrentArchitecture, CurrentOS) | Tools.Infrastructure.PlatformInfoService |
 | **IFileManagerService** | `Contracts/IFileManagerService.cs` | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName() | Tools.Infrastructure.FileManagerService |
 | **IArchiveExtractorService** | `Contracts/IArchiveExtractorService.cs` | Decompress(inputFile, exclude) | Tools.Infrastructure.ArchiveExtractorService |
 | **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), DownloadVersionToAsync(), GetAspNetCoreReleasesAsync() | Tools.Runtime.DownloaderService |
@@ -311,8 +305,6 @@ Data/
 │   ├── ILogDownloadService.cs              # Log file retrieval
 │   ├── IReverseProxyManagerService.cs      # Proxy configuration
 │   ├── IWebSiteHostingService.cs           # Website lifecycle
-│   ├── IWebSitesConfigurationService.cs    # Configuration persistence
-│   ├── IPlatformInfoService.cs             # Platform detection (Singleton)
 │   ├── IFileManagerService.cs              # File management (Scoped, configurable root)
 │   ├── IArchiveExtractorService.cs         # Archive extraction (Scoped)
 │   ├── IDownloaderService.cs               # .NET downloads with cancellation (Scoped)
@@ -424,19 +416,16 @@ Data/
 **Structure:**
 
 ```text
-Tools/
 ├── Converters/                             # Format/language converters
-│   ├── DsmLanguageToCultureConverter.cs    # DSM 3-letter language code → .NET culture name (returns null for "def", logs on trim)
-│   ├── PhpDateFormatToDotNetConverter.cs   # PHP date tokens (Y, m, d) → .NET format (yyyy, MM, dd); timezone token P → zzz; 8 timezone tokens unmappable (e,T,O,I,Z,c,r,u)
-│   └── PhpTimeFormatToDotNetConverter.cs   # PHP time tokens (H, G, h, g, i, s, a, A) → .NET format (HH, H, hh, h, mm, ss, tt); timezone tokens handled by date converter
+│   ├── DsmLanguageToCultureConverter.cs    # Conversion logic: DSM 3-letter language code → .NET culture name (returns null for "def", logs on trim)
+│   └── PhpFormatToDotNetConverter.cs       # Consolidated converter: PHP date/time tokens → .NET format strings (uses PhpDotNetFormatTokens from Constants)
 ├── Extensions/                             # Extension methods
 │   ├── ApiResponseExtensions.cs            # Response mapping helpers
-│   ├── HttpClientExtensions.cs             # HTTP client helpers (C# 14 scoped `extension(HttpClient)`)
-│   └── UriExtensions.cs                    # URI manipulation helpers
+│   └── HttpClientExtensions.cs             # HTTP client helpers (C# 14 scoped `extension(HttpClient)`)
 ├── Infrastructure/                         # Infrastructure utilities
 │   ├── ArchiveExtractorService.cs          # gzip + tar extraction (implements IArchiveExtractorService)
 │   ├── FileManagerService.cs               # File system initialization (implements IFileManagerService)
-│   ├── PlatformInfoService.cs              # Platform detection (implements IPlatformInfoService)
+│   ├── PlatformInfoService.cs              # Platform detection (no interface, direct injection)
 │   ├── ProcessHandle.cs                    # IProcessHandle + SystemProcessHandle (co-located)
 │   ├── ProcessRunner.cs                    # IProcessRunner + SystemProcessRunner (co-located)
 │   └── ProcessTerminator.cs                # Cross-platform process termination (SIGTERM/CloseMainWindow)
@@ -450,6 +439,7 @@ Tools/
     └── AssemblyRuntimeDetector.cs          # Runtime detection from *.runtimeconfig.json (implements IAssemblyRuntimeDetector)
 └── Threading/                              # Async coordination utilities
     └── SemaphoreLock.cs                    # Semaphore-based async locking utility
+
 ```
 
 **Infrastructure Services Architecture:**
@@ -458,10 +448,10 @@ The Tools project contains DI-based infrastructure services for platform detecti
 
 | Service | Interface | Lifetime | Key Features | Dependencies | Source File |
 |---------|-----------|----------|--------------|--------------|-------------|
-| **PlatformInfoService** | `IPlatformInfoService` | Singleton | Platform detection, config loading | ILogger | `Tools/Infrastructure/PlatformInfoService.cs` |
+| **PlatformInfoService** | _(no interface, dropped)_ | Singleton | Platform detection, config loading | ILogger | `Tools/Infrastructure/PlatformInfoService.cs` |
 | **FileManagerService** | `IFileManagerService` | Scoped | Directory management, configurable root path | ILogger, string rootPath | `Tools/Infrastructure/FileManagerService.cs` |
 | **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz extraction | IFileManagerService, ILogger | `Tools/Infrastructure/ArchiveExtractorService.cs` |
-| **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | IPlatformInfoService, IFileManagerService | `Tools/Runtime/DownloaderService.cs` |
+| **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | PlatformInfoService, IFileManagerService | `Tools/Runtime/DownloaderService.cs` |
 | **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | ILogger, ISemaphoreOwner | `Tools/Runtime/VersionsDetectorService.cs` |
 | **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes, creates SystemProcessHandle | ILogger, ILoggerFactory | `Tools/Infrastructure/ProcessRunner.cs` |
 | **SystemProcessHandle** | `IProcessHandle` | Transient (per-process) | Wraps `Process` for testability, graceful shutdown | `ILogger<ILogSystemProcessHandle>` | `Tools/Infrastructure/ProcessHandle.cs` |
@@ -512,7 +502,7 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
   - HTTP request timing (method, URL, status code, duration in milliseconds)
   - Authentication failure logging with error reason from response
   - API error logging for `Success: false` responses (error code + reason)
-  - User preferences fetch failure logging (best-effort, Debug level) via `FetchUserPreferencesFailed` (EventId 2000014)
+  - User preferences fetch failure logging (best-effort, Debug level) via `FetchUserPreferencesFailed` (EventId 2000013)
 - HttpClient factory integration for proper lifecycle management
 - All infrastructure services testable via interface abstractions
 
@@ -761,26 +751,22 @@ Each service owns a dedicated 100K range at 1M spacing to prevent cross-service 
 
 | Range | Service | Extension File | Folder |
 |-------|---------|----------------|--------|
-| `1000001–1000012` | AuthenticationService | `AuthenticationLoggingExtensions.cs` | `Server/Authentication/` |
+| `1000001–1000007` | AuthenticationService | `AuthenticationLoggingExtensions.cs` | `Server/Authentication/` |
 | `1100001–1100012` | FileSystemService | `FileSystemServiceLoggingExtensions.cs` | `Server/FileManagement/` |
 | `1200001–1200006` | FileManagerService | `FileManagerServiceLoggingExtensions.cs` | `Server/FileManagement/` |
 | `1300001–1300007` | LogDownloadService | `LogDownloadServiceLoggingExtensions.cs` | `Server/FileManagement/` |
-| `1400001–1400011` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` | `Server/Framework/` |
-| `1500001–1500009` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` | `Server/Framework/` |
-| `1600001–1600007` | SiteLifecycleManager (start/stop) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
-| `1601001–1601004` | SiteLifecycleManager (site stop) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
-| `1602001–1602003` | SiteLifecycleManager (dispose) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
-| `1603001–1603004` | SiteLifecycleManager (graceful shutdown) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
-| `1604001–1604005` | SiteLifecycleManager (duration) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
-| `2250001–2250005` | AssemblyRuntimeDetector | `AssemblyRuntimeDetectorLoggingExtensions.cs` | `Server/Infrastructure/` |
-| `1700001–1700016` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` | `Server/ReverseProxy/` |
-| `1800001–1800044` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` | `Server/WebsiteHosting/` |
-| `1900001–1900018` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` | `Server/WebsiteHosting/` |
-| `2000001–2000014` | DsmApiClient | `DsmApiLoggingExtensions.cs` | `Server/DsmApi/` |
-| `2100001–2100008` | ArchiveExtractorService | `ArchiveExtractorLoggingExtensions.cs` | `Server/Infrastructure/` |
+| `1400001–1400007` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` | `Server/Framework/` |
+| `1500001–1500007` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` | `Server/Framework/` |
+| `1600001–1600019` | SiteLifecycleManager | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1700001–1700013` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` | `Server/ReverseProxy/` |
+| `1800001–1800031` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` | `Server/WebsiteHosting/` |
+| `1900001–1900012` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` | `Server/WebsiteHosting/` |
+| `2000001–2000013` | DsmApiClient | `DsmApiLoggingExtensions.cs` | `Server/DsmApi/` |
+| `2100001–2100006` | ArchiveExtractorService | `ArchiveExtractorLoggingExtensions.cs` | `Server/Infrastructure/` |
 | `2200001–2200004` | VersionsDetectorService | `VersionsDetectorLoggingExtensions.cs` | `Server/Infrastructure/` |
+| `2250001–2250005` | AssemblyRuntimeDetector | `AssemblyRuntimeDetectorLoggingExtensions.cs` | `Server/Infrastructure/` |
 | `2300001–2300002` | PlatformInfoService | `PlatformInfoLoggingExtensions.cs` | `Server/Infrastructure/` |
-| `2400001–2400005` | DownloaderService | `DownloaderLoggingExtensions.cs` | `Server/Infrastructure/` |
+| `2400001–2400004` | DownloaderService | `DownloaderLoggingExtensions.cs` | `Server/Infrastructure/` |
 | `2500001` | SystemProcessRunner | `ProcessRunnerLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
 | `2600001–2600005` | SystemProcessHandle | `ProcessHandleLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
 
@@ -791,13 +777,8 @@ Client-side components use `ClientLoggingExtensions.cs` for structured logging i
 | Range | Service | Category Marker |
 |-------|---------|-----------------|
 | `7000001` | LicenseService | `ILogLicenseService` |
-| `7100001–7100015` | Home page | `ILogHome` |
-| `7200001–7200004` | DotnetVersionsDialog | `ILogDotnetVersionsDialog` |
-| `7300001–7300004` | AspNetReleasesDialog | `ILogAspNetReleasesDialog` |
-| `7400001` | WebSiteConfigurationDialog | `ILogWebSiteConfigurationDialog` |
-| `7500001` | FileSelectionDialog | `ILogFileSelectionDialog` |
 
-**Total:** 224 `[LoggerMessage]` methods across 19 source files (18 server + 1 client), zero CA2254 warnings.
+**Total:** 168 `[LoggerMessage]` methods across 19 source files (18 server + 1 client), zero CA2254 warnings.
 
 **Serilog Configuration:**
 
@@ -1006,7 +987,6 @@ using var timer = new OperationTimer(elapsed => logger.FrameworkInstalledDuratio
 | **UI Components** | FluentUI Blazor | Modern UI component library |
 | **Logging** | Serilog | Structured logging |
 | **HTTP Client** | Microsoft.Extensions.Http | HttpClient factory |
-| **Benchmarking** | BenchmarkDotNet | Performance testing |
 | **.NET Releases** | Microsoft.Deployment.DotNet.Releases | Version detection |
 | **WASM Server** | Microsoft.AspNetCore.Components.WebAssembly.Server | Blazor WASM hosting |
 | **Analyzer Rules** | Roslynator.Analyzers + Formatting.Analyzers | Code style enforcement |
@@ -1293,7 +1273,7 @@ The Globalization assembly serves two purposes:
 User-specific date/time format preferences flow from DSM UserSettings through to the WASM culture:
 
 1. **Server fetches UserSettings** — `SYNO.Core.UserSettings.get` (best-effort, post-auth) extracts `Personal.dateFormat` and `Personal.timeFormat` (PHP-style format strings)
-2. **Server converts formats** — `PhpDateFormatToDotNetConverter` and `PhpTimeFormatToDotNetConverter` convert PHP tokens to .NET format strings (e.g., `"Y/m/d"` → `"yyyy/MM/dd"`, `"H:i"` → `"H:mm"`)
+2. **Server converts formats** — `PhpFormatToDotNetConverter` converts PHP date/time tokens to .NET format strings using `PhpDotNetFormatTokens` from Constants (e.g., `"Y/m/d"` → `"yyyy/MM/dd"`)
 3. **Server passes to WASM** — `AuthenticationResult` carries `DateFormat` and `TimeFormat` properties alongside `Culture`
 4. **WASM applies formats** — `CultureManager.InitializeFromLogin()` clones the resolved `CultureInfo` and overrides `DateTimeFormat` patterns:
    - `ShortDatePattern` / `LongDatePattern` ← `DateFormat`
@@ -1327,9 +1307,8 @@ System-level date/time format discovery is a future enhancement.
 | `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `ResourceManager` (not `IStringLocalizer`) — reads `CurrentUICulture` at call time, so culture changes after login work without re-rendering; missing keys return `[{key}]` |
 | `ResourceManagerCache` | `Globalization` | Static class holding shared `ResourceManager` instance for `SharedResource` |
 | `LocalizedText` | `Globalization` | Replacement for `LocalizedString` (avoids namespace collision) — `Name`, `Value`, implicit `string` conversion |
-| `DsmLanguageToCultureConverter` | `Tools/Converters/` | Static converter: DSM 3-letter language code → .NET culture name (returns `null` for `"def"`, logs via `Debug.WriteLine` when input is trimmed) |
-| `PhpDateFormatToDotNetConverter` | `Tools/Converters/` | Static converter: PHP date tokens (Y, m, d, etc.) → .NET format strings (yyyy, MM, dd); maps timezone token `P` to `zzz`; 8 timezone tokens (e, T, O, I, Z, c, r, u) have no .NET equivalent |
-| `PhpTimeFormatToDotNetConverter` | `Tools/Converters/` | Static converter: PHP time tokens (H, G, h, g, i, s, a, A) → .NET format strings (HH, H, hh, h, mm, ss, tt); timezone tokens handled by date converter |
+| `DsmLanguageToCultureConverter` | `Tools/Converters/` | Conversion logic: DSM 3-letter language code → .NET culture name (returns `null` for `"def"`, logs via `Debug.WriteLine` when input is trimmed) |
+| `PhpFormatToDotNetConverter` | `Tools/Converters/` | Consolidated converter: PHP date/time tokens → .NET format strings (uses `PhpDotNetFormatTokens` ImmutableDictionary from Constants project) |
 | `WebSiteConfigurationValidator` | `Globalization/Validators/` | FluentValidation rules for `WebSiteConfiguration` (8 properties, separate messages for InternalPort/PublicPort) |
 | `LoginCredentialsValidator` | `Globalization/Validators/` | FluentValidation rules for `LoginCredentials` (2 properties) |
 | `DeferredMessageExtensions` | `Globalization/Validators/` | `WithLocalizedMessage()` extension — defers resource key resolution to validation time via `WithMessage(Func&lt;T, string&gt;)` so culture changes after login are respected |
@@ -1452,17 +1431,6 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 
 ## Performance Optimization
 
-### Benchmarking Results
-
-**String Building (URL Construction):**
-
-| Method | Allocated Memory | GC Cuts |
-|--------|------------------|---------|
-| Interpolated String | Higher | More frequent |
-| StringBuilder | Lower | Less frequent |
-
-**Recommendation:** Use `StringBuilder` for complex URL/parameter building with multiple concatenations.
-
 ### Caching Strategy
 
 **Current Implementation:**
@@ -1554,7 +1522,7 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 ### Immediate Priorities
 
 1. **Unit Test Implementation — Partially Complete**
-   - ✅ 187 tests across 9 phases (Data validation, domain, Result types, threading, extensions, I/O, parsing, platform)
+   - ✅ 400 tests across 10 phases (Data validation, domain, Result types, threading, extensions, I/O, parsing, platform, LogDownloadService, LicenseService, TreeContentService)
    - ⏳ Deferred: `DsmApiClient` (no interface), `DownloaderService` (external library), `WebSiteHostingService` (complex orchestration)
    - See `docs/ai/test-plan-2026-05-04.md` for results and coverage gaps
 
@@ -1647,13 +1615,13 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 
 ### C. Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 0.5.7 | May 11, 2026 | Dead code sweep: removed `ApiGenericResponse`, `PaginationDefaults`, `LicenseRoutes`, `DirectoryFilesResult`, `DsmToolsExtensions`; removed NuGet packages `Microsoft.AspNetCore.Mvc.Versioning` and `Microsoft.FluentUI.AspNetCore.Components.Emoji`; preserved `EmptyResponse` as standalone type (used by `DsmApiClient`); cleaned stale references in Constants tree diagram and Tools Extensions listing |
-| 0.5.4 | May 1, 2026 | Replaced custom `CloneGenerator` source generator with C# records (`init` setters) — 41 classes converted, `GenerateCloneAttribute`/`IGenericCloneable<T>` removed, `ApiParametersBase<T>` simplified (no cloning needed with immutability); SiteLifecycleManager hardening: lifecycle manager recreation on config update (stale config fix), removed vestigial `.Clone()` calls (Interactive WASM has no shared memory), removed `ProcessTimeoutSeconds` (inlined 10s constant), added `IOException` to `StopAsync` exception filter, `ProcessInfo` converted to snapshot record, parallel startup in `StartEligibleSitesAsync`, `CancellationToken` forwarding in `StopAllSitesAsync` and `GetRuntimeStateAsync`, removed dead null check and misleading `CancellationToken` from `StartAsync`; **post-review fixes**: `RemoveInstanceAsync` restructured to remove persistent config before in-memory state (prevents orphaned configs on failure), `StopAllSitesAsync` wraps `Dispose()` in `finally` (prevents `SemaphoreSlim` leak on exception), `StartAsync` disposes stale `_process` handle before restart (prevents handle leak on crash-restart cycles); **SiteLifecycleManager concurrency rewrite**: replaced `SemaphoreSlim` + `ISemaphoreOwner` with `Channel<LifecycleCommand>` + single consumer loop — eliminates TOCTOU races, no `ObjectDisposedException` boilerplate, safe disposal via queued `DisposeCommand`, `ConfigurationRequiresRestart` uses order-independent dictionary comparison |
-| 0.5.4 | April 29, 2026 | SIGTERM process termination fix: added `ProcessTerminator` utility (cross-platform SIGTERM via P/Invoke), replaced blocking `WaitForExit` with async `WaitForExitAsync`, reduced timeouts (HttpClient 90→15s, Process 60→10s) — eliminates DSM reverse proxy 504 errors |
-| 0.5.4 | April 25, 2026 | Synchronized with codebase: added `SiteLifecycleManager` two-tier process architecture (graceful shutdown, force kill fallback), documented `DirectoryFilesResult`, `WebSiteRuntimeState`, `DotnetInfoParserConstants`; removed version column from Technical Stack table; cleaned up stale empty directory references |
-| 0.5.4 | April 5, 2026 | Architecture documentation synchronized with codebase; corrected service lifetimes, added SemaphoreLock and AuthorizeSessionAttribute documentation |
-| 0.5.3 | March 2026 | Architecture documentation update, version bump |
-| 0.5.2 | Earlier | Initial architecture documentation |
-| ... | ... | Previous versions |
+| Date | Changes |
+|------|---------|
+| June 20, 2026 | Over-engineering reduction: removed Benchmarks project (-260 lines, -BenchmarkDotNet dep); merged ApiVersions+ApiMethods+ApiNames into ApiConstants; inlined LicenseConstants into LicenseService; consolidated PHP date/time converters into PhpFormatToDotNetConverter with PhpDotNetFormatTokens (ImmutableDictionary) in Constants; inlined UriExtensions (1 consumer); dropped IPlatformInfoService and IWebSitesConfigurationService interfaces (single impl, no tests); added 13 tests for LogDownloadService (3), LicenseService (5), TreeContentService (5); separated DsmLanguageCodes (data) from DsmLanguageToCultureConverter (logic) |
+| May 11, 2026 | Dead code sweep: removed `ApiGenericResponse`, `PaginationDefaults`, `LicenseRoutes`, `DirectoryFilesResult`, `DsmToolsExtensions`; removed NuGet packages `Microsoft.AspNetCore.Mvc.Versioning` and `Microsoft.FluentUI.AspNetCore.Components.Emoji`; preserved `EmptyResponse` as standalone type (used by `DsmApiClient`); cleaned stale references in Constants tree diagram and Tools Extensions listing |
+| May 1, 2026 | Replaced custom `CloneGenerator` source generator with C# records (`init` setters) — 41 classes converted, `GenerateCloneAttribute`/`IGenericCloneable<T>` removed, `ApiParametersBase<T>` simplified (no cloning needed with immutability); SiteLifecycleManager hardening: lifecycle manager recreation on config update (stale config fix), removed vestigial `.Clone()` calls (Interactive WASM has no shared memory), removed `ProcessTimeoutSeconds` (inlined 10s constant), added `IOException` to `StopAsync` exception filter, `ProcessInfo` converted to snapshot record, parallel startup in `StartEligibleSitesAsync`, `CancellationToken` forwarding in `StopAllSitesAsync` and `GetRuntimeStateAsync`, removed dead null check and misleading `CancellationToken` from `StartAsync`; **post-review fixes**: `RemoveInstanceAsync` restructured to remove persistent config before in-memory state (prevents orphaned configs on failure), `StopAllSitesAsync` wraps `Dispose()` in `finally` (prevents `SemaphoreSlim` leak on exception), `StartAsync` disposes stale `_process` handle before restart (prevents handle leak on crash-restart cycles); **SiteLifecycleManager concurrency rewrite**: replaced `SemaphoreSlim` + `ISemaphoreOwner` with `Channel<LifecycleCommand>` + single consumer loop — eliminates TOCTOU races, no `ObjectDisposedException` boilerplate, safe disposal via queued `DisposeCommand`, `ConfigurationRequiresRestart` uses order-independent dictionary comparison |
+| April 29, 2026 | SIGTERM process termination fix: added `ProcessTerminator` utility (cross-platform SIGTERM via P/Invoke), replaced blocking `WaitForExit` with async `WaitForExitAsync`, reduced timeouts (HttpClient 90→15s, Process 60→10s) — eliminates DSM reverse proxy 504 errors |
+| April 25, 2026 | Synchronized with codebase: added `SiteLifecycleManager` two-tier process architecture (graceful shutdown, force kill fallback), documented `DirectoryFilesResult`, `WebSiteRuntimeState`, `DotnetInfoParserConstants`; removed version column from Technical Stack table; cleaned up stale empty directory references |
+| April 5, 2026 | Architecture documentation synchronized with codebase; corrected service lifetimes, added SemaphoreLock and AuthorizeSessionAttribute documentation |
+| March 2026 | Architecture documentation update, version bump |
+| Earlier | Initial architecture documentation |

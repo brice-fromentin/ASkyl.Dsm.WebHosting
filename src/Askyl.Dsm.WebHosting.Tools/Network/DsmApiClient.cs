@@ -243,8 +243,6 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
 
     private async Task<bool> HandShakeAsync()
     {
-        logger.HandshakeStarting();
-
         var parameters = new InformationsQueryParameters(ApiInformations);
         var result = await ExecuteAsync<ApiInformationResponse>(parameters);
 

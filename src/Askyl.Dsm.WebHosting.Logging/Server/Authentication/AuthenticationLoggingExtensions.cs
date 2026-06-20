@@ -35,50 +35,20 @@ public static partial class AuthenticationLoggingExtensions
     public static partial void LogoutError(this ILogger<ILogAuthenticationService> logger, Exception ex);
 
     /// <summary>
-    /// Logs a login attempt for the specified user.
-    /// </summary>
-    [LoggerMessage(EventId = 1000005, Level = LogLevel.Debug, Message = "Login attempt for user: {Login}")]
-    public static partial void LoginStarting(this ILogger<ILogAuthenticationService> logger, string login);
-
-    /// <summary>
-    /// Logs a logout initiation.
-    /// </summary>
-    [LoggerMessage(EventId = 1000006, Level = LogLevel.Debug, Message = "Logout initiated")]
-    public static partial void LogoutStarting(this ILogger<ILogAuthenticationService> logger);
-
-    /// <summary>
-    /// Logs the duration of a login operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1000007, Level = LogLevel.Debug, Message = "Login completed in {Duration}ms for user: {Login}")]
-    public static partial void LoginDuration(this ILogger<ILogAuthenticationService> logger, long duration, string login);
-
-    /// <summary>
-    /// Logs the duration of a logout operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1000008, Level = LogLevel.Debug, Message = "Logout completed in {Duration}ms")]
-    public static partial void LogoutDuration(this ILogger<ILogAuthenticationService> logger, long duration);
-
-    /// <summary>
-    /// Logs that a DSM session validation check is being performed.
-    /// </summary>
-    [LoggerMessage(EventId = 1000009, Level = LogLevel.Debug, Message = "Validating DSM session against server")]
-    public static partial void SessionValidationStarting(this ILogger<ILogAuthenticationService> logger);
-
-    /// <summary>
     /// Logs that the DSM session was validated successfully against the server.
     /// </summary>
-    [LoggerMessage(EventId = 1000010, Level = LogLevel.Debug, Message = "DSM session validated successfully (cached for {TtlMinutes} minutes)")]
+    [LoggerMessage(EventId = 1000005, Level = LogLevel.Debug, Message = "DSM session validated successfully (cached for {TtlMinutes} minutes)")]
     public static partial void SessionValidationSuccess(this ILogger<ILogAuthenticationService> logger, int ttlMinutes);
 
     /// <summary>
     /// Logs that the DSM session validation failed — session is expired or invalid on the server.
     /// </summary>
-    [LoggerMessage(EventId = 1000011, Level = LogLevel.Warning, Message = "DSM session validation failed — session expired or invalid on server")]
+    [LoggerMessage(EventId = 1000006, Level = LogLevel.Warning, Message = "DSM session validation failed — session expired or invalid on server")]
     public static partial void SessionValidationFailed(this ILogger<ILogAuthenticationService> logger);
 
     /// <summary>
     /// Logs that an invalid DSM session was detected and cleared from the local session store.
     /// </summary>
-    [LoggerMessage(EventId = 1000012, Level = LogLevel.Information, Message = "Invalid DSM session detected — cleared from local session")]
+    [LoggerMessage(EventId = 1000007, Level = LogLevel.Information, Message = "Invalid DSM session detected — cleared from local session")]
     public static partial void SessionInvalidated(this ILogger<ILogAuthenticationService> logger);
 }

@@ -296,11 +296,15 @@ to ~35 lines/2 files.
 | 5 | stdlib HttpClientExtensions | SKIPPED (20 consumers) |
 | 6 | stdlib UriExtensions.WithQuery | ✅ DONE |
 | 7 | shrink DsmLanguageToCultureConverter | ✅ DONE |
-| 8 | shrink Constants project | ✅ PARTIAL (2/14 files) |
+| 8 | shrink Constants project | ✅ DONE (merged ApiConstants, inlined LicenseConstants, added PhpDotNetFormatTokens) |
 | 9 | shrink PHP format converters | ✅ DONE |
 | 10 | shrink WorkingState pattern | SKIPPED (10+ consumers) |
 | 11 | stdlib SemaphoreLock | SKIPPED (7 consumers) |
 | 12 | yagni 7 single-impl interfaces | ✅ DONE (5 kept, 2 dropped) |
+| 13 | shrink Result hierarchy | SKIPPED (justified: 6 ApiResultItems clones are copy-paste but collapsing breaks JSON contracts across 20+ files; cost > benefit) |
+| 14 | shrink ApiParametersBase | SKIPPED (justified: static reflection caches, 12 consumers, automatic version validation) |
+| 15 | yagni ProcessRunner/ProcessHandle | SKIPPED (justified: enables full SiteLifecycleManager testing via fake implementations) |
+| 16 | shrink Logging project | ✅ PARTIAL (dropped Starting/Duration events: 30 methods, 18 OperationTimer callbacks; dropped client UI logging: 35 methods across Home/Dialogs; kept LicenseService + CultureManager client logs) |
 
 ## Dependencies Removable
 

@@ -51,28 +51,4 @@ public static partial class FrameworkManagementLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1400007, Level = LogLevel.Error, Message = "Error while uninstalling ASP.NET Core {Version}")]
     public static partial void FrameworkUninstallError(this ILogger<ILogFrameworkManagementService> logger, Exception ex, string version);
-
-    /// <summary>
-    /// Logs the start of an ASP.NET Core installation.
-    /// </summary>
-    [LoggerMessage(EventId = 1400008, Level = LogLevel.Information, Message = "Installing ASP.NET Core {Version}")]
-    public static partial void InstallStarting(this ILogger<ILogFrameworkManagementService> logger, string version);
-
-    /// <summary>
-    /// Logs the start of an ASP.NET Core uninstallation.
-    /// </summary>
-    [LoggerMessage(EventId = 1400009, Level = LogLevel.Information, Message = "Uninstalling ASP.NET Core {Version}")]
-    public static partial void UninstallStarting(this ILogger<ILogFrameworkManagementService> logger, string version);
-
-    /// <summary>
-    /// Logs the duration of an ASP.NET Core installation.
-    /// </summary>
-    [LoggerMessage(EventId = 1400010, Level = LogLevel.Debug, Message = "Install completed in {Duration}ms for ASP.NET Core {Version}")]
-    public static partial void InstallDuration(this ILogger<ILogFrameworkManagementService> logger, long duration, string version);
-
-    /// <summary>
-    /// Logs the duration of an ASP.NET Core uninstallation.
-    /// </summary>
-    [LoggerMessage(EventId = 1400011, Level = LogLevel.Debug, Message = "Uninstall completed in {Duration}ms for ASP.NET Core {Version}")]
-    public static partial void UninstallDuration(this ILogger<ILogFrameworkManagementService> logger, long duration, string version);
 }

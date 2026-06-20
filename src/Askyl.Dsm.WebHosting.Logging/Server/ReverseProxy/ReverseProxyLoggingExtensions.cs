@@ -103,26 +103,4 @@ public static partial class ReverseProxyLoggingExtensions
     public static partial void FailedToDeleteReverseProxy(this ILogger<ILogReverseProxyManagerService> logger, Exception ex, Guid? uuid, string siteName);
 
     #endregion
-
-    #region Duration
-
-    /// <summary>
-    /// Logs the duration of a reverse proxy creation operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1700014, Level = LogLevel.Debug, Message = "Reverse proxy creation completed in {Duration}ms for site {SiteName}")]
-    public static partial void CreateDuration(this ILogger<ILogReverseProxyManagerService> logger, long duration, string siteName);
-
-    /// <summary>
-    /// Logs the duration of a reverse proxy update operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1700015, Level = LogLevel.Debug, Message = "Reverse proxy update completed in {Duration}ms for site {SiteName}")]
-    public static partial void UpdateDuration(this ILogger<ILogReverseProxyManagerService> logger, long duration, string siteName);
-
-    /// <summary>
-    /// Logs the duration of a reverse proxy deletion operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1700016, Level = LogLevel.Debug, Message = "Reverse proxy deletion completed in {Duration}ms for site {SiteName}")]
-    public static partial void DeleteDuration(this ILogger<ILogReverseProxyManagerService> logger, long duration, string siteName);
-
-    #endregion
 }

@@ -81,40 +81,4 @@ public static partial class ConfigurationLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1900012, Level = LogLevel.Warning, Message = "Failed to create backup of corrupted configuration")]
     public static partial void FailedToCreateBackup(this ILogger<ILogWebSitesConfigurationService> logger, Exception ex);
-
-    /// <summary>
-    /// Logs the start of an add site operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1900013, Level = LogLevel.Debug, Message = "Adding site: {SiteName}")]
-    public static partial void AddSiteStarting(this ILogger<ILogWebSitesConfigurationService> logger, string siteName);
-
-    /// <summary>
-    /// Logs the start of an update site operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1900014, Level = LogLevel.Debug, Message = "Updating site: {SiteName}")]
-    public static partial void UpdateSiteStarting(this ILogger<ILogWebSitesConfigurationService> logger, string siteName);
-
-    /// <summary>
-    /// Logs the start of a remove site operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1900015, Level = LogLevel.Debug, Message = "Removing site: {SiteName}")]
-    public static partial void RemoveSiteStarting(this ILogger<ILogWebSitesConfigurationService> logger, string siteName);
-
-    /// <summary>
-    /// Logs the duration of an add site operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1900016, Level = LogLevel.Debug, Message = "Add site completed in {Duration}ms for '{SiteName}'")]
-    public static partial void AddSiteDuration(this ILogger<ILogWebSitesConfigurationService> logger, long duration, string siteName);
-
-    /// <summary>
-    /// Logs the duration of an update site operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1900017, Level = LogLevel.Debug, Message = "Update site completed in {Duration}ms for '{SiteName}'")]
-    public static partial void UpdateSiteDuration(this ILogger<ILogWebSitesConfigurationService> logger, long duration, string siteName);
-
-    /// <summary>
-    /// Logs the duration of a remove site operation.
-    /// </summary>
-    [LoggerMessage(EventId = 1900018, Level = LogLevel.Debug, Message = "Remove site completed in {Duration}ms for '{SiteName}'")]
-    public static partial void RemoveSiteDuration(this ILogger<ILogWebSitesConfigurationService> logger, long duration, string siteName);
 }

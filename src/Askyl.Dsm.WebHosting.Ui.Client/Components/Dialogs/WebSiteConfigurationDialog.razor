@@ -4,14 +4,12 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
-@using Askyl.Dsm.WebHosting.Logging
 
 @implements IDialogContentComponent
 @implements IWorkingState
 
 @inject IDialogService DialogService
 @inject IWebSiteHostingService HostingService
-@inject ILogger<ILogWebSiteConfigurationDialog> Logger
 @inject ILocalizer localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
@@ -197,7 +195,6 @@
         catch (Exception ex)
         {
             var action = localizer[IsEditMode ? L.WebsiteConfig.ActionUpdating : L.WebsiteConfig.ActionCreating];
-            Logger.ErrorModifyingWebsite(ex, action);
             await DialogService.ShowErrorAsync(localizer[L.WebsiteConfig.ErrorModifying, action, ex.Message]);
         }
     }

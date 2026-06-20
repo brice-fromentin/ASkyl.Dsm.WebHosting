@@ -33,10 +33,4 @@ public static partial class DownloaderLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2400004, Level = LogLevel.Error, Message = "Download failed: {FileName}")]
     public static partial void DownloadFailed(this ILogger<ILogDownloaderService> logger, Exception ex, string fileName);
-
-    /// <summary>
-    /// Logs download duration.
-    /// </summary>
-    [LoggerMessage(EventId = 2400005, Level = LogLevel.Debug, Message = "Download completed in {Duration}ms for {FileName}")]
-    public static partial void DownloadDuration(this ILogger<ILogDownloaderService> logger, long duration, string fileName);
 }

@@ -26,10 +26,6 @@ public class FrameworkManagementService(
             return InstallationResult.CreateFailure(localizer[L.Validation.VersionRequired]);
         }
 
-        using var timer = new OperationTimer(elapsed => logger.InstallDuration(elapsed, version));
-
-        logger.InstallStarting(version);
-
         try
         {
             // Download the specific framework version
@@ -63,10 +59,6 @@ public class FrameworkManagementService(
         {
             return InstallationResult.CreateFailure(localizer[L.Validation.InvalidVersionFormat]);
         }
-
-        using var timer = new OperationTimer(elapsed => logger.UninstallDuration(elapsed, version));
-
-        logger.UninstallStarting(version);
 
         try
         {

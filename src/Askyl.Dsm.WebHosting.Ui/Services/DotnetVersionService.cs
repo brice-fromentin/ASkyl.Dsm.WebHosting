@@ -70,9 +70,6 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
     /// </summary>
     public async Task RefreshCacheAsync()
     {
-        using var timer = new OperationTimer(elapsed => logger.RefreshCacheDuration(elapsed));
-
-        logger.RefreshCacheStarting();
         await versionsDetector.RefreshCacheAsync();
     }
 
