@@ -297,8 +297,8 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
         return result;
     }
 
-    public async Task<ApiResponseBase<EmptyResponse>?> ExecuteSimpleAsync(IApiParameters parameters)
-        => await ExecuteAsync<ApiResponseBase<EmptyResponse>>(parameters);
+    public async Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters)
+        => await ExecuteAsync<ApiResponseBase<object>>(parameters);
 
     private static void LogApiErrorIfFailed<R>(R? result, ILogger<ILogDsmApiClient> logger)
         where R : IApiResponse

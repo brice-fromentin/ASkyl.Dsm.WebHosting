@@ -24,7 +24,7 @@ public class ExtensionMethodsTests : IDisposable
     public void IsValid_ResponseNull_ReturnsFalse()
     {
         // Arrange
-        ApiResponseBase<EmptyResponse>? response = null;
+        ApiResponseBase<object>? response = null;
 
         // Act & Assert
         Assert.False(response.IsValid());
@@ -34,7 +34,7 @@ public class ExtensionMethodsTests : IDisposable
     public void IsValid_SuccessTrue_NoData_ReturnsTrue()
     {
         // Arrange
-        var response = new ApiResponseBase<EmptyResponse> { Success = true };
+        var response = new ApiResponseBase<object> { Success = true };
 
         // Act & Assert
         Assert.True(response.IsValid());
@@ -44,7 +44,7 @@ public class ExtensionMethodsTests : IDisposable
     public void IsValid_SuccessFalse_ReturnsFalse()
     {
         // Arrange
-        var response = new ApiResponseBase<EmptyResponse> { Success = false };
+        var response = new ApiResponseBase<object> { Success = false };
 
         // Act & Assert
         Assert.False(response.IsValid());
@@ -54,7 +54,7 @@ public class ExtensionMethodsTests : IDisposable
     public void IsValid_WithHasDataTrue_NullData_ReturnsFalse()
     {
         // Arrange
-        var response = new ApiResponseBase<EmptyResponse> { Success = true, Data = null };
+        var response = new ApiResponseBase<object> { Success = true, Data = null };
 
         // Act & Assert
         Assert.False(response.IsValid(hasData: true));
@@ -64,7 +64,7 @@ public class ExtensionMethodsTests : IDisposable
     public void IsValid_WithHasDataTrue_WithData_ReturnsTrue()
     {
         // Arrange
-        var response = new ApiResponseBase<EmptyResponse> { Success = true, Data = new EmptyResponse() };
+        var response = new ApiResponseBase<object> { Success = true, Data = new object() };
 
         // Act & Assert
         Assert.True(response.IsValid(hasData: true));

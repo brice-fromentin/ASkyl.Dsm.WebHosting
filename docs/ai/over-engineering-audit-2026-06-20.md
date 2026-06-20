@@ -1,6 +1,6 @@
 # Over-Engineering Audit & Reduction Plan
 
-**Date:** 2026-06-20
+**Date:** 2026-06-20 (updated 2026-06-21)
 **Scope:** Full repository scan (not diff-based)
 **Goal:** Remove ~2,100 lines of over-engineering across ~45 files
 
@@ -112,7 +112,7 @@ Each finding is scored on three axes (1–5 scale), then ranked:
 
 ---
 
-### 8. [P1] shrink Constants project (~35 lines, 2 files) ✅ DONE
+### 8. [P1] shrink Constants project (~35 lines, 2 files)
 
 **Score:** Impact 4 / Risk 2 / Effort 2 → **1.0**
 
@@ -262,27 +262,121 @@ Each finding is scored on three axes (1–5 scale), then ranked:
 
 ---
 
+## New Findings (2026-06-21 Scan)
+
+### 17. [P0] native AspNetCoreReleaseType (25 lines, 1 file)
+
+**Score:** Impact 2 / Risk 1 / Effort 1 → **2.0**
+
+**What:** `AspNetCoreReleaseType` enum (LTS=0, STS=1, Unknown=99)
+duplicates `Microsoft.Deployment.DotNet.Releases.ReleaseType` exactly.
+The project already references this library. A single
+`ConvertReleaseType()` in `DownloaderService` casts back and forth.
+
+**Replacement:** Use `Microsoft.Deployment.DotNet.Releases.ReleaseType` directly. Remove `AspNetCoreReleaseType` enum and the cast method.
+
+**Files:** `src/Askyl.Dsm.WebHosting.Data/Domain/Runtime/AspNetCoreReleaseInfo.cs`
+
+---
+
+### 18. [P0] delete EmptyResponse (8 lines, 1 file)
+
+**Score:** Impact 1 / Risk 1 / Effort 1 → **1.0**
+
+**What:** Empty class used as `ApiResponseBase<EmptyResponse>` for API calls returning no data. Exists solely to satisfy `where T : class, new()` constraint.
+
+**Replacement:** Use `ApiResponseBase<object>` or introduce a `Unit` type. Only 2 production consumers (`DsmApiClient.ExecuteSimpleAsync`, test file).
+
+**Files:** `src/Askyl.Dsm.WebHosting.Data/DsmApi/Responses/EmptyResponse.cs`
+
+---
+
+### 19. [P1] shrink AspNetChannel (47 lines, 1 file)
+
+**Score:** Impact 2 / Risk 2 / Effort 1 → **1.0**
+
+**What:** Wrapper around `AspNetCoreReleaseInfo` adding `ToString()` for FluentSelect display + 6 forwarding properties. The `FromReleaseInfo` factory duplicates the constructor.
+
+**Replacement:** Add `ToString()` directly to `AspNetCoreReleaseInfo`. Consumers that need display formatting call `.ToString()` on the info object directly.
+
+**Files:** `src/Askyl.Dsm.WebHosting.Data/Domain/Runtime/AspNetChannel.cs`
+
+---
+
+### 20. [P1] shrink WebSiteInstance + WebSiteInstanceDetails inheritance (67 lines, 2 files)
+
+**Score:** Impact 2 / Risk 2 / Effort 2 → **0.5**
+
+**What:** `WebSiteInstanceDetails` extends `WebSiteInstance` to add exactly one property: `ProcessInfo? Process`. The base class has a forwarding `Id` property and duplicate constructors.
+
+**Replacement:** Single class with `[JsonIgnore]` on `Process`. Eliminates inheritance overhead for a single-property extension.
+
+**Files:** `src/Askyl.Dsm.WebHosting.Data/Domain/WebSites/WebSiteInstance.cs` + `WebSiteInstanceDetails.cs`
+
+---
+
+### 21. [P1] shrink WebSiteRuntimeState factories (18 lines, 1 file)
+
+**Score:** Impact 1 / Risk 1 / Effort 1 → **1.0**
+
+**What:** `Stopped` and `Running` static factories wrap the primary constructor with fixed strings. 4 consumers.
+
+**Replacement:** Call `new WebSiteRuntimeState(false, null, "Stopped")` or `new WebSiteRuntimeState(true, info, "Running")` inline. Factories add no value over the primary constructor.
+
+**Files:** `src/Askyl.Dsm.WebHosting.Data/Domain/WebSites/WebSiteRuntimeState.cs`
+
+---
+
+### 22. [P1] shrink DsmParameterNameAttribute (7 lines, 1 file)
+
+**Score:** Impact 1 / Risk 1 / Effort 1 → **1.0**
+
+**What:** Attribute storing a single string (`Name`) read via reflection in `ApiParametersBase.ToJson()`. Only 1 consumer type uses it.
+
+**Replacement:** `protected virtual string JsonParameterName { get; }` on `ApiParametersBase`. Eliminates reflection lookup for a single value.
+
+**Files:** `src/Askyl.Dsm.WebHosting.Data/Attributes/DsmParameterNameAttribute.cs`
+
+---
+
+### 23. [P2] shrink LocalizedText + ResourceManagerCache (30 lines, 1 file)
+
+**Score:** Impact 2 / Risk 3 / Effort 2 → **0.33**
+
+**What:** `LocalizedText` wraps a string with implicit conversion
+operator and a `Name` property (never read, only used for fallback
+display `[key]`). `ResourceManagerCache` is a 1-property static class.
+`ILocalizer` returns `LocalizedText` which consumers immediately
+convert to `string`.
+
+**Replacement:** Have `ILocalizer` return `string` directly. Remove `LocalizedText` wrapper and `ResourceManagerCache` (inline into `Localizer` constructor).
+
+**Files:** `src/Askyl.Dsm.WebHosting.Globalization/Localizer.cs`
+
+---
+
 ## Summary by Priority
 
 | Priority | Items | Lines | Files | Rationale |
 |---|---|---|---|---|
-| **P0 — Do now** | 7 | ~502 | 11 | Low risk, mechanical replacements, quick wins |
-| **P1 — Do next** | 5 | ~726 | ~23 | Moderate risk, dedicated PR per item |
-| **P2 — Do later** | 4 | ~837 | ~11 | High risk, defer until related work is underway |
-| **Total** | **16** | **~2,065** | **~45** | |
+| **P0 — Do now** | 9 | ~535 | 13 | Low risk, mechanical replacements, quick wins |
+| **P1 — Do next** | 9 | ~540 | ~25 | Moderate risk, dedicated PR per item |
+| **P2 — Do later** | 5 | ~937 | ~14 | High risk, defer until related work is underway |
+| **Total** | **23** | **~2,012** | **~52** | |
 
 **Revised after consumer analysis:** Several P0 items skipped
-(ApiResponseExtensions: 8, JsonOptionsCache: 11, OperationTimer: 17,
-HttpClientExtensions: 20). Constants scope reduced from ~400 lines/15 files
-to ~35 lines/2 files.
+(ApiResponseExtensions: 8 consumers, JsonOptionsCache: 11 consumers,
+OperationTimer: 17 consumers, HttpClientExtensions: 20 consumers).
+Constants scope reduced from ~400 lines/15 files to ~35 lines/2 files.
 
 ## Summary by Tag
 
 | Tag | Items | Lines | Files |
 |---|---|---|---|
-| shrink | 7 | ~1,720 | ~30 |
-| yagni | 3 | ~220 | ~10 |
-| stdlib | 4 | ~272 | 4 |
+| shrink | 10 | ~1,720 | ~35 |
+| yagni | 4 | ~220 | ~11 |
+| stdlib | 5 | ~272 | 5 |
+| native | 1 | ~25 | 1 |
 | delete | 3 | ~311 | 5 |
 
 ## Status
@@ -305,6 +399,13 @@ to ~35 lines/2 files.
 | 14 | shrink ApiParametersBase | SKIPPED (justified: static reflection caches, 12 consumers, automatic version validation) |
 | 15 | yagni ProcessRunner/ProcessHandle | SKIPPED (justified: enables full SiteLifecycleManager testing via fake implementations) |
 | 16 | shrink Logging project | ✅ PARTIAL (dropped Starting/Duration events: 30 methods, 18 OperationTimer callbacks; dropped client UI logging: 35 methods across Home/Dialogs; kept LicenseService + CultureManager client logs) |
+| 17 | native AspNetCoreReleaseType | SKIPPED (justified: Data project avoids external library dependency; enum mirrors library values for clean boundary) |
+| 18 | delete EmptyResponse | ✅ DONE |
+| 19 | shrink AspNetChannel | ⬜ PENDING |
+| 20 | shrink WebSiteInstance inheritance | ⬜ PENDING |
+| 21 | shrink WebSiteRuntimeState factories | ⬜ PENDING |
+| 22 | shrink DsmParameterNameAttribute | ⬜ PENDING |
+| 23 | shrink LocalizedText + ResourceManagerCache | ⬜ PENDING |
 
 ## Dependencies Removable
 
@@ -313,23 +414,68 @@ to ~35 lines/2 files.
 | `BenchmarkDotNet` | 0.15.8 | P0 | Sole consumer is Benchmarks project (deleted) |
 | `Microsoft.Extensions.Logging` | 10.0.9 | P2 | Solely for `[LoggerMessage]`; removable if logging is collapsed |
 
-## Execution Order (By Priority)
+## Execution Plan
 
-1. **P0 — Done (3/7 items, ~334 lines):** Benchmarks deleted, UriExtensions inlined,
-   DsmLanguageToCultureConverter folded into DsmLanguageCodes. 4 items skipped
-   after consumer analysis showed they are justified.
-2. **P1 — Done (5/5 items, ~260 lines):** Constants: ApiVersions + ApiMethods
-   merged into ApiConstants (renamed from ApiNames), LicenseConstants inlined
-   into LicenseService (12 of 14 kept). PHP converters merged (2→1 file),
-   TokenMap extracted to Constants project as ImmutableDictionary.
-   DsmLanguageToCultureConverter restored to Tools (logic separated from
-   DsmLanguageCodes constants). WorkingState/SemaphoreLock skipped
-   (6-7 consumers each). 7 single-impl interfaces: 5 kept (3 tested, 2 had
-   tests), 2 dropped (IPlatformInfoService, IWebSitesConfigurationService).
-3. **P2 — Week 4+ (4 items, ~840 lines):** Result hierarchy collapse,
-   ApiParametersBase shrink, ProcessRunner/ProcessHandle yagni,
-   Logging project shrink. High consumer count — pair with feature work
-   or dedicated refactoring sprint.
+### Week 1 — P0 Quick Wins (Items 17-18)
+
+**Item 17: native AspNetCoreReleaseType (25 lines)**
+
+- Replace `AspNetCoreReleaseType` with `Microsoft.Deployment.DotNet.Releases.ReleaseType` in `AspNetCoreReleaseInfo`
+- Remove `ConvertReleaseType` cast in `DownloaderService`
+- Update 3 test files
+- **Risk:** Low — enum values match exactly (LTS=0, STS=1, Unknown=99)
+- **Verification:** Build + existing tests pass
+
+**Item 18: delete EmptyResponse (8 lines)**
+
+- Replace `ApiResponseBase<EmptyResponse>` with `ApiResponseBase<object>` in `DsmApiClient.ExecuteSimpleAsync`
+- Update 5 test references
+- **Risk:** Low — empty class carries no behavioral contract
+- **Verification:** Build + existing tests pass
+
+### Week 2 — P1 Domain Shrinks (Items 19-22)
+
+**Item 19: shrink AspNetChannel (47 lines)**
+
+- Add `ToString()` to `AspNetCoreReleaseInfo` (format: `"8.0 (LTS)"` or `"9.0"`)
+- Replace `AspNetChannel` usages in `DotnetVersionService`, `RuntimeManagementController`, `ChannelsResult`
+- Update 10 test references
+- **Risk:** Medium — 4 prod consumers, touches API return types
+- **Verification:** Build + integration tests for channel endpoints
+
+**Item 20: shrink WebSiteInstance inheritance (67 lines)**
+
+- Merge `WebSiteInstanceDetails` into `WebSiteInstance` with `[JsonIgnore]` on `Process`
+- Update `WebSiteHostingService.SiteEntry`, `UpdateInstanceRuntimeState`
+- Update 6 test references
+- **Risk:** Medium — JSON serialization boundary changes
+- **Verification:** Build + serialization tests + API response validation
+
+**Item 21: shrink WebSiteRuntimeState factories (18 lines)**
+
+- Replace `WebSiteRuntimeState.Stopped` → `new(false, null, "Stopped")` at 4 call sites
+- Replace `WebSiteRuntimeState.Running(info)` → `new(true, info, "Running")` at 1 call site
+- Update 2 test references
+- **Risk:** Low — mechanical replacement, primary constructor is public
+- **Verification:** Build + existing tests pass
+
+**Item 22: shrink DsmParameterNameAttribute (7 lines)**
+
+- Add `protected virtual string JsonParameterName { get; }` to `ApiParametersBase`
+- Remove attribute from parameter types, override property instead
+- **Risk:** Low — 1 consumer, mechanical replacement
+- **Verification:** Build + DSM API integration tests
+
+### Week 3 — P2 Deferred (Item 23)
+
+**Item 23: shrink LocalizedText + ResourceManagerCache (30 lines)**
+
+- Change `ILocalizer` indexer to return `string` directly
+- Remove `LocalizedText` class and implicit operator
+- Inline `ResourceManagerCache.SharedResource` into `Localizer` constructor
+- Update 10 consumer sites (mostly tests)
+- **Risk:** Medium — 10 consumers, implicit operator removal may expose type mismatches
+- **Verification:** Build + all globalization tests
 
 ## Not Counted (Defensible Design)
 
@@ -337,3 +483,4 @@ to ~35 lines/2 files.
 - **DSM API models** (68 thin DTOs in `Data/DsmApi/`, not over-engineered)
 - **Custom `Localizer` / `ILocalizer`** (addresses real WASM culture caching bug in `IStringLocalizer`)
 - **`DsmApiClient`** (342 lines, but handles session TTL, handshake, auth, form/JSON dispatch — domain-specific, not reinvented)
+- **`IApiResponse` / `IApiParameters`** (generic constraints on `DsmApiClient`, not YAGNI — used as type bounds in 5+ method signatures)
