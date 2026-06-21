@@ -39,6 +39,7 @@
       "od *": "allow",
       "printenv *": "allow",
       "pwd": "allow",
+      "rg *": "allow",
       "sed *": "allow",
       "sleep *": "allow",
       "sort *": "allow",
