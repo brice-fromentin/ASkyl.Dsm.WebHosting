@@ -3,10 +3,8 @@ using System.Net;
 using System.Text.Json;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
-using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
-using Askyl.Dsm.WebHosting.Data.Domain.DsmSystem;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.User;
@@ -19,13 +17,13 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.User;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.UserSettings;
-using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
 
-public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmApiClient> logger)
+public class DsmApiClient(IHttpClientFactory httpClientFactory, DsmSettingsService settingsService, ILogger<ILogDsmApiClient> logger)
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
@@ -34,12 +32,6 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
     private DateTime _lastSessionValidation;
 
     public ApiInformationCollection ApiInformations { get; } = new();
-
-    /// <summary>
-    /// System-level DSM preferences extracted from /etc/synoinfo.conf.
-    /// Populated at construction time by reading the configuration file synchronously.
-    /// </summary>
-    public DsmSystemPreferences SystemPreferences { get; } = ReadSettings(logger);
 
     /// <summary>
     /// Session ID (SID) for the current DSM session.
@@ -106,7 +98,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
 
     public async Task<bool> ConnectAsync(LoginCredentials model)
     {
-        logger.Connecting(SystemPreferences.Server, SystemPreferences.Port);
+        logger.Connecting(settingsService.Server, settingsService.Port);
 
         if (!await HandShakeAsync())
         {
@@ -164,38 +156,6 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
         _sessionValid = true;
         _lastSessionValidation = DateTime.UtcNow;
         return true;
-    }
-
-    private static DsmSystemPreferences ReadSettings(ILogger<ILogDsmApiClient> logger)
-    {
-        if (!File.Exists(SystemDefaults.ConfigurationFileName))
-        {
-            logger.ConfigurationFileNotFound(SystemDefaults.ConfigurationFileName);
-            throw new FileNotFoundException("DSM configuration file not found", SystemDefaults.ConfigurationFileName);
-        }
-
-        var lines = File.ReadAllLines(SystemDefaults.ConfigurationFileName);
-        var settings = lines.Where(x => x.Contains('='))
-                            .ToDictionary(k => k.Split(['='], 2)[0], v => v.Split(['='], 2)[1].Replace("\"", String.Empty));
-
-        logger.ConfigurationLoaded(settings.Count);
-
-        var server = GetMandatorySetting(settings, SystemDefaults.KeyExternalHostIp, logger);
-        var language = settings.TryGetValue(SystemDefaults.KeyLanguage, out var lang) && lang.Length > 0 ? lang : "def";
-        var port = Int32.TryParse(settings.TryGetValue(SystemDefaults.KeyExternalHttpsPort, out var p) ? p : null, out var parsedPort) ? parsedPort : SystemDefaults.DefaultHttpsPort;
-
-        return new DsmSystemPreferences(server, port, language);
-    }
-
-    private static string GetMandatorySetting(Dictionary<string, string> settings, string key, ILogger<ILogDsmApiClient> logger)
-    {
-        if (!settings.TryGetValue(key, out var value) || value.Length == 0)
-        {
-            logger.MandatorySettingMissing(key);
-            throw new MandatorySettingMissingException(key);
-        }
-
-        return value;
     }
 
     /// <summary>
@@ -281,7 +241,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, ILogger<ILogDsmA
     public async Task<R?> ExecuteAsync<R>(IApiParameters parameters)
         where R : IApiResponse
     {
-        var url = parameters.BuildUrl(SystemPreferences.Server, SystemPreferences.Port);
+        var url = parameters.BuildUrl(settingsService.Server, settingsService.Port);
         var result = parameters.SerializationFormat switch
         {
             SerializationFormats.Form

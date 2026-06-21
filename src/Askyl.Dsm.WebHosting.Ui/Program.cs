@@ -55,6 +55,9 @@ builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddRazorComponents()
                 .AddInteractiveWebAssemblyComponents();
 
+// Register DSM settings service (singleton - reads /etc/synoinfo.conf once at startup)
+builder.Services.AddSingleton<DsmSettingsService>();
+
 // Register DSM API client and authentication facade
 builder.Services.AddSingleton<DsmApiClient>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
