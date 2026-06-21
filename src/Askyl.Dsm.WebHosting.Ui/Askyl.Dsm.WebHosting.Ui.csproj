@@ -10,16 +10,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.9" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.14.2" />
     <PackageReference Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageReference Include="Roslynator.Formatting.Analyzers" Version="4.15.0" />
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Constants/Askyl.Dsm.WebHosting.Constants.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Data/Askyl.Dsm.WebHosting.Data.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Globalization/Askyl.Dsm.WebHosting.Globalization.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Logging/Askyl.Dsm.WebHosting.Logging.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Tools/Askyl.Dsm.WebHosting.Tools.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Ui.Client/Askyl.Dsm.WebHosting.Ui.Client.csproj" />

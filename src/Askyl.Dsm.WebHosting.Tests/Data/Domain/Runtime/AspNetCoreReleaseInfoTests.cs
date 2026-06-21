@@ -32,8 +32,8 @@ public class AspNetCoreReleaseInfoTests
     public void Constructor_ValidArguments_SetsProperties()
     {
         // Arrange
-        var version = "8.0.1";
-        var productVersion = "8.0";
+        const string version = "8.0.1";
+        const string productVersion = "8.0";
         var releaseDate = DateTimeOffset.UtcNow;
 
         // Act

@@ -1,10 +1,10 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
-**Version:** 0.5.9
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** May 25, 2026 (Session validation against DSM server,
-`SYNO.Core.User.get` probe with 1-minute TTL cache, `DsmUsernameKey` session storage,
-`IsAuthenticatedAsync` consolidated, DSM API directory restructuring — Models/Parameters/Responses)
+**Last Updated:** June 21, 2026 (Over-engineering reduction completed: Benchmarks removed, API constants merged,
+PHP converters consolidated, UriExtensions inlined, LicenseConstants inlined, two interfaces dropped,
+DsmParameterNameAttribute replaced with virtual property, LocalizedText+ResourceManagerCache removed,
+ILocalizer returns string directly, 13 new tests added for LogDownload/License/TreeContent services)
 
 ---
 
@@ -67,10 +67,19 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
   - ✅ Async `WaitForExitAsync` with linked cancellation token replaces blocking `WaitForExit(timeoutMs)`
   - ✅ Reduced timeouts: HttpClient (90→15s), Process (60→10s) — eliminates DSM reverse proxy 504 errors
 - ⏳ TODO: Certificate management for reverse proxy
-- ⏳ TODO: Multi-language support
+- ⏳ **Multi-language support** (June 2026 — Phases 1-9 complete, Phase 10 remaining):
+  - ✅ Globalization assembly with `SharedResource.resx` + satellite assemblies (fr-FR)
+  - ✅ Server-side culture discovery via satellite assembly directory scanning
+  - ✅ Culture injection to WASM via `Blazor.start()` environment variable
+  - ✅ `ICultureManager` (in `Data.Contracts`) — resolves culture once at login (DSM-controlled, no runtime switching)
+  - ✅ `AcceptLanguageHandler` — propagates culture to server via HTTP headers
+  - ✅ `RequestLocalization` middleware — server reads `Accept-Language` from WASM
+  - ✅ FluentValidation migration (Phase 7) — shared validators in Globalization assembly
+  - ✅ Culture-aware formatting (Phase 9) — date/time format preferences flow from DSM UserSettings to WASM
+  - ⏳ End-to-end testing & validation (Phase 10)
 - ✅ Unit test implementation (10 phases complete — May 2026)
 - ✅ **IProcessRunner abstraction** for SiteLifecycleManager — co-located interface + implementation (ProcessRunner.cs, ProcessHandle.cs), enables full unit testing of process lifecycle
-- ✅ **LoggerMessage migration** — 224 source-generated `[LoggerMessage]` extension methods across 19 source files; zero CA2254 warnings
+- ✅ **LoggerMessage migration** — 168 source-generated `[LoggerMessage]` extension methods across 19 source files; zero CA2254 warnings
 - ✅ **DSM API logging** — request timing, authentication failures, and API errors logged via `[LoggerMessage]` extensions; compile-time `IApiResponse` constraint replaces reflection
 - ✅ **Serilog configuration** — output template with `{EventId}`, `Log.CloseAndFlush()` on graceful shutdown, `WithActivity` enricher for correlation tracking
 - ✅ **OperationTimer** — value-type disposable timer for scope-based duration logging across all services; replaced manual `Stopwatch` boilerplate with single-line `using var` pattern
@@ -94,10 +103,10 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 ### Solution Structure
 
 ```text
-Askyl.Dsm.WebHosting.slnx (Version 0.5.3)
-├── Askyl.Dsm.WebHosting.Benchmarks         # Performance benchmarks (BenchmarkDotNet)
+Askyl.Dsm.WebHosting.slnx
 ├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
 ├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
+├── Askyl.Dsm.WebHosting.Globalization      # Localization resources, validators, culture management, C# 14 scoped extensions
 ├── Askyl.Dsm.WebHosting.Logging            # Logging extensions (source-generated log methods)
 ├── Askyl.Dsm.WebHosting.Tools              # Utility tools & DSM API client
 ├── Askyl.Dsm.WebHosting.Tests              # Unit tests (xUnit, Moq, FluentAssertions)
@@ -119,12 +128,12 @@ Askyl.Dsm.WebHosting.slnx (Version 0.5.3)
 All projects share common build settings from `Directory.Build.props`:
 
 ```xml
-<!-- Centralized versioning -->
-<Version>0.5.9</Version>
-<AssemblyVersion>0.5.9.0</AssemblyVersion>
-<FileVersion>0.5.9.0</FileVersion>
-<InformationalVersion>0.5.9</InformationalVersion>
-<PackageVersion>0.5.9</PackageVersion>
+<!-- Centralized versioning (see src/Directory.Build.props for current value) -->
+<Version>0.5.x</Version>
+<AssemblyVersion>0.5.x.0</AssemblyVersion>
+<FileVersion>0.5.x.0</FileVersion>
+<InformationalVersion>0.5.x</InformationalVersion>
+<PackageVersion>0.5.x</PackageVersion>
 
 <!-- Debug settings -->
 <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
@@ -137,6 +146,9 @@ All projects share common build settings from `Directory.Build.props`:
 <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
 <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
+
+<!-- Enable C# 14 preview features (scoped extension keyword) -->
+<EnablePreviewFeatures>true</EnablePreviewFeatures>
 ```
 
 **Analyzer Packages:**
@@ -194,21 +206,21 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 ```text
 
 Constants/
-├── Application/                            # Application-wide constants (8 files)
-│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session (DsmSid, DsmUsername, TTL), auth messages
+├── Application/                            # Application-wide constants (6 files)
+│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session (DsmSid, DsmUsername, TTL)
 │   ├── DotnetInfoParserConstants.cs        # dotnet --info section headers and framework identifiers
 │   ├── InfrastructureConstants.cs          # Directory names (Downloads)
-│   ├── LicenseConstants.cs                 # License file management
 │   ├── LogConstants.cs                     # Log directory and file paths
 │   ├── SecurityHeaders.cs                  # HTTP security header values (CSP, X-Frame-Options, etc.)
 │   ├── ValidationConstants.cs              # Validation message constants (path traversal, version format, env vars)
 │   └── WebSiteConstants.cs                 # Website config, process lifecycle, port validation
-├── DSM/                                    # Synology DSM-specific constants (8 files)
+├── Globalization/                          # Culture and localization constants (1 file)
+│   └── GlobalizationConstants.cs           # Default culture/language, text direction (LTR/RTL), env var names, Accept-Language header
+├── DSM/                                    # Synology DSM-specific constants (7 files)
 │   ├── API/                                # API-related constants
-│   │   ├── ApiMethods.cs                   # CRUD operation names (Create, Get, List, etc.)
-│   │   ├── ApiNames.cs                     # 8 DSM API identifiers (SYNO.API.Auth, FileStation, Core.User, etc.)
-│   │   ├── ApiVersions.cs                  # Version range constants (Min: 1, Max: 7)
+│   │   ├── ApiConstants.cs                 # Merged API names, methods, and version ranges (ImmutableDictionary + const fields)
 │   │   ├── DsmConstants.cs                 # Shared DSM error codes (ErrorCodeAuthenticationFailed = -4)
+│   │   ├── PhpDotNetFormatTokens.cs        # PHP → .NET format token mappings (ImmutableDictionary, data only)
 │   │   ├── ReverseProxyConstants.cs        # Proxy error codes and description prefix
 │   │   └── SerializationFormats.cs         # Enum: Form, Json
 │   ├── FileStation/                        # FileStation-specific constants (1 file)
@@ -243,9 +255,10 @@ Constants/
 
 | Category | Key Constants | Count |
 |----------|---------------|-------|
-| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), DsmSid, DsmUsername, SessionValidationTtlMinutes | ~37 |
-| **Websites** | Process timeouts, port range (1024-65535), environment vars, validation messages | ~25 |
-| **DSM APIs** | 8 API names (incl. Core.User), CRUD methods, version ranges, shared error codes | ~37 + 1 enum |
+| **Application** | SettingsFileName, HttpClientName, ApplicationSubPath ("adwh"), DsmSid, DsmUsername, SessionValidationTtlMinutes | ~30 |
+| **Globalization** | DefaultCulture, DefaultCultureInfo, DefaultLanguageTag, TextDirectionLtr/Rtl, SupportedCultures/SystemCulture env vars, AcceptLanguageHeader | 7 |
+| **Websites** | Process timeouts, port range (1024-65535), WellKnownWebPorts [80, 443], environment vars, validation messages | ~26 |
+| **DSM APIs** | 8 API names (incl. Core.User), CRUD methods, version ranges (merged ApiConstants), PHP→.NET format tokens, shared error codes | ~37 + 1 enum + 1 ImmutableDictionary |
 | **FileStation** | Listing patterns, sorting, pagination (100 limit) | ~15 |
 | **Network** | Cookie header ("Cookie"), SSID prefix ("_SSID="), localhost | 6 + 1 enum |
 | **Runtime** | Architecture IDs (x64/arm/arm64), OS IDs (linux/osx/windows) | ~15 |
@@ -262,7 +275,7 @@ Constants/
 
 ### 2. Askyl.Dsm.WebHosting.Data
 
-**Purpose:** Core data layer, API definitions, domain services, and result types (14 service contracts)
+**Purpose:** Core data layer, API definitions, domain services, and result types (12 service contracts)
 
 **Complete Service Contracts Inventory:**
 
@@ -275,10 +288,6 @@ Constants/
 | **ILogDownloadService** | `Contracts/ILogDownloadService.cs` | CreateLogZipStreamAsync() | Ui.Services.LogDownloadService |
 | **IReverseProxyManagerService** | `Contracts/IReverseProxyManagerService.cs` | CreateAsync(), UpdateAsync(), DeleteAsync() | Ui.Services.ReverseProxyManagerService |
 | **IWebSiteHostingService** | `Contracts/IWebSiteHostingService.cs` | GetAllWebsitesAsync(), AddWebsiteAsync() | Ui.Services.WebSiteHostingService, Ui.Client.Services.WebSiteHostingService |
-
-**Note:** `FindByCompositeKeyAsync()` is a private helper method in the implementation, not part of the public interface.
-| **IWebSitesConfigurationService** | `Contracts/IWebSitesConfigurationService.cs` | GetAllSitesAsync(), AddSiteAsync(), RemoveSiteAsync() | Ui.Services.WebSitesConfigurationService |
-| **IPlatformInfoService** | `Contracts/IPlatformInfoService.cs` | (Properties: ChannelVersion, CurrentArchitecture, CurrentOS) | Tools.Infrastructure.PlatformInfoService |
 | **IFileManagerService** | `Contracts/IFileManagerService.cs` | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName() | Tools.Infrastructure.FileManagerService |
 | **IArchiveExtractorService** | `Contracts/IArchiveExtractorService.cs` | Decompress(inputFile, exclude) | Tools.Infrastructure.ArchiveExtractorService |
 | **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), DownloadVersionToAsync(), GetAspNetCoreReleasesAsync() | Tools.Runtime.DownloaderService |
@@ -297,8 +306,6 @@ Data/
 │   ├── ILogDownloadService.cs              # Log file retrieval
 │   ├── IReverseProxyManagerService.cs      # Proxy configuration
 │   ├── IWebSiteHostingService.cs           # Website lifecycle
-│   ├── IWebSitesConfigurationService.cs    # Configuration persistence
-│   ├── IPlatformInfoService.cs             # Platform detection (Singleton)
 │   ├── IFileManagerService.cs              # File management (Scoped, configurable root)
 │   ├── IArchiveExtractorService.cs         # Archive extraction (Scoped)
 │   ├── IDownloaderService.cs               # .NET downloads with cancellation (Scoped)
@@ -323,10 +330,8 @@ Data/
 │       ├── WebSiteConfiguration.cs         # Main config model (settings only — no runtime state)
 │       ├── WebSiteInstance.cs              # Runtime instance (owns RequiredFramework — not persisted)
 │       ├── WebSiteRuntimeState.cs          # Immutable record for site state (Running/Stopped/NotResponding)
-│       ├── WebSiteInstanceDetails.cs       # Website instance details for UI
+  │       ├── WebSiteInstanceDetails.cs       # Website instance details for UI
 │       ├── WebSitesConfiguration.cs        # Persistent configuration store
-├── Attributes/                             # Custom attributes
-│   └── DsmParameterNameAttribute.cs        # DSM parameter name mapping
 ├── DsmApi/                                 # DSM API integration
 │   ├── Models/                             # API models (records with init setters)
 │   │   ├── Auth/                           # Authentication models
@@ -363,7 +368,6 @@ Data/
 │   └── Responses/                          # API response wrappers
 │       ├── ApiInformationResponse.cs       # API info query response
 │       ├── ApiResponseBase.cs              # Generic response base with Error model
-│       ├── EmptyResponse.cs                # No-data response
 │       ├── Auth/                           # Authentication responses
 │       │   └── AuthLoginResponse.cs        # Login response (sid)
 │       ├── Core/                           # Core API responses
@@ -410,15 +414,16 @@ Data/
 **Structure:**
 
 ```text
-Tools/
+├── Converters/                             # Format/language converters
+│   ├── DsmLanguageToCultureConverter.cs    # Conversion logic: DSM 3-letter language code → .NET culture name (returns null for "def", logs on trim)
+│   └── PhpFormatToDotNetConverter.cs       # Consolidated converter: PHP date/time tokens → .NET format strings (uses PhpDotNetFormatTokens from Constants)
 ├── Extensions/                             # Extension methods
 │   ├── ApiResponseExtensions.cs            # Response mapping helpers
-│   ├── HttpClientExtensions.cs             # HTTP client helpers
-│   └── UriExtensions.cs                    # URI manipulation helpers
+│   └── HttpClientExtensions.cs             # HTTP client helpers (C# 14 scoped `extension(HttpClient)`)
 ├── Infrastructure/                         # Infrastructure utilities
 │   ├── ArchiveExtractorService.cs          # gzip + tar extraction (implements IArchiveExtractorService)
 │   ├── FileManagerService.cs               # File system initialization (implements IFileManagerService)
-│   ├── PlatformInfoService.cs              # Platform detection (implements IPlatformInfoService)
+│   ├── PlatformInfoService.cs              # Platform detection (no interface, direct injection)
 │   ├── ProcessHandle.cs                    # IProcessHandle + SystemProcessHandle (co-located)
 │   ├── ProcessRunner.cs                    # IProcessRunner + SystemProcessRunner (co-located)
 │   └── ProcessTerminator.cs                # Cross-platform process termination (SIGTERM/CloseMainWindow)
@@ -432,6 +437,7 @@ Tools/
     └── AssemblyRuntimeDetector.cs          # Runtime detection from *.runtimeconfig.json (implements IAssemblyRuntimeDetector)
 └── Threading/                              # Async coordination utilities
     └── SemaphoreLock.cs                    # Semaphore-based async locking utility
+
 ```
 
 **Infrastructure Services Architecture:**
@@ -440,10 +446,10 @@ The Tools project contains DI-based infrastructure services for platform detecti
 
 | Service | Interface | Lifetime | Key Features | Dependencies | Source File |
 |---------|-----------|----------|--------------|--------------|-------------|
-| **PlatformInfoService** | `IPlatformInfoService` | Singleton | Platform detection, config loading | ILogger | `Tools/Infrastructure/PlatformInfoService.cs` |
+| **PlatformInfoService** | _(no interface, dropped)_ | Singleton | Platform detection, config loading | ILogger | `Tools/Infrastructure/PlatformInfoService.cs` |
 | **FileManagerService** | `IFileManagerService` | Scoped | Directory management, configurable root path | ILogger, string rootPath | `Tools/Infrastructure/FileManagerService.cs` |
 | **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz extraction | IFileManagerService, ILogger | `Tools/Infrastructure/ArchiveExtractorService.cs` |
-| **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | IPlatformInfoService, IFileManagerService | `Tools/Runtime/DownloaderService.cs` |
+| **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | PlatformInfoService, IFileManagerService | `Tools/Runtime/DownloaderService.cs` |
 | **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | ILogger, ISemaphoreOwner | `Tools/Runtime/VersionsDetectorService.cs` |
 | **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes, creates SystemProcessHandle | ILogger, ILoggerFactory | `Tools/Infrastructure/ProcessRunner.cs` |
 | **SystemProcessHandle** | `IProcessHandle` | Transient (per-process) | Wraps `Process` for testability, graceful shutdown | `ILogger<ILogSystemProcessHandle>` | `Tools/Infrastructure/ProcessHandle.cs` |
@@ -494,6 +500,7 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
   - HTTP request timing (method, URL, status code, duration in milliseconds)
   - Authentication failure logging with error reason from response
   - API error logging for `Success: false` responses (error code + reason)
+  - User preferences fetch failure logging (best-effort, Debug level) via `FetchUserPreferencesFailed` (EventId 2000013)
 - HttpClient factory integration for proper lifecycle management
 - All infrastructure services testable via interface abstractions
 
@@ -502,6 +509,8 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
 Defined in `Data/DsmApi/Responses/ApiResponseBase.cs`. All DSM API response types implement `IApiResponse` via `ApiResponseBase<T>`.
 
 This enables compile-time access to `Success` and `Error` properties — replacing reflection with type-safe error handling.
+
+**Config Parsing:** `ReadSettings()` uses `Split(new[] { '=' }, 2)` to preserve values containing `=` (base64 data, URLs). Keys consumed: `external_host_ip`, `language`, `external_port_dsm_https`.
 
 **Connection Flow:** See `DsmApiClient.cs` lines 85-120
 
@@ -602,14 +611,19 @@ Ui.Client/
 │   │   │   └── Services: IWebSiteHostingService, IAuthenticationService, ILogDownloadService
 │   │   ├── Login.razor                     # Authentication form with platform check (Linux/macOS warning)
 │   │   │   └── Services: IAuthenticationService.LoginAsync(), DataAnnotationsValidator
-│   │   └── NotFound.razor                  # 404 handler
+│   │   └── NotFound.razor                  # 404 handler — FluentUI centered page with localized home link
 │   └── Patterns/                           # UI patterns
 │       └── WorkingState/                   # IWorkingState interface and CreateWorkingState extension
+├── Contracts/                              # Client-side service contracts
+│   └── INavigationGuard.cs                 # Router navigation guard interface (OnNavigateAsync, OnNavigate)
 ├── Extensions/                             # Client-side extension methods
 │   └── FsEntryExtensions.cs                # File system entry extension methods
 ├── Interfaces/                             # C# interfaces for JS interop
-├── Services/                               # HTTP client wrappers (7 services)
+├── Services/                               # HTTP client wrappers + culture management (10 services)
+│   ├── AcceptLanguageHandler.cs            # DelegatingHandler — attaches Accept-Language header from ICultureManager
 │   ├── AuthenticationService.cs            # Singleton - POST /api/authentication/login, logout, status
+│   ├── AuthenticationNavigationGuard.cs    # Singleton - INavigationGuard impl, Router OnNavigateAsync guard, enforces auth before render (no flash)
+│   ├── CultureManager.cs                   # ICultureManager impl — safe static init, resolves culture at login, clones with date/time formats
 │   ├── DotnetVersionService.cs             # GET /api/runtime-management/{versions,channels,releases}
 │   ├── FileSystemService.cs                # GET /api/file-management/{shared-folders,directory-contents}
 │   ├── FrameworkManagementService.cs       # POST /api/framework-management/{install,uninstall}
@@ -620,7 +634,7 @@ Ui.Client/
 │   └── appsettings.json                    # Client Serilog config (BrowserConsole sink)
 ├── _Imports.razor                          # Global using directives (System.Net.Http, Microsoft.FluentUI, Icons namespaces)
 ├── Program.cs                              # WASM entry point (service registration, HttpClient configuration)
-└── Routes.razor                            # Router with AppAssembly route discovery, MainLayout default
+└── Routes.razor                            # Router with OnNavigateAsync auth guard, AppAssembly route discovery, MainLayout default
 ```
 
 **Key Features:**
@@ -661,6 +675,9 @@ Ui.Client/
 // Singleton - Authentication state managed server-side via session cookies
 builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
 
+// Singleton - Router navigation guard (enforces auth before render)
+builder.Services.AddSingleton<AuthenticationNavigationGuard>();
+
 // Scoped - HTTP client wrappers for REST API calls
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
 builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();
@@ -676,18 +693,7 @@ builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
 });
 ```
 
-### 6. Askyl.Dsm.WebHosting.Benchmarks
-
-**Purpose:** Performance benchmarking with BenchmarkDotNet
-
-**Key Features:**
-
-- **MemoryDiagnoser** for GC analysis and memory allocation tracking
-- **Comparison tests** for string concatenation strategies
-- **Real-world scenarios** (URL building, parameter encoding)
-- **BenchmarkDotNet 0.15.8** for accurate performance measurements
-
-### 7. Askyl.Dsm.WebHosting.Logging
+### 6. Askyl.Dsm.WebHosting.Logging
 
 **Purpose:** Logging extensions with source-generated logger methods
 
@@ -743,26 +749,22 @@ Each service owns a dedicated 100K range at 1M spacing to prevent cross-service 
 
 | Range | Service | Extension File | Folder |
 |-------|---------|----------------|--------|
-| `1000001–1000012` | AuthenticationService | `AuthenticationLoggingExtensions.cs` | `Server/Authentication/` |
+| `1000001–1000007` | AuthenticationService | `AuthenticationLoggingExtensions.cs` | `Server/Authentication/` |
 | `1100001–1100012` | FileSystemService | `FileSystemServiceLoggingExtensions.cs` | `Server/FileManagement/` |
 | `1200001–1200006` | FileManagerService | `FileManagerServiceLoggingExtensions.cs` | `Server/FileManagement/` |
 | `1300001–1300007` | LogDownloadService | `LogDownloadServiceLoggingExtensions.cs` | `Server/FileManagement/` |
-| `1400001–1400011` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` | `Server/Framework/` |
-| `1500001–1500009` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` | `Server/Framework/` |
-| `1600001–1600007` | SiteLifecycleManager (start/stop) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
-| `1601001–1601004` | SiteLifecycleManager (site stop) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
-| `1602001–1602003` | SiteLifecycleManager (dispose) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
-| `1603001–1603004` | SiteLifecycleManager (graceful shutdown) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
-| `1604001–1604005` | SiteLifecycleManager (duration) | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
-| `2250001–2250005` | AssemblyRuntimeDetector | `AssemblyRuntimeDetectorLoggingExtensions.cs` | `Server/Infrastructure/` |
-| `1700001–1700016` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` | `Server/ReverseProxy/` |
-| `1800001–1800044` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` | `Server/WebsiteHosting/` |
-| `1900001–1900018` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` | `Server/WebsiteHosting/` |
-| `2000001–2000012` | DsmApiClient | `DsmApiLoggingExtensions.cs` | `Server/DsmApi/` |
-| `2100001–2100008` | ArchiveExtractorService | `ArchiveExtractorLoggingExtensions.cs` | `Server/Infrastructure/` |
+| `1400001–1400007` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` | `Server/Framework/` |
+| `1500001–1500007` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` | `Server/Framework/` |
+| `1600001–1600019` | SiteLifecycleManager | `ProcessLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
+| `1700001–1700013` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` | `Server/ReverseProxy/` |
+| `1800001–1800031` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` | `Server/WebsiteHosting/` |
+| `1900001–1900012` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` | `Server/WebsiteHosting/` |
+| `2000001–2000013` | DsmApiClient | `DsmApiLoggingExtensions.cs` | `Server/DsmApi/` |
+| `2100001–2100006` | ArchiveExtractorService | `ArchiveExtractorLoggingExtensions.cs` | `Server/Infrastructure/` |
 | `2200001–2200004` | VersionsDetectorService | `VersionsDetectorLoggingExtensions.cs` | `Server/Infrastructure/` |
+| `2250001–2250005` | AssemblyRuntimeDetector | `AssemblyRuntimeDetectorLoggingExtensions.cs` | `Server/Infrastructure/` |
 | `2300001–2300002` | PlatformInfoService | `PlatformInfoLoggingExtensions.cs` | `Server/Infrastructure/` |
-| `2400001–2400005` | DownloaderService | `DownloaderLoggingExtensions.cs` | `Server/Infrastructure/` |
+| `2400001–2400004` | DownloaderService | `DownloaderLoggingExtensions.cs` | `Server/Infrastructure/` |
 | `2500001` | SystemProcessRunner | `ProcessRunnerLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
 | `2600001–2600005` | SystemProcessHandle | `ProcessHandleLoggingExtensions.cs` | `Server/ProcessLifecycle/` |
 
@@ -773,13 +775,8 @@ Client-side components use `ClientLoggingExtensions.cs` for structured logging i
 | Range | Service | Category Marker |
 |-------|---------|-----------------|
 | `7000001` | LicenseService | `ILogLicenseService` |
-| `7100001–7100015` | Home page | `ILogHome` |
-| `7200001–7200004` | DotnetVersionsDialog | `ILogDotnetVersionsDialog` |
-| `7300001–7300004` | AspNetReleasesDialog | `ILogAspNetReleasesDialog` |
-| `7400001` | WebSiteConfigurationDialog | `ILogWebSiteConfigurationDialog` |
-| `7500001` | FileSelectionDialog | `ILogFileSelectionDialog` |
 
-**Total:** 224 `[LoggerMessage]` methods across 19 source files (18 server + 1 client), zero CA2254 warnings.
+**Total:** 168 `[LoggerMessage]` methods across 19 source files (18 server + 1 client), zero CA2254 warnings.
 
 **Serilog Configuration:**
 
@@ -988,7 +985,6 @@ using var timer = new OperationTimer(elapsed => logger.FrameworkInstalledDuratio
 | **UI Components** | FluentUI Blazor | Modern UI component library |
 | **Logging** | Serilog | Structured logging |
 | **HTTP Client** | Microsoft.Extensions.Http | HttpClient factory |
-| **Benchmarking** | BenchmarkDotNet | Performance testing |
 | **.NET Releases** | Microsoft.Deployment.DotNet.Releases | Version detection |
 | **WASM Server** | Microsoft.AspNetCore.Components.WebAssembly.Server | Blazor WASM hosting |
 | **Analyzer Rules** | Roslynator.Analyzers + Formatting.Analyzers | Code style enforcement |
@@ -1100,12 +1096,15 @@ builder.Services.AddRazorComponents()
 ### Component Hierarchy
 
 ```text
-App.razor (Root)
-└── MainLayout.razor
-    └── Page Content
-        ├── Home.razor (Dashboard with website grid)
-        ├── Login.razor (Authentication)
-        └── NotFound.razor (404 handler)
+App.razor (Root — server-rendered shell)
+├── FluentDesignTheme (System mode — light/dark theme)
+└── FluentLayout (full-viewport layout container)
+    └── Routes (InteractiveWebAssembly)
+        └── MainLayout.razor (FluentMainLayout with Header/Body)
+            └── Page Content
+                ├── Home.razor (Dashboard with website grid)
+                ├── Login.razor (Authentication)
+                └── NotFound.razor (404 — FluentUI centered page with localized home link)
 
 Dialogs (Overlay)
 ├── WebSiteConfigurationDialog.razor
@@ -1154,24 +1153,31 @@ Input components with immediate validation feedback:
 
 ### Authentication & Session Management
 
-1. **Server-Side Session Storage**
+1. **Router-Level Navigation Guard**
+   - `AuthenticationNavigationGuard` intercepts all navigation via `<Router OnNavigateAsync>`
+   - Async auth check (`IsAuthenticatedAsync`) runs before any component renders
+   - Login page path excluded from guard — all other routes require authentication
+   - No cached auth state — re-checks on every navigation to avoid stale state after login
+   - Eliminates flash of protected content before redirect to login
+
+2. **Server-Side Session Storage**
    - DSM SID stored in server session (not client storage)
    - Username stored alongside SID for defense-in-depth (`DsmUsername`)
    - HttpOnly cookies prevent XSS attacks
    - SameSite=Strict prevents CSRF
 
-2. **Server-Side Session Validation**
+3. **Server-Side Session Validation**
    - `IsAuthenticatedAsync()` validates both session keys and calls `SYNO.Core.User.get`
    - 1-minute TTL cache matches DSM minimum session timeout
    - Detects expired or revoked sessions via DSM server (error `-4`)
    - Clears session keys and redirects to login on validation failure
 
-3. **Antiforgery & CSRF Protection**
+4. **Antiforgery & CSRF Protection**
    - Enabled for all Blazor components and API endpoints
    - SameSite=Strict documented on all 5 API controllers as primary CSRF defense
    - Token validation on state-changing operations
 
-4. **HTTPS & HSTS Enforcement**
+5. **HTTPS & HSTS Enforcement**
    - `UseHttpsRedirection()` in middleware pipeline
    - `UseHsts()` enabled for non-development environments (30-day max-age)
    - Default protocol for reverse proxy is HTTPS
@@ -1227,18 +1233,198 @@ Input components with immediate validation feedback:
 
 ---
 
+## Globalization & Localization
+
+### Architecture Overview
+
+Culture is **DSM-controlled** — resolved once at login from user/system preferences, then locked for the session. There is no runtime language switching in the UI.
+
+The Globalization assembly serves two purposes:
+
+1. **Localization resources** — `SharedResource.resx` with satellite assemblies per culture
+2. **Shared validators** — FluentValidation validators used by both server and client
+
+### Culture Flow
+
+1. **Server discovers cultures** — `GlobalizationSettings` singleton (in `Ui/Infrastructure/`) scans `Globalization` assembly directory for satellite assembly subdirectories at construction time
+2. **Server reads DSM system culture** — `ApplyDsmSystemCulture()` extension extracts `language` from DSM API, converts via `DsmLanguageToCultureConverter`, sets `IGlobalizationSettings.SystemCulture`
+3. **Server injects to WASM** — supported cultures as JSON + system culture, injected via `Blazor.start()` using `dotnet.withEnvironmentVariable()` for `ADWH_SUPPORTED_CULTURES` and `ADWH_SYSTEM_CULTURE`
+4. **WASM parses cultures** — `CultureManager` static initializer deserializes `ADWH_SUPPORTED_CULTURES` JSON env var (no server-side `GlobalizationSettings` dependency)
+5. **CultureManager pre-resolves** — static fields capture `BrowserCulture` (from WASM runtime's auto-set `CurrentUICulture`), `SystemCulture`, and `SupportedCultures` (from env var) as `CultureInfo?`
+6. **Early CultureManager resolution** — `Program.cs` forces DI resolution of `ICultureManager` before `host.RunAsync()` — sets `CurrentUICulture` before any page renders
+7. **Login resolves culture** — priority: login response `Culture` → system culture → browser culture → default `en-US`
+8. **WASM propagates to server** — `AcceptLanguageHandler` attaches `Accept-Language` header to all HTTP requests
+9. **Server reads header** — `RequestLocalization` middleware sets thread culture per request
+
+**html lang attribute** — set server-side in `App.razor` via `GetLanguageTag()`:
+
+1. **DSM system culture** — from `IGlobalizationSettings.SystemCulture` (injected singleton)
+2. **Accept-Language header** — parsed directly, matched against supported cultures (handles neutral languages like `fr` → `fr-FR`)
+3. **Default** — `en`
+
+**Why not `IRequestCultureFeature`?** — ASP.NET Core request localization doesn't match neutral languages (`fr`) to specific cultures (`fr-FR`), so we parse `Accept-Language` directly.
+
+**Logout flow** — `forceLoad: true` triggers full page reload, which resets culture to system/browser resolution.
+
+### Date/Time Format Flow
+
+User-specific date/time format preferences flow from DSM UserSettings through to the WASM culture:
+
+1. **Server fetches UserSettings** — `SYNO.Core.UserSettings.get` (best-effort, post-auth) extracts `Personal.dateFormat` and `Personal.timeFormat` (PHP-style format strings)
+2. **Server converts formats** — `PhpFormatToDotNetConverter` converts PHP date/time tokens to .NET format strings using `PhpDotNetFormatTokens` from Constants (e.g., `"Y/m/d"` → `"yyyy/MM/dd"`)
+3. **Server passes to WASM** — `AuthenticationResult` carries `DateFormat` and `TimeFormat` properties alongside `Culture`
+4. **WASM applies formats** — `CultureManager.InitializeFromLogin()` clones the resolved `CultureInfo` and overrides `DateTimeFormat` patterns:
+   - `ShortDatePattern` / `LongDatePattern` ← `DateFormat`
+   - `ShortTimePattern` / `LongTimePattern` ← `TimeFormat`
+5. **UI uses standard formats** — date columns use `Format="d"` (short date) and `Format="g"` (short date+time), which automatically respect the user's custom patterns
+
+**Defensive coding:** All culture/format operations are wrapped in try-catch:
+
+- `CultureNotFoundException` / `ArgumentException` → fall back to system culture
+- `FormatException` → keep culture default patterns, log warning via `InvalidDateFormatIgnored` / `InvalidTimeFormatIgnored`
+
+**Known limitation:** `SystemCulture` does not include date/time format preferences from system config.
+The date/time format flow only applies when the user has explicit preferences in `SYNO.Core.UserSettings.get`.
+System-level date/time format discovery is a future enhancement.
+
+### Key Components
+
+| Component | Location | Purpose |
+|---|---|---|
+| `ICultureManager` | `Data.Contracts` | Interface: `InitializeFromLogin(string?, string?, string?)`, `ResetToSystem()`, `CurrentCulture`, `CurrentUICulture` |
+| `CultureManager` | `Ui.Client` | WASM implementation — safe static init (`SafeParseSupportedCultures`, `SafeGetBrowserCulture`, `SafeResolveSystemCultureFromEnv`), resolves culture at login, clones with date/time formats, updates `html lang` and `dir` via `GetTextDirection()` extension on every culture change |
+| `IGlobalizationSettings` | `Data.Contracts` | Interface: `SupportedCultures`, `SupportedCultureNamesJson`, `SystemCulture` |
+| `GlobalizationSettings` | `Ui/Infrastructure/` | Singleton service implementing `IGlobalizationSettings` — discovers cultures from satellite resources at construction, logs via `ILogger<ILogGlobalizationSettings>` |
+| `AcceptLanguageHandler` | `Ui.Client` | `DelegatingHandler` that attaches `Accept-Language` header from `ICultureManager` |
+| `GlobalizationExtensions` | `Ui/Extensions/` | `ApplyDsmSystemCulture()` — fetches DSM language and sets `SystemCulture`; `UseGlobalizationRequestLocalization()` — configures and adds middleware |
+| `GlobalizationConstants` | `Constants/Globalization/` | `DefaultCulture`/`DefaultCultureInfo`, `TextDirectionLtr`/`TextDirectionRtl`, env var names, `AcceptLanguageHeader` |
+| `CultureInfoExtensions` | `Globalization/Extensions/` | C# 14 scoped `extension(CultureInfo)` — `GetTextDirection()` returns LTR/RTL from `TextInfo.IsRightToLeft` |
+| `GlobalizationServiceCollectionExtensions` | `Globalization/Extensions/` | C# 14 scoped `extension(IServiceCollection)` — `AddGlobalization()` registers `ILocalizer` singleton |
+| `LocalizationKeys.cs` | `Globalization` | Strongly-typed keys organized by model (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`) |
+| `ILocalizer` | `Globalization` | Abstraction interface — returns `string` directly via indexer, hides `ResourceManager` from consumer projects |
+| `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `ResourceManager` (not `IStringLocalizer`) — reads `CurrentUICulture` at call time, so culture changes after login work without re-rendering; missing keys return `[{key}]`; holds static `SharedResource` field |
+| `DsmLanguageToCultureConverter` | `Tools/Converters/` | Conversion logic: DSM 3-letter language code → .NET culture name (returns `null` for `"def"`, logs via `Debug.WriteLine` when input is trimmed) |
+| `PhpFormatToDotNetConverter` | `Tools/Converters/` | Consolidated converter: PHP date/time tokens → .NET format strings (uses `PhpDotNetFormatTokens` ImmutableDictionary from Constants project) |
+| `WebSiteConfigurationValidator` | `Globalization/Validators/` | FluentValidation rules for `WebSiteConfiguration` (8 properties, separate messages for InternalPort/PublicPort) |
+| `LoginCredentialsValidator` | `Globalization/Validators/` | FluentValidation rules for `LoginCredentials` (2 properties) |
+| `DeferredMessageExtensions` | `Globalization/Validators/` | `WithLocalizedMessage()` extension — defers resource key resolution to validation time via `WithMessage(Func&lt;T, string&gt;)` so culture changes after login are respected |
+
+### Validation Architecture
+
+Validators are defined once in Globalization and consumed by both server and client — eliminating duplicate validation logic:
+
+| Layer | Package | Registration | Behavior |
+|-------|---------|--------------|----------|
+| **Globalization** | `FluentValidation` + `FluentValidation.DependencyInjectionExtensions` | Contains both validators | Defines all rules with deferred localized messages via `WithLocalizedMessage()` extension — uses `WithMessage(Func<T, string>)` to resolve resource keys at validation time, ensuring culture changes after login are respected |
+| **Server (Ui)** | `FluentValidation.AspNetCore` | `AddFluentValidationAutoValidation()` | Auto-populates ModelState; invalid POST returns 400 Bad Request |
+
+**Dependency Graph:**
+
+```text
+Globalization → Data (for domain models)
+Globalization → FluentValidation, FluentValidation.DependencyInjectionExtensions
+Ui (server) → Globalization + FluentValidation.AspNetCore + Data.Contracts (IGlobalizationSettings)
+Ui.Client (WASM) → Globalization + Data.Contracts (ICultureManager)
+```
+
+**Registration (Program.cs):**
+
+```csharp
+// Server (Ui/Program.cs)
+builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
+builder.Services.AddFluentValidationAutoValidation();
+
+// Client (Ui.Client/Program.cs)
+builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
+```
+
+### Culture Resolution Priority
+
+**At construction (login page, post-logout):**
+
+1. **DSM system culture** — from `ADWH_SYSTEM_CULTURE` env var (pre-resolved to `CultureInfo?` as `SystemCulture`)
+2. **Browser culture** — from WASM runtime's auto-set `CultureInfo.CurrentUICulture` (pre-resolved to `CultureInfo` as `BrowserCulture`)
+3. **Default** — `en-US`
+
+**After login:**
+
+1. **Login response culture** — server resolved user vs system preference (from DSM settings)
+2. **DSM system culture** — same as above (pre-resolved)
+3. **Browser culture** — same as above (pre-resolved)
+4. **Default** — `en-US`
+
+**Matching strategy:** `FindMatchingCulture(CultureInfo)` uses `CultureInfo.Equals` for exact match, then `TwoLetterISOLanguageName` for parent culture fallback. All matching is done at class load time.
+
+### Adding a New Culture
+
+1. Add `SharedResource.<culture>.resx` to `Globalization/Resources/`
+2. Build — SDK auto-generates satellite assembly in `<culture>/` subdirectory
+3. Server auto-discovers via directory scan → injects to WASM
+4. **Zero code changes needed**
+
+### Adding a New Validator
+
+1. Create `XxxValidator.cs` in `Globalization/Validators/`
+2. Add keys to `LocalizationKeys.cs` under model-scoped class (e.g., `L.XxxModel.*`)
+3. Add strings to both `.resx` files
+4. Validator auto-discovered by `AddValidatorsFromAssemblyContaining<SharedResource>()`
+5. **Zero registration changes needed**
+
+### Design Decisions
+
+- **DSM-controlled culture**: No runtime switching — culture locked after login, reset to system on logout
+- **Synchronous culture methods**: `InitializeFromLogin()` and `ResetToSystem()` are `void` — no I/O involved
+- **Pre-resolved static fields**: `BrowserCulture`, `SystemCulture`, and `SupportedCultures` captured at class load — `ResolveSystemCulture()` is allocation-free at runtime
+- **Safe static initialization**: Each static field uses a `Safe*` wrapper
+  (`SafeParseSupportedCultures`, `SafeGetBrowserCulture`,
+  `SafeResolveSystemCultureFromEnv`) that catches `CultureNotFoundException`,
+  `ArgumentException`, and `JsonException` — prevents `TypeInitializationException`
+  from crashing WASM on malformed env vars
+- **`NotSupportedException` on pattern setters**: Date/time pattern overrides
+  catch both `FormatException` and `NotSupportedException` — cloned cultures
+  are mutable, but defensive coding guards against rare immutable culture variants
+- **Pure C# browser detection**: WASM runtime auto-sets `CultureInfo.CurrentUICulture` from Accept-Language header — no JS interop needed
+- **`DsmLanguageToCultureConverter` returns `null` for `"def"`**: `"def"` means "use browser default" — not English
+- **`GlobalizationSettings` as singleton in Ui/Infrastructure/**: Server-only `IGlobalizationSettings` implementation — avoids WASM file system API crashes; discovery logged via `[LoggerMessage]`
+- **`GlobalizationExtensions` in `Ui/Extensions/`**: `ApplyDsmSystemCulture()` fetches DSM language; `UseGlobalizationRequestLocalization()` resolves settings from DI and adds middleware
+- **`ILocalizer` abstraction**: Hides `ResourceManager` from consumer projects — indexer returns `string` directly, no wrapper type
+- **`ResourceManager` instead of `IStringLocalizer<T>`**: `IStringLocalizer<T>` caches culture at construction in WASM. `ResourceManager` reads `CurrentUICulture` at call time
+- **`BlazorWebAssemblyLoadAllGlobalizationData`**: Required for dynamic culture changes at WASM startup — without it, changing culture before first page render throws `AggregateException`
+- **Early `CultureManager` resolution**: `Program.cs` forces DI resolution before `host.RunAsync()` — ensures `CurrentUICulture` is set before login page renders
+- **Full page reload on logout**: `forceLoad: true` resets WASM circuit, culture re-resolves to system/browser
+- **Server-side Accept-Language parsing**: `IRequestCultureFeature` doesn't match neutral languages (`fr`) to specific cultures (`fr-FR`) — `GetLanguageTag()` parses header directly
+- **`CultureManager` updates `html lang` and `dir` via `IJSRuntime`**: Sets `document.documentElement.lang` and `dir` (`rtl`/`ltr`) on every culture change — enables RTL support
+- **Missing translation bracketed format**: `Localizer` and `DeferredMessageExtensions` return `[{key}]` for missing keys — makes absent translations visible in UI without crashing
+- **No client-side `setHtmlLang` JS interop (legacy)**: Replaced by `CultureManager.UpdateHtmlLangAndDir()` via `IJSRuntime` which updates both `lang` and `dir` attributes
+- **`AuthenticationResult.Culture` is `{ get; set; }`**: System.Text.Json requires setters for deserialization into properties
+- **`IsAuthenticated` marked `[JsonIgnore]`**: Redundant alias for `Success` — pollutes JSON response
+- **ASP.NET Core default camelCase JSON**: Removed `PropertyNamingPolicy = null` — camelCase is industry standard and matches WASM client defaults
+- **Satellite assembly discovery**: `Directory.GetDirectories()` on assembly location, filtered by project satellite assembly name
+- **`dotnet.withEnvironmentVariable()`**: Pure .NET approach, no JS variables or JS interop needed for culture discovery
+- **`SupportedCultures` discovered at construction**: `GlobalizationSettings` singleton discovers cultures in its constructor (logged via `[LoggerMessage]`), available through DI before login
+- **`MarkupString` in `App.razor`**: Required to avoid HTML-encoding of JSON double quotes inside `<script>` block
+- **Shared validators in Globalization**: Single source of truth — server auto-validation uses the same FluentValidation rules defined in the Globalization assembly
+- **Model-scoped localization keys**: `L.WebSiteConfiguration.*` and `L.LoginCredentials.*` clarify model ownership
+- **No DataAnnotations**: All validation migrated to FluentValidation — DataAnnotations cannot use runtime-localized messages
+- **Separate port validation messages**: `InternalPort` (1024-65535) and
+  `PublicPort` (80, 443, or 1024-65535) have distinct validation keys
+  (`InternalPortRange`, `PublicPortRange`) since `WellKnownWebPorts` allows
+  standard web ports below the minimum application port
+- **`AuthenticationResult` carries `DateFormat` and `TimeFormat`**: Formats converted on server, passed to WASM alongside culture
+- **Culture-aware date formats via `CultureInfo.DateTimeFormat` override**: Clones culture and overrides patterns for user-specific preferences
+- **Standard format specifiers `"d"` and `"g"` in UI**: Leverages `CultureInfo.DateTimeFormat` automatically — no custom formatting logic in components
+- **Dynamic `html lang` attribute**: Reads from `IRequestCultureFeature` for accessibility and SEO — server-side request culture is the source of truth
+- **Defensive try-catch for culture operations**: `CultureNotFoundException`/`ArgumentException` fall back to system culture; `FormatException` keeps culture defaults with warning log
+- **Same format applied to short/long patterns**: DSM provides one date and one time format per user; applying to both short/long variants is the pragmatic trade-off
+- **`AuthenticationNavigationGuard` enforces auth before render**: Router `OnNavigateAsync` guard eliminates UI flash; no auth caching to avoid stale state; sync `OnNavigate` throws
+- **`FluentDesignTheme` + `FluentLayout` in App.razor**: App-level theme (System mode) and full-viewport layout; `FluentMainLayout` in MainLayout.razor provides Header/Body structure with background theming
+- **`GlobalizationConstants` centralizes culture defaults**: `DefaultCulture`, `DefaultCultureInfo`, text direction, env var names and `Accept-Language` header moved from `ApplicationConstants` to `Constants/Globalization/`
+- **C# 14 scoped extensions in `Extensions/` folders**: `CultureInfoExtensions` and `GlobalizationServiceCollectionExtensions` use `extension(T)` syntax
+- **`GetTextDirection()` extension**: Centralizes RTL/LTR logic (`culture.TextInfo.IsRightToLeft`); used by SSR `App.razor` and WASM `CultureManager`
+
+---
+
 ## Performance Optimization
-
-### Benchmarking Results
-
-**String Building (URL Construction):**
-
-| Method | Allocated Memory | GC Cuts |
-|--------|------------------|---------|
-| Interpolated String | Higher | More frequent |
-| StringBuilder | Lower | Less frequent |
-
-**Recommendation:** Use `StringBuilder` for complex URL/parameter building with multiple concatenations.
 
 ### Caching Strategy
 
@@ -1331,7 +1517,7 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 ### Immediate Priorities
 
 1. **Unit Test Implementation — Partially Complete**
-   - ✅ 187 tests across 9 phases (Data validation, domain, Result types, threading, extensions, I/O, parsing, platform)
+   - ✅ 400 tests across 10 phases (Data validation, domain, Result types, threading, extensions, I/O, parsing, platform, LogDownloadService, LicenseService, TreeContentService)
    - ⏳ Deferred: `DsmApiClient` (no interface), `DownloaderService` (external library), `WebSiteHostingService` (complex orchestration)
    - See `docs/ai/test-plan-2026-05-04.md` for results and coverage gaps
 
@@ -1424,13 +1610,13 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 
 ### C. Version History
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 0.5.7 | May 11, 2026 | Dead code sweep: removed `ApiGenericResponse`, `PaginationDefaults`, `LicenseRoutes`, `DirectoryFilesResult`, `DsmToolsExtensions`; removed NuGet packages `Microsoft.AspNetCore.Mvc.Versioning` and `Microsoft.FluentUI.AspNetCore.Components.Emoji`; preserved `EmptyResponse` as standalone type (used by `DsmApiClient`); cleaned stale references in Constants tree diagram and Tools Extensions listing |
-| 0.5.4 | May 1, 2026 | Replaced custom `CloneGenerator` source generator with C# records (`init` setters) — 41 classes converted, `GenerateCloneAttribute`/`IGenericCloneable<T>` removed, `ApiParametersBase<T>` simplified (no cloning needed with immutability); SiteLifecycleManager hardening: lifecycle manager recreation on config update (stale config fix), removed vestigial `.Clone()` calls (Interactive WASM has no shared memory), removed `ProcessTimeoutSeconds` (inlined 10s constant), added `IOException` to `StopAsync` exception filter, `ProcessInfo` converted to snapshot record, parallel startup in `StartEligibleSitesAsync`, `CancellationToken` forwarding in `StopAllSitesAsync` and `GetRuntimeStateAsync`, removed dead null check and misleading `CancellationToken` from `StartAsync`; **post-review fixes**: `RemoveInstanceAsync` restructured to remove persistent config before in-memory state (prevents orphaned configs on failure), `StopAllSitesAsync` wraps `Dispose()` in `finally` (prevents `SemaphoreSlim` leak on exception), `StartAsync` disposes stale `_process` handle before restart (prevents handle leak on crash-restart cycles); **SiteLifecycleManager concurrency rewrite**: replaced `SemaphoreSlim` + `ISemaphoreOwner` with `Channel<LifecycleCommand>` + single consumer loop — eliminates TOCTOU races, no `ObjectDisposedException` boilerplate, safe disposal via queued `DisposeCommand`, `ConfigurationRequiresRestart` uses order-independent dictionary comparison |
-| 0.5.4 | April 29, 2026 | SIGTERM process termination fix: added `ProcessTerminator` utility (cross-platform SIGTERM via P/Invoke), replaced blocking `WaitForExit` with async `WaitForExitAsync`, reduced timeouts (HttpClient 90→15s, Process 60→10s) — eliminates DSM reverse proxy 504 errors |
-| 0.5.4 | April 25, 2026 | Synchronized with codebase: added `SiteLifecycleManager` two-tier process architecture (graceful shutdown, force kill fallback), documented `DirectoryFilesResult`, `WebSiteRuntimeState`, `DotnetInfoParserConstants`; removed version column from Technical Stack table; cleaned up stale empty directory references |
-| 0.5.4 | April 5, 2026 | Architecture documentation synchronized with codebase; corrected service lifetimes, added SemaphoreLock and AuthorizeSessionAttribute documentation |
-| 0.5.3 | March 2026 | Architecture documentation update, version bump |
-| 0.5.2 | Earlier | Initial architecture documentation |
-| ... | ... | Previous versions |
+| Date | Changes |
+|------|---------|
+| June 20, 2026 | Over-engineering reduction: removed Benchmarks project (-260 lines, -BenchmarkDotNet dep); merged ApiVersions+ApiMethods+ApiNames into ApiConstants; inlined LicenseConstants into LicenseService; consolidated PHP date/time converters into PhpFormatToDotNetConverter with PhpDotNetFormatTokens (ImmutableDictionary) in Constants; inlined UriExtensions (1 consumer); dropped IPlatformInfoService and IWebSitesConfigurationService interfaces (single impl, no tests); added 13 tests for LogDownloadService (3), LicenseService (5), TreeContentService (5); separated DsmLanguageCodes (data) from DsmLanguageToCultureConverter (logic) |
+| May 11, 2026 | Dead code sweep: removed `ApiGenericResponse`, `PaginationDefaults`, `LicenseRoutes`, `DirectoryFilesResult`, `DsmToolsExtensions`; removed NuGet packages `Microsoft.AspNetCore.Mvc.Versioning` and `Microsoft.FluentUI.AspNetCore.Components.Emoji`; preserved `EmptyResponse` as standalone type (used by `DsmApiClient`); cleaned stale references in Constants tree diagram and Tools Extensions listing |
+| May 1, 2026 | Replaced custom `CloneGenerator` source generator with C# records (`init` setters) — 41 classes converted, `GenerateCloneAttribute`/`IGenericCloneable<T>` removed, `ApiParametersBase<T>` simplified (no cloning needed with immutability); SiteLifecycleManager hardening: lifecycle manager recreation on config update (stale config fix), removed vestigial `.Clone()` calls (Interactive WASM has no shared memory), removed `ProcessTimeoutSeconds` (inlined 10s constant), added `IOException` to `StopAsync` exception filter, `ProcessInfo` converted to snapshot record, parallel startup in `StartEligibleSitesAsync`, `CancellationToken` forwarding in `StopAllSitesAsync` and `GetRuntimeStateAsync`, removed dead null check and misleading `CancellationToken` from `StartAsync`; **post-review fixes**: `RemoveInstanceAsync` restructured to remove persistent config before in-memory state (prevents orphaned configs on failure), `StopAllSitesAsync` wraps `Dispose()` in `finally` (prevents `SemaphoreSlim` leak on exception), `StartAsync` disposes stale `_process` handle before restart (prevents handle leak on crash-restart cycles); **SiteLifecycleManager concurrency rewrite**: replaced `SemaphoreSlim` + `ISemaphoreOwner` with `Channel<LifecycleCommand>` + single consumer loop — eliminates TOCTOU races, no `ObjectDisposedException` boilerplate, safe disposal via queued `DisposeCommand`, `ConfigurationRequiresRestart` uses order-independent dictionary comparison |
+| April 29, 2026 | SIGTERM process termination fix: added `ProcessTerminator` utility (cross-platform SIGTERM via P/Invoke), replaced blocking `WaitForExit` with async `WaitForExitAsync`, reduced timeouts (HttpClient 90→15s, Process 60→10s) — eliminates DSM reverse proxy 504 errors |
+| April 25, 2026 | Synchronized with codebase: added `SiteLifecycleManager` two-tier process architecture (graceful shutdown, force kill fallback), documented `DirectoryFilesResult`, `WebSiteRuntimeState`, `DotnetInfoParserConstants`; removed version column from Technical Stack table; cleaned up stale empty directory references |
+| April 5, 2026 | Architecture documentation synchronized with codebase; corrected service lifetimes, added SemaphoreLock and AuthorizeSessionAttribute documentation |
+| March 2026 | Architecture documentation update, version bump |
+| Earlier | Initial architecture documentation |

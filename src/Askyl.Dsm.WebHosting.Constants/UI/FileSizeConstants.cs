@@ -51,9 +51,9 @@ public static class FileSizeConstants
     #region Formatting
 
     /// <summary>
-    /// Decimal places to display for fractional file sizes.
+    /// Format string for fractional file sizes (culture-aware with thousands grouping).
     /// </summary>
-    public const string DecimalFormat = "F2";
+    public const string DecimalFormat = "N2";
 
     #endregion
 }

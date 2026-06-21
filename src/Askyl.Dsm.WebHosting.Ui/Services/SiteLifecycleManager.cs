@@ -5,6 +5,7 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
@@ -19,6 +20,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 public sealed class SiteLifecycleManager : IDisposable
 {
     private readonly ILogger<ILogSiteLifecycleManager> _logger;
+    private readonly ILocalizer _localizer;
     private readonly IProcessRunner _processRunner;
     private readonly IAssemblyRuntimeDetector _assemblyRuntimeDetector;
     private readonly WebSiteConfiguration _configuration;
@@ -34,11 +36,13 @@ public sealed class SiteLifecycleManager : IDisposable
 
     public SiteLifecycleManager(
         ILogger<ILogSiteLifecycleManager> logger,
+        ILocalizer localizer,
         IProcessRunner processRunner,
         IAssemblyRuntimeDetector assemblyRuntimeDetector,
         WebSiteConfiguration configuration)
     {
         _logger = logger;
+        _localizer = localizer;
         _processRunner = processRunner;
         _assemblyRuntimeDetector = assemblyRuntimeDetector;
         _configuration = configuration;
@@ -54,13 +58,13 @@ public sealed class SiteLifecycleManager : IDisposable
         if (_isDisposing)
         {
             _logger.CannotStartSiteDisposing(_configuration.Name);
-            return ApiResult.CreateFailure("Site configuration is being updated");
+            return ApiResult.CreateFailure(_localizer[LK.Error.SiteConfigUpdating]);
         }
 
         var tcs = new TaskCompletionSource<ApiResult>();
         if (!_channel.Writer.TryWrite(new StartCommand(tcs)))
         {
-            return ApiResult.CreateFailure("Failed to queue start command");
+            return ApiResult.CreateFailure(_localizer[LK.Error.FailedToQueueStart]);
         }
 
         return await tcs.Task;
@@ -75,13 +79,13 @@ public sealed class SiteLifecycleManager : IDisposable
         if (_isDisposing)
         {
             _logger.CannotStopSiteDisposing(_configuration.Name);
-            return ApiResult.CreateFailure("Site configuration is being updated");
+            return ApiResult.CreateFailure(_localizer[LK.Error.SiteConfigUpdating]);
         }
 
         var tcs = new TaskCompletionSource<ApiResult>();
         if (!_channel.Writer.TryWrite(new StopCommand(tcs, cancellationToken)))
         {
-            return ApiResult.CreateFailure("Failed to queue stop command");
+            return ApiResult.CreateFailure(_localizer[LK.Error.FailedToQueueStop]);
         }
 
         return await tcs.Task;
@@ -94,13 +98,13 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (_isDisposing)
         {
-            return WebSiteRuntimeState.Stopped;
+            return new WebSiteRuntimeState(false, null);
         }
 
         var tcs = new TaskCompletionSource<WebSiteRuntimeState>();
         if (!_channel.Writer.TryWrite(new GetStateCommand(tcs)))
         {
-            return WebSiteRuntimeState.Stopped;
+            return new WebSiteRuntimeState(false, null);
         }
 
         return await tcs.Task.WaitAsync(cancellationToken);
@@ -166,14 +170,10 @@ public sealed class SiteLifecycleManager : IDisposable
 
     private ApiResult ProcessStartCommand()
     {
-        using var timer = new OperationTimer(elapsed => _logger.StartDuration(_configuration.Name, elapsed));
-
-        _logger.StartAttempt(_configuration.Name);
-
         if (_process?.HasExited == false)
         {
             _logger.SiteAlreadyRunning(_configuration.Name);
-            return ApiResult.CreateFailure($"Site '{_configuration.Name}' is already running");
+            return ApiResult.CreateFailure(_localizer[LK.Error.SiteAlreadyRunning, _configuration.Name]);
         }
 
         // Dispose stale process handle from a previously exited process
@@ -182,15 +182,15 @@ public sealed class SiteLifecycleManager : IDisposable
         if (!File.Exists(_configuration.ApplicationRealPath))
         {
             _logger.ApplicationBinaryNotFound(_configuration.ApplicationRealPath);
-            return ApiResult.CreateFailure($"Application binary not found: {_configuration.ApplicationRealPath}");
+            return ApiResult.CreateFailure(_localizer[LK.Error.ApplicationBinaryNotFound, _configuration.ApplicationRealPath]);
         }
 
         // Detect and validate framework compatibility
         var runtimeInfo = _assemblyRuntimeDetector.Detect(_configuration.ApplicationRealPath);
         if (runtimeInfo is { IsCompatible: false })
         {
-            _logger.SiteStartBlockedIncompatible(runtimeInfo.MissingMessage ?? "Incompatible framework");
-            return ApiResult.CreateFailure(runtimeInfo.MissingMessage ?? "Incompatible framework");
+            _logger.SiteStartBlockedIncompatible(runtimeInfo.MissingMessage ?? _localizer[LK.Error.IncompatibleFramework]);
+            return ApiResult.CreateFailure(runtimeInfo.MissingMessage ?? _localizer[LK.Error.IncompatibleFramework]);
         }
 
         try
@@ -204,16 +204,12 @@ public sealed class SiteLifecycleManager : IDisposable
         catch (Exception ex)
         {
             _logger.FailedToStartSite(ex, _configuration.Name);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(_localizer[LK.Error.OperationFailed]);
         }
     }
 
     private async Task<ApiResult> ProcessStopCommand(CancellationToken cancellationToken)
     {
-        using var timer = new OperationTimer(elapsed => _logger.StopDuration(_configuration.Name, elapsed));
-
-        _logger.StopAttempt(_configuration.Name);
-
         if (_process?.HasExited != false)
         {
             _logger.SiteAlreadyStopped(_configuration.Name);
@@ -238,7 +234,7 @@ public sealed class SiteLifecycleManager : IDisposable
         catch (Exception ex)
         {
             _logger.FailedToStopSite(ex, _configuration.Name);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(_localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -246,12 +242,12 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (_process?.HasExited != false)
         {
-            return WebSiteRuntimeState.Stopped;
+            return new WebSiteRuntimeState(false, null);
         }
 
         var processInfo = new ProcessInfo(_process.Id);
 
-        return WebSiteRuntimeState.Running(processInfo);
+        return new WebSiteRuntimeState(true, processInfo);
     }
 
     private async Task ProcessDisposeCommand()

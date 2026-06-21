@@ -1,6 +1,6 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
-@using Askyl.Dsm.WebHosting.Logging
+@using Askyl.Dsm.WebHosting.Globalization
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -9,25 +9,25 @@
 @inject IDotnetVersionService DotnetVersionService
 @inject IFrameworkManagementService ManagementService
 @inject IToastService ToastService
-@inject ILogger<ILogAspNetReleasesDialog> Logger
+@inject ILocalizer localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">ASP.NET Online</FluentLabel>
+    <FluentLabel Typo="Typography.H2">@localizer[LK.AspNetReleases.DialogTitle]</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Disabled="@IsWorking" Class="flex-full-width">Close</FluentButton>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Disabled="@IsWorking" Class="flex-full-width">@localizer[LK.Common.Close]</FluentButton>
 </FluentDialogFooter>
 
 <FluentDialogBody>
     <FluentToolbar Class="full-width">
-        <FluentLabel>Channel</FluentLabel>
+        <FluentLabel>@localizer[LK.AspNetReleases.ChannelLabel]</FluentLabel>
 
-        <FluentSelect TOption="AspNetChannel" Items="@Channels" SelectedOption="@SelectedChannel" SelectedOptionChanged="OnChannelChanged" Width="140px" Disabled="@IsWorking" />
+        <FluentSelect TOption="AspNetCoreReleaseInfo" Items="@Channels" SelectedOption="@SelectedChannel" SelectedOptionChanged="OnChannelChanged" Width="140px" Disabled="@IsWorking" />
 
-        <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="Refresh" Disabled="@IsWorking">
+        <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="@localizer[LK.Common.Refresh]" Disabled="@IsWorking">
             <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
         </FluentButton>
 
@@ -44,14 +44,14 @@
     <div class="dialog-grid-container">
         <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="240px 120px 100px 120px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
             <ChildContent>
-                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="Version" Property="@(r => r.Version)" Sortable="true" />
-                <TemplateColumn TGridItem="AspNetRelease" Title="Installed" Align="Align.Center">
-                    @(context.IsInstalled ? "✓" : String.Empty)
+                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="@localizer[LK.AspNetReleases.GridColumnVersion]" Property="@(r => r.Version)" Sortable="true" />
+                <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[LK.AspNetReleases.GridColumnInstalled]" Align="Align.Center">
+                    @(context.IsInstalled ? localizer[LK.Common.CheckMark] : String.Empty)
                 </TemplateColumn>
-                <TemplateColumn TGridItem="AspNetRelease" Title="Security" Align="Align.Center">
-                    @(context.IsSecurity ? "⚠" : String.Empty)
+                <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[LK.AspNetReleases.GridColumnSecurity]" Align="Align.Center">
+                    @(context.IsSecurity ? localizer[LK.Common.WarningIcon] : String.Empty)
                 </TemplateColumn>
-                <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="Release" Property="@(r => r.ReleaseDate)" Format="yyyy-MM-dd" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending" />
+                <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="@localizer[LK.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="d" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending" />
             </ChildContent>
         </AutoDataGrid>
     </div>
@@ -78,11 +78,11 @@
     [Parameter]
     public string? Content { get; set; }
 
-    private List<AspNetChannel> Channels { get; set; } = [];
+    private List<AspNetCoreReleaseInfo> Channels { get; set; } = [];
 
     private IQueryable<AspNetRelease> Releases { get; set; } = AutoDataGrid<AspNetRelease>.Empty();
 
-    private AspNetChannel? SelectedChannel { get; set; }
+    private AspNetCoreReleaseInfo? SelectedChannel { get; set; }
 
     private AspNetRelease? SelectedItem { get; set; }
 
@@ -100,10 +100,12 @@
     {
         if (SelectedItem == null)
         {
-            return "Select a version";
+            return localizer[LK.AspNetReleases.SelectVersion];
         }
 
-        return IsSelectedVersionInstalled ? $"Uninstall {SelectedItem.Version}" : $"Install {SelectedItem.Version}";
+        return IsSelectedVersionInstalled
+            ? localizer[LK.AspNetReleases.UninstallVersion, SelectedItem.Version]
+            : localizer[LK.AspNetReleases.InstallVersion, SelectedItem.Version];
     }
 
     #endregion
@@ -125,7 +127,7 @@
         StateHasChanged();
     }
 
-    private async Task OnChannelChanged(AspNetChannel? channel)
+    private async Task OnChannelChanged(AspNetCoreReleaseInfo? channel)
     {
         SelectedChannel = channel;
         await LoadReleasesAsync(channel);
@@ -137,11 +139,13 @@
     {
         try
         {
+            using var worker = this.CreateWorkingState(localizer[LK.Loading.Channels]);
+
             var channelsResult = await DotnetVersionService.GetChannelsAsync();
 
             if (!channelsResult.Success)
             {
-                await ShowErrorAsync(channelsResult.Message ?? "Failed to load channels");
+                await ShowErrorAsync(channelsResult.Message ?? localizer[LK.Error.FailedToLoadChannels]);
                 Channels.Clear();
                 SelectedChannel = null;
                 return;
@@ -152,18 +156,18 @@
             var initialChannel = Channels.FirstOrDefault(c => c.ProductVersion == Content)
                 ?? SelectedChannel
                 ?? Channels.FirstOrDefault();
+
             await OnChannelChanged(initialChannel);
         }
         catch (Exception ex)
         {
-            Logger.FailedToLoadChannels(ex);
             await ShowErrorAsync(ex.Message);
             Channels.Clear();
             SelectedChannel = null;
         }
     }
 
-    private async Task LoadReleasesAsync(AspNetChannel? channel)
+    private async Task LoadReleasesAsync(AspNetCoreReleaseInfo? channel)
     {
         SelectedItem = null;
 
@@ -175,11 +179,13 @@
 
         try
         {
+            using var worker = this.CreateWorkingState(localizer[LK.Loading.Releases]);
+
             var releasesResult = await DotnetVersionService.GetReleasesWithStatusAsync(channel.ProductVersion);
 
             if (!releasesResult.Success)
             {
-                await ShowErrorAsync(releasesResult.Message ?? "Failed to load releases");
+                await ShowErrorAsync(releasesResult.Message ?? localizer[LK.Error.FailedToLoadReleases]);
                 Releases = AutoDataGrid<AspNetRelease>.Empty();
                 return;
             }
@@ -189,7 +195,6 @@
         }
         catch (Exception ex)
         {
-            Logger.FailedToLoadReleases(ex, channel?.ProductVersion);
             await ShowErrorAsync(ex.Message);
             Releases = AutoDataGrid<AspNetRelease>.Empty();
         }
@@ -214,24 +219,23 @@
 
         try
         {
-            using var worker = this.CreateWorkingState("Installing ...");
+            using var worker = this.CreateWorkingState(localizer[LK.Loading.Installing]);
 
             var result = await ManagementService.InstallFrameworkAsync(SelectedItem.Version, SelectedChannel?.ProductVersion ?? String.Empty);
 
             if (result.Success)
             {
-                await DialogService.ShowInfoAsync(result.Message ?? "Installation completed successfully");
+                await DialogService.ShowInfoAsync(result.Message ?? localizer[LK.Success.InstallationCompleted]);
                 await Refresh();
             }
             else
             {
-                await DialogService.ShowErrorAsync(result.Message ?? "Installation failed");
+                await DialogService.ShowErrorAsync(result.Message ?? localizer[LK.Error.InstallationFailed]);
             }
         }
         catch (Exception ex)
         {
-            Logger.InstallationError(ex, SelectedItem?.Version);
-            await DialogService.ShowErrorAsync($"Installation error: {ex.Message}");
+            await DialogService.ShowErrorAsync(localizer[LK.AspNetReleases.InstallationError, ex.Message]);
         }
     }
 
@@ -242,7 +246,7 @@
             return;
         }
 
-        var confirmationMessage = $"Click OK if you want to proceed with uninstalling ASP.NET Core {SelectedItem.Version}";
+        var confirmationMessage = localizer[LK.AspNetReleases.UninstallConfirmation, SelectedItem.Version];
         var confirmation = await DialogService.ShowConfirmationAsync(confirmationMessage);
         var result = await confirmation.Result;
 
@@ -253,24 +257,23 @@
 
         try
         {
-            using var worker = this.CreateWorkingState("Uninstalling ...");
+            using var worker = this.CreateWorkingState(localizer[LK.Loading.Uninstalling]);
 
             var uninstallResult = await ManagementService.UninstallFrameworkAsync(SelectedItem.Version);
 
             if (uninstallResult.Success)
             {
-                await DialogService.ShowInfoAsync(uninstallResult.Message ?? "Uninstallation completed successfully");
+                await DialogService.ShowInfoAsync(uninstallResult.Message ?? localizer[LK.Success.UninstallationCompleted]);
                 await Refresh();
             }
             else
             {
-                await DialogService.ShowErrorAsync(uninstallResult.Message ?? "Uninstallation failed");
+                await DialogService.ShowErrorAsync(uninstallResult.Message ?? localizer[LK.Error.UninstallationFailed]);
             }
         }
         catch (Exception ex)
         {
-            Logger.UninstallationError(ex, SelectedItem?.Version);
-            await DialogService.ShowErrorAsync($"Uninstallation error: {ex.Message}");
+            await DialogService.ShowErrorAsync(localizer[LK.AspNetReleases.UninstallationError, ex.Message]);
         }
     }
 }

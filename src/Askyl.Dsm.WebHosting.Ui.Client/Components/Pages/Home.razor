@@ -2,34 +2,34 @@
 
 @implements IWorkingState
 
-@using System.Net
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Constants.WebApi
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
-@using Askyl.Dsm.WebHosting.Logging
+@using Askyl.Dsm.WebHosting.Globalization
 
 @inject IDialogService DialogService
 @inject IAuthenticationService AuthService
 @inject IWebSiteHostingService WebsiteHostingService
-@inject ILogger<ILogHome> Logger
 @inject NavigationManager navigation
 @inject IToastService ToastService
+@inject ILocalizer localizer
+@inject ICultureManager CultureManager
 
-<PageTitle>ADWH - Home</PageTitle>
+<PageTitle>@localizer[LK.Home.PageTitle]</PageTitle>
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentToolbar Class="full-width">
     <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral" OnClick="AddWebSite">
-        Add
+        @localizer[LK.Home.AddButton]
     </FluentButton>
     <FluentButton IconStart="@(new IconsRegular20.Edit())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="EditWebSite">
-        Edit
+        @localizer[LK.Home.EditButton]
     </FluentButton>
     <FluentButton IconStart="@(new IconsRegular20.Delete())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="DeleteWebSite">
-        Delete
+        @localizer[LK.Common.Delete]
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
     <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance">
@@ -40,30 +40,32 @@
     </FluentButton>
     <FluentSpacer />
     <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="Appearance.Outline">
-        .NET Version
+        @localizer[LK.Home.DotnetVersionButton]
     </FluentButton>
     <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="Appearance.Outline">
-        ASP.NET Online
+        @localizer[LK.Home.AspNetOnlineButton]
     </FluentButton>
     <FluentButton OnClick="ShowLicensesDialog" Appearance="Appearance.Outline">
-        Licenses
+        @localizer[LK.Home.LicensesButton]
     </FluentButton>
     <FluentButton OnClick="DownloadLogs" Appearance="Appearance.Outline">
-        Download Logs
+        @localizer[LK.Home.DownloadLogsButton]
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
     <FluentButton OnClick="Logout" Appearance="Appearance.Outline" IconStart="@(new IconsRegular20.SignOut())">
-        Logout
+        @localizer[LK.Home.LogoutButton]
     </FluentButton>
 </FluentToolbar>
 
 <AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr 1fr">
     <ChildContent>
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Name" Property="@(i => i.Configuration.Name)" Sortable="true" />
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Path" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="Framework" Property="@(i => GetFrameworkDisplay(i))" Sortable="false" />
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="Internal Port" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="State" Property="@(i => i.State)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnName]" Property="@(i => i.Configuration.Name)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnPath]" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
+        <TemplateColumn TGridItem="WebSiteInstance" Title="@localizer[LK.Home.GridColumnFramework]">
+            @(GetFrameworkDisplay(context))
+        </TemplateColumn>
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="@localizer[LK.Home.GridColumnInternalPort]" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnState]" Property="@(i => i.State)" Sortable="true" />
     </ChildContent>
 </AutoDataGrid>
 
@@ -86,20 +88,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var authResult = await AuthService.IsAuthenticatedAsync();
-        if (!authResult.Success || authResult.Value != true)
-        {
-            navigation.NavigateTo(ApplicationConstants.LoginPagePath);
-            return;
-        }
-
         await LoadInstancesAsync();
         await base.OnInitializedAsync();
     }
 
     private async Task LoadInstancesAsync()
     {
-        using var worker = this.CreateWorkingState("Loading websites...");
+        using var worker = this.CreateWorkingState(localizer[LK.Home.LoadingWebsites]);
 
         try
         {
@@ -107,20 +102,17 @@
 
             if (!result.Success || result.Value is null)
             {
-                Logger.FailedToLoadWebsites(result.Message ?? "Unknown error");
                 Instances = [];
-                ShowSafeErrorToast($"Failed to load websites: {result.Message}");
+                ShowSafeErrorToast($"{localizer[LK.Error.FailedToLoadWebsites]}: {result.Message}");
                 return;
             }
 
             Instances = result.Value;
-            Logger.LoadedWebsites(Instances.Count);
         }
         catch (Exception ex)
         {
-            Logger.ErrorLoadingWebsites(ex);
             Instances = [];
-            ShowSafeErrorToast($"Failed to load websites: {ex.Message}");
+            ShowSafeErrorToast($"{localizer[LK.Error.FailedToLoadWebsites]}: {ex.Message}");
         }
     }
 
@@ -140,11 +132,11 @@
 
     private void HandleInstanceSelected(WebSiteInstance instance) => SelectedInstance = instance;
 
-    private static string GetFrameworkDisplay(WebSiteInstance instance)
+    private string GetFrameworkDisplay(WebSiteInstance instance)
     {
         if (String.IsNullOrEmpty(instance.RequiredFramework))
         {
-            return "—";
+            return localizer[LK.Common.Dash];
         }
 
         return instance.RequiredFramework;
@@ -161,7 +153,7 @@
         var selectedName = SelectedInstance.Configuration.Name;
 
         // Show confirmation dialog
-        var confirmationMessage = $"Are you sure you want to delete the website '{selectedName}'? This action cannot be undone.";
+        var confirmationMessage = localizer[LK.Home.DeleteConfirmation, selectedName];
         var confirmation = await DialogService.ShowConfirmationAsync(confirmationMessage);
         var result = await confirmation.Result;
 
@@ -170,7 +162,7 @@
             return;
         }
 
-        using var worker = this.CreateWorkingState($"Deleting website '{selectedName}'...");
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.DeletingWebsite, selectedName]);
 
         try
         {
@@ -178,19 +170,16 @@
 
             if (!deleteResult.Success)
             {
-                Logger.FailedToDeleteWebsite(deleteResult.Message ?? "Unknown error");
-                ShowSafeErrorToast(deleteResult.Message ?? "Failed to delete website");
+                ShowSafeErrorToast(deleteResult.Message ?? localizer[LK.Error.FailedToDeleteWebsite]);
                 return;
             }
 
-            Logger.WebsiteDeleted(selectedName);
             Instances.RemoveAll(i => i.Id == selectedId);
             SelectedInstance = null;
         }
         catch (Exception ex)
         {
-            Logger.ErrorDeletingWebsite(ex);
-            ShowSafeErrorToast($"Error deleting website: {ex.Message}");
+            ShowSafeErrorToast(localizer[LK.Home.ErrorDeleting, ex.Message]);
         }
     }
 
@@ -223,7 +212,7 @@
         var selectedId = SelectedInstance.Id;
         var selectedName = SelectedInstance.Configuration.Name;
 
-        using var worker = this.CreateWorkingState($"Starting website '{selectedName}'...");
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.StartingWebsite, selectedName]);
 
         try
         {
@@ -231,18 +220,15 @@
 
             if (!result.Success)
             {
-                Logger.FailedToStartWebsite(result.Message ?? "Unknown error");
-                ShowSafeErrorToast(result.Message ?? "Failed to start website");
+                ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToStartWebsite]);
                 return;
             }
 
-            Logger.WebsiteStarted(selectedName);
             await LoadInstancesAsync();
         }
         catch (Exception ex)
         {
-            Logger.ErrorStartingWebsite(ex);
-            ShowSafeErrorToast($"Error starting website: {ex.Message}");
+            ShowSafeErrorToast(localizer[LK.Home.ErrorStarting, ex.Message]);
         }
     }
 
@@ -256,7 +242,7 @@
         var selectedId = SelectedInstance.Id;
         var selectedName = SelectedInstance.Configuration.Name;
 
-        using var worker = this.CreateWorkingState($"Stopping website '{selectedName}'...");
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.StoppingWebsite, selectedName]);
 
         try
         {
@@ -264,18 +250,15 @@
 
             if (!result.Success)
             {
-                Logger.FailedToStopWebsite(result.Message ?? "Unknown error");
-                ShowSafeErrorToast(result.Message ?? "Failed to stop website");
+                ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToStopWebsite]);
                 return;
             }
 
-            Logger.WebsiteStopped(selectedName);
             await LoadInstancesAsync();
         }
         catch (Exception ex)
         {
-            Logger.ErrorStoppingWebsite(ex);
-            ShowSafeErrorToast($"Error stopping website: {ex.Message}");
+            ShowSafeErrorToast(localizer[LK.Home.ErrorStopping, ex.Message]);
         }
     }
 
@@ -300,18 +283,16 @@
 
             if (!result.Success)
             {
-                Logger.LogoutFailed(result.Message ?? "Unknown error");
-                ShowSafeErrorToast(result.Message ?? "Failed to logout");
+                ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToLogout]);
                 return;
             }
 
-            Logger.LoggedOut();
+            CultureManager.ResetToSystem();
             navigation.NavigateTo(ApplicationConstants.LoginPagePath);
         }
         catch (Exception ex)
         {
-            Logger.ErrorDuringLogout(ex);
-            ShowSafeErrorToast($"Error during logout: {ex.Message}");
+            ShowSafeErrorToast(localizer[LK.Home.ErrorLoggingOut, ex.Message]);
         }
     }
 
@@ -319,12 +300,12 @@
     #region Security Helpers
 
     /// <summary>
-    /// Safely displays an error toast with HTML-encoded message to prevent XSS attacks.
+    /// Displays an error toast. Blazor automatically HTML-encodes rendered text,
+    /// so no manual encoding is needed.
     /// </summary>
     private void ShowSafeErrorToast(string message)
     {
-        var encodedMessage = WebUtility.HtmlEncode(message);
-        ToastService.ShowError(encodedMessage);
+        ToastService.ShowError(message);
     }
 
     #endregion

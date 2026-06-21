@@ -1,48 +1,18 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
-using Askyl.Dsm.WebHosting.Data.Attributes;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.AppPortal.ReverseProxy;
 
-[DsmParameterName("entry")]
 public class ReverseProxyCreateParameters(ApiInformationCollection informations, Models.ReverseProxy.ReverseProxy? entry = null)
     : ApiParametersBase<Models.ReverseProxy.ReverseProxy>(informations, entry)
 {
-    public override string Name => ApiNames.AppPortalReverseProxy;
+    public override string Name => ApiConstants.AppPortalReverseProxy;
+
+    protected override string JsonParameterName => "entry";
 
     public override int Version => 1;
 
-    public override string Method => ApiMethods.Create;
+    public override string Method => ApiConstants.MethodCreate;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Json;
 }
-
-/*
-api=SYNO.Core.AppPortal.ReverseProxy
-&method=create
-&version=1
-&entry=
-{
-    "description": "test-proxy-name",
-    "proxy_connect_timeout": 60,
-    "proxy_read_timeout": 60,
-    "proxy_send_timeout": 60,
-    "proxy_http_version": 1,
-    "proxy_intercept_errors": false,
-    "frontend": {
-        "acl": null,
-        "fqdn": "test-hostname",
-        "port": 80,
-        "protocol": 0,
-        "https": {
-            "hsts": false
-        }
-    },
-    "backend": {
-        "fqdn": "test-target-hostname",
-        "port": 80,
-        "protocol": 0
-    },
-    "customize_headers": []
-}
-*/

@@ -3,6 +3,7 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
+using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Ui.Services;
@@ -18,6 +19,7 @@ namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 public class SiteLifecycleManagerTests : IDisposable
 {
     private readonly Mock<ILogger<ILogSiteLifecycleManager>> _logger;
+    private readonly Mock<ILocalizer> _localizer;
     private readonly FakeProcessRunner _processRunner;
     private readonly FakeProcessHandle _processHandle;
     private readonly Mock<IAssemblyRuntimeDetector> _detector;
@@ -29,6 +31,7 @@ public class SiteLifecycleManagerTests : IDisposable
     public SiteLifecycleManagerTests()
     {
         _logger = new Mock<ILogger<ILogSiteLifecycleManager>>();
+        _localizer = new Mock<ILocalizer>();
         _processRunner = new FakeProcessRunner();
         _processHandle = new FakeProcessHandle();
         _detector = new Mock<IAssemblyRuntimeDetector>();
@@ -57,7 +60,7 @@ public class SiteLifecycleManagerTests : IDisposable
 
     private SiteLifecycleManager CreateManager()
     {
-        return new SiteLifecycleManager(_logger.Object, _processRunner, _detector.Object, _configuration);
+        return new SiteLifecycleManager(_logger.Object, _localizer.Object, _processRunner, _detector.Object, _configuration);
     }
 
     public void Dispose()

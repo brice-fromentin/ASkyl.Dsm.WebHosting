@@ -1,6 +1,13 @@
-﻿<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(NotFound)">
+﻿@using Askyl.Dsm.WebHosting.Ui.Client.Contracts
+
+<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(NotFound)" OnNavigateAsync="AuthGuard.OnNavigateAsync">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
+
+@code
+{
+    [Inject] private INavigationGuard AuthGuard { get; set; } = default!;
+}

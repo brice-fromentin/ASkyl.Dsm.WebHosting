@@ -4,6 +4,7 @@ using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
@@ -18,11 +19,12 @@ public class WebSiteHostingService(
     ILogger<ILogWebSiteHostingService> logger,
     ILoggerFactory loggerFactory,
     IProcessRunner processRunner,
-    IWebSitesConfigurationService configService,
+    WebSitesConfigurationService configService,
     IFileSystemService fileSystemService,
     IReverseProxyManagerService reverseProxyManager,
     IAssemblyRuntimeDetector assemblyRuntimeDetector,
-    IVersionsDetectorService versionsDetector) : BackgroundService, IWebSiteHostingService
+    IVersionsDetectorService versionsDetector,
+    ILocalizer localizer) : BackgroundService, IWebSiteHostingService
 {
     #region Fields
 
@@ -35,9 +37,9 @@ public class WebSiteHostingService(
     /// <summary>
     /// Pairs a website instance with its lifecycle manager, eliminating parallel dictionary synchronization.
     /// </summary>
-    private sealed class SiteEntry(WebSiteInstanceDetails instance, SiteLifecycleManager lifecycleManager)
+    private sealed class SiteEntry(WebSiteInstance instance, SiteLifecycleManager lifecycleManager)
     {
-        public WebSiteInstanceDetails Instance { get; } = instance;
+        public WebSiteInstance Instance { get; } = instance;
         public SiteLifecycleManager LifecycleManager { get; set; } = lifecycleManager;
     }
 
@@ -68,10 +70,6 @@ public class WebSiteHostingService(
     /// </summary>
     public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration)
     {
-        using var timer = new OperationTimer(elapsed => logger.AddWebsiteDuration(elapsed, configuration.Name));
-
-        logger.AddWebsiteStarting(configuration.Name);
-
         // Validate environment variables before any side effects
         var envVarResult = ValidateEnvironmentVariables(configuration.AdditionalEnvironmentVariables);
         if (envVarResult is not null)
@@ -87,7 +85,7 @@ public class WebSiteHostingService(
             if (!permissionResult.Success)
             {
                 logger.PermissionSettingFailedAdd(configuration.Name, permissionResult.Message);
-                return WebSiteInstanceResult.CreateFailure($"Failed to set permissions: {permissionResult.Message}");
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToSetPermissions, permissionResult.Message ?? localizer[LK.Error.Unknown]]);
             }
 
             // STEP 2: Create reverse proxy rule (CRITICAL - must succeed)
@@ -96,7 +94,7 @@ public class WebSiteHostingService(
             if (!proxyResult.Success)
             {
                 logger.ReverseProxyCreationFailedAdd(configuration.Name, proxyResult.Message);
-                return WebSiteInstanceResult.CreateFailure($"Failed to create reverse proxy: {proxyResult.Message}");
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToCreateReverseProxy, proxyResult.Message ?? localizer[LK.Error.Unknown]]);
             }
 
             // STEP 3: Add website configuration (persistent storage)
@@ -113,7 +111,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.ErrorAddingWebsite(ex, configuration.Name);
-            return WebSiteInstanceResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -125,14 +123,10 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(configuration.Id, out var entry))
         {
             logger.InstanceNotFoundUpdate(configuration.Name);
-            return WebSiteInstanceResult.CreateFailure($"Instance not found for website '{configuration.Name}'");
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.InstanceNotFound]);
         }
 
         var existingInstance = entry.Instance;
-
-        using var timer = new OperationTimer(elapsed => logger.UpdateWebsiteDuration(elapsed, configuration.Name));
-
-        logger.UpdateWebsiteStarting(configuration.Name);
 
         // Validate environment variables before any side effects
         var envVarResult = ValidateEnvironmentVariables(configuration.AdditionalEnvironmentVariables);
@@ -149,7 +143,7 @@ public class WebSiteHostingService(
             if (!permissionResult.Success)
             {
                 logger.PermissionSettingFailedUpdate(configuration.Name, permissionResult.Message);
-                return WebSiteInstanceResult.CreateFailure($"Failed to set permissions: {permissionResult.Message}");
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToSetPermissions, permissionResult.Message ?? localizer[LK.Error.Unknown]]);
             }
 
             // STEP 2: Update reverse proxy rule (CRITICAL - must succeed)
@@ -158,7 +152,7 @@ public class WebSiteHostingService(
             if (!proxyResult.Success)
             {
                 logger.ReverseProxyUpdateFailed(configuration.Name, proxyResult.Message);
-                return WebSiteInstanceResult.CreateFailure($"Failed to update reverse proxy: {proxyResult.Message}");
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToUpdateReverseProxy, proxyResult.Message ?? localizer[LK.Error.Unknown]]);
             }
 
             // STEP 3: Update configuration (persistent storage)
@@ -173,7 +167,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.ErrorUpdatingWebsite(ex, configuration.Name);
-            return WebSiteInstanceResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -191,12 +185,8 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(id, out var entry))
         {
             logger.CannotStartSiteNotFound(id);
-            return ApiResult.CreateFailure($"Site with ID '{id}' not found");
+            return ApiResult.CreateFailure(localizer[LK.Error.SiteNotFound, id]);
         }
-
-        using var timer = new OperationTimer(elapsed => logger.StartWebsiteDuration(elapsed, entry.Instance.Configuration.Name));
-
-        logger.StartWebsiteStarting(entry.Instance.Configuration.Name);
 
         var result = await entry.LifecycleManager.StartAsync();
 
@@ -217,12 +207,8 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(id, out var entry))
         {
             logger.CannotStopSiteNotFound(id);
-            return ApiResult.CreateFailure($"Site with ID '{id}' not found");
+            return ApiResult.CreateFailure(localizer[LK.Error.SiteNotFound, id]);
         }
-
-        using var timer = new OperationTimer(elapsed => logger.StopWebsiteDuration(elapsed, entry.Instance.Configuration.Name));
-
-        logger.StopWebsiteStarting(entry.Instance.Configuration.Name);
 
         var result = await entry.LifecycleManager.StopAsync();
 
@@ -241,8 +227,6 @@ public class WebSiteHostingService(
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        logger.HostingServiceStarting();
-
         await versionsDetector.RefreshCacheAsync(cancellationToken);
         await InitializeAllInstancesAsync();
         await StartEligibleSitesAsync();
@@ -281,7 +265,7 @@ public class WebSiteHostingService(
 
         foreach (var site in allSites)
         {
-            var instance = new WebSiteInstanceDetails(site);
+            var instance = new WebSiteInstance(site);
 
             // Detect framework from assembly
             if (!String.IsNullOrEmpty(site.ApplicationRealPath))
@@ -290,7 +274,7 @@ public class WebSiteHostingService(
                 instance.RequiredFramework = runtimeInfo?.Channel;
             }
 
-            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, assemblyRuntimeDetector, site);
+            var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), localizer, processRunner, assemblyRuntimeDetector, site);
             _sites[instance.Id] = new SiteEntry(instance, lifecycleManager);
 
             logger.InstanceCreated(site.Name);
@@ -319,8 +303,8 @@ public class WebSiteHostingService(
 
     public async Task<WebSiteInstance> AddInstanceAsync(WebSiteConfiguration configuration)
     {
-        var instance = new WebSiteInstanceDetails(configuration);
-        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, assemblyRuntimeDetector, configuration);
+        var instance = new WebSiteInstance(configuration);
+        var lifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), localizer, processRunner, assemblyRuntimeDetector, configuration);
         _sites[instance.Id] = new SiteEntry(instance, lifecycleManager);
 
         logger.InstanceAdded(configuration.Name);
@@ -349,7 +333,7 @@ public class WebSiteHostingService(
         // Recreate lifecycle manager with new configuration to avoid stale config
         entry.LifecycleManager.Dispose();
         existingInstance.Configuration = newConfiguration;
-        entry.LifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), processRunner, assemblyRuntimeDetector, newConfiguration);
+        entry.LifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), localizer, processRunner, assemblyRuntimeDetector, newConfiguration);
 
         logger.InstanceUpdated(newConfiguration.Name);
 
@@ -379,15 +363,11 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(instanceId, out var entry))
         {
             logger.CannotRemoveInstanceNotFound(instanceId);
-            return ApiResult.CreateFailure("Instance not found");
+            return ApiResult.CreateFailure(localizer[LK.Error.InstanceNotFound]);
         }
 
         var instance = entry.Instance;
         var siteName = instance.Configuration.Name;
-
-        using var timer = new OperationTimer(elapsed => logger.RemoveWebsiteDuration(elapsed, siteName));
-
-        logger.RemoveWebsiteStarting(siteName);
 
         try
         {
@@ -424,7 +404,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToRemoveSite(ex, siteName);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -432,7 +412,7 @@ public class WebSiteHostingService(
     /// Updates the runtime state of a WebSiteInstance from WebSiteRuntimeState.
     /// Helper method for synchronizing instance state with lifecycle manager state.
     /// </summary>
-    private static void UpdateInstanceRuntimeState(WebSiteInstanceDetails instance, WebSiteRuntimeState runtimeState)
+    private static void UpdateInstanceRuntimeState(WebSiteInstance instance, WebSiteRuntimeState runtimeState)
     {
         instance.IsRunning = runtimeState.IsRunning;
         instance.Process = runtimeState.ProcessDetails;
@@ -474,7 +454,7 @@ public class WebSiteHostingService(
         if (String.IsNullOrEmpty(configuration.ApplicationRealPath))
         {
             logger.NoApplicationRealPath(configuration.Name);
-            return ApiResult.CreateFailure("No application path configured");
+            return ApiResult.CreateFailure(localizer[LK.Error.NoApplicationPath]);
         }
 
         // Determine if the target is a directory (if ApplicationPath ends with .dll, set permissions on parent directory)
@@ -503,7 +483,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToCreateReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -521,7 +501,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToUpdateReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -539,7 +519,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToDeleteReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -575,7 +555,7 @@ public class WebSiteHostingService(
     /// Validates environment variable keys and values to prevent resource exhaustion.
     /// Returns a failure result if validation fails, or null if all checks pass.
     /// </summary>
-    private static WebSiteInstanceResult? ValidateEnvironmentVariables(Dictionary<string, string> environmentVariables)
+    private WebSiteInstanceResult? ValidateEnvironmentVariables(Dictionary<string, string> environmentVariables)
     {
         if (environmentVariables is null || environmentVariables.Count == 0)
         {
@@ -586,12 +566,12 @@ public class WebSiteHostingService(
         {
             if (String.IsNullOrWhiteSpace(kvp.Key) || kvp.Key.Length > ValidationConstants.EnvVarKeyMaxLength)
             {
-                return WebSiteInstanceResult.CreateFailure(String.Format(ValidationConstants.EnvVarKeyTooLong, kvp.Key, ValidationConstants.EnvVarKeyMaxLength));
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Validation.EnvVarKeyTooLong, kvp.Key, ValidationConstants.EnvVarKeyMaxLength]);
             }
 
             if (kvp.Value?.Length > ValidationConstants.EnvVarValueMaxLength)
             {
-                return WebSiteInstanceResult.CreateFailure(String.Format(ValidationConstants.EnvVarValueTooLong, kvp.Key, ValidationConstants.EnvVarValueMaxLength));
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Validation.EnvVarValueTooLong, kvp.Key, ValidationConstants.EnvVarValueMaxLength]);
             }
         }
 

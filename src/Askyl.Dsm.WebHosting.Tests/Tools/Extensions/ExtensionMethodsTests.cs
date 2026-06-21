@@ -24,150 +24,50 @@ public class ExtensionMethodsTests : IDisposable
     public void IsValid_ResponseNull_ReturnsFalse()
     {
         // Arrange
-        ApiResponseBase<EmptyResponse>? response = null;
+        ApiResponseBase<object>? response = null;
 
         // Act & Assert
-        Assert.False(response.IsValid<EmptyResponse>());
+        Assert.False(response.IsValid());
     }
 
     [Fact]
     public void IsValid_SuccessTrue_NoData_ReturnsTrue()
     {
         // Arrange
-        var response = new ApiResponseBase<EmptyResponse> { Success = true };
+        var response = new ApiResponseBase<object> { Success = true };
 
         // Act & Assert
-        Assert.True(response.IsValid<EmptyResponse>());
+        Assert.True(response.IsValid());
     }
 
     [Fact]
     public void IsValid_SuccessFalse_ReturnsFalse()
     {
         // Arrange
-        var response = new ApiResponseBase<EmptyResponse> { Success = false };
+        var response = new ApiResponseBase<object> { Success = false };
 
         // Act & Assert
-        Assert.False(response.IsValid<EmptyResponse>());
+        Assert.False(response.IsValid());
     }
 
     [Fact]
     public void IsValid_WithHasDataTrue_NullData_ReturnsFalse()
     {
         // Arrange
-        var response = new ApiResponseBase<EmptyResponse> { Success = true, Data = null };
+        var response = new ApiResponseBase<object> { Success = true, Data = null };
 
         // Act & Assert
-        Assert.False(response.IsValid<EmptyResponse>(hasData: true));
+        Assert.False(response.IsValid(hasData: true));
     }
 
     [Fact]
     public void IsValid_WithHasDataTrue_WithData_ReturnsTrue()
     {
         // Arrange
-        var response = new ApiResponseBase<EmptyResponse> { Success = true, Data = new EmptyResponse() };
+        var response = new ApiResponseBase<object> { Success = true, Data = new object() };
 
         // Act & Assert
-        Assert.True(response.IsValid<EmptyResponse>(hasData: true));
-    }
-
-    #endregion
-
-    #region UriExtensions - ToLower
-
-    [Fact]
-    public void BooleanToLower_True_ReturnsTrueString()
-    {
-        // Act & Assert
-        Assert.Equal("true", true.ToLower());
-    }
-
-    [Fact]
-    public void BooleanToLower_False_ReturnsFalseString()
-    {
-        // Act & Assert
-        Assert.Equal("false", false.ToLower());
-    }
-
-    #endregion
-
-    #region UriExtensions - WithQuery
-
-    [Fact]
-    public void WithQuery_NoParameters_ReturnsOriginalUri()
-    {
-        // Arrange
-        string uri = "https://example.com/api";
-
-        // Act
-        var result = uri.WithQuery();
-
-        // Assert
-        Assert.Equal("https://example.com/api", result);
-    }
-
-    [Fact]
-    public void WithQuery_SingleParameter_AppendsQueryString()
-    {
-        // Arrange
-        string uri = "https://example.com/api";
-
-        // Act
-        var result = uri.WithQuery(("key", "value"));
-
-        // Assert
-        Assert.Equal("https://example.com/api?key=value", result);
-    }
-
-    [Fact]
-    public void WithQuery_MultipleParameters_AppendsAll()
-    {
-        // Arrange
-        string uri = "https://example.com/api";
-
-        // Act
-        var result = uri.WithQuery(("key1", "val1"), ("key2", "val2"));
-
-        // Assert
-        Assert.Equal("https://example.com/api?key1=val1&key2=val2", result);
-    }
-
-    [Fact]
-    public void WithQuery_NullValue_SkipsParameter()
-    {
-        // Arrange
-        string uri = "https://example.com/api";
-
-        // Act
-        var result = uri.WithQuery(("key1", "val1"), ("key2", null!));
-
-        // Assert
-        Assert.Equal("https://example.com/api?key1=val1", result);
-    }
-
-    [Fact]
-    public void WithQuery_AllNullValues_ReturnsOriginalUri()
-    {
-        // Arrange
-        string uri = "https://example.com/api";
-
-        // Act
-        var result = uri.WithQuery(("key", null!));
-
-        // Assert
-        Assert.Equal("https://example.com/api", result);
-    }
-
-    [Fact]
-    public void WithQuery_EscapesSpecialCharacters()
-    {
-        // Arrange
-        string uri = "https://example.com/api";
-
-        // Act
-        var result = uri.WithQuery(("key", "value with spaces"));
-
-        // Assert
-        Assert.Equal("https://example.com/api?key=value%20with%20spaces", result);
+        Assert.True(response.IsValid(hasData: true));
     }
 
     #endregion
@@ -212,7 +112,7 @@ public class ExtensionMethodsTests : IDisposable
         var client = CreateClient();
 
         // Act
-        var result = await client.GetJsonOrDefaultAsync<TestModel>("/default", () => new TestModel());
+        var result = await client.GetJsonOrDefaultAsync("/default", () => new TestModel());
 
         // Assert
         Assert.NotNull(result);
@@ -227,7 +127,7 @@ public class ExtensionMethodsTests : IDisposable
         var client = CreateClient();
 
         // Act
-        var result = await client.GetJsonOrDefaultAsync<TestModel>("/", () => new TestModel { Name = "fallback" });
+        var result = await client.GetJsonOrDefaultAsync("/", () => new TestModel { Name = "fallback" });
 
         // Assert
         Assert.NotNull(result);
@@ -314,7 +214,7 @@ public class ExtensionMethodsTests : IDisposable
         var client = CreateClient();
 
         // Act
-        var result = await client.DeleteJsonOrDefaultAsync<TestModel>("/", () => new TestModel { Name = "fallback" });
+        var result = await client.DeleteJsonOrDefaultAsync("/", () => new TestModel { Name = "fallback" });
 
         // Assert
         Assert.NotNull(result);
@@ -329,7 +229,7 @@ public class ExtensionMethodsTests : IDisposable
         var client = CreateClient();
 
         // Act
-        var result = await client.PostJsonOrDefaultAsync<TestModel, TestModel>("/", new TestModel(), () => new TestModel { Name = "fallback" });
+        var result = await client.PostJsonOrDefaultAsync("/", new TestModel(), () => new TestModel { Name = "fallback" });
 
         // Assert
         Assert.NotNull(result);
@@ -340,7 +240,7 @@ public class ExtensionMethodsTests : IDisposable
     public async Task ReadFromJsonAsync_DeserializesContent()
     {
         // Arrange
-        var json = "{\"name\":\"test\",\"value\":42}";
+        const string json = "{\"name\":\"test\",\"value\":42}";
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         // Act

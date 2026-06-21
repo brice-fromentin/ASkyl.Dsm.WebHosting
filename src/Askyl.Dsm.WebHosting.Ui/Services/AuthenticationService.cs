@@ -2,10 +2,11 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Converters;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Network;
-using Microsoft.AspNetCore.Http;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -15,63 +16,61 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="apiClient">The DSM API client for making authentication calls.</param>
 /// <param name="httpContextAccessor">Access to current HTTP context for session management.</param>
 /// <param name="logger">Logger for tracking authentication operations.</param>
-public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor httpContextAccessor, ILogger<ILogAuthenticationService> logger) : IAuthenticationService
+/// <param name="localizer">Localizer for user-facing strings.</param>
+public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor httpContextAccessor, ILogger<ILogAuthenticationService> logger, ILocalizer localizer) : IAuthenticationService
 {
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
     {
-        using var timer = new OperationTimer(elapsed => logger.LoginDuration(elapsed, login));
-
-        logger.LoginStarting(login);
-
         var model = new LoginCredentials(login, password, otpCode);
 
         if (!await apiClient.ConnectAsync(model))
         {
             logger.LoginFailed(login);
-            return AuthenticationResult.CreateNotAuthenticated("Invalid credentials");
+            return AuthenticationResult.CreateNotAuthenticated(localizer[LK.Error.AuthenticationFailed]);
         }
+
+        // Best-effort: fetch user preferences (language, date/time format) from SYNO.Core.UserSettings.get
+        await apiClient.FetchUserLanguageAsync();
+
+        var culture = ResolveCulture(apiClient);
+        var dateFormat = PhpFormatToDotNetConverter.Convert(apiClient.UserDateFormat);
+        var timeFormat = PhpFormatToDotNetConverter.Convert(apiClient.UserTimeFormat);
 
         // Store DSM SID and username in server-side session for persistence
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmSessionKey, apiClient.Sid);
         httpContextAccessor.HttpContext?.Session.SetString(ApplicationConstants.DsmUsernameKey, login);
         logger.LoginSuccessful(login);
-        return AuthenticationResult.CreateAuthenticated();
+        return AuthenticationResult.CreateAuthenticated(null, culture, dateFormat, timeFormat);
     }
 
     /// <inheritdoc/>
     public async Task<ApiResult> LogoutAsync()
     {
-        using var timer = new OperationTimer(elapsed => logger.LogoutDuration(elapsed));
-
-        logger.LogoutStarting();
-
         try
         {
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmSessionKey);
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmUsernameKey);
             await apiClient.DisconnectAsync();
             logger.UserLoggedOut();
-            return ApiResult.CreateSuccess("Logout successful");
+            return ApiResult.CreateSuccess(localizer[LK.Success.LogoutSuccessful]);
         }
         catch (Exception ex)
         {
             logger.LogoutError(ex);
-            return ApiResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
     /// <inheritdoc/>
     public async Task<ApiResultBool> IsAuthenticatedAsync()
     {
-        logger.SessionValidationStarting();
-
         var sessionId = httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmSessionKey);
         var username = httpContextAccessor.HttpContext?.Session.GetString(ApplicationConstants.DsmUsernameKey);
 
         if (String.IsNullOrEmpty(sessionId) || String.IsNullOrEmpty(username))
         {
-            return ApiResultBool.CreateSuccess(false, "No session found");
+            return ApiResultBool.CreateSuccess(false, localizer[LK.Error.NoSessionFound]);
         }
 
         if (!await apiClient.ValidateSessionAsync(username))
@@ -83,10 +82,21 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmUsernameKey);
             logger.SessionInvalidated();
 
-            return ApiResultBool.CreateSuccess(false, "Session expired on server");
+            return ApiResultBool.CreateSuccess(false, localizer[LK.Error.SessionExpired]);
         }
 
         logger.SessionValidationSuccess(ApplicationConstants.SessionValidationTtlMinutes);
         return ApiResultBool.CreateSuccess(true);
+    }
+
+    /// <summary>
+    /// Resolves culture from user preferences.
+    /// UserSettings.Personal.lang already resolves user override vs. system fallback.
+    /// If "def", let WASM use browser navigator.language.
+    /// </summary>
+    private static string? ResolveCulture(DsmApiClient apiClient)
+    {
+        // Converter handles null, empty, whitespace, and "def" internally.
+        return DsmLanguageToCultureConverter.Convert(apiClient.UserLanguage);
     }
 }

@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Network;
 
@@ -14,24 +13,18 @@ public sealed class WebSiteConfiguration
     /// </summary>
     public Guid Id { get; set; } = Guid.Empty;
 
-    [Required(ErrorMessage = WebSiteConstants.SiteNameRequiredErrorMessage)]
-    [StringLength(100, MinimumLength = 1, ErrorMessage = "Site name cannot be empty and must be 100 characters or less.")]
     public string Name { get; set; } = "";
 
     #endregion
 
     #region Application
 
-    [Required(ErrorMessage = WebSiteConstants.ApplicationPathRequiredErrorMessage)]
     public string ApplicationPath { get; set; } = "";
 
     public string ApplicationRealPath { get; set; } = "";
 
-    [Required(ErrorMessage = WebSiteConstants.PortRequiredErrorMessage)]
-    [Range(WebSiteConstants.MinWebApplicationPort, WebSiteConstants.MaxWebApplicationPort, ErrorMessage = WebSiteConstants.PortRangeErrorMessage)]
     public int InternalPort { get; set; } = WebSiteConstants.MinWebApplicationPort;
 
-    [Required(ErrorMessage = WebSiteConstants.EnvironmentRequiredErrorMessage)]
     public string Environment { get; set; } = WebSiteConstants.DefaultEnvironment;
 
     public bool IsEnabled { get; set; } = true;
@@ -41,7 +34,6 @@ public sealed class WebSiteConfiguration
     /// <summary>
     /// Graceful shutdown timeout in seconds. Defaults to <c>WebSiteConstants.DefaultProcessTimeoutSeconds</c> (10s).
     /// </summary>
-    [Range(WebSiteConstants.MinProcessTimeoutSeconds, WebSiteConstants.MaxProcessTimeoutSeconds, ErrorMessage = WebSiteConstants.ProcessTimeoutRangeErrorMessage)]
     public int ProcessTimeoutSeconds { get; set; } = WebSiteConstants.DefaultProcessTimeoutSeconds;
 
     public Dictionary<string, string> AdditionalEnvironmentVariables { get; set; } = [];
@@ -50,10 +42,8 @@ public sealed class WebSiteConfiguration
 
     #region Reverse Proxy
 
-    [Required(ErrorMessage = WebSiteConstants.HostNameRequiredErrorMessage)]
     public string HostName { get; set; } = "";
 
-    [Required(ErrorMessage = WebSiteConstants.PortRequiredErrorMessage)]
     public int PublicPort { get; set; } = WebSiteConstants.DefaultPublicPort;
 
     public ProtocolType Protocol { get; set; } = ProtocolType.HTTPS;

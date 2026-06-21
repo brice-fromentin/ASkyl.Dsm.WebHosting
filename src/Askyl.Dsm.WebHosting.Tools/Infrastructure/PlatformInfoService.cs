@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
-using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -11,7 +10,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// <summary>
 /// Service that provides platform information including operating system, architecture, and configured channel version.
 /// </summary>
-public sealed class PlatformInfoService : IPlatformInfoService
+public sealed class PlatformInfoService
 {
     private enum Platform
     {

@@ -7,7 +7,7 @@ namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Auth;
 public class AuthLoginParameters(ApiInformationCollection informations, AuthenticateLogin? entry = null)
     : ApiParametersBase<AuthenticateLogin>(informations, entry)
 {
-    public override string Name => ApiNames.Auth;
+    public override string Name => ApiConstants.Auth;
 
     public override int Version => 6;
 

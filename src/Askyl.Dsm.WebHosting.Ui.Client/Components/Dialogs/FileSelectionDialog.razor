@@ -1,8 +1,7 @@
-@using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
 @using Askyl.Dsm.WebHosting.Data.Contracts
-@using Askyl.Dsm.WebHosting.Logging
+@using Askyl.Dsm.WebHosting.Globalization
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -11,12 +10,12 @@
 @inject IFileSystemService FileSystemService
 @inject ITreeContentService TreeContentService
 @inject IJSRuntime JSRuntime
-@inject ILogger<ILogFileSelectionDialog> Logger
+@inject ILocalizer localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">File Selection</FluentLabel>
+    <FluentLabel Typo="Typography.H2">@localizer[LK.FileSelection.DialogTitle]</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogBody>
@@ -29,7 +28,7 @@
         <Panel2>
             <AutoDataGrid TItem="FsEntry" Items="@_files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick" OnRowDoubleClick="@OnFileDoubleClick" OnReload="@ReloadCurrentDirectory">
                 <ChildContent>
-                    <TemplateColumn TGridItem="FsEntry" Title="Name" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Name)" InitialSortDirection="SortDirection.Ascending">
+                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Home.GridColumnName]" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Name)" InitialSortDirection="SortDirection.Ascending">
                         <ChildContent Context="file">
                             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                                 <FluentIcon Value="@GetFileIcon(file)" />
@@ -37,24 +36,24 @@
                             </FluentStack>
                         </ChildContent>
                     </TemplateColumn>
-                    <TemplateColumn TGridItem="FsEntry" Title="Size" Align="Align.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
-                        @(GetFileSize(context))
+                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Common.Size]" Align="Align.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
+                        @(GetFileSize(context, localizer))
                     </TemplateColumn>
-                    <TemplateColumn TGridItem="FsEntry" Title="Type" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
-                        @(GetFileType(context))
+                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Common.Type]" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
+                        @(GetFileType(context, localizer))
                     </TemplateColumn>
-                    <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="Modified" Property="@(f => f.Modified)" Format="yyyy-MM-dd HH:mm" Align="Align.Center" Sortable="true" />
+                    <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="@localizer[LK.Common.Modified]" Property="@(f => f.Modified)" Format="g" Align="Align.Center" Sortable="true" />
                 </ChildContent>
 
                 <EmptyContent>
                     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
                         @if (!String.IsNullOrEmpty(_selectedPath))
                         {
-                            <FluentLabel>No files found in this directory.</FluentLabel>
+                            <FluentLabel>@localizer[LK.FileSelection.NoFilesFound]</FluentLabel>
                         }
                         else
                         {
-                            <FluentLabel>Select a shared folder from the tree to view its contents.</FluentLabel>
+                            <FluentLabel>@localizer[LK.FileSelection.SelectFolder]</FluentLabel>
                         }
                     </FluentStack>
                 </EmptyContent>
@@ -66,10 +65,10 @@
 <FluentDialogFooter>
     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
         <FluentButton OnClick="CancelAsync" Appearance="Appearance.Neutral">
-            Cancel
+            @localizer[LK.Common.Cancel]
         </FluentButton>
         <FluentButton OnClick="ConfirmAsync" Appearance="Appearance.Accent" Disabled="@(_selectedFile == null)">
-            Select File
+            @localizer[LK.FileSelection.SelectFile]
         </FluentButton>
     </FluentStack>
 </FluentDialogFooter>
@@ -115,7 +114,7 @@
 
     private async Task LoadSharedFoldersAsync()
     {
-        using var worker = this.CreateWorkingState(ApplicationConstants.LoadingSharedFoldersMessage);
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.SharedFolders]);
 
         try
         {
@@ -123,7 +122,7 @@
 
             if (!sharedFoldersResult.Success)
             {
-                await ShowErrorAsync(sharedFoldersResult.Message ?? "Failed to load shared folders");
+                await ShowErrorAsync(sharedFoldersResult.Message ?? localizer[LK.Error.FailedToLoadSharedFolders]);
                 TreeItems = [];
                 return;
             }
@@ -133,7 +132,6 @@
         }
         catch (Exception ex)
         {
-            Logger.FailedToLoadSharedFolders(ex);
             await ShowErrorAsync(ex.Message);
             TreeItems = [];
         }
@@ -146,9 +144,8 @@
             // Pass the same callback for nested lazy loading
             return await TreeContentService.LoadChildDirectoriesAsync(path, ShowErrorAsync, LoadChildDirectoriesAsync);
         }
-        catch (Exception ex)
+        catch
         {
-            Logger.FailedToLoadChildDirectories(ex, path);
             return [];
         }
     }
@@ -178,7 +175,7 @@
             return;
         }
 
-        using var worker = this.CreateWorkingState(ApplicationConstants.LoadingDirectoryContentsMessage);
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.DirectoryContents]);
 
         try
         {
@@ -186,7 +183,7 @@
 
             if (!contentsResult.Success)
             {
-                await HandleDirectoryLoadErrorAsync(contentsResult.Message ?? ApplicationConstants.FailedToLoadDirectoryContentsErrorMessage);
+                await HandleDirectoryLoadErrorAsync(contentsResult.Message ?? localizer[LK.Error.FailedToLoadDirectoryContents]);
                 return;
             }
 
@@ -194,8 +191,7 @@
         }
         catch (Exception ex)
         {
-            Logger.FailedToLoadDirectoryContents(ex, selectedPath);
-            await HandleDirectoryLoadErrorAsync($"{ApplicationConstants.FailedToLoadDirectoryContentsErrorMessage}: {ex.Message}");
+            await HandleDirectoryLoadErrorAsync($"{localizer[LK.Error.FailedToLoadDirectoryContents]}: {ex.Message}");
         }
     }
 
@@ -212,8 +208,6 @@
 
     private async Task OnFileDoubleClick(FsEntry file)
     {
-        Logger.FileDoubleClicked(file.Name, file.IsDirectory);
-
         if (file.IsDirectory)
         {
             await JSRuntime.InvokeVoidAsync("selectChildItem", file.Path, Path.GetDirectoryName(file.Path));
@@ -262,11 +256,11 @@
 
     #region Display Helpers
 
-    private static string GetFileSize(FsEntry file)
+    private static string GetFileSize(FsEntry file, ILocalizer localizer)
     {
         if (file.IsDirectory || file.Size is null)
         {
-            return "-";
+            return localizer[LK.Common.Dash];
         }
 
         var bytes = file.Size.Value;
@@ -278,18 +272,18 @@
 
         if (bytes < FileSizeConstants.BytesPerMebibyte)
         {
-            return $"{(bytes / FileSizeConstants.BytesPerKibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.KibibytesSuffix}";
+            return $"{((double)bytes / FileSizeConstants.BytesPerKibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.KibibytesSuffix}";
         }
 
         if (bytes < FileSizeConstants.BytesPerGibibyte)
         {
-            return $"{(bytes / FileSizeConstants.BytesPerMebibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.MebibytesSuffix}";
+            return $"{((double)bytes / FileSizeConstants.BytesPerMebibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.MebibytesSuffix}";
         }
 
-        return $"{(bytes / FileSizeConstants.BytesPerGibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.GibibytesSuffix}";
+        return $"{((double)bytes / FileSizeConstants.BytesPerGibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.GibibytesSuffix}";
     }
 
-    private static string GetFileType(FsEntry file) => file.IsDirectory ? "Directory" : "File";
+    private static string GetFileType(FsEntry file, ILocalizer localizer) => file.IsDirectory ? localizer[LK.FileSelection.Directory] : localizer[LK.FileSelection.File];
 
     private static Icon GetFileIcon(FsEntry file)
     {

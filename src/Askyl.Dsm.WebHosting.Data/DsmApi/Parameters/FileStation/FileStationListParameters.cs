@@ -6,7 +6,7 @@ namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.FileStation;
 
 public class FileStationListParameters(ApiInformationCollection informations, FileStationList? entry = null) : ApiParametersBase<FileStationList>(informations, entry)
 {
-    public override string Name => ApiNames.FileStationList;
+    public override string Name => ApiConstants.FileStationList;
 
     public override int Version => 2;
 

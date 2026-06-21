@@ -80,73 +80,30 @@ public class WebSiteInstanceTests
 
     #endregion
 
-    #region WebSiteInstanceDetails
+    #region Process Property
 
     [Fact]
-    public void WebSiteInstanceDetails_InheritsFromWebSiteInstance()
+    public void Process_DefaultsToNull()
+    {
+        // Act
+        var instance = new WebSiteInstance();
+
+        // Assert
+        Assert.Null(instance.Process);
+    }
+
+    [Fact]
+    public void Process_CanBeSet()
     {
         // Arrange
-        var config = new WebSiteConfiguration { Name = "TestSite" };
+        var instance = new WebSiteInstance();
+        var processInfo = new ProcessInfo(1234);
 
         // Act
-        var details = new WebSiteInstanceDetails(config);
+        instance.Process = processInfo;
 
         // Assert
-        Assert.IsAssignableFrom<WebSiteInstance>(details);
-        Assert.Same(config, details.Configuration);
-    }
-
-    [Fact]
-    public void WebSiteInstanceDetails_CanSetProcess()
-    {
-        // Act
-        var details = new WebSiteInstanceDetails();
-        details.Process = new ProcessInfo(1234);
-
-        // Assert
-        Assert.NotNull(details.Process);
-        Assert.Equal(1234, details.Process!.Id);
-    }
-
-    [Fact]
-    public void WebSiteInstanceDetails_Process_DefaultsToNull()
-    {
-        // Act
-        var details = new WebSiteInstanceDetails();
-
-        // Assert
-        Assert.Null(details.Process);
-    }
-
-    #endregion
-
-    #region WebSiteRuntimeState
-
-    [Fact]
-    public void WebSiteRuntimeState_Stopped_Factory_ReturnsCorrectState()
-    {
-        // Act
-        var state = WebSiteRuntimeState.Stopped;
-
-        // Assert
-        Assert.False(state.IsRunning);
-        Assert.Null(state.ProcessDetails);
-        Assert.Equal("Stopped", state.StatusText);
-    }
-
-    [Fact]
-    public void WebSiteRuntimeState_Running_Factory_ReturnsCorrectState()
-    {
-        // Arrange
-        var processInfo = new ProcessInfo(5678);
-
-        // Act
-        var state = WebSiteRuntimeState.Running(processInfo);
-
-        // Assert
-        Assert.True(state.IsRunning);
-        Assert.Same(processInfo, state.ProcessDetails);
-        Assert.Equal("Running", state.StatusText);
+        Assert.Same(processInfo, instance.Process);
     }
 
     #endregion

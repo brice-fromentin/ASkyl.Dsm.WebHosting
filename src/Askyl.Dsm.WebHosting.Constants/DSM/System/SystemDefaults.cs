@@ -26,6 +26,12 @@ public static class SystemDefaults
     /// </summary>
     public const string KeyExternalHttpsPort = "external_port_dsm_https";
 
+    /// <summary>
+    /// Key name for system language in synoinfo.conf (e.g. "def" for default browser language, or a specific code).
+    /// If "def", the browser language should be used as fallback.
+    /// </summary>
+    public const string KeyLanguage = "language";
+
     #endregion
 
     #region Default Values
@@ -34,6 +40,11 @@ public static class SystemDefaults
     /// Default DSM HTTPS port when not configured otherwise.
     /// </summary>
     public const int DefaultHttpsPort = 5001;
+
+    /// <summary>
+    /// Value for language field in synoinfo.conf when browser language should be used.
+    /// </summary>
+    public const string DefaultLanguage = "def";
 
     #endregion
 }

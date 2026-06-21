@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.JSON;
-using Askyl.Dsm.WebHosting.Data.Attributes;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
@@ -19,9 +18,9 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 {
     private ApiParametersBase() => throw new NotImplementedException();
 
-    public ApiParametersBase(ApiInformationCollection informations, T? entry = null)
+    protected ApiParametersBase(ApiInformationCollection informations, T? entry = null)
     {
-        var infos = (Name == ApiNames.Info)
+        var infos = (Name == ApiConstants.Info)
                         ? CreateDefaultHandshakeInfo()
                         : informations.Get(Name) ?? throw new NullReferenceException("Empty API Information.");
 
@@ -35,11 +34,10 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
     }
 
     private static ApiInformation CreateDefaultHandshakeInfo()
-        => new() { Path = ApiNames.Handshake, MinVersion = ApiVersions.MinVersion, MaxVersion = ApiVersions.MaxVersion };
+        => new() { Path = ApiConstants.Handshake, MinVersion = ApiConstants.MinVersion, MaxVersion = ApiConstants.MaxVersion };
 
     #region Reflections Caches
 
-    private static string? ApiJsonParameterName;
     private static List<PropertyDefinition> Properties { get; } = GetDefinitions();
 
     private class PropertyDefinition(PropertyInfo info, string customName)
@@ -69,6 +67,8 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 
     public T Parameters { get; }
 
+    protected virtual string JsonParameterName => throw new NotImplementedException();
+
     public string BuildUrl(string server, int port) => $"https://{server}:{port}/webapi/{Path}/{Name}";
 
     public StringContent ToForm()
@@ -80,19 +80,12 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 
     public StringContent ToJson()
     {
-        ApiJsonParameterName ??= GetType().GetCustomAttribute<DsmParameterNameAttribute>()?.Name;
-
-        if (String.IsNullOrWhiteSpace(ApiJsonParameterName))
-        {
-            throw new ArgumentException($"DsmParameterNameAttribute is not set for type {typeof(T).Name}");
-        }
-
         var builder = BuildForm(true);
         var serialized = JsonSerializer.Serialize(Parameters, JsonOptionsCache.Options);
         var encoded = Uri.EscapeDataString(serialized);
 
         builder.Append('&');
-        builder.Append(ApiJsonParameterName);
+        builder.Append(JsonParameterName);
         builder.Append('=');
         builder.Append(encoded);
 

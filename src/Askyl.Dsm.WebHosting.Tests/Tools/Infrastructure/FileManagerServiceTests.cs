@@ -99,7 +99,7 @@ public class FileManagerServiceTests : IDisposable
     {
         // Arrange
         var service = CreateService(_tempBase);
-        var dirName = "testdir";
+        const string dirName = "testdir";
 
         // Act
         var result = service.GetDirectory(dirName);
@@ -114,7 +114,7 @@ public class FileManagerServiceTests : IDisposable
     {
         // Arrange
         var service = CreateService(_tempBase);
-        var dirName = "existing";
+        const string dirName = "existing";
         service.GetDirectory(dirName);
 
         // Act
@@ -148,7 +148,7 @@ public class FileManagerServiceTests : IDisposable
     {
         // Arrange
         var service = CreateService(_tempBase);
-        var dirName = "todelete";
+        const string dirName = "todelete";
         var dirPath = service.GetDirectory(dirName);
 
         // Act
@@ -177,8 +177,8 @@ public class FileManagerServiceTests : IDisposable
     {
         // Arrange
         var service = CreateService(_tempBase);
-        var dirName = "mydir";
-        var fileName = "myfile.txt";
+        const string dirName = "mydir";
+        const string fileName = "myfile.txt";
 
         // Act
         var result = service.GetFullName(dirName, fileName);
@@ -215,7 +215,7 @@ public class FileManagerServiceTests : IDisposable
     {
         // Arrange
         var service = CreateService(_tempBase);
-        var dirName = "newdir";
+        const string dirName = "newdir";
 
         // Act
         service.GetFullName(dirName, "file.txt");

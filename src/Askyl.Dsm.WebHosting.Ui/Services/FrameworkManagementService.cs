@@ -1,32 +1,30 @@
-using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
 public class FrameworkManagementService(
     IDotnetVersionService dotnetVersionService,
-    IPlatformInfoService platformInfo,
+    PlatformInfoService platformInfo,
     IDownloaderService downloader,
     IFileManagerService fileManager,
     IArchiveExtractorService archiveExtractor,
-    ILogger<ILogFrameworkManagementService> logger) : IFrameworkManagementService
+    ILogger<ILogFrameworkManagementService> logger,
+    ILocalizer localizer) : IFrameworkManagementService
 {
     public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel, CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrEmpty(version))
         {
             logger.InstallFailedVersionRequired();
-            return InstallationResult.CreateFailure("Version is required");
+            return InstallationResult.CreateFailure(localizer[LK.Validation.VersionRequired]);
         }
-
-        using var timer = new OperationTimer(elapsed => logger.InstallDuration(elapsed, version));
-
-        logger.InstallStarting(version);
 
         try
         {
@@ -40,12 +38,12 @@ public class FrameworkManagementService(
             await dotnetVersionService.RefreshCacheAsync();
 
             logger.FrameworkInstalled(version);
-            return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been installed successfully.");
+            return InstallationResult.CreateSuccess(localizer[LK.Success.InstallationCompleted]);
         }
         catch (Exception ex)
         {
             logger.FrameworkInstallError(ex, version);
-            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -54,17 +52,13 @@ public class FrameworkManagementService(
         if (String.IsNullOrEmpty(version))
         {
             logger.UninstallFailedVersionRequired();
-            return InstallationResult.CreateFailure("Version is required");
+            return InstallationResult.CreateFailure(localizer[LK.Validation.VersionRequired]);
         }
 
         if (!dotnetVersionService.IsValidVersionFormat(version))
         {
-            return InstallationResult.CreateFailure(ValidationConstants.InvalidVersionFormat);
+            return InstallationResult.CreateFailure(localizer[LK.Validation.InvalidVersionFormat]);
         }
-
-        using var timer = new OperationTimer(elapsed => logger.UninstallDuration(elapsed, version));
-
-        logger.UninstallStarting(version);
 
         try
         {
@@ -81,22 +75,22 @@ public class FrameworkManagementService(
             await dotnetVersionService.RefreshCacheAsync();
 
             logger.FrameworkUninstalled(version);
-            return InstallationResult.CreateSuccess($"ASP.NET Core {version} has been uninstalled successfully.");
+            return InstallationResult.CreateSuccess(localizer[LK.Success.UninstallationCompleted]);
         }
         catch (LastReleaseUninstallException ex)
         {
             logger.UninstallFailed(ex.Message);
-            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
         catch (MissingChannelConfigurationException ex)
         {
             logger.UninstallFailed(ex.Message);
-            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
         catch (Exception ex)
         {
             logger.FrameworkUninstallError(ex, version);
-            return InstallationResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 

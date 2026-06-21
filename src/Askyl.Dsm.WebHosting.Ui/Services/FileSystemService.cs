@@ -1,4 +1,3 @@
-using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
@@ -6,11 +5,11 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.FileStation;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.FileStation;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Network;
 
@@ -20,7 +19,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Server-side implementation of IFileSystemService for Synology DSM FileStation API operations.
 /// Returns simple FileSystemItem data objects; UI-specific rendering is handled by the client layer.
 /// </summary>
-public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemService> logger) : Data.Contracts.IFileSystemService
+public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemService> logger, ILocalizer localizer) : Data.Contracts.IFileSystemService
 {
     public async Task<SharedFoldersResult> GetSharedFoldersAsync()
     {
@@ -37,7 +36,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         catch (Exception ex)
         {
             logger.ErrorRetrievingSharedFolders(ex);
-            return SharedFoldersResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return SharedFoldersResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -47,7 +46,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (!IsPathValid(path))
         {
             logger.PathValidationFailed(path);
-            return DirectoryContentsResult.CreateFailure(ValidationConstants.PathTraversalDetected);
+            return DirectoryContentsResult.CreateFailure(localizer[LK.Validation.PathTraversalDetected]);
         }
 
         logger.RetrievingDirectoryContents(path, directoryOnly);
@@ -81,7 +80,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         catch (Exception ex)
         {
             logger.ErrorRetrievingDirectory(ex, path);
-            return DirectoryContentsResult.CreateFailure(ApplicationConstants.OperationFailedErrorMessage);
+            return DirectoryContentsResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -93,7 +92,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (!IsPathValid(path))
         {
             logger.PathValidationFailed(path);
-            return ApiResult.CreateFailure(ValidationConstants.PathTraversalDetected);
+            return ApiResult.CreateFailure(localizer[LK.Validation.PathTraversalDetected]);
         }
 
         var targetPath = isDirectory ? path : Path.GetDirectoryName(path) ?? path;
@@ -149,7 +148,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (response?.Success != true || response.Data?.TaskId is null)
         {
             logger.FailedToSetAclPermissions(path, response?.Success, response?.Error?.Code);
-            return ApiResult.CreateFailure($"Failed to set ACL permissions for {path}: Success={response?.Success}, ErrorCode={response?.Error?.Code}");
+            return ApiResult.CreateFailure(localizer[LK.Error.FailedToSetACL, path, response?.Success ?? false, response?.Error?.Code ?? 0]);
         }
 
         logger.AclPermissionsSet(path, response.Data.TaskId);
@@ -206,14 +205,14 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
     /// Note: All API calls request AdditionalPathSizeTimeFields, so Additional is guaranteed to be populated.
     /// </summary>
     private static FsEntry CreateFsEntry(FileStationFile file)
-        => new(file.Path, file.Name, file.IsDirectory, file.Additional!.RealPath!, Size: file.IsDirectory ? null : file.Additional!.Size!, Modified: DateTimeOffset.FromUnixTimeSeconds(file.Additional!.Time!.ModifyTime!.Value).UtcDateTime);
+        => new(file.Path, file.Name, file.IsDirectory, file.Additional!.RealPath!, Size: file.IsDirectory ? null : file.Additional!.Size!, Modified: DateTimeOffset.FromUnixTimeSeconds(file.Additional!.Time!.ModifyTime!.Value).LocalDateTime);
 
     /// <summary>
     /// Creates an FsEntry from a FileStationShare.
     /// Note: All API calls request AdditionalPathSizeTimeFields, so Additional is guaranteed to be populated.
     /// </summary>
     private static FsEntry CreateFsEntry(FileStationShare share)
-        => new(share.Path, share.Name, share.IsDirectory, share.Additional!.RealPath!, Size: null, Modified: DateTimeOffset.FromUnixTimeSeconds(share.Additional!.Time!.ModifyTime!.Value).UtcDateTime);
+        => new(share.Path, share.Name, share.IsDirectory, share.Additional!.RealPath!, Size: null, Modified: DateTimeOffset.FromUnixTimeSeconds(share.Additional!.Time!.ModifyTime!.Value).LocalDateTime);
 
     /// <summary>
     /// Validates a DSM virtual path to prevent path traversal attacks.

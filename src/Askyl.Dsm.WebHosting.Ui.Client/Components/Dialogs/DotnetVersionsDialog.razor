@@ -1,20 +1,20 @@
 @using Askyl.Dsm.WebHosting.Constants.Runtime
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
-@using Askyl.Dsm.WebHosting.Logging
+@using Askyl.Dsm.WebHosting.Globalization
 
 @implements IDialogContentComponent
 
 @inject IDotnetVersionService DotnetVersionService
 @inject IToastService ToastService
-@inject ILogger<ILogDotnetVersionsDialog> Logger
+@inject ILocalizer localizer
 
 <FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">.NET Versions</FluentLabel>
+    <FluentLabel Typo="Typography.H2">@localizer[LK.DotnetVersions.DialogTitle]</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent">Close</FluentButton>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent">@localizer[LK.Common.Close]</FluentButton>
 </FluentDialogFooter>
 
 <FluentDialogBody>
@@ -22,7 +22,7 @@
     {
         <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center">
             <FluentProgressRing />
-            <FluentLabel>Searching for .NET versions...</FluentLabel>
+            <FluentLabel>@localizer[LK.DotnetVersions.Searching]</FluentLabel>
         </FluentStack>
     }
     else if (DotnetVersions is { Count: > 0 })
@@ -55,7 +55,7 @@
         <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
             <FluentIcon Value="@(new IconsRegular24.Info())" Color="Color.Warning" />
             <FluentLabel Typo="Typography.Body">
-                No .NET installation found. Make sure .NET is installed.
+                @localizer[LK.DotnetVersions.NotFound]
             </FluentLabel>
         </FluentStack>
     }
@@ -87,7 +87,7 @@
 
             if (!versionsResult.Success)
             {
-                ErrorMessage = versionsResult.Message ?? "Failed to load .NET versions";
+                ErrorMessage = versionsResult.Message ?? localizer[LK.DotnetVersions.FailedToLoad];
                 DotnetVersions = [];
                 return;
             }
@@ -96,8 +96,7 @@
         }
         catch (Exception ex)
         {
-            Logger.ErrorSearchingDotnetVersion(ex);
-            ErrorMessage = $"Error while searching for global .NET version: {ex.Message}";
+            ErrorMessage = localizer[LK.DotnetVersions.ErrorSearching, ex.Message];
             DotnetVersions = [];
         }
         finally

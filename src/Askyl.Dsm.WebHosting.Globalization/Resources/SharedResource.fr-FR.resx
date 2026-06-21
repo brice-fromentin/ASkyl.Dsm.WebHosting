@@ -1,0 +1,606 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Common -->
+  <data name="OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Supprimer</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Actualiser</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Chargement...</value>
+  </data>
+  <data name="Common_Size" xml:space="preserve">
+    <value>Taille</value>
+  </data>
+  <data name="Common_Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Common_Modified" xml:space="preserve">
+    <value>Modifié</value>
+  </data>
+  <data name="Common_ApplicationTitle" xml:space="preserve">
+    <value>.NET Web Hosting</value>
+  </data>
+  <data name="Common_UnhandledError" xml:space="preserve">
+    <value>Une erreur non gérée s'est produite.</value>
+  </data>
+  <data name="Common_Dash" xml:space="preserve">
+    <value>-</value>
+  </data>
+  <data name="Common_CheckMark" xml:space="preserve">
+    <value>✓</value>
+  </data>
+  <data name="Common_WarningIcon" xml:space="preserve">
+    <value>⚠</value>
+  </data>
+
+  <!-- Login -->
+  <data name="Login_PageTitle" xml:space="preserve">
+    <value>ADWH - Connexion</value>
+  </data>
+  <data name="Login_DialogTitle" xml:space="preserve">
+    <value>Authentification (compte DSM)</value>
+  </data>
+  <data name="Login_LoginLabel" xml:space="preserve">
+    <value>Identifiant :</value>
+  </data>
+  <data name="Login_PasswordLabel" xml:space="preserve">
+    <value>Mot de passe :</value>
+  </data>
+  <data name="Login_OTPLabel" xml:space="preserve">
+    <value>OTP :</value>
+  </data>
+  <data name="Login_Authenticating" xml:space="preserve">
+    <value>Authentification...</value>
+  </data>
+
+  <!-- Home -->
+  <data name="Home_PageTitle" xml:space="preserve">
+    <value>ADWH - Accueil</value>
+  </data>
+  <data name="Home_AddButton" xml:space="preserve">
+    <value>Ajouter</value>
+  </data>
+  <data name="Home_EditButton" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="Home_DotnetVersionButton" xml:space="preserve">
+    <value>Version .NET</value>
+  </data>
+  <data name="Home_AspNetOnlineButton" xml:space="preserve">
+    <value>ASP.NET En ligne</value>
+  </data>
+  <data name="Home_LicensesButton" xml:space="preserve">
+    <value>Licences</value>
+  </data>
+  <data name="Home_DownloadLogsButton" xml:space="preserve">
+    <value>Télécharger les journaux</value>
+  </data>
+  <data name="Home_LogoutButton" xml:space="preserve">
+    <value>Déconnexion</value>
+  </data>
+  <data name="Home_GridColumnName" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="Home_GridColumnPath" xml:space="preserve">
+    <value>Chemin</value>
+  </data>
+  <data name="Home_GridColumnFramework" xml:space="preserve">
+    <value>Framework</value>
+  </data>
+  <data name="Home_GridColumnInternalPort" xml:space="preserve">
+    <value>Port interne</value>
+  </data>
+  <data name="Home_GridColumnState" xml:space="preserve">
+    <value>État</value>
+  </data>
+  <data name="Home_DeleteConfirmation" xml:space="preserve">
+    <value>Êtes-vous sûr de vouloir supprimer le site web '{0}' ? Cette action est irréversible.</value>
+  </data>
+  <data name="Home_ErrorDeleting" xml:space="preserve">
+    <value>Erreur lors de la suppression du site web : {0}</value>
+  </data>
+  <data name="Home_ErrorStarting" xml:space="preserve">
+    <value>Erreur lors du démarrage du site web : {0}</value>
+  </data>
+  <data name="Home_ErrorStopping" xml:space="preserve">
+    <value>Erreur lors de l'arrêt du site web : {0}</value>
+  </data>
+  <data name="Home_ErrorLoggingOut" xml:space="preserve">
+    <value>Erreur lors de la déconnexion : {0}</value>
+  </data>
+
+  <!-- NotFound -->
+  <data name="NotFound_PageTitle" xml:space="preserve">
+    <value>Non trouvé</value>
+  </data>
+  <data name="NotFound_Content" xml:space="preserve">
+    <value>Page non trouvée</value>
+  </data>
+  <data name="NotFound_GoHome" xml:space="preserve">
+    <value>Retour à l'accueil</value>
+  </data>
+
+  <!-- WebsiteConfig -->
+  <data name="WebsiteConfig_EditTitle" xml:space="preserve">
+    <value>Modifier le site</value>
+  </data>
+  <data name="WebsiteConfig_AddTitle" xml:space="preserve">
+    <value>Ajouter un site</value>
+  </data>
+  <data name="WebsiteConfig_NameLabel" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="WebsiteConfig_AppSettingsSection" xml:space="preserve">
+    <value>Paramètres de l'application</value>
+  </data>
+  <data name="WebsiteConfig_AppPathLabel" xml:space="preserve">
+    <value>Chemin de l'application</value>
+  </data>
+  <data name="WebsiteConfig_EnvironmentLabel" xml:space="preserve">
+    <value>Environnement</value>
+  </data>
+  <data name="WebsiteConfig_InternalPortLabel" xml:space="preserve">
+    <value>Port interne</value>
+  </data>
+  <data name="WebsiteConfig_ShutdownTimeoutLabel" xml:space="preserve">
+    <value>Délai d'arrêt (secondes)</value>
+  </data>
+  <data name="WebsiteConfig_EnabledLabel" xml:space="preserve">
+    <value>Activé</value>
+  </data>
+  <data name="WebsiteConfig_AutoStartLabel" xml:space="preserve">
+    <value>Démarrage automatique</value>
+  </data>
+  <data name="WebsiteConfig_ReverseProxySection" xml:space="preserve">
+    <value>Proxy inverse</value>
+  </data>
+  <data name="WebsiteConfig_HostnameLabel" xml:space="preserve">
+    <value>Nom d'hôte</value>
+  </data>
+  <data name="WebsiteConfig_ProtocolLabel" xml:space="preserve">
+    <value>Protocole</value>
+  </data>
+  <data name="WebsiteConfig_PublicPortLabel" xml:space="preserve">
+    <value>Port public</value>
+  </data>
+  <data name="WebsiteConfig_EnableHSTSLabel" xml:space="preserve">
+    <value>Activer HSTS</value>
+  </data>
+  <data name="WebsiteConfig_UpdateButton" xml:space="preserve">
+    <value>Mettre à jour</value>
+  </data>
+  <data name="WebsiteConfig_CreateButton" xml:space="preserve">
+    <value>Créer</value>
+  </data>
+  <data name="WebsiteConfig_FrameworkNotInstalled" xml:space="preserve">
+    <value>Le site web nécessite .NET {0} qui n'est pas installé. Installer maintenant ?</value>
+  </data>
+  <data name="WebsiteConfig_ErrorModifying" xml:space="preserve">
+    <value>Erreur lors de la {0} du site web : {1}</value>
+  </data>
+  <data name="WebsiteConfig_ActionUpdating" xml:space="preserve">
+    <value>mise à jour</value>
+  </data>
+  <data name="WebsiteConfig_ActionCreating" xml:space="preserve">
+    <value>création</value>
+  </data>
+  <data name="WebsiteConfig_ProtocolHttp" xml:space="preserve">
+    <value>HTTP</value>
+  </data>
+  <data name="WebsiteConfig_ProtocolHttps" xml:space="preserve">
+    <value>HTTPS</value>
+  </data>
+
+  <!-- AspNetReleases -->
+  <data name="AspNetReleases_DialogTitle" xml:space="preserve">
+    <value>ASP.NET En ligne</value>
+  </data>
+  <data name="AspNetReleases_ChannelLabel" xml:space="preserve">
+    <value>Canal</value>
+  </data>
+  <data name="AspNetReleases_SelectVersion" xml:space="preserve">
+    <value>Sélectionner une version</value>
+  </data>
+  <data name="AspNetReleases_InstallVersion" xml:space="preserve">
+    <value>Installer {0}</value>
+  </data>
+  <data name="AspNetReleases_UninstallVersion" xml:space="preserve">
+    <value>Désinstaller {0}</value>
+  </data>
+  <data name="AspNetReleases_GridColumnVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="AspNetReleases_GridColumnInstalled" xml:space="preserve">
+    <value>Installé</value>
+  </data>
+  <data name="AspNetReleases_GridColumnSecurity" xml:space="preserve">
+    <value>Sécurité</value>
+  </data>
+  <data name="AspNetReleases_GridColumnRelease" xml:space="preserve">
+    <value>Publication</value>
+  </data>
+  <data name="AspNetReleases_InstallationError" xml:space="preserve">
+    <value>Erreur d'installation : {0}</value>
+  </data>
+  <data name="AspNetReleases_UninstallConfirmation" xml:space="preserve">
+    <value>Cliquez sur OK pour procéder à la désinstallation d'ASP.NET Core {0}</value>
+  </data>
+  <data name="AspNetReleases_UninstallationError" xml:space="preserve">
+    <value>Erreur de désinstallation : {0}</value>
+  </data>
+
+  <!-- AutoDataGrid -->
+  <data name="AutoDataGrid_Loading" xml:space="preserve">
+    <value>Chargement des éléments...</value>
+  </data>
+  <data name="AutoDataGrid_Empty" xml:space="preserve">
+    <value>Aucun élément trouvé.</value>
+  </data>
+  <data name="AutoDataGrid_ItemsCount" xml:space="preserve">
+    <value>Éléments : {0}</value>
+  </data>
+
+  <!-- Loading -->
+  <data name="Loading_SharedFolders" xml:space="preserve">
+    <value>Chargement des dossiers partagés...</value>
+  </data>
+  <data name="Loading_DirectoryContents" xml:space="preserve">
+    <value>Chargement du contenu du répertoire...</value>
+  </data>
+  <data name="Loading_Installing" xml:space="preserve">
+    <value>Installation en cours...</value>
+  </data>
+  <data name="Loading_Channels" xml:space="preserve">
+    <value>Chargement des canaux...</value>
+  </data>
+  <data name="Loading_Releases" xml:space="preserve">
+    <value>Chargement des versions...</value>
+  </data>
+  <data name="Loading_Uninstalling" xml:space="preserve">
+    <value>Désinstallation en cours...</value>
+  </data>
+  <data name="Loading_DeletingWebsite" xml:space="preserve">
+    <value>Suppression du site web '{0}'...</value>
+  </data>
+  <data name="Loading_StartingWebsite" xml:space="preserve">
+    <value>Démarrage du site web '{0}'...</value>
+  </data>
+  <data name="Loading_StoppingWebsite" xml:space="preserve">
+    <value>Arrêt du site web '{0}'...</value>
+  </data>
+  <data name="Loading_UpdatingWebsite" xml:space="preserve">
+    <value>Mise à jour de '{0}'...</value>
+  </data>
+  <data name="Loading_CreatingWebsite" xml:space="preserve">
+    <value>Création de '{0}'...</value>
+  </data>
+
+  <!-- Error -->
+  <data name="Error_PlatformNotSupported" xml:space="preserve">
+    <value>L'application ne peut fonctionner que sur Linux ou MacOS</value>
+  </data>
+  <data name="Error_AuthenticationFailed" xml:space="preserve">
+    <value>Échec de l'authentification</value>
+  </data>
+  <data name="Error_OperationFailed" xml:space="preserve">
+    <value>L'opération a échoué. Consultez les journaux pour plus de détails.</value>
+  </data>
+  <data name="Error_RateLimitExceeded" xml:space="preserve">
+    <value>Trop de tentatives de connexion. Veuillez attendre une minute avant de réessayer.</value>
+  </data>
+  <data name="Error_FailedToLoadWebsites" xml:space="preserve">
+    <value>Échec du chargement des sites</value>
+  </data>
+  <data name="Error_FailedToAddWebsite" xml:space="preserve">
+    <value>Échec de l'ajout du site</value>
+  </data>
+  <data name="Error_FailedToUpdateWebsite" xml:space="preserve">
+    <value>Échec de la mise à jour du site</value>
+  </data>
+  <data name="Error_FailedToDeleteWebsite" xml:space="preserve">
+    <value>Échec de la suppression du site</value>
+  </data>
+  <data name="Error_FailedToRemoveWebsite" xml:space="preserve">
+    <value>Échec de la suppression du site</value>
+  </data>
+  <data name="Error_FailedToStartWebsite" xml:space="preserve">
+    <value>Échec du démarrage du site</value>
+  </data>
+  <data name="Error_FailedToStopWebsite" xml:space="preserve">
+    <value>Échec de l'arrêt du site</value>
+  </data>
+  <data name="Error_FailedToLogout" xml:space="preserve">
+    <value>Échec de la déconnexion</value>
+  </data>
+  <data name="Error_FailedToLoadSharedFolders" xml:space="preserve">
+    <value>Échec du chargement des dossiers partagés</value>
+  </data>
+  <data name="Error_FailedToLoadDirectoryContents" xml:space="preserve">
+    <value>Échec du chargement du contenu du répertoire</value>
+  </data>
+  <data name="Error_FailedToLoadDirectoryContentsWithPath" xml:space="preserve">
+    <value>Échec du chargement du contenu du répertoire pour le chemin : {0}</value>
+  </data>
+  <data name="Error_FailedToLoadInstalledVersions" xml:space="preserve">
+    <value>Échec du chargement des versions installées</value>
+  </data>
+  <data name="Error_FailedToCheckChannelInstalled" xml:space="preserve">
+    <value>Échec de la vérification du canal '{0}'</value>
+  </data>
+  <data name="Error_FailedToCheckVersionInstalled" xml:space="preserve">
+    <value>Échec de la vérification de la version '{0}'</value>
+  </data>
+  <data name="Error_FailedToLoadChannels" xml:space="preserve">
+    <value>Échec du chargement des canaux disponibles</value>
+  </data>
+  <data name="Error_FailedToLoadReleases" xml:space="preserve">
+    <value>Échec du chargement des versions</value>
+  </data>
+  <data name="Error_FailedToLoadReleasesForChannel" xml:space="preserve">
+    <value>Échec du chargement des versions pour le canal '{0}'</value>
+  </data>
+  <data name="Error_FailedToInstallFramework" xml:space="preserve">
+    <value>Échec de l'installation du framework</value>
+  </data>
+  <data name="Error_FailedToLogin" xml:space="preserve">
+    <value>Échec de la connexion</value>
+  </data>
+  <data name="Error_FailedToCheckAuthStatus" xml:space="preserve">
+    <value>Échec de la vérification du statut d'authentification</value>
+  </data>
+  <data name="Error_Unknown" xml:space="preserve">
+    <value>Erreur inconnue</value>
+  </data>
+  <data name="Error_ApplicationPathRequired" xml:space="preserve">
+    <value>Le chemin de l'application est requis. Veuillez sélectionner un chemin valide.</value>
+  </data>
+  <data name="Error_InstallationFailed" xml:space="preserve">
+    <value>Échec de l'installation</value>
+  </data>
+  <data name="Error_UninstallationFailed" xml:space="preserve">
+    <value>Échec de la désinstallation de la version {0}</value>
+  </data>
+  <data name="Error_SiteConfigUpdating" xml:space="preserve">
+    <value>La configuration du site est en cours de mise à jour</value>
+  </data>
+  <data name="Error_FailedToQueueStart" xml:space="preserve">
+    <value>Échec de la mise en file d'attente de la commande de démarrage</value>
+  </data>
+  <data name="Error_FailedToQueueStop" xml:space="preserve">
+    <value>Échec de la mise en file d'attente de la commande d'arrêt</value>
+  </data>
+  <data name="Error_SiteAlreadyRunning" xml:space="preserve">
+    <value>Le site '{0}' est déjà en cours d'exécution</value>
+  </data>
+  <data name="Error_ApplicationBinaryNotFound" xml:space="preserve">
+    <value>Binaire de l'application introuvable : {0}</value>
+  </data>
+  <data name="Error_IncompatibleFramework" xml:space="preserve">
+    <value>Framework incompatible</value>
+  </data>
+  <data name="Error_InstanceNotFound" xml:space="preserve">
+    <value>Instance introuvable</value>
+  </data>
+  <data name="Error_NoApplicationPath" xml:space="preserve">
+    <value>Aucun chemin d'application configuré</value>
+  </data>
+  <data name="Error_SiteNotFound" xml:space="preserve">
+    <value>Site avec l'ID '{0}' introuvable</value>
+  </data>
+  <data name="Error_FailedToSetACL" xml:space="preserve">
+    <value>Échec de la configuration des permissions ACL pour {0} : Réussite={1}, Code d'erreur={2}</value>
+  </data>
+  <data name="Error_NoSessionFound" xml:space="preserve">
+    <value>Aucune session trouvée</value>
+  </data>
+  <data name="Error_SessionExpired" xml:space="preserve">
+    <value>Session expirée sur le serveur</value>
+  </data>
+  <data name="Error_FailedToSetPermissions" xml:space="preserve">
+    <value>Échec de la configuration des permissions : {0}</value>
+  </data>
+  <data name="Error_FailedToCreateReverseProxy" xml:space="preserve">
+    <value>Échec de la création du proxy inverse : {0}</value>
+  </data>
+  <data name="Error_FailedToUpdateReverseProxy" xml:space="preserve">
+    <value>Échec de la mise à jour du proxy inverse : {0}</value>
+  </data>
+
+  <!-- Success -->
+  <data name="Success_AuthenticationSuccessful" xml:space="preserve">
+    <value>Authentification réussie</value>
+  </data>
+  <data name="Success_InstallationCompleted" xml:space="preserve">
+    <value>Installation terminée avec succès</value>
+  </data>
+  <data name="Success_LogoutSuccessful" xml:space="preserve">
+    <value>Déconnexion réussie</value>
+  </data>
+  <data name="Success_UninstallationCompleted" xml:space="preserve">
+    <value>Désinstallation terminée avec succès</value>
+  </data>
+
+  <!-- Validation -->
+  <data name="Validation_PathRequired" xml:space="preserve">
+    <value>Le chemin est requis</value>
+  </data>
+  <data name="Validation_PathTraversalDetected" xml:space="preserve">
+    <value>Chemin invalide : les séquences de traversée ne sont pas autorisées</value>
+  </data>
+  <data name="Validation_InvalidVersionFormat" xml:space="preserve">
+    <value>Format de version invalide</value>
+  </data>
+  <data name="Validation_VersionRequired" xml:space="preserve">
+    <value>La version est requise</value>
+  </data>
+  <data name="Validation_EnvVarKeyTooLong" xml:space="preserve">
+    <value>La clé de variable d'environnement '{0}' dépasse la longueur maximale de {1} caractères</value>
+  </data>
+  <data name="Validation_EnvVarValueTooLong" xml:space="preserve">
+    <value>La valeur de la variable d'environnement '{0}' dépasse la longueur maximale de {1} caractères</value>
+  </data>
+
+  <!-- WebSiteConfiguration Validation -->
+  <data name="WebSiteConfiguration_NameRequired" xml:space="preserve">
+    <value>Le nom du site est requis</value>
+  </data>
+  <data name="WebSiteConfiguration_NameLength" xml:space="preserve">
+    <value>Le nom du site doit comporter entre 1 et 100 caractères</value>
+  </data>
+  <data name="WebSiteConfiguration_ApplicationPathRequired" xml:space="preserve">
+    <value>Le chemin de l'application est requis</value>
+  </data>
+  <data name="WebSiteConfiguration_InternalPortRequired" xml:space="preserve">
+    <value>Le port interne est requis</value>
+  </data>
+  <data name="WebSiteConfiguration_PublicPortRequired" xml:space="preserve">
+    <value>Le port public est requis</value>
+  </data>
+  <data name="WebSiteConfiguration_InternalPortRange" xml:space="preserve">
+    <value>Le port interne doit être compris entre 1024 et 65535</value>
+  </data>
+  <data name="WebSiteConfiguration_PublicPortRange" xml:space="preserve">
+    <value>Le port public doit être 80, 443, ou compris entre 1024 et 65535</value>
+  </data>
+  <data name="WebSiteConfiguration_EnvironmentRequired" xml:space="preserve">
+    <value>L'environnement est requis</value>
+  </data>
+  <data name="WebSiteConfiguration_ProcessTimeoutRange" xml:space="preserve">
+    <value>Le délai d'arrêt doit être compris entre 10 et 120 secondes</value>
+  </data>
+  <data name="WebSiteConfiguration_HostNameRequired" xml:space="preserve">
+    <value>Le nom d'hôte est requis</value>
+  </data>
+
+  <!-- LoginCredentials Validation -->
+  <data name="LoginCredentials_LoginRequired" xml:space="preserve">
+    <value>L'identifiant est requis</value>
+  </data>
+  <data name="LoginCredentials_PasswordRequired" xml:space="preserve">
+    <value>Le mot de passe est requis</value>
+  </data>
+
+  <!-- Home Loading -->
+  <data name="Home_LoadingWebsites" xml:space="preserve">
+    <value>Chargement des sites web...</value>
+  </data>
+
+  <!-- DotnetVersions Dialog -->
+  <data name="DotnetVersions_DialogTitle" xml:space="preserve">
+    <value>Versions .NET</value>
+  </data>
+  <data name="DotnetVersions_Searching" xml:space="preserve">
+    <value>Recherche des versions .NET...</value>
+  </data>
+  <data name="DotnetVersions_NotFound" xml:space="preserve">
+    <value>Aucune installation .NET trouvée. Vérifiez que .NET est installé.</value>
+  </data>
+  <data name="DotnetVersions_FailedToLoad" xml:space="preserve">
+    <value>Échec du chargement des versions .NET</value>
+  </data>
+  <data name="DotnetVersions_ErrorSearching" xml:space="preserve">
+    <value>Erreur lors de la recherche des versions .NET : {0}</value>
+  </data>
+
+  <!-- Licenses Dialog -->
+  <data name="Licenses_DialogTitle" xml:space="preserve">
+    <value>Licences</value>
+  </data>
+  <data name="Licenses_Loading" xml:space="preserve">
+    <value>Chargement des licences...</value>
+  </data>
+
+  <!-- FileSelection Dialog -->
+  <data name="FileSelection_DialogTitle" xml:space="preserve">
+    <value>Sélection de fichier</value>
+  </data>
+  <data name="FileSelection_SelectFile" xml:space="preserve">
+    <value>Sélectionner le fichier</value>
+  </data>
+  <data name="FileSelection_NoFilesFound" xml:space="preserve">
+    <value>Aucun fichier trouvé dans ce répertoire.</value>
+  </data>
+  <data name="FileSelection_SelectFolder" xml:space="preserve">
+    <value>Sélectionnez un dossier partagé dans l'arborescence pour afficher son contenu.</value>
+  </data>
+  <data name="FileSelection_Directory" xml:space="preserve">
+    <value>Répertoire</value>
+  </data>
+  <data name="FileSelection_File" xml:space="preserve">
+    <value>Fichier</value>
+  </data>
+
+</root>

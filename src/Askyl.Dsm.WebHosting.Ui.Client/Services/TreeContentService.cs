@@ -1,5 +1,5 @@
-using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 using Microsoft.FluentUI.AspNetCore.Components;
 
@@ -9,7 +9,8 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// Implementation of ITreeContentService that loads directory content from the server.
 /// </summary>
 /// <param name="fileSystemService">The file system service to fetch directory contents.</param>
-public class TreeContentService(IFileSystemService fileSystemService) : ITreeContentService
+/// <param name="localizer">Localizer for user-facing strings.</param>
+public class TreeContentService(IFileSystemService fileSystemService, ILocalizer localizer) : ITreeContentService
 {
     /// <inheritdoc/>
     public async Task<List<TreeViewItem>> LoadChildDirectoriesAsync(string path, Func<string, Task> errorHandler, Func<string, Task<List<TreeViewItem>>> loadChildrenAsync)
@@ -21,7 +22,7 @@ public class TreeContentService(IFileSystemService fileSystemService) : ITreeCon
 
             if (!contentsResult.Success)
             {
-                await errorHandler($"{ApplicationConstants.FailedToLoadDirectoryContentsErrorMessage}: {contentsResult.Message}");
+                await errorHandler($"{localizer[LK.Error.FailedToLoadDirectoryContents]}: {contentsResult.Message}");
                 return [];
             }
 
@@ -37,7 +38,7 @@ public class TreeContentService(IFileSystemService fileSystemService) : ITreeCon
         }
         catch (Exception ex)
         {
-            await errorHandler($"{ApplicationConstants.FailedToLoadDirectoryContentsErrorMessage}: {ex.Message}");
+            await errorHandler($"{localizer[LK.Error.FailedToLoadDirectoryContents]}: {ex.Message}");
 
             return [];
         }

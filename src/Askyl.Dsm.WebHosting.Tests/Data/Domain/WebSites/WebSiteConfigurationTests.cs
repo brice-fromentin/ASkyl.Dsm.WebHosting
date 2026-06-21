@@ -1,6 +1,5 @@
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
+using Askyl.Dsm.WebHosting.Globalization.Validators;
 
 namespace Askyl.Dsm.WebHosting.Tests.Data.Domain.WebSites;
 
@@ -8,9 +7,17 @@ public class WebSiteConfigurationTests
 {
     private const int PortMin = 1024;
     private const int PortMax = 65535;
+    private const int PublicPortWellKnownHttp = 80;
+    private const int PublicPortWellKnownHttps = 443;
     private const int TimeoutMin = 10;
     private const int TimeoutMax = 120;
     private const int NameMaxLength = 100;
+
+    private static WebSiteConfigurationValidator CreateValidator()
+    {
+        return new();
+    }
+
     #region Name
 
     [Fact]
@@ -18,16 +25,14 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = new WebSiteConfiguration { Name = "" };
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var nameErrors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.Name))).ToList();
-        Assert.NotEmpty(nameErrors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.Name));
     }
 
     [Fact]
@@ -35,16 +40,14 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = new WebSiteConfiguration { Name = null! };
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var nameErrors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.Name))).ToList();
-        Assert.NotEmpty(nameErrors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.Name));
     }
 
     [Fact]
@@ -52,16 +55,14 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = new WebSiteConfiguration { Name = new string('A', NameMaxLength + 1) };
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var nameErrors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.Name))).ToList();
-        Assert.NotEmpty(nameErrors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.Name));
     }
 
     [Fact]
@@ -70,15 +71,13 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.Name = new string('A', NameMaxLength);
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        var nameErrors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.Name))).ToList();
-        Assert.Empty(nameErrors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.Name));
     }
 
     [Fact]
@@ -86,15 +85,13 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        var nameErrors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.Name))).ToList();
-        Assert.Empty(nameErrors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.Name));
     }
 
     #endregion
@@ -107,16 +104,14 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.ApplicationPath = "";
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.ApplicationPath))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.ApplicationPath));
     }
 
     [Fact]
@@ -125,16 +120,14 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.ApplicationPath = null!;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.ApplicationPath))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.ApplicationPath));
     }
 
     [Fact]
@@ -142,15 +135,13 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.ApplicationPath))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.ApplicationPath));
     }
 
     #endregion
@@ -163,16 +154,14 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.InternalPort = PortMin - 1;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.InternalPort))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.InternalPort));
     }
 
     [Fact]
@@ -181,16 +170,14 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.InternalPort = PortMax + 1;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.InternalPort))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.InternalPort));
     }
 
     [Fact]
@@ -199,15 +186,13 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.InternalPort = PortMin;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.InternalPort))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.InternalPort));
     }
 
     [Fact]
@@ -216,15 +201,13 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.InternalPort = PortMax;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.InternalPort))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.InternalPort));
     }
 
     #endregion
@@ -237,16 +220,14 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.HostName = "";
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.HostName))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.HostName));
     }
 
     [Fact]
@@ -255,16 +236,14 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.HostName = null!;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.HostName))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.HostName));
     }
 
     [Fact]
@@ -272,15 +251,13 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.HostName))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.HostName));
     }
 
     #endregion
@@ -293,16 +270,14 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.Environment = "";
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.Environment))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.Environment));
     }
 
     [Fact]
@@ -311,16 +286,14 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.Environment = null!;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.Environment))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.Environment));
     }
 
     [Fact]
@@ -328,15 +301,13 @@ public class WebSiteConfigurationTests
     {
         // Arrange
         var config = CreateValidConfig();
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.Environment))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.Environment));
     }
 
     #endregion
@@ -349,16 +320,14 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.ProcessTimeoutSeconds = TimeoutMin - 1;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.ProcessTimeoutSeconds))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.ProcessTimeoutSeconds));
     }
 
     [Fact]
@@ -367,16 +336,14 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.ProcessTimeoutSeconds = TimeoutMax + 1;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        var isValid = Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        Assert.False(isValid);
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.ProcessTimeoutSeconds))).ToList();
-        Assert.NotEmpty(errors);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.ProcessTimeoutSeconds));
     }
 
     [Fact]
@@ -385,15 +352,13 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.ProcessTimeoutSeconds = TimeoutMin;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.ProcessTimeoutSeconds))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.ProcessTimeoutSeconds));
     }
 
     [Fact]
@@ -402,15 +367,172 @@ public class WebSiteConfigurationTests
         // Arrange
         var config = CreateValidConfig();
         config.ProcessTimeoutSeconds = TimeoutMax;
-        var context = new ValidationContext(config);
-        var results = new List<ValidationResult>();
+        var validator = CreateValidator();
 
         // Act
-        Validator.TryValidateObject(config, context, results, validateAllProperties: true);
+        var result = validator.Validate(config);
 
         // Assert
-        var errors = results.Where(r => r.MemberNames.Contains(nameof(WebSiteConfiguration.ProcessTimeoutSeconds))).ToList();
-        Assert.Empty(errors);
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.ProcessTimeoutSeconds));
+    }
+
+    #endregion
+
+    #region PublicPort
+
+    [Fact]
+    public void Validate_PublicPort_Zero_Fails()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = 0;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_Negative_Fails()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = -1;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_WellKnownHttp_Passes()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PublicPortWellKnownHttp;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_WellKnownHttps_Passes()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PublicPortWellKnownHttps;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_ValidHighPort_Passes()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PortMin;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_BelowWellKnown_Fails()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = 1;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_BetweenWellKnownAndHighPort_Fails()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = 500; // Between well-known ports (80, 443) and high port range (1024+)
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_AboveMax_Fails()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PortMax + 1;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_MinHighPortBoundary_Passes()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PortMin;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
+    }
+
+    [Fact]
+    public void Validate_PublicPort_MaxPortBoundary_Passes()
+    {
+        // Arrange
+        var config = CreateValidConfig();
+        config.PublicPort = PortMax;
+        var validator = CreateValidator();
+
+        // Act
+        var result = validator.Validate(config);
+
+        // Assert
+        Assert.DoesNotContain(result.Errors, e => e.PropertyName == nameof(WebSiteConfiguration.PublicPort));
     }
 
     #endregion
@@ -424,6 +546,7 @@ public class WebSiteConfigurationTests
             Name = "TestSite",
             ApplicationPath = "/path/to/app.dll",
             InternalPort = 5000,
+            PublicPort = PublicPortWellKnownHttps,
             HostName = "example.com",
             Environment = "Production",
             ProcessTimeoutSeconds = 30

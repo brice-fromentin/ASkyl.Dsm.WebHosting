@@ -9,23 +9,30 @@
     <RootNamespace>Askyl.Dsm.WebHosting.Ui.Client</RootNamespace>
     <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.8" />
+    <InternalsVisibleTo Include="Askyl.Dsm.WebHosting.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blazilla" Version="2.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.9" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.14.2" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.14.2" />
     <PackageReference Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageReference Include="Roslynator.Formatting.Analyzers" Version="4.15.0" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
-    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.1" />
     <PackageReference Include="Serilog.Sinks.BrowserConsole" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Constants/Askyl.Dsm.WebHosting.Constants.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Data/Askyl.Dsm.WebHosting.Data.csproj" />
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Globalization/Askyl.Dsm.WebHosting.Globalization.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Logging/Askyl.Dsm.WebHosting.Logging.csproj" />
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Tools/Askyl.Dsm.WebHosting.Tools.csproj" />
   </ItemGroup>

@@ -6,8 +6,8 @@ namespace Askyl.Dsm.WebHosting.Data.Results;
 /// <summary>
 /// Represents a list of ASP.NET Core channel versions result.
 /// </summary>
-public sealed class ChannelsResult(bool success, string? message, List<AspNetChannel>? value, ApiErrorCode errorCode = default)
-    : ApiResultItems<AspNetChannel>(success, message, value, errorCode)
+public sealed class ChannelsResult(bool success, string? message, List<AspNetCoreReleaseInfo>? value, ApiErrorCode errorCode = default)
+    : ApiResultItems<AspNetCoreReleaseInfo>(success, message, value, errorCode)
 {
     [JsonConstructor]
     private ChannelsResult() : this(false, null, default!, ApiErrorCode.Failure) { }
@@ -17,7 +17,7 @@ public sealed class ChannelsResult(bool success, string? message, List<AspNetCha
     /// </summary>
     /// <param name="value">The list of ASP.NET Core channels.</param>
     /// <param name="message">Optional success message.</param>
-    public static ChannelsResult CreateSuccess(List<AspNetChannel> value, string? message = null)
+    public static ChannelsResult CreateSuccess(List<AspNetCoreReleaseInfo> value, string? message = null)
         => new(true, message, value, ApiErrorCode.None);
 
     /// <summary>

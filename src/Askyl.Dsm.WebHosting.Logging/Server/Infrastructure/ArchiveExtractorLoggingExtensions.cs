@@ -45,16 +45,4 @@ public static partial class ArchiveExtractorLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2100006, Level = LogLevel.Error, Message = "I/O error occurred while extracting archive: {InputFile}")]
     public static partial void ArchiveExtractionIoError(this ILogger<ILogArchiveExtractorService> logger, Exception ex, string inputFile);
-
-    /// <summary>
-    /// Logs the start of an archive extraction.
-    /// </summary>
-    [LoggerMessage(EventId = 2100007, Level = LogLevel.Information, Message = "Extracting archive: {InputFile} to {TargetDirectory}")]
-    public static partial void ExtractStarting(this ILogger<ILogArchiveExtractorService> logger, string inputFile, string targetDirectory);
-
-    /// <summary>
-    /// Logs the duration of an archive extraction.
-    /// </summary>
-    [LoggerMessage(EventId = 2100008, Level = LogLevel.Debug, Message = "Archive extraction completed in {Duration}ms for {InputFile}")]
-    public static partial void ExtractDuration(this ILogger<ILogArchiveExtractorService> logger, long duration, string inputFile);
 }

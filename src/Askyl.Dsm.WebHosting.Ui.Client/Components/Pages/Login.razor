@@ -6,34 +6,37 @@
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Data.Domain.Authentication
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Globalization
 
 @inject IAuthenticationService authService
 @inject IDialogService DialogsService
 @inject IToastService ToastService
 @inject NavigationManager navigation
+@inject ILocalizer localizer
+@inject ICultureManager cultureManager
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
-<PageTitle>ADWH - Login</PageTitle>
+<PageTitle>@localizer[LK.Login.PageTitle]</PageTitle>
 
 <FluentDialog Modal="true" TrapFocus="true" PreventScroll="true">
     <EditForm Model="@Model" OnValidSubmit="Authenticate">
-        <DataAnnotationsValidator />
+        <FluentValidator />
 
         <FluentDialogHeader>
-            <h2>Authentication (DSM account)</h2>
+            <h2>@localizer[LK.Login.DialogTitle]</h2>
         </FluentDialogHeader>
 
         <FluentStack Orientation="Orientation.Vertical">
-            <RealTimeTextField @bind-Value="Model.Login" Label="Login:" Class="full-size" Autofocus="true" Name="username" />
+            <RealTimeTextField @bind-Value="Model.Login" Label="@localizer[LK.Login.LoginLabel]" Class="full-size" Autofocus="true" Name="username" />
             <FluentValidationMessage For="(() => Model.Login)" />
-            <RealTimeTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Label="Password:" Class="full-size" Name="password" />
+            <RealTimeTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Label="@localizer[LK.Login.PasswordLabel]" Class="full-size" Name="password" />
             <FluentValidationMessage For="(() => Model.Password)" />
-            <RealTimeTextField @bind-Value="Model.OtpCode" Label="OTP:" Class="full-size" Name="otp" />
+            <RealTimeTextField @bind-Value="Model.OtpCode" Label="@localizer[LK.Login.OTPLabel]" Class="full-size" Name="otp" />
         </FluentStack>
 
         <FluentDialogFooter>
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="flex-grow: 1;">OK</FluentButton>
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="flex-grow: 1;">@localizer[LK.Common.OK]</FluentButton>
         </FluentDialogFooter>
     </EditForm>
 </FluentDialog>
@@ -56,7 +59,7 @@
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            DialogsService.ShowError(ApplicationConstants.PlatformNotSupportedErrorMessage);
+            DialogsService.ShowError(localizer[LK.Error.PlatformNotSupported]);
         }
 
         var isAuthenticatedResult = await authService.IsAuthenticatedAsync();
@@ -73,19 +76,22 @@
             return;
         }
 
-        using var worker = this.CreateWorkingState("Authenticating...");
+        using var worker = this.CreateWorkingState(localizer[LK.Login.Authenticating]);
 
         var result = await authService.LoginAsync(Model.Login, Model.Password, Model.OtpCode);
 
         if (!result.Success || !result.IsAuthenticated)
         {
             // failed - either HTTP call failed or credentials invalid
-            var errorMessage = result.Message?.Trim() ?? ApplicationConstants.AuthenticationFailedErrorMessage;
+            var errorMessage = result.Message?.Trim() ?? localizer[LK.Error.AuthenticationFailed];
             ToastService.ShowError(errorMessage);
             return;
         }
 
-        ToastService.ShowSuccess(ApplicationConstants.AuthenticationSuccessfulMessage);
+        // Initialize culture from login response (user preference or system fallback)
+        cultureManager.InitializeFromLogin(result.Culture, result.DateFormat, result.TimeFormat);
+
+        ToastService.ShowSuccess(localizer[LK.Success.AuthenticationSuccessful]);
         navigation.NavigateTo(ApplicationConstants.HomePagePath);
     }
 }

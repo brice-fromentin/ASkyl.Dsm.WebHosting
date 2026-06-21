@@ -1,5 +1,26 @@
 @page "/notfound"
 
-<PageTitle>Not found</PageTitle>
+@using Askyl.Dsm.WebHosting.Constants.Application
+@using Askyl.Dsm.WebHosting.Globalization
 
-Ouiiinnnn
+@inject ILocalizer localizer
+@inject NavigationManager navigation
+
+<PageTitle>@localizer[LK.NotFound.PageTitle]</PageTitle>
+
+<FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Class="full-height">
+    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
+        <FluentLabel Typo="Typography.H1">@localizer[LK.NotFound.Content]</FluentLabel>
+        <FluentButton Appearance="Appearance.Accent" IconStart="@(new IconsRegular20.Home())" OnClick="GoHome">
+            @localizer[LK.NotFound.GoHome]
+        </FluentButton>
+    </FluentStack>
+</FluentStack>
+
+@code
+{
+    private void GoHome()
+    {
+        navigation.NavigateTo(ApplicationConstants.HomePagePath);
+    }
+}

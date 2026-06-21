@@ -26,6 +26,8 @@ MD040:
     - csharp
     - xml
     - markdown
+    - json
+    - html
 
 # MD033/no-inline-html - Inline HTML
 # Disabled: Tables use <T> for type formatting

@@ -67,7 +67,7 @@ public class VersionsDetectorServiceTests
     public void ParseDotnetInfo_IgnoresUnknownLines()
     {
         // Arrange
-        var output = "Random content without any section headers";
+        const string output = "Random content without any section headers";
 
         // Act
         var result = _service.ParseDotnetInfo(output);
@@ -84,7 +84,7 @@ public class VersionsDetectorServiceTests
     public void ParseDotnetInfo_ValidOutput_ExtractsAllFrameworks()
     {
         // Arrange
-        var output = @".NET SDK:
+        const string output = @".NET SDK:
  Version:           9.0.301
 
 .NET SDKs installed:
@@ -124,7 +124,7 @@ public class VersionsDetectorServiceTests
     public void ParseDotnetInfo_NoVersions_ReturnsEmptyList()
     {
         // Arrange
-        var output = "Random content without any version info";
+        const string output = "Random content without any version info";
 
         // Act
         var result = _service.ParseDotnetInfo(output);
@@ -175,7 +175,7 @@ public class VersionsDetectorServiceTests
     public void ParseDotnetInfo_ResultsOrderedCorrectly()
     {
         // Arrange
-        var output = @".NET runtimes installed:
+        const string output = @".NET runtimes installed:
   Microsoft.AspNetCore.App 9.0.5 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]
   Microsoft.NETCore.App 9.0.5 [/usr/local/share/dotnet/shared/Microsoft.NETCore.App]
 
@@ -203,7 +203,7 @@ public class VersionsDetectorServiceTests
     public void ParseDotnetInfo_DuplicateVersions_KeepsUnique()
     {
         // Arrange
-        var output = @".NET SDKs installed:
+        const string output = @".NET SDKs installed:
   9.0.300 [/usr/local/share/dotnet/sdk]
   9.0.300 [/usr/local/share/dotnet/sdk]";
 

@@ -16,4 +16,15 @@ public record AuthenticateLogin
 
     [JsonPropertyName("otp_code")]
     public string? OtpCode { get; init; }
+
+    public AuthenticateLogin()
+    {
+    }
+
+    public AuthenticateLogin(string account, string password, string? otpCode = null)
+    {
+        Account = account;
+        Password = password;
+        OtpCode = otpCode;
+    }
 }

@@ -1,7 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.User;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.User;
 
@@ -12,7 +11,7 @@ namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.User;
 public class CoreUserGetParameters(ApiInformationCollection informations, CoreUserGetEntry? entry = null)
     : ApiParametersBase<CoreUserGetEntry>(informations, entry)
 {
-    public override string Name => ApiNames.CoreUser;
+    public override string Name => ApiConstants.CoreUser;
 
     public override int Version => 1;
 

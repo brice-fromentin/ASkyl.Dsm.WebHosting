@@ -8,7 +8,7 @@ namespace Askyl.Dsm.WebHosting.Data.Results;
 public class ApiResult(bool success, string? message, ApiErrorCode errorCode = default)
 {
     [JsonConstructor]
-    private ApiResult() : this(false, null, ApiErrorCode.Failure) { }
+    protected ApiResult() : this(false, null, ApiErrorCode.Failure) { }
 
     /// <summary>
     /// Indicates whether the operation succeeded (true) or failed (false).
