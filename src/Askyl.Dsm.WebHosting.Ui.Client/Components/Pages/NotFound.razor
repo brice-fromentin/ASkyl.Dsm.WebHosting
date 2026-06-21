@@ -6,13 +6,13 @@
 @inject ILocalizer localizer
 @inject NavigationManager navigation
 
-<PageTitle>@localizer[L.NotFound.PageTitle]</PageTitle>
+<PageTitle>@localizer[LK.NotFound.PageTitle]</PageTitle>
 
 <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Class="full-height">
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
-        <FluentLabel Typo="Typography.H1">@localizer[L.NotFound.Content]</FluentLabel>
+        <FluentLabel Typo="Typography.H1">@localizer[LK.NotFound.Content]</FluentLabel>
         <FluentButton Appearance="Appearance.Accent" IconStart="@(new IconsRegular20.Home())" OnClick="GoHome">
-            @localizer[L.NotFound.GoHome]
+            @localizer[LK.NotFound.GoHome]
         </FluentButton>
     </FluentStack>
 </FluentStack>

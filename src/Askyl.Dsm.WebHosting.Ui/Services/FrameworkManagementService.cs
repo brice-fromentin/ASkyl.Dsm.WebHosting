@@ -23,7 +23,7 @@ public class FrameworkManagementService(
         if (String.IsNullOrEmpty(version))
         {
             logger.InstallFailedVersionRequired();
-            return InstallationResult.CreateFailure(localizer[L.Validation.VersionRequired]);
+            return InstallationResult.CreateFailure(localizer[LK.Validation.VersionRequired]);
         }
 
         try
@@ -38,12 +38,12 @@ public class FrameworkManagementService(
             await dotnetVersionService.RefreshCacheAsync();
 
             logger.FrameworkInstalled(version);
-            return InstallationResult.CreateSuccess(localizer[L.Success.InstallationCompleted]);
+            return InstallationResult.CreateSuccess(localizer[LK.Success.InstallationCompleted]);
         }
         catch (Exception ex)
         {
             logger.FrameworkInstallError(ex, version);
-            return InstallationResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -52,12 +52,12 @@ public class FrameworkManagementService(
         if (String.IsNullOrEmpty(version))
         {
             logger.UninstallFailedVersionRequired();
-            return InstallationResult.CreateFailure(localizer[L.Validation.VersionRequired]);
+            return InstallationResult.CreateFailure(localizer[LK.Validation.VersionRequired]);
         }
 
         if (!dotnetVersionService.IsValidVersionFormat(version))
         {
-            return InstallationResult.CreateFailure(localizer[L.Validation.InvalidVersionFormat]);
+            return InstallationResult.CreateFailure(localizer[LK.Validation.InvalidVersionFormat]);
         }
 
         try
@@ -75,22 +75,22 @@ public class FrameworkManagementService(
             await dotnetVersionService.RefreshCacheAsync();
 
             logger.FrameworkUninstalled(version);
-            return InstallationResult.CreateSuccess(localizer[L.Success.UninstallationCompleted]);
+            return InstallationResult.CreateSuccess(localizer[LK.Success.UninstallationCompleted]);
         }
         catch (LastReleaseUninstallException ex)
         {
             logger.UninstallFailed(ex.Message);
-            return InstallationResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
         catch (MissingChannelConfigurationException ex)
         {
             logger.UninstallFailed(ex.Message);
-            return InstallationResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
         catch (Exception ex)
         {
             logger.FrameworkUninstallError(ex, version);
-            return InstallationResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 

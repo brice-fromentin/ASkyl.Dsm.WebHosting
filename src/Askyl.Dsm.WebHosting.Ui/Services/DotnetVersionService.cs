@@ -32,7 +32,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
         catch (Exception ex)
         {
             logger.FailedToGetInstalledVersions(ex);
-            return InstalledVersionsResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return InstalledVersionsResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -46,7 +46,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
         catch (Exception ex)
         {
             logger.FailedToCheckChannelInstalled(ex, channel);
-            return ApiResultBool.CreateFailure(localizer[L.Error.OperationFailed]);
+            return ApiResultBool.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -60,7 +60,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
         catch (Exception ex)
         {
             logger.FailedToCheckVersionInstalled(ex, version);
-            return ApiResultBool.CreateFailure(localizer[L.Error.OperationFailed]);
+            return ApiResultBool.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -89,7 +89,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
         catch (Exception ex)
         {
             logger.FailedToGetChannels(ex);
-            return ChannelsResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return ChannelsResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -115,7 +115,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
         catch (Exception ex)
         {
             logger.FailedToGetReleases(ex, channel);
-            return ReleasesResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return ReleasesResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 

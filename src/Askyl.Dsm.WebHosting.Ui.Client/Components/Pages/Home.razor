@@ -17,19 +17,19 @@
 @inject ILocalizer localizer
 @inject ICultureManager CultureManager
 
-<PageTitle>@localizer[L.Home.PageTitle]</PageTitle>
+<PageTitle>@localizer[LK.Home.PageTitle]</PageTitle>
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentToolbar Class="full-width">
     <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral" OnClick="AddWebSite">
-        @localizer[L.Home.AddButton]
+        @localizer[LK.Home.AddButton]
     </FluentButton>
     <FluentButton IconStart="@(new IconsRegular20.Edit())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="EditWebSite">
-        @localizer[L.Home.EditButton]
+        @localizer[LK.Home.EditButton]
     </FluentButton>
     <FluentButton IconStart="@(new IconsRegular20.Delete())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="DeleteWebSite">
-        @localizer[L.Common.Delete]
+        @localizer[LK.Common.Delete]
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
     <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance">
@@ -40,32 +40,32 @@
     </FluentButton>
     <FluentSpacer />
     <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="Appearance.Outline">
-        @localizer[L.Home.DotnetVersionButton]
+        @localizer[LK.Home.DotnetVersionButton]
     </FluentButton>
     <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="Appearance.Outline">
-        @localizer[L.Home.AspNetOnlineButton]
+        @localizer[LK.Home.AspNetOnlineButton]
     </FluentButton>
     <FluentButton OnClick="ShowLicensesDialog" Appearance="Appearance.Outline">
-        @localizer[L.Home.LicensesButton]
+        @localizer[LK.Home.LicensesButton]
     </FluentButton>
     <FluentButton OnClick="DownloadLogs" Appearance="Appearance.Outline">
-        @localizer[L.Home.DownloadLogsButton]
+        @localizer[LK.Home.DownloadLogsButton]
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
     <FluentButton OnClick="Logout" Appearance="Appearance.Outline" IconStart="@(new IconsRegular20.SignOut())">
-        @localizer[L.Home.LogoutButton]
+        @localizer[LK.Home.LogoutButton]
     </FluentButton>
 </FluentToolbar>
 
 <AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr 1fr">
     <ChildContent>
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[L.Home.GridColumnName]" Property="@(i => i.Configuration.Name)" Sortable="true" />
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[L.Home.GridColumnPath]" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
-        <TemplateColumn TGridItem="WebSiteInstance" Title="@localizer[L.Home.GridColumnFramework]">
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnName]" Property="@(i => i.Configuration.Name)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnPath]" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
+        <TemplateColumn TGridItem="WebSiteInstance" Title="@localizer[LK.Home.GridColumnFramework]">
             @(GetFrameworkDisplay(context))
         </TemplateColumn>
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="@localizer[L.Home.GridColumnInternalPort]" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[L.Home.GridColumnState]" Property="@(i => i.State)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="@localizer[LK.Home.GridColumnInternalPort]" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnState]" Property="@(i => i.State)" Sortable="true" />
     </ChildContent>
 </AutoDataGrid>
 
@@ -94,7 +94,7 @@
 
     private async Task LoadInstancesAsync()
     {
-        using var worker = this.CreateWorkingState(localizer[L.Home.LoadingWebsites]);
+        using var worker = this.CreateWorkingState(localizer[LK.Home.LoadingWebsites]);
 
         try
         {
@@ -103,7 +103,7 @@
             if (!result.Success || result.Value is null)
             {
                 Instances = [];
-                ShowSafeErrorToast($"{localizer[L.Error.FailedToLoadWebsites]}: {result.Message}");
+                ShowSafeErrorToast($"{localizer[LK.Error.FailedToLoadWebsites]}: {result.Message}");
                 return;
             }
 
@@ -112,7 +112,7 @@
         catch (Exception ex)
         {
             Instances = [];
-            ShowSafeErrorToast($"{localizer[L.Error.FailedToLoadWebsites]}: {ex.Message}");
+            ShowSafeErrorToast($"{localizer[LK.Error.FailedToLoadWebsites]}: {ex.Message}");
         }
     }
 
@@ -136,7 +136,7 @@
     {
         if (String.IsNullOrEmpty(instance.RequiredFramework))
         {
-            return localizer[L.Common.Dash];
+            return localizer[LK.Common.Dash];
         }
 
         return instance.RequiredFramework;
@@ -153,7 +153,7 @@
         var selectedName = SelectedInstance.Configuration.Name;
 
         // Show confirmation dialog
-        var confirmationMessage = localizer[L.Home.DeleteConfirmation, selectedName];
+        var confirmationMessage = localizer[LK.Home.DeleteConfirmation, selectedName];
         var confirmation = await DialogService.ShowConfirmationAsync(confirmationMessage);
         var result = await confirmation.Result;
 
@@ -162,7 +162,7 @@
             return;
         }
 
-        using var worker = this.CreateWorkingState(localizer[L.Loading.DeletingWebsite, selectedName]);
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.DeletingWebsite, selectedName]);
 
         try
         {
@@ -170,7 +170,7 @@
 
             if (!deleteResult.Success)
             {
-                ShowSafeErrorToast(deleteResult.Message ?? localizer[L.Error.FailedToDeleteWebsite]);
+                ShowSafeErrorToast(deleteResult.Message ?? localizer[LK.Error.FailedToDeleteWebsite]);
                 return;
             }
 
@@ -179,7 +179,7 @@
         }
         catch (Exception ex)
         {
-            ShowSafeErrorToast(localizer[L.Home.ErrorDeleting, ex.Message]);
+            ShowSafeErrorToast(localizer[LK.Home.ErrorDeleting, ex.Message]);
         }
     }
 
@@ -212,7 +212,7 @@
         var selectedId = SelectedInstance.Id;
         var selectedName = SelectedInstance.Configuration.Name;
 
-        using var worker = this.CreateWorkingState(localizer[L.Loading.StartingWebsite, selectedName]);
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.StartingWebsite, selectedName]);
 
         try
         {
@@ -220,7 +220,7 @@
 
             if (!result.Success)
             {
-                ShowSafeErrorToast(result.Message ?? localizer[L.Error.FailedToStartWebsite]);
+                ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToStartWebsite]);
                 return;
             }
 
@@ -228,7 +228,7 @@
         }
         catch (Exception ex)
         {
-            ShowSafeErrorToast(localizer[L.Home.ErrorStarting, ex.Message]);
+            ShowSafeErrorToast(localizer[LK.Home.ErrorStarting, ex.Message]);
         }
     }
 
@@ -242,7 +242,7 @@
         var selectedId = SelectedInstance.Id;
         var selectedName = SelectedInstance.Configuration.Name;
 
-        using var worker = this.CreateWorkingState(localizer[L.Loading.StoppingWebsite, selectedName]);
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.StoppingWebsite, selectedName]);
 
         try
         {
@@ -250,7 +250,7 @@
 
             if (!result.Success)
             {
-                ShowSafeErrorToast(result.Message ?? localizer[L.Error.FailedToStopWebsite]);
+                ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToStopWebsite]);
                 return;
             }
 
@@ -258,7 +258,7 @@
         }
         catch (Exception ex)
         {
-            ShowSafeErrorToast(localizer[L.Home.ErrorStopping, ex.Message]);
+            ShowSafeErrorToast(localizer[LK.Home.ErrorStopping, ex.Message]);
         }
     }
 
@@ -283,7 +283,7 @@
 
             if (!result.Success)
             {
-                ShowSafeErrorToast(result.Message ?? localizer[L.Error.FailedToLogout]);
+                ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToLogout]);
                 return;
             }
 
@@ -292,7 +292,7 @@
         }
         catch (Exception ex)
         {
-            ShowSafeErrorToast(localizer[L.Home.ErrorLoggingOut, ex.Message]);
+            ShowSafeErrorToast(localizer[LK.Home.ErrorLoggingOut, ex.Message]);
         }
     }
 

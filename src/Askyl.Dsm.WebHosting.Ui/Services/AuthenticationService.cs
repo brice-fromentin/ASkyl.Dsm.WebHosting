@@ -27,7 +27,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
         if (!await apiClient.ConnectAsync(model))
         {
             logger.LoginFailed(login);
-            return AuthenticationResult.CreateNotAuthenticated(localizer[L.Error.AuthenticationFailed]);
+            return AuthenticationResult.CreateNotAuthenticated(localizer[LK.Error.AuthenticationFailed]);
         }
 
         // Best-effort: fetch user preferences (language, date/time format) from SYNO.Core.UserSettings.get
@@ -53,12 +53,12 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmUsernameKey);
             await apiClient.DisconnectAsync();
             logger.UserLoggedOut();
-            return ApiResult.CreateSuccess(localizer[L.Success.LogoutSuccessful]);
+            return ApiResult.CreateSuccess(localizer[LK.Success.LogoutSuccessful]);
         }
         catch (Exception ex)
         {
             logger.LogoutError(ex);
-            return ApiResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -70,7 +70,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
 
         if (String.IsNullOrEmpty(sessionId) || String.IsNullOrEmpty(username))
         {
-            return ApiResultBool.CreateSuccess(false, localizer[L.Error.NoSessionFound]);
+            return ApiResultBool.CreateSuccess(false, localizer[LK.Error.NoSessionFound]);
         }
 
         if (!await apiClient.ValidateSessionAsync(username))
@@ -82,7 +82,7 @@ public class AuthenticationService(DsmApiClient apiClient, IHttpContextAccessor 
             httpContextAccessor.HttpContext?.Session.Remove(ApplicationConstants.DsmUsernameKey);
             logger.SessionInvalidated();
 
-            return ApiResultBool.CreateSuccess(false, localizer[L.Error.SessionExpired]);
+            return ApiResultBool.CreateSuccess(false, localizer[LK.Error.SessionExpired]);
         }
 
         logger.SessionValidationSuccess(ApplicationConstants.SessionValidationTtlMinutes);

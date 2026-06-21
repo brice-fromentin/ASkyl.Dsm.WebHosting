@@ -85,7 +85,7 @@ public class WebSiteHostingService(
             if (!permissionResult.Success)
             {
                 logger.PermissionSettingFailedAdd(configuration.Name, permissionResult.Message);
-                return WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToSetPermissions, permissionResult.Message ?? localizer[L.Error.Unknown]]);
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToSetPermissions, permissionResult.Message ?? localizer[LK.Error.Unknown]]);
             }
 
             // STEP 2: Create reverse proxy rule (CRITICAL - must succeed)
@@ -94,7 +94,7 @@ public class WebSiteHostingService(
             if (!proxyResult.Success)
             {
                 logger.ReverseProxyCreationFailedAdd(configuration.Name, proxyResult.Message);
-                return WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToCreateReverseProxy, proxyResult.Message ?? localizer[L.Error.Unknown]]);
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToCreateReverseProxy, proxyResult.Message ?? localizer[LK.Error.Unknown]]);
             }
 
             // STEP 3: Add website configuration (persistent storage)
@@ -111,7 +111,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.ErrorAddingWebsite(ex, configuration.Name);
-            return WebSiteInstanceResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -123,7 +123,7 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(configuration.Id, out var entry))
         {
             logger.InstanceNotFoundUpdate(configuration.Name);
-            return WebSiteInstanceResult.CreateFailure(localizer[L.Error.InstanceNotFound]);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.InstanceNotFound]);
         }
 
         var existingInstance = entry.Instance;
@@ -143,7 +143,7 @@ public class WebSiteHostingService(
             if (!permissionResult.Success)
             {
                 logger.PermissionSettingFailedUpdate(configuration.Name, permissionResult.Message);
-                return WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToSetPermissions, permissionResult.Message ?? localizer[L.Error.Unknown]]);
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToSetPermissions, permissionResult.Message ?? localizer[LK.Error.Unknown]]);
             }
 
             // STEP 2: Update reverse proxy rule (CRITICAL - must succeed)
@@ -152,7 +152,7 @@ public class WebSiteHostingService(
             if (!proxyResult.Success)
             {
                 logger.ReverseProxyUpdateFailed(configuration.Name, proxyResult.Message);
-                return WebSiteInstanceResult.CreateFailure(localizer[L.Error.FailedToUpdateReverseProxy, proxyResult.Message ?? localizer[L.Error.Unknown]]);
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToUpdateReverseProxy, proxyResult.Message ?? localizer[LK.Error.Unknown]]);
             }
 
             // STEP 3: Update configuration (persistent storage)
@@ -167,7 +167,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.ErrorUpdatingWebsite(ex, configuration.Name);
-            return WebSiteInstanceResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -185,7 +185,7 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(id, out var entry))
         {
             logger.CannotStartSiteNotFound(id);
-            return ApiResult.CreateFailure(localizer[L.Error.SiteNotFound, id]);
+            return ApiResult.CreateFailure(localizer[LK.Error.SiteNotFound, id]);
         }
 
         var result = await entry.LifecycleManager.StartAsync();
@@ -207,7 +207,7 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(id, out var entry))
         {
             logger.CannotStopSiteNotFound(id);
-            return ApiResult.CreateFailure(localizer[L.Error.SiteNotFound, id]);
+            return ApiResult.CreateFailure(localizer[LK.Error.SiteNotFound, id]);
         }
 
         var result = await entry.LifecycleManager.StopAsync();
@@ -363,7 +363,7 @@ public class WebSiteHostingService(
         if (!_sites.TryGetValue(instanceId, out var entry))
         {
             logger.CannotRemoveInstanceNotFound(instanceId);
-            return ApiResult.CreateFailure(localizer[L.Error.InstanceNotFound]);
+            return ApiResult.CreateFailure(localizer[LK.Error.InstanceNotFound]);
         }
 
         var instance = entry.Instance;
@@ -404,7 +404,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToRemoveSite(ex, siteName);
-            return ApiResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -454,7 +454,7 @@ public class WebSiteHostingService(
         if (String.IsNullOrEmpty(configuration.ApplicationRealPath))
         {
             logger.NoApplicationRealPath(configuration.Name);
-            return ApiResult.CreateFailure(localizer[L.Error.NoApplicationPath]);
+            return ApiResult.CreateFailure(localizer[LK.Error.NoApplicationPath]);
         }
 
         // Determine if the target is a directory (if ApplicationPath ends with .dll, set permissions on parent directory)
@@ -483,7 +483,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToCreateReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -501,7 +501,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToUpdateReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -519,7 +519,7 @@ public class WebSiteHostingService(
         catch (Exception ex)
         {
             logger.FailedToDeleteReverseProxyRule(ex, configuration.Name);
-            return ApiResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -566,12 +566,12 @@ public class WebSiteHostingService(
         {
             if (String.IsNullOrWhiteSpace(kvp.Key) || kvp.Key.Length > ValidationConstants.EnvVarKeyMaxLength)
             {
-                return WebSiteInstanceResult.CreateFailure(localizer[L.Validation.EnvVarKeyTooLong, kvp.Key, ValidationConstants.EnvVarKeyMaxLength]);
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Validation.EnvVarKeyTooLong, kvp.Key, ValidationConstants.EnvVarKeyMaxLength]);
             }
 
             if (kvp.Value?.Length > ValidationConstants.EnvVarValueMaxLength)
             {
-                return WebSiteInstanceResult.CreateFailure(localizer[L.Validation.EnvVarValueTooLong, kvp.Key, ValidationConstants.EnvVarValueMaxLength]);
+                return WebSiteInstanceResult.CreateFailure(localizer[LK.Validation.EnvVarValueTooLong, kvp.Key, ValidationConstants.EnvVarValueMaxLength]);
             }
         }
 

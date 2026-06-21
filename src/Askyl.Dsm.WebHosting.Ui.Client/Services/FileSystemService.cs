@@ -18,13 +18,13 @@ public class FileSystemService(IHttpClientFactory httpClientFactory, ILocalizer 
 
     /// <inheritdoc/>
     public async Task<SharedFoldersResult> GetSharedFoldersAsync()
-        => await _httpClient.GetJsonOrDefaultAsync(FileManagementRoutes.SharedFoldersFullRoute, () => SharedFoldersResult.CreateFailure(localizer[L.Error.FailedToLoadSharedFolders]));
+        => await _httpClient.GetJsonOrDefaultAsync(FileManagementRoutes.SharedFoldersFullRoute, () => SharedFoldersResult.CreateFailure(localizer[LK.Error.FailedToLoadSharedFolders]));
 
     /// <inheritdoc/>
     public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly)
     {
         var url = $"{FileManagementRoutes.DirectoryContentsFullRoute}?path={Uri.EscapeDataString(path)}&directoryOnly={(directoryOnly ? "true" : "false")}";
-        return await _httpClient.GetJsonOrDefaultAsync(url, () => DirectoryContentsResult.CreateFailure(localizer[L.Error.FailedToLoadDirectoryContentsWithPath, path]));
+        return await _httpClient.GetJsonOrDefaultAsync(url, () => DirectoryContentsResult.CreateFailure(localizer[LK.Error.FailedToLoadDirectoryContentsWithPath, path]));
     }
 
     /// <inheritdoc/>

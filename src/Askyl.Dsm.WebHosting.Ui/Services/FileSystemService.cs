@@ -36,7 +36,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         catch (Exception ex)
         {
             logger.ErrorRetrievingSharedFolders(ex);
-            return SharedFoldersResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return SharedFoldersResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -46,7 +46,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (!IsPathValid(path))
         {
             logger.PathValidationFailed(path);
-            return DirectoryContentsResult.CreateFailure(localizer[L.Validation.PathTraversalDetected]);
+            return DirectoryContentsResult.CreateFailure(localizer[LK.Validation.PathTraversalDetected]);
         }
 
         logger.RetrievingDirectoryContents(path, directoryOnly);
@@ -80,7 +80,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         catch (Exception ex)
         {
             logger.ErrorRetrievingDirectory(ex, path);
-            return DirectoryContentsResult.CreateFailure(localizer[L.Error.OperationFailed]);
+            return DirectoryContentsResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -92,7 +92,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (!IsPathValid(path))
         {
             logger.PathValidationFailed(path);
-            return ApiResult.CreateFailure(localizer[L.Validation.PathTraversalDetected]);
+            return ApiResult.CreateFailure(localizer[LK.Validation.PathTraversalDetected]);
         }
 
         var targetPath = isDirectory ? path : Path.GetDirectoryName(path) ?? path;
@@ -148,7 +148,7 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
         if (response?.Success != true || response.Data?.TaskId is null)
         {
             logger.FailedToSetAclPermissions(path, response?.Success, response?.Error?.Code);
-            return ApiResult.CreateFailure(localizer[L.Error.FailedToSetACL, path, response?.Success ?? false, response?.Error?.Code ?? 0]);
+            return ApiResult.CreateFailure(localizer[LK.Error.FailedToSetACL, path, response?.Success ?? false, response?.Error?.Code ?? 0]);
         }
 
         logger.AclPermissionsSet(path, response.Data.TaskId);

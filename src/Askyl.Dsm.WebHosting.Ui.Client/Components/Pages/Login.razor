@@ -17,26 +17,26 @@
 
 <LoadingOverlay WorkingStateComponent="@this" />
 
-<PageTitle>@localizer[L.Login.PageTitle]</PageTitle>
+<PageTitle>@localizer[LK.Login.PageTitle]</PageTitle>
 
 <FluentDialog Modal="true" TrapFocus="true" PreventScroll="true">
     <EditForm Model="@Model" OnValidSubmit="Authenticate">
         <FluentValidator />
 
         <FluentDialogHeader>
-            <h2>@localizer[L.Login.DialogTitle]</h2>
+            <h2>@localizer[LK.Login.DialogTitle]</h2>
         </FluentDialogHeader>
 
         <FluentStack Orientation="Orientation.Vertical">
-            <RealTimeTextField @bind-Value="Model.Login" Label="@localizer[L.Login.LoginLabel]" Class="full-size" Autofocus="true" Name="username" />
+            <RealTimeTextField @bind-Value="Model.Login" Label="@localizer[LK.Login.LoginLabel]" Class="full-size" Autofocus="true" Name="username" />
             <FluentValidationMessage For="(() => Model.Login)" />
-            <RealTimeTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Label="@localizer[L.Login.PasswordLabel]" Class="full-size" Name="password" />
+            <RealTimeTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Label="@localizer[LK.Login.PasswordLabel]" Class="full-size" Name="password" />
             <FluentValidationMessage For="(() => Model.Password)" />
-            <RealTimeTextField @bind-Value="Model.OtpCode" Label="@localizer[L.Login.OTPLabel]" Class="full-size" Name="otp" />
+            <RealTimeTextField @bind-Value="Model.OtpCode" Label="@localizer[LK.Login.OTPLabel]" Class="full-size" Name="otp" />
         </FluentStack>
 
         <FluentDialogFooter>
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="flex-grow: 1;">@localizer[L.Common.OK]</FluentButton>
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="flex-grow: 1;">@localizer[LK.Common.OK]</FluentButton>
         </FluentDialogFooter>
     </EditForm>
 </FluentDialog>
@@ -59,7 +59,7 @@
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            DialogsService.ShowError(localizer[L.Error.PlatformNotSupported]);
+            DialogsService.ShowError(localizer[LK.Error.PlatformNotSupported]);
         }
 
         var isAuthenticatedResult = await authService.IsAuthenticatedAsync();
@@ -76,14 +76,14 @@
             return;
         }
 
-        using var worker = this.CreateWorkingState(localizer[L.Login.Authenticating]);
+        using var worker = this.CreateWorkingState(localizer[LK.Login.Authenticating]);
 
         var result = await authService.LoginAsync(Model.Login, Model.Password, Model.OtpCode);
 
         if (!result.Success || !result.IsAuthenticated)
         {
             // failed - either HTTP call failed or credentials invalid
-            var errorMessage = result.Message?.Trim() ?? localizer[L.Error.AuthenticationFailed];
+            var errorMessage = result.Message?.Trim() ?? localizer[LK.Error.AuthenticationFailed];
             ToastService.ShowError(errorMessage);
             return;
         }
@@ -91,7 +91,7 @@
         // Initialize culture from login response (user preference or system fallback)
         cultureManager.InitializeFromLogin(result.Culture, result.DateFormat, result.TimeFormat);
 
-        ToastService.ShowSuccess(localizer[L.Success.AuthenticationSuccessful]);
+        ToastService.ShowSuccess(localizer[LK.Success.AuthenticationSuccessful]);
         navigation.NavigateTo(ApplicationConstants.HomePagePath);
     }
 }

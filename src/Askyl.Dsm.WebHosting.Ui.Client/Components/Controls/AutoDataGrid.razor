@@ -20,7 +20,7 @@
                 {
                     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
                         <FluentProgressRing />
-                        <FluentLabel>@localizer[L.AutoDataGrid.Loading]</FluentLabel>
+                        <FluentLabel>@localizer[LK.AutoDataGrid.Loading]</FluentLabel>
                     </FluentStack>
                 }
             </LoadingContent>
@@ -34,7 +34,7 @@
                 {
                     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
                         <FluentIcon Value="@(new IconsRegular16.Info())" />
-                        <FluentLabel>@localizer[L.AutoDataGrid.Empty]</FluentLabel>
+                        <FluentLabel>@localizer[LK.AutoDataGrid.Empty]</FluentLabel>
                     </FluentStack>
                 }
             </EmptyContent>
@@ -43,7 +43,7 @@
     <div class="auto-data-grid-infos-area">
         <FluentToolbar>
             <FluentSpacer />
-            <FluentLabel>@localizer[L.AutoDataGrid.ItemsCount, Items?.Count() ?? 0]</FluentLabel>
+            <FluentLabel>@localizer[LK.AutoDataGrid.ItemsCount, Items?.Count() ?? 0]</FluentLabel>
             @if (OnReload.HasDelegate)
             {
                 <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />

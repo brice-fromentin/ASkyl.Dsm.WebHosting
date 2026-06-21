@@ -10,11 +10,11 @@
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">@localizer[L.Licenses.DialogTitle]</FluentLabel>
+    <FluentLabel Typo="Typography.H2">@localizer[LK.Licenses.DialogTitle]</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Class="flex-full-width">@localizer[L.Common.Close]</FluentButton>
+    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Class="flex-full-width">@localizer[LK.Common.Close]</FluentButton>
 </FluentDialogFooter>
 
 <FluentDialogBody>
@@ -57,7 +57,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using var worker = this.CreateWorkingState(localizer[L.Licenses.Loading]);
+        using var worker = this.CreateWorkingState(localizer[LK.Licenses.Loading]);
 
         _licenses = await LicenseService.GetLicensesAsync();
     }

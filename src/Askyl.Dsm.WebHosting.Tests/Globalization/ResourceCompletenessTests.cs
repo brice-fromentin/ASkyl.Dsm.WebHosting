@@ -94,11 +94,11 @@ public class ResourceCompletenessTests
         var assembly = typeof(WebHosting.Globalization.Resources.SharedResource).Assembly;
         var resxKeys = GetEmbeddedResxKeys(assembly);
 
-        // Act — collect all key values from L.cs via reflection
-        var keysType = typeof(WebHosting.Globalization.L);
+        // Act — collect all key values from LK.cs via reflection
+        var keysType = typeof(WebHosting.Globalization.LK);
         var localizationKeys = CollectLocalizationKeys(keysType);
 
-        // Assert — every key in L should exist in the .resx
+        // Assert — every key in LK should exist in the .resx
         var missing = localizationKeys.Except(resxKeys).OrderBy(k => k).ToList();
         Assert.Empty(missing);
     }
@@ -114,11 +114,11 @@ public class ResourceCompletenessTests
         var assembly = typeof(WebHosting.Globalization.Resources.SharedResource).Assembly;
         var resxKeys = GetEmbeddedResxKeys(assembly);
 
-        // Act — collect all key values from L.cs via reflection
-        var keysType = typeof(WebHosting.Globalization.L);
+        // Act — collect all key values from LK.cs via reflection
+        var keysType = typeof(WebHosting.Globalization.LK);
         var localizationKeys = CollectLocalizationKeys(keysType);
 
-        // Assert — every key in .resx should be referenced by L.cs (no orphaned translations)
+        // Assert — every key in .resx should be referenced by LK.cs (no orphaned translations)
         var orphaned = resxKeys.Except(localizationKeys).OrderBy(k => k).ToList();
         Assert.Empty(orphaned);
     }

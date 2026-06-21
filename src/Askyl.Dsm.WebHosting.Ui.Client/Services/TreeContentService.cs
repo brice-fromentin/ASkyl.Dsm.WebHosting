@@ -22,7 +22,7 @@ public class TreeContentService(IFileSystemService fileSystemService, ILocalizer
 
             if (!contentsResult.Success)
             {
-                await errorHandler($"{localizer[L.Error.FailedToLoadDirectoryContents]}: {contentsResult.Message}");
+                await errorHandler($"{localizer[LK.Error.FailedToLoadDirectoryContents]}: {contentsResult.Message}");
                 return [];
             }
 
@@ -38,7 +38,7 @@ public class TreeContentService(IFileSystemService fileSystemService, ILocalizer
         }
         catch (Exception ex)
         {
-            await errorHandler($"{localizer[L.Error.FailedToLoadDirectoryContents]}: {ex.Message}");
+            await errorHandler($"{localizer[LK.Error.FailedToLoadDirectoryContents]}: {ex.Message}");
 
             return [];
         }

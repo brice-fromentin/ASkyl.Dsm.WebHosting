@@ -8,9 +8,9 @@ public sealed class LoginCredentialsValidator : AbstractValidator<LoginCredentia
     public LoginCredentialsValidator()
     {
         RuleFor(x => x.Login)
-            .NotEmpty().WithLocalizedMessage(L.LoginCredentials.LoginRequired);
+            .NotEmpty().WithLocalizedMessage(LK.LoginCredentials.LoginRequired);
 
         RuleFor(x => x.Password)
-            .NotEmpty().WithLocalizedMessage(L.LoginCredentials.PasswordRequired);
+            .NotEmpty().WithLocalizedMessage(LK.LoginCredentials.PasswordRequired);
     }
 }

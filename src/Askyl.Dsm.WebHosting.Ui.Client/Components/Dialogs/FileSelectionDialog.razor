@@ -15,7 +15,7 @@
 <LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">@localizer[L.FileSelection.DialogTitle]</FluentLabel>
+    <FluentLabel Typo="Typography.H2">@localizer[LK.FileSelection.DialogTitle]</FluentLabel>
 </FluentDialogHeader>
 
 <FluentDialogBody>
@@ -28,7 +28,7 @@
         <Panel2>
             <AutoDataGrid TItem="FsEntry" Items="@_files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick" OnRowDoubleClick="@OnFileDoubleClick" OnReload="@ReloadCurrentDirectory">
                 <ChildContent>
-                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[L.Home.GridColumnName]" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Name)" InitialSortDirection="SortDirection.Ascending">
+                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Home.GridColumnName]" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Name)" InitialSortDirection="SortDirection.Ascending">
                         <ChildContent Context="file">
                             <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                                 <FluentIcon Value="@GetFileIcon(file)" />
@@ -36,24 +36,24 @@
                             </FluentStack>
                         </ChildContent>
                     </TemplateColumn>
-                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[L.Common.Size]" Align="Align.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
+                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Common.Size]" Align="Align.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
                         @(GetFileSize(context, localizer))
                     </TemplateColumn>
-                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[L.Common.Type]" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
+                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Common.Type]" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
                         @(GetFileType(context, localizer))
                     </TemplateColumn>
-                    <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="@localizer[L.Common.Modified]" Property="@(f => f.Modified)" Format="g" Align="Align.Center" Sortable="true" />
+                    <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="@localizer[LK.Common.Modified]" Property="@(f => f.Modified)" Format="g" Align="Align.Center" Sortable="true" />
                 </ChildContent>
 
                 <EmptyContent>
                     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
                         @if (!String.IsNullOrEmpty(_selectedPath))
                         {
-                            <FluentLabel>@localizer[L.FileSelection.NoFilesFound]</FluentLabel>
+                            <FluentLabel>@localizer[LK.FileSelection.NoFilesFound]</FluentLabel>
                         }
                         else
                         {
-                            <FluentLabel>@localizer[L.FileSelection.SelectFolder]</FluentLabel>
+                            <FluentLabel>@localizer[LK.FileSelection.SelectFolder]</FluentLabel>
                         }
                     </FluentStack>
                 </EmptyContent>
@@ -65,10 +65,10 @@
 <FluentDialogFooter>
     <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
         <FluentButton OnClick="CancelAsync" Appearance="Appearance.Neutral">
-            @localizer[L.Common.Cancel]
+            @localizer[LK.Common.Cancel]
         </FluentButton>
         <FluentButton OnClick="ConfirmAsync" Appearance="Appearance.Accent" Disabled="@(_selectedFile == null)">
-            @localizer[L.FileSelection.SelectFile]
+            @localizer[LK.FileSelection.SelectFile]
         </FluentButton>
     </FluentStack>
 </FluentDialogFooter>
@@ -114,7 +114,7 @@
 
     private async Task LoadSharedFoldersAsync()
     {
-        using var worker = this.CreateWorkingState(localizer[L.Loading.SharedFolders]);
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.SharedFolders]);
 
         try
         {
@@ -122,7 +122,7 @@
 
             if (!sharedFoldersResult.Success)
             {
-                await ShowErrorAsync(sharedFoldersResult.Message ?? localizer[L.Error.FailedToLoadSharedFolders]);
+                await ShowErrorAsync(sharedFoldersResult.Message ?? localizer[LK.Error.FailedToLoadSharedFolders]);
                 TreeItems = [];
                 return;
             }
@@ -175,7 +175,7 @@
             return;
         }
 
-        using var worker = this.CreateWorkingState(localizer[L.Loading.DirectoryContents]);
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.DirectoryContents]);
 
         try
         {
@@ -183,7 +183,7 @@
 
             if (!contentsResult.Success)
             {
-                await HandleDirectoryLoadErrorAsync(contentsResult.Message ?? localizer[L.Error.FailedToLoadDirectoryContents]);
+                await HandleDirectoryLoadErrorAsync(contentsResult.Message ?? localizer[LK.Error.FailedToLoadDirectoryContents]);
                 return;
             }
 
@@ -191,7 +191,7 @@
         }
         catch (Exception ex)
         {
-            await HandleDirectoryLoadErrorAsync($"{localizer[L.Error.FailedToLoadDirectoryContents]}: {ex.Message}");
+            await HandleDirectoryLoadErrorAsync($"{localizer[LK.Error.FailedToLoadDirectoryContents]}: {ex.Message}");
         }
     }
 
@@ -260,7 +260,7 @@
     {
         if (file.IsDirectory || file.Size is null)
         {
-            return localizer[L.Common.Dash];
+            return localizer[LK.Common.Dash];
         }
 
         var bytes = file.Size.Value;
@@ -283,7 +283,7 @@
         return $"{((double)bytes / FileSizeConstants.BytesPerGibibyte).ToString(FileSizeConstants.DecimalFormat)} {FileSizeConstants.GibibytesSuffix}";
     }
 
-    private static string GetFileType(FsEntry file, ILocalizer localizer) => file.IsDirectory ? localizer[L.FileSelection.Directory] : localizer[L.FileSelection.File];
+    private static string GetFileType(FsEntry file, ILocalizer localizer) => file.IsDirectory ? localizer[LK.FileSelection.Directory] : localizer[LK.FileSelection.File];
 
     private static Icon GetFileIcon(FsEntry file)
     {

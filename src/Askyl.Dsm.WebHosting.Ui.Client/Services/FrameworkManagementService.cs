@@ -21,10 +21,10 @@ public class FrameworkManagementService(IHttpClientFactory httpClientFactory, IL
     public async Task<InstallationResult> InstallFrameworkAsync(string version, string channel, CancellationToken cancellationToken = default)
     {
         var model = new InstallFramework(version, channel);
-        return await _httpClient.PostJsonOrDefaultAsync(FrameworkManagementRoutes.InstallFullRoute, model, () => InstallationResult.CreateFailure(localizer[L.Error.FailedToInstallFramework]), cancellationToken);
+        return await _httpClient.PostJsonOrDefaultAsync(FrameworkManagementRoutes.InstallFullRoute, model, () => InstallationResult.CreateFailure(localizer[LK.Error.FailedToInstallFramework]), cancellationToken);
     }
 
     /// <inheritdoc/>
     public async Task<InstallationResult> UninstallFrameworkAsync(string version, CancellationToken cancellationToken = default)
-        => await _httpClient.PostJsonOrDefaultAsync<object, InstallationResult>(FrameworkManagementRoutes.UninstallWithVersionFullRoute(version), new(), () => InstallationResult.CreateFailure(localizer[L.Error.UninstallationFailed, version]), cancellationToken);
+        => await _httpClient.PostJsonOrDefaultAsync<object, InstallationResult>(FrameworkManagementRoutes.UninstallWithVersionFullRoute(version), new(), () => InstallationResult.CreateFailure(localizer[LK.Error.UninstallationFailed, version]), cancellationToken);
 }

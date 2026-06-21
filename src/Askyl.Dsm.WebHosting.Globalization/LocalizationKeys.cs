@@ -5,7 +5,7 @@ namespace Askyl.Dsm.WebHosting.Globalization;
 /// Keys are flat strings that match the &lt;data name="..."&gt; entries in SharedResource.resx.
 /// Use with <see cref="ILocalizer"/> for compile-time safety.
 /// </summary>
-public static class L
+public static class LK
 {
     /// <summary>Common UI strings shared across the application.</summary>
     public static class Common

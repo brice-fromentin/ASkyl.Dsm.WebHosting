@@ -19,31 +19,31 @@ public class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocaliz
 
     /// <inheritdoc/>
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
-        => await _httpClient.GetJsonOrDefaultAsync(RuntimeManagementRoutes.VersionsFullRoute, () => InstalledVersionsResult.CreateFailure(localizer[L.Error.FailedToLoadInstalledVersions]), cancellationToken);
+        => await _httpClient.GetJsonOrDefaultAsync(RuntimeManagementRoutes.VersionsFullRoute, () => InstalledVersionsResult.CreateFailure(localizer[LK.Error.FailedToLoadInstalledVersions]), cancellationToken);
 
     /// <inheritdoc/>
     public async Task<ApiResultBool> IsChannelInstalledAsync(string channel, string frameworkType = DotNetFrameworkTypes.AspNetCore, CancellationToken cancellationToken = default)
     {
         var url = RuntimeManagementRoutes.ChannelInstalledFullRoute(channel);
-        return await _httpClient.GetJsonOrDefaultAsync(url, () => ApiResultBool.CreateFailure(localizer[L.Error.FailedToCheckChannelInstalled, channel]), cancellationToken);
+        return await _httpClient.GetJsonOrDefaultAsync(url, () => ApiResultBool.CreateFailure(localizer[LK.Error.FailedToCheckChannelInstalled, channel]), cancellationToken);
     }
 
     /// <inheritdoc/>
     public async Task<ApiResultBool> IsVersionInstalledAsync(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore, CancellationToken cancellationToken = default)
     {
         var url = RuntimeManagementRoutes.VersionInstalledFullRoute(version);
-        return await _httpClient.GetJsonOrDefaultAsync(url, () => ApiResultBool.CreateFailure(localizer[L.Error.FailedToCheckVersionInstalled, version]), cancellationToken);
+        return await _httpClient.GetJsonOrDefaultAsync(url, () => ApiResultBool.CreateFailure(localizer[LK.Error.FailedToCheckVersionInstalled, version]), cancellationToken);
     }
 
     /// <inheritdoc/>
     public async Task<ChannelsResult> GetChannelsAsync(CancellationToken cancellationToken = default)
-        => await _httpClient.GetJsonOrDefaultAsync(RuntimeManagementRoutes.ChannelsFullRoute, () => ChannelsResult.CreateFailure(localizer[L.Error.FailedToLoadChannels]), cancellationToken);
+        => await _httpClient.GetJsonOrDefaultAsync(RuntimeManagementRoutes.ChannelsFullRoute, () => ChannelsResult.CreateFailure(localizer[LK.Error.FailedToLoadChannels]), cancellationToken);
 
     /// <inheritdoc/>
     public async Task<ReleasesResult> GetReleasesWithStatusAsync(string channel, CancellationToken cancellationToken = default)
     {
         var url = RuntimeManagementRoutes.ReleasesWithStatusFullRoute(channel);
-        return await _httpClient.GetJsonOrDefaultAsync(url, () => ReleasesResult.CreateFailure(localizer[L.Error.FailedToLoadReleasesForChannel, channel]), cancellationToken);
+        return await _httpClient.GetJsonOrDefaultAsync(url, () => ReleasesResult.CreateFailure(localizer[LK.Error.FailedToLoadReleasesForChannel, channel]), cancellationToken);
     }
 
     /// <inheritdoc/>
