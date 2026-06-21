@@ -55,7 +55,7 @@ public class DeferredMessageExtensionsTests
             Assert.NotNull(error);
 
             // Compare with direct resource lookup to ensure culture was respected
-            var expectedFrench = ResourceManagerCache.SharedResource.GetString("WebSiteConfiguration_NameRequired", new CultureInfo("fr-FR")) ?? "WebSiteConfiguration_NameRequired";
+            var expectedFrench = Localizer.SharedResource.GetString("WebSiteConfiguration_NameRequired", new CultureInfo("fr-FR")) ?? "WebSiteConfiguration_NameRequired";
             Assert.Equal(expectedFrench, error.ErrorMessage);
         }
         finally
@@ -106,7 +106,7 @@ public class DeferredMessageExtensionsTests
             Assert.NotNull(error);
 
             // Verify the message was resolved from resources (not the raw key name)
-            var expected = ResourceManagerCache.SharedResource.GetString("WebSiteConfiguration_InternalPortRange", new CultureInfo("en-US")) ?? "WebSiteConfiguration_InternalPortRange";
+            var expected = Localizer.SharedResource.GetString("WebSiteConfiguration_InternalPortRange", new CultureInfo("en-US")) ?? "WebSiteConfiguration_InternalPortRange";
             Assert.Equal(expected, error.ErrorMessage);
         }
         finally

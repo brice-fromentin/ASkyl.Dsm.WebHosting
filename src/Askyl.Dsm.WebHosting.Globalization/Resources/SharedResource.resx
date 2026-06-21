@@ -323,6 +323,12 @@
   <data name="Loading_Installing" xml:space="preserve">
     <value>Installing...</value>
   </data>
+  <data name="Loading_Channels" xml:space="preserve">
+    <value>Loading channels...</value>
+  </data>
+  <data name="Loading_Releases" xml:space="preserve">
+    <value>Loading releases...</value>
+  </data>
   <data name="Loading_Uninstalling" xml:space="preserve">
     <value>Uninstalling...</value>
   </data>

@@ -17,7 +17,7 @@ public static class GlobalizationServiceCollectionExtensions
         {
             // ResourceManager-based localizer — reads CurrentUICulture at call time,
             // so culture changes after login are picked up without re-rendering.
-            services.AddSingleton<ILocalizer>(new Localizer(ResourceManagerCache.SharedResource));
+            services.AddSingleton<ILocalizer>(new Localizer());
 
             return services;
         }

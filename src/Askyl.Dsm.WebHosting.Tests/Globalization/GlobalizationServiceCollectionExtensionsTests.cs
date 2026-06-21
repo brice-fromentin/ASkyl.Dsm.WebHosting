@@ -42,7 +42,7 @@ public class GlobalizationServiceCollectionExtensionsTests
             var result = localizer["Login_PageTitle"];
 
             // Assert
-            Assert.Equal("ADWH - Login", result.Value);
+            Assert.Equal("ADWH - Login", result);
         }
         finally
         {

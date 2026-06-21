@@ -21,13 +21,13 @@ public class LocalizerTests
         try
         {
             CultureInfo.CurrentUICulture = new CultureInfo("en-US");
-            var localizer = new Localizer(ResourceManagerCache.SharedResource);
+            var localizer = new Localizer();
 
             // Act
             var result = localizer["Login_PageTitle"];
 
             // Assert
-            Assert.Equal("ADWH - Login", result.Value);
+            Assert.Equal("ADWH - Login", result);
         }
         finally
         {
@@ -47,14 +47,14 @@ public class LocalizerTests
         try
         {
             CultureInfo.CurrentUICulture = new CultureInfo("en-US");
-            var localizer = new Localizer(ResourceManagerCache.SharedResource);
+            var localizer = new Localizer();
 
             // Act
             var result = localizer["Home_DeleteConfirmation", "TestSite"];
 
             // Assert
-            Assert.NotNull(result.Value);
-            Assert.Contains("TestSite", result.Value);
+            Assert.NotNull(result);
+            Assert.Contains("TestSite", result);
         }
         finally
         {
@@ -70,13 +70,13 @@ public class LocalizerTests
     public void Indexer_MissingKey_ReturnsKeyAsFallback()
     {
         // Arrange
-        var localizer = new Localizer(ResourceManagerCache.SharedResource);
+        var localizer = new Localizer();
 
         // Act
         var result = localizer["NonExistent.Key.That.Does.Not.Exist"];
 
         // Assert
-        Assert.Equal("[NonExistent.Key.That.Does.Not.Exist]", result.Value);
+        Assert.Equal("[NonExistent.Key.That.Does.Not.Exist]", result);
     }
 
     #endregion
@@ -87,18 +87,18 @@ public class LocalizerTests
     public void Indexer_RespectsCurrentUICulture()
     {
         // Arrange
-        var localizer = new Localizer(ResourceManagerCache.SharedResource);
+        var localizer = new Localizer();
         var originalCulture = CultureInfo.CurrentUICulture;
 
         try
         {
             // Act — English
             CultureInfo.CurrentUICulture = new CultureInfo("en-US");
-            var enValue = localizer["Login_PageTitle"].Value;
+            var enValue = localizer["Login_PageTitle"];
 
             // Act — French
             CultureInfo.CurrentUICulture = new CultureInfo("fr-FR");
-            var frValue = localizer["Login_PageTitle"].Value;
+            var frValue = localizer["Login_PageTitle"];
 
             // Assert
             Assert.Equal("ADWH - Login", enValue);
@@ -108,49 +108,6 @@ public class LocalizerTests
         {
             CultureInfo.CurrentUICulture = originalCulture;
         }
-    }
-
-    #endregion
-
-    #region Implicit Conversion
-
-    [Fact]
-    public void ImplicitOperator_ConvertsToString()
-    {
-        // Arrange
-        var original = CultureInfo.CurrentUICulture;
-        try
-        {
-            CultureInfo.CurrentUICulture = new CultureInfo("en-US");
-            var localizer = new Localizer(ResourceManagerCache.SharedResource);
-
-            // Act
-            string text = localizer["Login_PageTitle"];
-
-            // Assert
-            Assert.Equal("ADWH - Login", text);
-        }
-        finally
-        {
-            CultureInfo.CurrentUICulture = original;
-        }
-    }
-
-    #endregion
-
-    #region Null Handling
-
-    [Fact]
-    public void ImplicitOperator_NullReturnsEmptyString()
-    {
-        // Arrange
-        LocalizedText? localizableText = null;
-
-        // Act
-        string text = localizableText;
-
-        // Assert
-        Assert.Equal(String.Empty, text);
     }
 
     #endregion

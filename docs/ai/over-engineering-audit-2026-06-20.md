@@ -404,8 +404,8 @@ Constants scope reduced from ~400 lines/15 files to ~35 lines/2 files.
 | 19 | shrink AspNetChannel | ✅ DONE |
 | 20 | shrink WebSiteInstance inheritance | ✅ DONE |
 | 21 | shrink WebSiteRuntimeState factories | ✅ DONE |
-| 22 | shrink DsmParameterNameAttribute | ⬜ PENDING |
-| 23 | shrink LocalizedText + ResourceManagerCache | ⬜ PENDING |
+| 22 | shrink DsmParameterNameAttribute | ✅ DONE |
+| 23 | shrink LocalizedText + ResourceManagerCache | ✅ DONE |
 
 ## Dependencies Removable
 

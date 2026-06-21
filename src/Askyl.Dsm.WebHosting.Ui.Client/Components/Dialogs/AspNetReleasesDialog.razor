@@ -139,6 +139,8 @@
     {
         try
         {
+            using var worker = this.CreateWorkingState(localizer[L.Loading.Channels]);
+
             var channelsResult = await DotnetVersionService.GetChannelsAsync();
 
             if (!channelsResult.Success)
@@ -154,6 +156,7 @@
             var initialChannel = Channels.FirstOrDefault(c => c.ProductVersion == Content)
                 ?? SelectedChannel
                 ?? Channels.FirstOrDefault();
+
             await OnChannelChanged(initialChannel);
         }
         catch (Exception ex)
@@ -176,6 +179,8 @@
 
         try
         {
+            using var worker = this.CreateWorkingState(localizer[L.Loading.Releases]);
+
             var releasesResult = await DotnetVersionService.GetReleasesWithStatusAsync(channel.ProductVersion);
 
             if (!releasesResult.Success)

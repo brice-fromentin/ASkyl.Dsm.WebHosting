@@ -25,6 +25,6 @@ public static class DeferredMessageExtensions
     static string ResolveResource(string key)
     {
         var culture = CultureInfo.CurrentUICulture;
-        return ResourceManagerCache.SharedResource.GetString(key, culture) ?? $"[{key}]";
+        return Localizer.SharedResource.GetString(key, culture) ?? $"[{key}]";
     }
 }

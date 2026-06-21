@@ -12,7 +12,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// WASM implementation of <see cref="ICultureManager"/>.
 /// Resolves culture at construction from DSM system settings, then overrides with user preference at login.
 /// Propagates culture to server via HTTP <c>Accept-Language</c> headers.
-/// Culture cannot be changed at runtime — it is controlled by DSM user/system preferences.
+/// Culture is not user-selectable via UI — determined by DSM system settings and user login preferences.
 /// Supported cultures are discovered from the environment variable injected by the server via <c>Blazor.start()</c>.
 /// Browser language is detected from <see cref="CultureInfo.CurrentUICulture"/> auto-set by the WASM runtime.
 /// </summary>

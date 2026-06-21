@@ -1,9 +1,10 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** June 20, 2026 (Over-engineering reduction: Benchmarks removed, API constants merged,
+**Last Updated:** June 21, 2026 (Over-engineering reduction completed: Benchmarks removed, API constants merged,
 PHP converters consolidated, UriExtensions inlined, LicenseConstants inlined, two interfaces dropped,
-13 new tests added for LogDownload/License/TreeContent services)
+DsmParameterNameAttribute replaced with virtual property, LocalizedText+ResourceManagerCache removed,
+ILocalizer returns string directly, 13 new tests added for LogDownload/License/TreeContent services)
 
 ---
 
@@ -329,10 +330,8 @@ Data/
 │       ├── WebSiteConfiguration.cs         # Main config model (settings only — no runtime state)
 │       ├── WebSiteInstance.cs              # Runtime instance (owns RequiredFramework — not persisted)
 │       ├── WebSiteRuntimeState.cs          # Immutable record for site state (Running/Stopped/NotResponding)
-│       ├── WebSiteInstanceDetails.cs       # Website instance details for UI
+  │       ├── WebSiteInstanceDetails.cs       # Website instance details for UI
 │       ├── WebSitesConfiguration.cs        # Persistent configuration store
-├── Attributes/                             # Custom attributes
-│   └── DsmParameterNameAttribute.cs        # DSM parameter name mapping
 ├── DsmApi/                                 # DSM API integration
 │   ├── Models/                             # API models (records with init setters)
 │   │   ├── Auth/                           # Authentication models
@@ -369,7 +368,6 @@ Data/
 │   └── Responses/                          # API response wrappers
 │       ├── ApiInformationResponse.cs       # API info query response
 │       ├── ApiResponseBase.cs              # Generic response base with Error model
-│       ├── EmptyResponse.cs                # No-data response
 │       ├── Auth/                           # Authentication responses
 │       │   └── AuthLoginResponse.cs        # Login response (sid)
 │       ├── Core/                           # Core API responses
@@ -1303,10 +1301,8 @@ System-level date/time format discovery is a future enhancement.
 | `CultureInfoExtensions` | `Globalization/Extensions/` | C# 14 scoped `extension(CultureInfo)` — `GetTextDirection()` returns LTR/RTL from `TextInfo.IsRightToLeft` |
 | `GlobalizationServiceCollectionExtensions` | `Globalization/Extensions/` | C# 14 scoped `extension(IServiceCollection)` — `AddGlobalization()` registers `ILocalizer` singleton |
 | `LocalizationKeys.cs` | `Globalization` | Strongly-typed keys organized by model (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`) |
-| `ILocalizer` | `Globalization` | Abstraction interface — hides `ResourceManager` from consumer projects |
-| `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `ResourceManager` (not `IStringLocalizer`) — reads `CurrentUICulture` at call time, so culture changes after login work without re-rendering; missing keys return `[{key}]` |
-| `ResourceManagerCache` | `Globalization` | Static class holding shared `ResourceManager` instance for `SharedResource` |
-| `LocalizedText` | `Globalization` | Replacement for `LocalizedString` (avoids namespace collision) — `Name`, `Value`, implicit `string` conversion |
+| `ILocalizer` | `Globalization` | Abstraction interface — returns `string` directly via indexer, hides `ResourceManager` from consumer projects |
+| `Localizer` | `Globalization` | Implementation of `ILocalizer` wrapping `ResourceManager` (not `IStringLocalizer`) — reads `CurrentUICulture` at call time, so culture changes after login work without re-rendering; missing keys return `[{key}]`; holds static `SharedResource` field |
 | `DsmLanguageToCultureConverter` | `Tools/Converters/` | Conversion logic: DSM 3-letter language code → .NET culture name (returns `null` for `"def"`, logs via `Debug.WriteLine` when input is trimmed) |
 | `PhpFormatToDotNetConverter` | `Tools/Converters/` | Consolidated converter: PHP date/time tokens → .NET format strings (uses `PhpDotNetFormatTokens` ImmutableDictionary from Constants project) |
 | `WebSiteConfigurationValidator` | `Globalization/Validators/` | FluentValidation rules for `WebSiteConfiguration` (8 properties, separate messages for InternalPort/PublicPort) |
@@ -1391,9 +1387,8 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 - **`DsmLanguageToCultureConverter` returns `null` for `"def"`**: `"def"` means "use browser default" — not English
 - **`GlobalizationSettings` as singleton in Ui/Infrastructure/**: Server-only `IGlobalizationSettings` implementation — avoids WASM file system API crashes; discovery logged via `[LoggerMessage]`
 - **`GlobalizationExtensions` in `Ui/Extensions/`**: `ApplyDsmSystemCulture()` fetches DSM language; `UseGlobalizationRequestLocalization()` resolves settings from DI and adds middleware
-- **`ILocalizer` abstraction**: Hides `ResourceManager` from consumer projects — enforces consistent usage via single indexer
+- **`ILocalizer` abstraction**: Hides `ResourceManager` from consumer projects — indexer returns `string` directly, no wrapper type
 - **`ResourceManager` instead of `IStringLocalizer<T>`**: `IStringLocalizer<T>` caches culture at construction in WASM. `ResourceManager` reads `CurrentUICulture` at call time
-- **`LocalizedText` instead of `LocalizedString`**: Name collision with `Microsoft.Extensions.Localization.LocalizedString`
 - **`BlazorWebAssemblyLoadAllGlobalizationData`**: Required for dynamic culture changes at WASM startup — without it, changing culture before first page render throws `AggregateException`
 - **Early `CultureManager` resolution**: `Program.cs` forces DI resolution before `host.RunAsync()` — ensures `CurrentUICulture` is set before login page renders
 - **Full page reload on logout**: `forceLoad: true` resets WASM circuit, culture re-resolves to system/browser

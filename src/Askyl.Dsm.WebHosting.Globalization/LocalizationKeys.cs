@@ -157,6 +157,8 @@ public static class L
         public const string SharedFolders = "Loading_SharedFolders";
         public const string DirectoryContents = "Loading_DirectoryContents";
         public const string Installing = "Loading_Installing";
+        public const string Channels = "Loading_Channels";
+        public const string Releases = "Loading_Releases";
         public const string Uninstalling = "Loading_Uninstalling";
         public const string DeletingWebsite = "Loading_DeletingWebsite";
         public const string StartingWebsite = "Loading_StartingWebsite";
