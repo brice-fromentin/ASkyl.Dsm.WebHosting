@@ -23,18 +23,10 @@ public class GlobalizationSettingsTests
         // Arrange
         var settings = CreateSettings();
 
-        // Assert
+        // Assert — both collection and JSON contain the culture
         Assert.Contains(settings.SupportedCultures, c => c.Name == cultureName);
-    }
-
-    [Fact]
-    public void SupportedCultures_HasAtLeastOneCulture()
-    {
-        // Arrange
-        var settings = CreateSettings();
-
-        // Assert
-        Assert.NotEmpty(settings.SupportedCultures);
+        var jsonNames = System.Text.Json.JsonSerializer.Deserialize<string[]>(settings.SupportedCultureNamesJson)!;
+        Assert.Contains(cultureName, jsonNames);
     }
 
     [Fact]
@@ -75,21 +67,6 @@ public class GlobalizationSettingsTests
 
         // Assert
         Assert.Equal(settings.SupportedCultures.Select(c => c.Name).OrderBy(n => n), names.OrderBy(n => n));
-    }
-
-    [Theory]
-    [InlineData("en-US")]
-    [InlineData("fr-FR")]
-    public void SupportedCultureNamesJson_ContainsExpectedCulture(string cultureName)
-    {
-        // Arrange
-        var settings = CreateSettings();
-
-        // Act
-        var names = System.Text.Json.JsonSerializer.Deserialize<string[]>(settings.SupportedCultureNamesJson)!;
-
-        // Assert
-        Assert.Contains(cultureName, names);
     }
 
     #endregion

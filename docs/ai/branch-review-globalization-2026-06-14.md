@@ -462,17 +462,22 @@
 - **Issue:** Space before colon in English ("Items : {0}").
 - **Fix Applied:** Value is now `"Items: {0}"` — no space before colon.
 
-### N4. `GlobalizationSettingsTests` duplicates pattern
+### N4. `GlobalizationSettingsTests` duplicates pattern — ✅ RESOLVED
 
 - **File:** `GlobalizationSettingsTests.cs`
 - **Issue:** Separate tests for each culture could be consolidated.
-- **Suggestion:** Parameterized test.
+- **Fix Applied:** Merged `SupportedCultures_ContainsExpectedCulture` and
+  `SupportedCultureNamesJson_ContainsExpectedCulture` into single `[Theory]`;
+  removed redundant `HasAtLeastOneCulture` test (12 → 9 tests).
 
-### N5. `CultureManagerTests` could use `[Theory]` consolidation
+### N5. `CultureManagerTests` could use `[Theory]` consolidation — ✅ RESOLVED
 
 - **File:** `CultureManagerTests.cs`
 - **Issue:** 27 tests, some could be consolidated.
-- **Suggestion:** Use `[Theory]` with input combinations.
+- **Fix Applied:** Merged valid culture + sync assertions into single `[Theory]`;
+  consolidated 4 date/time format tests into parameterized `[Theory]` + 1 Fact;
+  merged ResetToSystem tests; combined 4 static initialization tests into 2
+  (27 → 21 tests).
 
 ### N6. `DeferredMessageFormatter.cs` XML doc references outdated syntax — ✅ RESOLVED
 
