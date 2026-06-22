@@ -213,8 +213,8 @@ public class ReverseProxyManagerService(
             return false;
         }
 
-        return message.IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               message.IndexOf("does not exist", StringComparison.OrdinalIgnoreCase) >= 0;
+        return message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("does not exist", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
