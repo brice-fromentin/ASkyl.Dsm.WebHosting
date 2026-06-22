@@ -293,6 +293,8 @@ Constants/
 | **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), DownloadVersionToAsync(), GetAspNetCoreReleasesAsync() | Tools.Runtime.DownloaderService |
 | **IVersionsDetectorService** | `Contracts/IVersionsDetectorService.cs` | GetInstalledVersionsAsync(), IsChannelInstalled(), RefreshCacheAsync() | Tools.Runtime.VersionsDetectorService |
 | **IAssemblyRuntimeDetector** | `Contracts/IAssemblyRuntimeDetector.cs` | Detect() | Tools.Runtime.AssemblyRuntimeDetector |
+| **IDsmSession** | `Contracts/IDsmSession.cs` | ConnectAsync(), ValidateSessionAsync(), Disconnect(), ExecuteAsync(), ExecuteSimpleAsync() | Ui.Services.DsmSession |
+| **IDsmSettingsService** | `Contracts/IDsmSettingsService.cs` | Server, Port, Language | Tools.Infrastructure.DsmSettingsService |
 
 **Structure:**
 
@@ -306,6 +308,8 @@ Data/
 │   ├── ILogDownloadService.cs              # Log file retrieval
 │   ├── IReverseProxyManagerService.cs      # Proxy configuration
 │   ├── IWebSiteHostingService.cs           # Website lifecycle
+│   ├── IDsmSession.cs                      # Per-user DSM session wrapper
+│   ├── IDsmSettingsService.cs              # DSM system settings (server, port, language)
 │   ├── IFileManagerService.cs              # File management (Scoped, configurable root)
 │   ├── IArchiveExtractorService.cs         # Archive extraction (Scoped)
 │   ├── IDownloaderService.cs               # .NET downloads with cancellation (Scoped)
