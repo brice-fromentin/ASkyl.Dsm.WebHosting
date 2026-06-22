@@ -140,7 +140,7 @@ public class FileSystemService(DsmSession dsmSession, ILogger<ILogFileSystemServ
             ]
         };
 
-        var parameters = new CoreAclSetParameters(dsmSession.ApiInformations, aclSet);
+        var parameters = new CoreAclSetParameters(aclSet);
 
         var response = await dsmSession.ExecuteAsync<CoreAclSetResponse>(parameters);
 
@@ -163,7 +163,7 @@ public class FileSystemService(DsmSession dsmSession, ILogger<ILogFileSystemServ
             SortDirection = FileStationDefaults.SortDirectionAsc
         };
 
-        var parameters = new FileStationListShareParameters(dsmSession.ApiInformations, entry);
+        var parameters = new FileStationListShareParameters(entry);
 
         var response = await dsmSession.ExecuteAsync<FileStationListShareResponse>(parameters);
 
@@ -187,7 +187,7 @@ public class FileSystemService(DsmSession dsmSession, ILogger<ILogFileSystemServ
             FileType = !String.IsNullOrEmpty(fileType) ? fileType : FileStationDefaults.TypeAll
         };
 
-        var parameters = new FileStationListParameters(dsmSession.ApiInformations, entry);
+        var parameters = new FileStationListParameters(entry);
 
         var response = await dsmSession.ExecuteAsync<FileStationListResponse>(parameters);
 

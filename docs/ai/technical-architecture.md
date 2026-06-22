@@ -492,7 +492,9 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
 **Key Features:**
 
 - Singleton pattern (registered in DI container)
-- Session management with SID validation and restoration
+- Implements `ISemaphoreOwner` for thread-safe lazy initialization of `ApiInformations`
+- `EnsureInitializedAsync()` — double-checked locking via `SemaphoreLock`; fetches API metadata once, cached forever
+- `ExecuteAsync<R>` — resolves API path from `ApiInformations`, passes to `BuildUrl(server, port, path)`
 - Automatic serialization based on `IApiParameters.SerializationFormat`
 - Strategy pattern for Form vs JSON serialization
 - Compile-time generic constraint `where R : IApiResponse` on `ExecuteAsync<R>` — enables compile-time access to `Success`/`Error` properties (no reflection)
@@ -800,9 +802,9 @@ Client-side components use `ClientLoggingExtensions.cs` for structured logging i
 
 **Architectural Trade-off — Singleton `DsmApiClient`:**
 
-`DsmApiClient` is registered as Singleton despite holding per-session state (`_sid`, `_httpClient` cookie header, session validation cache). This is intentional because:
+`DsmApiClient` is registered as Singleton as a pure HTTP client with no per-session state. SID is passed per-call; cookie attached per-request via `HttpRequestMessage`. This is intentional because:
 
-1. **Shared `ApiInformations`:** API discovery cache is expensive to re-fetch (handshake call)
+1. **Shared `ApiInformations`:** API metadata cached via lazy-init with `SemaphoreLock` — fetched once, cached forever
 2. **`HttpClient` reuse:** Named client with configured `BaseAddress` and timeouts — benefits from connection pooling
 3. **`BackgroundService` anchor:** `WebSiteHostingService` (Singleton) depends on services using `DsmApiClient`. `IHostedService` is always Singleton.
 
@@ -1019,10 +1021,10 @@ using var timer = new OperationTimer(elapsed => logger.FrameworkInstalledDuratio
 
 ```text
 1. Client → LoginCredentials { Username, Password, [LotP] }
-2. DsmApiClient.ReadSettings() → Load /etc/synoinfo.conf
-3. DsmApiClient.HandShakeAsync() → SYNO.API.Info query
-4. DsmApiClient.AuthenticateAsync() → auth.login API call
-5. Response: SID stored in cookie header (ssid=...)
+2. DsmSettingsService → Load /etc/synoinfo.conf (graceful fallback defaults)
+3. DsmApiClient.EnsureInitializedAsync() → SYNO.API.Info query (lazy-init, SemaphoreLock)
+4. DsmSession.AuthenticateAsync() → auth.login API call
+5. Response: SID stored per-request via HttpRequestMessage cookie header
 6. Session persisted in ASP.NET Core session (DsmSid + DsmUsername)
 ```
 
@@ -1048,9 +1050,9 @@ The `IsAuthenticatedAsync()` method performs server-side validation against the 
 
 **Singleton Architectural Trade-off:**
 
-`DsmApiClient` is intentionally Singleton despite holding per-session state (`_sid`, `_sessionValid`, `_lastSessionValidation`):
+`DsmApiClient` is intentionally Singleton as a pure HTTP client with no per-session state (all per-user state extracted to Scoped `DsmSession`):
 
-1. **Shared `ApiInformations`:** API discovery cache is expensive to re-fetch (handshake call)
+1. **Shared `ApiInformations`:** API metadata cached via lazy-init with `SemaphoreLock` — fetched once, cached forever
 2. **`HttpClient` reuse:** Named client with configured `BaseAddress` and timeouts — benefits from connection pooling
 3. **`BackgroundService` anchor:** `WebSiteHostingService` (Singleton) depends on services using `DsmApiClient`. `IHostedService` is always Singleton.
 
@@ -1430,7 +1432,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 
 **Current Implementation:**
 
-- **ApiInformations Cache:** DSM API metadata cached after handshake
+- **ApiInformations Cache:** DSM API metadata via lazy-init with `SemaphoreLock` double-checked locking in `DsmApiClient`; fetched once, cached forever
 - **Session Validation Cache:** 1-minute TTL for DSM session validation results (avoids per-request API overhead)
 - **Instance Cache:** In-memory `ConcurrentDictionary` for website instances
 - **Configuration Cache:** JSON file read on startup, in-memory during runtime

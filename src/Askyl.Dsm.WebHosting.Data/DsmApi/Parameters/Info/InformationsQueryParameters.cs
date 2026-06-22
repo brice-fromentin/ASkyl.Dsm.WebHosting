@@ -3,7 +3,8 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Info;
 
-public class InformationsQueryParameters(ApiInformationCollection informations) : ApiParametersBase<ApiInformationQuery>(informations)
+public class InformationsQueryParameters()
+    : ApiParametersBase<ApiInformationQuery>()
 {
     public override string Name => ApiConstants.Info;
 

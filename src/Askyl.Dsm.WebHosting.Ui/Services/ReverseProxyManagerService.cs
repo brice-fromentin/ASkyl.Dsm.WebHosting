@@ -41,7 +41,7 @@ public class ReverseProxyManagerService(
             Backend = new(NetworkConstants.Localhost, site.InternalPort, (int)ProtocolType.HTTP)
         };
 
-        var createParams = new ReverseProxyCreateParameters(dsmSession.ApiInformations, proxy);
+        var createParams = new ReverseProxyCreateParameters(proxy);
 
         var response = await dsmSession.ExecuteSimpleAsync(createParams);
 
@@ -81,7 +81,7 @@ public class ReverseProxyManagerService(
             Backend = new(NetworkConstants.Localhost, config.InternalPort, (int)ProtocolType.HTTP)
         };
 
-        var updateParams = new ReverseProxyUpdateParameters(dsmSession.ApiInformations, updatedProxy);
+        var updateParams = new ReverseProxyUpdateParameters(updatedProxy);
 
         var response = await dsmSession.ExecuteSimpleAsync(updateParams);
 
@@ -158,7 +158,7 @@ public class ReverseProxyManagerService(
     /// </summary>
     private async Task<List<ReverseProxy>> GetAllReverseProxiesAsync()
     {
-        var parameters = new ReverseProxyListParameters(dsmSession.ApiInformations);
+        var parameters = new ReverseProxyListParameters();
         var response = await dsmSession.ExecuteAsync<ReverseProxyListResponse>(parameters);
 
         return response?.Data?.Entries ?? [];
@@ -169,7 +169,7 @@ public class ReverseProxyManagerService(
     /// </summary>
     private async Task DeleteByUuidAsync(Guid uuid, string siteName)
     {
-        var deleteParams = new ReverseProxyDeleteParameters(dsmSession.ApiInformations);
+        var deleteParams = new ReverseProxyDeleteParameters();
         deleteParams.Parameters.Add(uuid);
 
         var deleteResponse = await dsmSession.ExecuteSimpleAsync(deleteParams);

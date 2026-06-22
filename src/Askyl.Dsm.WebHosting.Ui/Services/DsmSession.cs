@@ -2,13 +2,11 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Auth;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.User;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.User;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.UserSettings;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Info;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.User;
@@ -28,8 +26,6 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     private readonly DsmApiClient _client = client;
     private bool _sessionValid;
     private DateTime _lastSessionValidation = DateTime.MinValue;
-
-    public ApiInformationCollection ApiInformations => _client.ApiInformations;
 
     private string? Sid
     {
@@ -97,7 +93,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
             return true;
         }
 
-        var parameters = new CoreUserGetParameters(_client.ApiInformations, new CoreUserGetEntry(Username));
+        var parameters = new CoreUserGetParameters(new CoreUserGetEntry(Username));
         var response = await _client.ExecuteAsync<CoreUserGetResponse>(Sid, parameters);
 
         if (response is null || response.Error?.Code == DsmConstants.ErrorCodeAuthenticationFailed)
@@ -154,16 +150,8 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
 
     private async Task<string?> AuthenticateAsync(LoginCredentials model)
     {
-        if (_client.ApiInformations.Get(ApiConstants.Auth) is null)
-        {
-            if (!await HandShakeAsync())
-            {
-                return null;
-            }
-        }
-
         var login = new AuthenticateLogin(model.Login, model.Password, model.OtpCode);
-        var parameters = new AuthLoginParameters(_client.ApiInformations, login);
+        var parameters = new AuthLoginParameters(login);
         var response = await _client.ExecuteAsync<AuthLoginResponse>(null, parameters);
 
         if (response?.Success != true || response.Data is null)
@@ -177,28 +165,11 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         return response.Data.Sid;
     }
 
-    private async Task<bool> HandShakeAsync()
-    {
-        var parameters = new InformationsQueryParameters(_client.ApiInformations);
-        var result = await _client.ExecuteAsync<ApiInformationResponse>(null, parameters);
-
-        if (result?.Success != true || result.Data is null || result.Data.Count == 0)
-        {
-            logger.HandshakeFailure();
-            return false;
-        }
-
-        _client.ApiInformations.Replace(result.Data);
-        logger.HandshakeSuccess();
-
-        return true;
-    }
-
     private async Task FetchUserPreferencesAsync(string sid)
     {
         try
         {
-            var parameters = new CoreUserSettingsParameters(_client.ApiInformations);
+            var parameters = new CoreUserSettingsParameters();
             var response = await _client.ExecuteAsync<CoreUserSettingsResponse>(sid, parameters);
 
             var personal = response?.Data?.Personal;

@@ -5,26 +5,39 @@ using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Info;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
+using Askyl.Dsm.WebHosting.Tools.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
 
 public class DsmApiClient(IHttpClientFactory httpClientFactory, DsmSettingsService settingsService, ILogger<ILogDsmApiClient> logger)
+    : ISemaphoreOwner
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     public ApiInformationCollection ApiInformations { get; } = new();
+
+    public SemaphoreSlim Semaphore { get; } = new(1, 1);
 
     #region HTTP Request calls
 
     public async Task<R?> ExecuteAsync<R>(string? sid, IApiParameters parameters)
         where R : IApiResponse
     {
-        var url = parameters.BuildUrl(settingsService.Server, settingsService.Port);
+        await EnsureInitializedAsync();
+
+        var path = (parameters.Name == ApiConstants.Info)
+            ? ApiConstants.Handshake
+            : ApiInformations.Get(parameters.Name)?.Path
+                ?? throw new InvalidOperationException($"Unknown API: {parameters.Name}");
+
+        var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, path);
+
         var result = parameters.SerializationFormat switch
         {
             SerializationFormats.Form
@@ -42,6 +55,49 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, DsmSettingsServi
 
     public async Task<ApiResponseBase<object>?> ExecuteSimpleAsync(string? sid, IApiParameters parameters)
         => await ExecuteAsync<ApiResponseBase<object>>(sid, parameters);
+
+    private async Task EnsureInitializedAsync()
+    {
+        if (ApiInformations.Get(ApiConstants.Auth) is not null)
+        {
+            return;
+        }
+
+        using var @lock = await SemaphoreLock.AcquireAsync(this);
+
+        if (ApiInformations.Get(ApiConstants.Auth) is not null)
+        {
+            return;
+        }
+
+        if (!await HandShakeAsync())
+        {
+            throw new InvalidOperationException("DSM API handshake failed");
+        }
+    }
+
+    private async Task<bool> HandShakeAsync()
+    {
+        var parameters = new InformationsQueryParameters();
+        var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, ApiConstants.Handshake);
+
+        var result = await ExecuteFormAsync<ApiInformationResponse>(null, url, parameters);
+
+        if (result?.Success != true || result.Data is null || result.Data.Count == 0)
+        {
+            logger.HandshakeFailure();
+            return false;
+        }
+
+        ApiInformations.Replace(result.Data);
+        logger.HandshakeSuccess();
+
+        return true;
+    }
+
+    #endregion
+
+    #region HTTP Helpers
 
     private static void LogApiErrorIfFailed<R>(R? result, ILogger<ILogDsmApiClient> logger)
         where R : IApiResponse

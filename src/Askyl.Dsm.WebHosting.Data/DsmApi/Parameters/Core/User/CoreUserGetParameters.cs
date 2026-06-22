@@ -1,5 +1,4 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.User;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.User;
@@ -8,8 +7,8 @@ namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.User;
 /// Parameters for fetching a single user by name via SYNO.Core.User.get.
 /// Used to validate whether the logged-in user still exists and the session is active.
 /// </summary>
-public class CoreUserGetParameters(ApiInformationCollection informations, CoreUserGetEntry? entry = null)
-    : ApiParametersBase<CoreUserGetEntry>(informations, entry)
+public class CoreUserGetParameters(CoreUserGetEntry? entry = null)
+    : ApiParametersBase<CoreUserGetEntry>(entry)
 {
     public override string Name => ApiConstants.CoreUser;
 

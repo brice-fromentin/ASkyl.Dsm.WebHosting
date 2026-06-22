@@ -266,9 +266,11 @@ Scoped → Singleton is valid in DI. `DsmApiClient` stays Singleton to preserve 
 - `GlobalizationExtensions`: depend on `DsmSettingsService` instead of `DsmApiClient`
 - Verify all callers receive correct session state per request scope
 
-### Phase 8: Decouple `ApiInformationCollection` from Parameters
+### Phase 8: Decouple `ApiInformationCollection` from Parameters and `DsmSession` ✅ COMPLETE
 
-- **Goal:** `DsmApiClient` owns the entire `ApiInformations` lifecycle — lazy-init, locking, lookup. Parameters become pure serialization shells with zero knowledge of API metadata.
+- **Goal:** `DsmApiClient` owns the entire `ApiInformations` lifecycle — lazy-init, locking, lookup.
+  Parameters become pure serialization shells. `DsmSession` is decoupled from `ApiInformationCollection`
+  entirely — it no longer knows about API metadata, handshake, or collection state.
 - **`IApiParameters.BuildUrl`** signature change: `BuildUrl(string server, int port, string path)` — accepts resolved path as parameter
 - **`ApiParametersBase<T>` constructor** — remove `ApiInformationCollection` parameter; no longer does `informations.Get(Name)` lookup
 - **`ApiParametersBase<T>`** — remove `Path` property, version validation, `CreateDefaultHandshakeInfo()`, `NullReferenceException("Empty API Information.")` anti-pattern
@@ -288,16 +290,30 @@ Scoped → Singleton is valid in DI. `DsmApiClient` stays Singleton to preserve 
       : apiInfo.Path;
   ```
 
-- **`DsmSession.HandShakeAsync`** — remove; move to `DsmApiClient` as private lazy-init method with `SemaphoreLock` double-checked locking
-- **`DsmSession.AuthenticateAsync`** — remove handshake guard (`if Get(Auth) is null`); `DsmApiClient` ensures `ApiInformations` is populated before any call
+- **`DsmApiClient` lazy-init** — private `EnsureInitializedAsync()` with `SemaphoreLock` double-checked locking;
+  called from `ExecuteAsync` before any API call; eliminates per-session handshake
+
+- **`DsmSession` cleanup** (decouple from `ApiInformationCollection`):
+
+  - Remove `ApiInformations` proxy property (`public ApiInformationCollection ApiInformations => _client.ApiInformations;`)
+  - Remove `HandShakeAsync()` — moved to `DsmApiClient.EnsureInitializedAsync()`
+  - Remove handshake guard in `AuthenticateAsync` (`if _client.ApiInformations.Get(Auth) is null`)
+  - Remove `_client.ApiInformations.Replace(result.Data)` — `DsmApiClient` handles it internally
+  - Remove `_client.ApiInformations` from all parameter constructors:
+    - `ValidateSessionAsync`: `new CoreUserGetParameters(Username)` instead of `new CoreUserGetParameters(_client.ApiInformations, ...)`
+    - `AuthenticateAsync`: `new AuthLoginParameters(login)` instead of `new AuthLoginParameters(_client.ApiInformations, login)`
+    - `HandShakeAsync`: `new InformationsQueryParameters()` instead of `new InformationsQueryParameters(_client.ApiInformations)` (method removed anyway)
+    - `FetchUserPreferencesAsync`: `new CoreUserSettingsParameters()` instead of `new CoreUserSettingsParameters(_client.ApiInformations)`
+  - After cleanup, `DsmSession` only knows about `DsmApiClient.ExecuteAsync()` and `ISession` — zero API metadata awareness
+
 - **Parameter classes** — all constructors simplified: `new AuthLoginParameters(login)` instead of `new AuthLoginParameters(informations, login)`
 - **Files impacted:**
   - `Data/DsmApi/Parameters/IApiParameters.cs` — `BuildUrl` signature
   - `Data/DsmApi/Parameters/ApiParametersBase.cs` — remove collection, Path, version validation
   - `Data/DsmApi/Parameters/Info/InformationsQueryParameters.cs` — remove collection from constructor
   - All parameter classes (~20 files) — remove `ApiInformationCollection` from constructor
-  - `Tools/Network/DsmApiClient.cs` — add lazy-init with `SemaphoreLock`, lookup in `ExecuteAsync`
-  - `Ui/Services/DsmSession.cs` — remove `HandShakeAsync`, remove `ApiInformations` proxy property
+  - `Tools/Network/DsmApiClient.cs` — add `ISemaphoreOwner`, lazy-init `EnsureInitializedAsync()`, lookup in `ExecuteAsync`
+  - `Ui/Services/DsmSession.cs` — remove `HandShakeAsync`, `ApiInformations` proxy, handshake guard, all `_client.ApiInformations` usages
   - `Ui/Services/FileSystemService.cs` — remove `dsmSession.ApiInformations` from parameter constructors
   - `Ui/Services/ReverseProxyManagerService.cs` — same
 
@@ -538,23 +554,23 @@ Existing methods to migrate:
 - `Connecting`, `Connected`, `Disconnecting`, `Disconnected`, `HandshakeSuccess`, `HandshakeFailure`, `FetchUserPreferencesFailed` → `DsmSession` (2900001–2900007)
 - `AuthenticationFailed` → stays on `DsmApiClient` (auth is HTTP-layer concern)
 
-### `ApiParametersBase` Constructor Behavior
+### `ApiParametersBase` Constructor Behavior (After Phase 8)
 
 ```csharp
 // All parameter classes extend ApiParametersBase<T>
-// Constructor takes ApiInformationCollection, looks up API info by Name
-protected ApiParametersBase(ApiInformationCollection informations, T? entry = null)
+// Constructor takes only the entry payload — no ApiInformationCollection
+protected ApiParametersBase(T? entry = null)
 {
-    // Special case: InformationsQueryParameters uses default handshake info
-    var infos = (Name == ApiConstants.Info)
-        ? CreateDefaultHandshakeInfo()
-        : informations.Get(Name) ?? throw new NullReferenceException("Empty API Information.");
-    // ...
+    Parameters = entry ?? new();
 }
+
+// BuildUrl accepts resolved path from DsmApiClient
+public string BuildUrl(string server, int port, string path)
+    => $"https://{server}:{port}/webapi/{path}/{Name}";
 ```
 
-This means `InformationsQueryParameters` can be constructed without a populated
-`ApiInformationCollection` — used for the lazy-init handshake in `DsmApiClient`.
+`DsmApiClient` owns the full `ApiInformations` lifecycle: lazy-init with `SemaphoreLock`, lookup, and path resolution.
+Parameters are pure serialization shells with zero API metadata awareness.
 
 ### Test Patterns (Existing)
 
@@ -587,10 +603,10 @@ This means `InformationsQueryParameters` can be constructed without a populated
   - `DsmApiClientTests` (8): cookie attachment, serialization, HTTP errors, URL, concurrency
   - `DsmSessionTests` (5): session validation, disconnect, SID delegation
   - Consumer regression tests not feasible — `DsmSession` and `DsmSettingsService` are `sealed`
+- **Phase 8 complete (2026-06-23):** `ApiInformationCollection` fully decoupled from parameters and `DsmSession`;
+  `DsmApiClient` owns lifecycle with `SemaphoreLock` lazy-init; `BuildUrl` accepts resolved path;
+  parameters are pure serialization shells; `DsmSession` has zero API metadata awareness
 
 ## Future Work
 
 - **Unseal `DsmSession` and `DsmSettingsService`:** Both are `sealed`, preventing mocking. Defer until dedicated testability pass.
-- **Phase 8 pending:** Decouple `ApiInformationCollection` from parameters — `DsmApiClient` owns full
-  lifecycle with `SemaphoreLock` lazy-init; parameters become pure serialization shells;
-  `BuildUrl` accepts resolved path.

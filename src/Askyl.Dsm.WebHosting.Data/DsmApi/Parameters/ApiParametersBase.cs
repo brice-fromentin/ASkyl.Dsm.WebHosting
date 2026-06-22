@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.JSON;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 
@@ -18,23 +17,10 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 {
     private ApiParametersBase() => throw new NotImplementedException();
 
-    protected ApiParametersBase(ApiInformationCollection informations, T? entry = null)
+    protected ApiParametersBase(T? entry = null)
     {
-        var infos = (Name == ApiConstants.Info)
-                        ? CreateDefaultHandshakeInfo()
-                        : informations.Get(Name) ?? throw new NullReferenceException("Empty API Information.");
-
-        if (Version < infos.MinVersion || Version > infos.MaxVersion)
-        {
-            throw new ArgumentOutOfRangeException($"Requested API version is {Version}, but {Name} support is between {infos.MinVersion} and {infos.MaxVersion}.");
-        }
-
-        Path = infos.Path;
         Parameters = entry ?? new();
     }
-
-    private static ApiInformation CreateDefaultHandshakeInfo()
-        => new() { Path = ApiConstants.Handshake, MinVersion = ApiConstants.MinVersion, MaxVersion = ApiConstants.MaxVersion };
 
     #region Reflections Caches
 
@@ -57,8 +43,6 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 
     public abstract string Name { get; }
 
-    public string Path { get; }
-
     public abstract int Version { get; }
 
     public abstract string Method { get; }
@@ -69,7 +53,8 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 
     protected virtual string JsonParameterName => throw new NotImplementedException();
 
-    public string BuildUrl(string server, int port) => $"https://{server}:{port}/webapi/{Path}/{Name}";
+    public string BuildUrl(string server, int port, string path)
+        => $"https://{server}:{port}/webapi/{path}/{Name}";
 
     public StringContent ToForm()
     {

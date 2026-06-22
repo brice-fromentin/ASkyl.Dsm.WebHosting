@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Logging;
@@ -42,7 +43,15 @@ public class DsmSessionTests : IDisposable
         var factory = new Mock<IHttpClientFactory>();
         factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
 
-        return new DsmApiClient(factory.Object, _settingsService, _clientLogger.Object);
+        var client = new DsmApiClient(factory.Object, _settingsService, _clientLogger.Object);
+
+        client.ApiInformations.Replace(new Dictionary<string, ApiInformation>
+        {
+            { ApiConstants.Auth, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
+            { "test", new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } }
+        });
+
+        return client;
     }
 
     DsmSession CreateSession()
@@ -148,12 +157,12 @@ public class DsmSessionTests : IDisposable
     sealed class TestParameters : IApiParameters
     {
         public string Name => "test";
-        public string Path => "/test";
         public int Version => 1;
         public string Method => "test";
         public SerializationFormats SerializationFormat => SerializationFormats.Form;
 
-        public string BuildUrl(string server, int port) => $"https://{server}:{port}{Path}";
+        public string BuildUrl(string server, int port, string path) => $"https://{server}:{port}/webapi/{path}/test";
+
         public StringContent ToForm() => new("test");
         public StringContent ToJson() => new("{}");
     }

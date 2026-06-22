@@ -1,6 +1,7 @@
 using System.Net;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.Network;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Logging;
@@ -32,7 +33,15 @@ public class DsmApiClientTests : IDisposable
         var factory = new Mock<IHttpClientFactory>();
         factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
 
-        return new DsmApiClient(factory.Object, _settingsService, _logger.Object);
+        var client = new DsmApiClient(factory.Object, _settingsService, _logger.Object);
+
+        client.ApiInformations.Replace(new Dictionary<string, ApiInformation>
+        {
+            { ApiConstants.Auth, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
+            { "test", new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } }
+        });
+
+        return client;
     }
 
     public void Dispose()
@@ -284,12 +293,12 @@ public class DsmApiClientTests : IDisposable
     sealed class TestFormParameters : IApiParameters
     {
         public string Name => "test";
-        public string Path => "entry.cgi";
         public int Version => 1;
         public string Method => "test";
         public SerializationFormats SerializationFormat => SerializationFormats.Form;
 
-        public string BuildUrl(string server, int port) => $"https://{server}:{port}/webapi/entry.cgi/test";
+        public string BuildUrl(string server, int port, string path) => $"https://{server}:{port}/webapi/{path}/test";
+
         public StringContent ToForm() => new("api=test&version=1&method=test");
         public StringContent ToJson() => new("{}");
     }
@@ -297,12 +306,12 @@ public class DsmApiClientTests : IDisposable
     sealed class TestJsonParameters : IApiParameters
     {
         public string Name => "test";
-        public string Path => "entry.cgi";
         public int Version => 1;
         public string Method => "test";
         public SerializationFormats SerializationFormat => SerializationFormats.Json;
 
-        public string BuildUrl(string server, int port) => $"https://{server}:{port}/webapi/entry.cgi/test";
+        public string BuildUrl(string server, int port, string path) => $"https://{server}:{port}/webapi/{path}/test";
+
         public StringContent ToForm() => new("api=test&version=1&method=test");
         public StringContent ToJson() => new("{}", System.Text.Encoding.UTF8, NetworkConstants.ApplicationJson);
     }
