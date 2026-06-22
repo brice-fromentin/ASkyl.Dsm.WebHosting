@@ -30,7 +30,7 @@
       "git rebase --abort": "deny",
       "git reset --hard*": "deny",
       "git reset --soft*": "deny",
-      "git status": "allow",
+      "git status *": "allow",
       "jq *": "allow",
       "grep *": "allow",
       "head *": "allow",
