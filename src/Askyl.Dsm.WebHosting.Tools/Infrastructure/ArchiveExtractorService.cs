@@ -2,7 +2,6 @@ using System.Formats.Tar;
 using System.IO.Compression;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Logging;
-using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;

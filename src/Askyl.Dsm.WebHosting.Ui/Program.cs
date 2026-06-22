@@ -60,6 +60,7 @@ builder.Services.AddSingleton<DsmSettingsService>();
 
 // Register DSM API client and authentication facade
 builder.Services.AddSingleton<DsmApiClient>();
+builder.Services.AddScoped<DsmSession>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 // Register platform info service (singleton - platform detection happens once at startup)
@@ -87,14 +88,14 @@ builder.Services.AddSingleton<IProcessRunner, SystemProcessRunner>();
 builder.Services.AddScoped<IDotnetVersionService, DotnetVersionService>();
 builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementService>();
 
-// Register file system service (requires DsmApiClient)
-builder.Services.AddSingleton<IFileSystemService, FileSystemService>();
+// Register file system service (Scoped - depends on Scoped DsmSession)
+builder.Services.AddScoped<IFileSystemService, FileSystemService>();
 
 // Register log download service
 builder.Services.AddScoped<ILogDownloadService, LogDownloadService>();
 
 // Register website hosting services
-builder.Services.AddSingleton<IReverseProxyManagerService, ReverseProxyManagerService>();
+builder.Services.AddScoped<IReverseProxyManagerService, ReverseProxyManagerService>();
 builder.Services.AddSingleton<WebSitesConfigurationService>();
 builder.Services.AddSingleton<IWebSiteHostingService, WebSiteHostingService>();
 builder.Services.AddSingleton(sp => (IHostedService)sp.GetRequiredService<IWebSiteHostingService>());

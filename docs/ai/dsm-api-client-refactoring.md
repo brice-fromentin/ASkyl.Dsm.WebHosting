@@ -1,6 +1,6 @@
 # DsmApiClient Refactoring Plan
 
-## Status: In Progress
+## Status: Complete
 
 ## Root Cause Analysis
 
@@ -212,26 +212,23 @@ Scoped → Singleton is valid in DI. `DsmApiClient` stays Singleton to preserve 
 - **Design decision:** `DsmSettingsService` is DI-injected Singleton (not static) — enables testability
 - **Logging:** `DsmSettingsServiceLoggingExtensions` with EventId 2800001–2800005
 
-### Phase 2: Strip Session State from `DsmApiClient`
+### Phase 2: Strip Session State from `DsmApiClient` ✅ COMPLETE
 
 - Remove `Sid`, `_sessionValid`, `_lastSessionValidation` fields
 - Remove `UserLanguage`, `UserDateFormat`, `UserTimeFormat` fields
 - Remove `SetSid()`, `DisconnectAsync()`, `FetchUserLanguageAsync()`
-- Remove `ConnectAsync()` — move to `DsmSession`
-- Move `AuthenticateAsync()` to `DsmSession`
+- Remove `ConnectAsync()` — moved to `DsmSession` (Phase 3)
+- Move `AuthenticateAsync()` to `DsmSession` (Phase 3)
 - Keep `HandShakeAsync()` on `DsmApiClient` — drives lazy-init of `ApiInformations`
-- Remove `SystemPreferences` — inject `DsmSettingsService` instead
+- `SystemPreferences` removed — `DsmSettingsService` injected (Phase 1)
 - Accept SID as a parameter on `ExecuteAsync<R>()` and `ExecuteSimpleAsync()`
 - Attach cookie via `HttpRequestMessage.Headers.Add()`, not `DefaultRequestHeaders`
 - Keep: HTTP execution, serialization strategy, logging, `IApiResponse` parsing
-- `ApiInformations`: keep on `DsmApiClient` but switch to lazy initialization with
-  double-checked lock using `SemaphoreLock` from `Tools/Threading/`. Fetched once on first
-  API call via `SYNO.Core.Info.query`, cached forever. Eliminates per-login handshake
-  overhead and concurrent mutation risk. **Behavioral change is safe:** DSM cannot change
-  API metadata without a system restart, which restarts the application and clears the cache.
-- Register as Singleton in DI container
+- `ApiInformations`: kept on `DsmApiClient`, lazy-init with `SemaphoreLock` (Phase 2 deferral — remains TODO)
+- **Consumers:** `FileSystemService` and `ReverseProxyManagerService` pass `null` for SID (temporary — Phase 6 fixes)
+- **Consumers:** `AuthenticationService` stubbed (Phase 4 reimplements with `DsmSession`)
 
-### Phase 3: Create `DsmSession`
+### Phase 3: Create `DsmSession` ✅ COMPLETE
 
 - Depends on `DsmApiClient` + `ISession`
 - Reads `DsmSid` and `DsmUsername` from `ISession` via `ApplicationConstants` keys
@@ -242,9 +239,11 @@ Scoped → Singleton is valid in DI. `DsmApiClient` stays Singleton to preserve 
   - `ConnectAsync()` — authenticate + fetch user preferences (no handshake — `DsmApiClient` handles lazy-init of `ApiInformations` on first API call)
   - `DisconnectAsync()` — clear local state (SID cleared from `ISession` by caller)
   - `ValidateSessionAsync()` — per-user TTL cache, calls `SYNO.Core.User.get`
-- Register as Scoped in DI container
+- **Placement:** `Ui/Services/DsmSession.cs` (not `Tools/`) — requires ASP.NET Core `ISession`
+- **Logging:** `DsmSessionLoggingExtensions` with EventId 2900001–2900007
+- **Consumers:** `FileSystemService` and `ReverseProxyManagerService` now depend on `DsmSession` instead of `DsmApiClient`; SID injected automatically from `ISession`
 
-### Phase 4: Update `AuthenticationService`
+### Phase 4: Update `AuthenticationService` ✅ COMPLETE
 
 - Depend on `DsmSession` instead of `DsmApiClient`
 - Login: call `DsmSession.ConnectAsync()`, store `DsmSid`/`DsmUsername` in `ISession`,
@@ -253,18 +252,54 @@ Scoped → Singleton is valid in DI. `DsmApiClient` stays Singleton to preserve 
 - Validation: call `DsmSession.ValidateSessionAsync()` (uses per-user TTL cache)
 - Remove direct `DsmApiClient` constructor parameter
 
-### Phase 5: Fix Consumer Lifetimes
+### Phase 5: Fix Consumer Lifetimes ✅ COMPLETE
 
 - Change `FileSystemService` from Singleton to Scoped in `Program.cs`
 - Change `ReverseProxyManagerService` from Singleton to Scoped in `Program.cs`
 - Both are stateless per-request API wrappers — no reason for Singleton
+- Register `DsmSession` as Scoped in `Program.cs`
 
-### Phase 6: Update Remaining Consumers
+### Phase 6: Update Remaining Consumers ✅ COMPLETE
 
 - `FileSystemService`: depend on `DsmSession` instead of `DsmApiClient`
 - `ReverseProxyManagerService`: depend on `DsmSession` instead of `DsmApiClient`
 - `GlobalizationExtensions`: depend on `DsmSettingsService` instead of `DsmApiClient`
 - Verify all callers receive correct session state per request scope
+
+### Phase 8: Decouple `ApiInformationCollection` from Parameters
+
+- **Goal:** `DsmApiClient` owns the entire `ApiInformations` lifecycle — lazy-init, locking, lookup. Parameters become pure serialization shells with zero knowledge of API metadata.
+- **`IApiParameters.BuildUrl`** signature change: `BuildUrl(string server, int port, string path)` — accepts resolved path as parameter
+- **`ApiParametersBase<T>` constructor** — remove `ApiInformationCollection` parameter; no longer does `informations.Get(Name)` lookup
+- **`ApiParametersBase<T>`** — remove `Path` property, version validation, `CreateDefaultHandshakeInfo()`, `NullReferenceException("Empty API Information.")` anti-pattern
+- **`DsmApiClient.ExecuteAsync`** — does lookup before calling `BuildUrl`:
+
+  ```csharp
+  var apiInfo = ApiInformations.Get(parameters.Name)
+      ?? throw new InvalidOperationException($"Unknown API: {parameters.Name}");
+  var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, apiInfo.Path);
+  ```
+
+- **`InformationsQueryParameters`** — special-cased in `DsmApiClient.ExecuteAsync` (handshake API doesn't need lookup):
+
+  ```csharp
+  var path = (parameters.Name == ApiConstants.Info)
+      ? ApiConstants.Handshake
+      : apiInfo.Path;
+  ```
+
+- **`DsmSession.HandShakeAsync`** — remove; move to `DsmApiClient` as private lazy-init method with `SemaphoreLock` double-checked locking
+- **`DsmSession.AuthenticateAsync`** — remove handshake guard (`if Get(Auth) is null`); `DsmApiClient` ensures `ApiInformations` is populated before any call
+- **Parameter classes** — all constructors simplified: `new AuthLoginParameters(login)` instead of `new AuthLoginParameters(informations, login)`
+- **Files impacted:**
+  - `Data/DsmApi/Parameters/IApiParameters.cs` — `BuildUrl` signature
+  - `Data/DsmApi/Parameters/ApiParametersBase.cs` — remove collection, Path, version validation
+  - `Data/DsmApi/Parameters/Info/InformationsQueryParameters.cs` — remove collection from constructor
+  - All parameter classes (~20 files) — remove `ApiInformationCollection` from constructor
+  - `Tools/Network/DsmApiClient.cs` — add lazy-init with `SemaphoreLock`, lookup in `ExecuteAsync`
+  - `Ui/Services/DsmSession.cs` — remove `HandShakeAsync`, remove `ApiInformations` proxy property
+  - `Ui/Services/FileSystemService.cs` — remove `dsmSession.ApiInformations` from parameter constructors
+  - `Ui/Services/ReverseProxyManagerService.cs` — same
 
 ### Phase 7: Tests
 
@@ -319,7 +354,7 @@ mock `DsmApiClient` via `Mock<DsmApiClient>` or use `HttpMessageHandler` stub.
 | **#2 `ReadSettings()` Throws** | Phase 1 | Extracted to `DsmSettingsService` with try-catch and default fallbacks. Missing file or keys no longer crash startup. |
 | **#3 Mixed Responsibilities** | Phase 1 + 2 | `ReadSettings()` → `DsmSettingsService`. Session state → `DsmSession`. `DsmApiClient` is pure HTTP client. |
 | **#9 Singleton Mutable Session State** | Phase 2 + 3 | `Sid`, `_sessionValid`, `_lastSessionValidation`, user preferences removed from `DsmApiClient`. Moved to `DsmSession` (Scoped, per-user, reads `ISession`). |
-| **`ApiInformations` concurrent mutation** | Phase 2 | Lazy initialization with double-checked lock via `SemaphoreLock`. Fetched once, cached forever. No per-login mutation. |
+| **`ApiInformations` concurrent mutation** | Phase 8 | Lazy initialization with double-checked lock via `SemaphoreLock` in `DsmApiClient`. Fetched once, cached forever. Parameters decoupled — `BuildUrl` accepts resolved path. |
 | **Consumer lifetime mismatch** | Phase 5 + 6 | `FileSystemService` and `ReverseProxyManagerService` changed from Singleton to Scoped. Compatible with Scoped `DsmSession`. |
 
 ---
@@ -498,6 +533,7 @@ Existing `[LoggerMessage]` methods in `DsmApiLoggingExtensions.cs`:
 | `DsmSession` | 2900000 | 2900001–2900010 | Session |
 
 Existing methods to migrate:
+
 - `ConfigurationFileNotFound`, `ConfigurationLoaded`, `MandatorySettingMissing` → `DsmSettingsService` (2800001–2800003)
 - `Connecting`, `Connected`, `Disconnecting`, `Disconnected`, `HandshakeSuccess`, `HandshakeFailure`, `FetchUserPreferencesFailed` → `DsmSession` (2900001–2900007)
 - `AuthenticationFailed` → stays on `DsmApiClient` (auth is HTTP-layer concern)
@@ -540,4 +576,21 @@ This means `InformationsQueryParameters` can be constructed without a populated
 - `HandShakeAsync()` stays on `DsmApiClient` to drive lazy-init of `ApiInformations`; `DsmSession.ConnectAsync()` only calls `AuthenticateAsync()` + `FetchUserLanguageAsync()`
 - `FileSystemService` and `ReverseProxyManagerService` must change from Singleton to Scoped
 - EventId ranges: `DsmSettingsService` (2800001–2800005), `DsmSession` (2900001–2900010)
-- **Phase 1 complete (2026-06-22):** `DsmSettingsService` extracts settings from `DsmApiClient`; graceful fallback defaults replace throwing exceptions; direct property mapping (`Server`, `Port`, `Language`) preferred over exposing `Preferences`
+- **Phase 1 complete (2026-06-22):** `DsmSettingsService` extracts settings from `DsmApiClient`; graceful fallback defaults; direct property mapping (`Server`, `Port`, `Language`)
+- **Phase 2 complete (2026-06-22):** `DsmApiClient` is now a pure HTTP client with no session state; SID passed as parameter per-call; cookie attached per-request via `HttpRequestMessage`
+- **Phase 3 complete (2026-06-22):** `DsmSession` created in `Ui/Services/` (requires ASP.NET Core `ISession`); owns per-user TTL cache, preferences, and login/logout/validation flow
+- **Phase 4 complete (2026-06-22):** `AuthenticationService` depends on `DsmSession`; simplified login/logout/validation flow
+- **Phase 5 complete (2026-06-22):** `FileSystemService` and `ReverseProxyManagerService` changed from Singleton to Scoped; `WebSiteHostingService` uses `IServiceScopeFactory` to resolve scoped dependencies
+- **Phase 6 complete (2026-06-22):** All consumers updated; `GlobalizationExtensions` depends on `DsmSettingsService`; DI chain valid: `Scoped → Scoped → Singleton → HttpClient`
+- **Phase 7 complete (2026-06-22):** 18 tests across 3 test files:
+  - `DsmSettingsServiceTests` (5): service construction, config parsing, mandatory settings
+  - `DsmApiClientTests` (8): cookie attachment, serialization, HTTP errors, URL, concurrency
+  - `DsmSessionTests` (5): session validation, disconnect, SID delegation
+  - Consumer regression tests not feasible — `DsmSession` and `DsmSettingsService` are `sealed`
+
+## Future Work
+
+- **Unseal `DsmSession` and `DsmSettingsService`:** Both are `sealed`, preventing mocking. Defer until dedicated testability pass.
+- **Phase 8 pending:** Decouple `ApiInformationCollection` from parameters — `DsmApiClient` owns full
+  lifecycle with `SemaphoreLock` lazy-init; parameters become pure serialization shells;
+  `BuildUrl` accepts resolved path.
