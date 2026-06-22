@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.User;
@@ -20,7 +21,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Per-user scoped session wrapper over DsmApiClient.
 /// Manages SID persistence in ISession, owns per-user TTL cache and preferences.
 /// </summary>
-public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpContextAccessor, ILogger<ILogDsmSession> logger)
+public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpContextAccessor, ILogger<ILogDsmSession> logger) : IDsmSession
 {
     private readonly ISession _session = httpContextAccessor.HttpContext!.Session;
     private readonly DsmApiClient _client = client;

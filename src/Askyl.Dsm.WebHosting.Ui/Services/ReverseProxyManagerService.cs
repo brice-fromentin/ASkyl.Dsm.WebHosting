@@ -13,7 +13,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 
 public class ReverseProxyManagerService(
     ILogger<ILogReverseProxyManagerService> logger,
-    DsmSession dsmSession) : IReverseProxyManagerService
+    IDsmSession dsmSession) : IReverseProxyManagerService
 {
     #region Public API
 

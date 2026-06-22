@@ -606,7 +606,10 @@ Parameters are pure serialization shells with zero API metadata awareness.
 - **Phase 8 complete (2026-06-23):** `ApiInformationCollection` fully decoupled from parameters and `DsmSession`;
   `DsmApiClient` owns lifecycle with `SemaphoreLock` lazy-init; `BuildUrl` accepts resolved path;
   parameters are pure serialization shells; `DsmSession` has zero API metadata awareness
+- **Testability (2026-06-23):** Extracted `IDsmSession` and `IDsmSettingsService` interfaces in `Data.Contracts`;
+  consumers depend on interfaces; enables mocking for consumer regression tests
 
 ## Future Work
 
-- **Unseal `DsmSession` and `DsmSettingsService`:** Both are `sealed`, preventing mocking. Defer until dedicated testability pass.
+- **Consumer regression tests:** Now feasible with `IDsmSession` and `IDsmSettingsService` interfaces — verify
+  `FileSystemService` and `ReverseProxyManagerService` correctly delegate to `IDsmSession`.

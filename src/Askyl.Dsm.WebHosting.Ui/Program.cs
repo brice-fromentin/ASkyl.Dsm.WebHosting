@@ -56,11 +56,11 @@ builder.Services.AddRazorComponents()
                 .AddInteractiveWebAssemblyComponents();
 
 // Register DSM settings service (singleton - reads /etc/synoinfo.conf once at startup)
-builder.Services.AddSingleton<DsmSettingsService>();
+builder.Services.AddSingleton<IDsmSettingsService, DsmSettingsService>();
 
 // Register DSM API client and authentication facade
 builder.Services.AddSingleton<DsmApiClient>();
-builder.Services.AddScoped<DsmSession>();
+builder.Services.AddScoped<IDsmSession, DsmSession>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 // Register platform info service (singleton - platform detection happens once at startup)

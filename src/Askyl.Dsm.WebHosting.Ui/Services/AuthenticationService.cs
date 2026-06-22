@@ -14,7 +14,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="dsmSession">The DSM session for making authentication calls.</param>
 /// <param name="logger">Logger for tracking authentication operations.</param>
 /// <param name="localizer">Localizer for user-facing strings.</param>
-public class AuthenticationService(DsmSession dsmSession, ILogger<ILogAuthenticationService> logger, ILocalizer localizer) : IAuthenticationService
+public class AuthenticationService(IDsmSession dsmSession, ILogger<ILogAuthenticationService> logger, ILocalizer localizer) : IAuthenticationService
 {
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)

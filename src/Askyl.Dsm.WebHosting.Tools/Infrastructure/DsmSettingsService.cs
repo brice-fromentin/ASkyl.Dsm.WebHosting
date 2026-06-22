@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.Network;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.DsmSystem;
 using Askyl.Dsm.WebHosting.Logging;
 using Microsoft.Extensions.Logging;
@@ -10,7 +11,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// Reads DSM system preferences from /etc/synoinfo.conf once at startup.
 /// Provides graceful fallback defaults if the configuration file is missing or malformed.
 /// </summary>
-public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger)
+public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger) : IDsmSettingsService
 {
     private readonly DsmSystemPreferences _preferences = ReadSettings(logger);
 
