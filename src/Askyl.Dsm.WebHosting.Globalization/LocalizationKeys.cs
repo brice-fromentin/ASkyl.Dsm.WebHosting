@@ -204,6 +204,8 @@ public static class LK
         public const string SiteAlreadyRunning = "Error_SiteAlreadyRunning";
         public const string ApplicationBinaryNotFound = "Error_ApplicationBinaryNotFound";
         public const string IncompatibleFramework = "Error_IncompatibleFramework";
+        public const string RuntimeNotInstalled = "Error_RuntimeNotInstalled";
+        public const string RuntimeDetectionFailed = "Error_RuntimeDetectionFailed";
         public const string InstanceNotFound = "Error_InstanceNotFound";
         public const string NoApplicationPath = "Error_NoApplicationPath";
         public const string SiteNotFound = "Error_SiteNotFound";

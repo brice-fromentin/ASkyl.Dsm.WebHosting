@@ -188,8 +188,9 @@ public sealed class SiteLifecycleManager : IDisposable
         var runtimeInfo = _assemblyRuntimeDetector.Detect(_configuration.ApplicationRealPath);
         if (runtimeInfo is { IsCompatible: false })
         {
-            _logger.SiteStartBlockedIncompatible(runtimeInfo.MissingMessage ?? _localizer[LK.Error.IncompatibleFramework]);
-            return ApiResult.CreateFailure(runtimeInfo.MissingMessage ?? _localizer[LK.Error.IncompatibleFramework]);
+            var incompatibleMessage = _localizer[LK.Error.RuntimeNotInstalled, runtimeInfo.Channel];
+            _logger.SiteStartBlockedIncompatible(incompatibleMessage);
+            return ApiResult.CreateFailure(incompatibleMessage);
         }
 
         try

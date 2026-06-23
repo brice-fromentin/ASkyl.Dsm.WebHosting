@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
@@ -29,7 +30,7 @@ public class AuthenticationController(IAuthenticationService authService) : Cont
     /// <param name="model">The login model containing login, password, and optional OTP code.</param>
     /// <returns>OK with authentication result (Success=true or Success=false with ErrorMessage).</returns>
     [HttpPost(AuthenticationRoutes.LoginRoute)]
-    [EnableRateLimiting("login-throttle")]
+    [EnableRateLimiting(ApplicationConstants.RateLimitPolicyLogin)]
     public async Task<ActionResult<AuthenticationResult>> Login([FromBody] LoginCredentials model)
         => Ok(await authService.LoginAsync(model.Login, model.Password, model.OtpCode));
 

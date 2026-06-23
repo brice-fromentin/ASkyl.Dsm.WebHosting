@@ -451,6 +451,12 @@
   <data name="Error_IncompatibleFramework" xml:space="preserve">
     <value>Framework incompatible</value>
   </data>
+  <data name="Error_RuntimeNotInstalled" xml:space="preserve">
+    <value>Requiert .NET {0}, mais ce runtime n'est pas installé</value>
+  </data>
+  <data name="Error_RuntimeDetectionFailed" xml:space="preserve">
+    <value>Impossible de détecter la version .NET du runtime de l'assembly</value>
+  </data>
   <data name="Error_InstanceNotFound" xml:space="preserve">
     <value>Instance introuvable</value>
   </data>

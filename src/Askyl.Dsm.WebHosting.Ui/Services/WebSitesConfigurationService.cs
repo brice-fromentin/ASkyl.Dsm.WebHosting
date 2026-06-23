@@ -61,7 +61,7 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
         // Test write access to base directory (needed for configuration file)
         try
         {
-            var testPath = Path.Combine(baseDirectory, ".write_test");
+            var testPath = Path.Combine(baseDirectory, ApplicationConstants.WriteTestFileName);
             File.WriteAllText(testPath, "");
             File.Delete(testPath);
         }

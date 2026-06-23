@@ -543,7 +543,7 @@ public class WebSiteHostingService(
 
         if (runtimeInfo is null)
         {
-            result.WarningMessage = RuntimeConstants.RuntimeDetectionFailedWarningMessage;
+            result.WarningMessage = localizer[LK.Error.RuntimeDetectionFailed];
             return result;
         }
 
@@ -551,7 +551,7 @@ public class WebSiteHostingService(
 
         if (!runtimeInfo.IsCompatible)
         {
-            result.WarningMessage = runtimeInfo.MissingMessage;
+            result.WarningMessage = localizer[LK.Error.RuntimeNotInstalled, runtimeInfo.Channel];
         }
 
         return result;

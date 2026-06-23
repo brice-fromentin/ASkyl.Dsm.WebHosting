@@ -57,9 +57,7 @@ public sealed partial class AssemblyRuntimeDetector(
                 logger.FrameworkNotInstalled(assemblyPath, channel);
             }
 
-            var missingMessage = isCompatible ? null : $"Requires .NET {channel}, but this runtime is not installed";
-
-            return new AssemblyRuntimeInfo(channel, isCompatible, missingMessage);
+            return new AssemblyRuntimeInfo(channel, isCompatible, null);
         }
         catch (Exception ex)
         {

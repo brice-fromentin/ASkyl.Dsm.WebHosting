@@ -89,6 +89,11 @@ public static class ApplicationConstants
     /// </summary>
     public const int SessionValidationTtlMinutes = 1;
 
+    /// <summary>
+    /// Rate limiting policy name for login endpoint throttling.
+    /// </summary>
+    public const string RateLimitPolicyLogin = "login-throttle";
+
     #endregion
 
     #region UI Interaction

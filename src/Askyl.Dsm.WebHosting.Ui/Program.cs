@@ -105,7 +105,7 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter("login-throttle", options =>
+    options.AddFixedWindowLimiter(ApplicationConstants.RateLimitPolicyLogin, options =>
     {
         options.PermitLimit = 5;
         options.Window = TimeSpan.FromMinutes(1);
