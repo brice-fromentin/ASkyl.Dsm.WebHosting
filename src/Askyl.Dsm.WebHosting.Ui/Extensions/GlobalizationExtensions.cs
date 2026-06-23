@@ -20,7 +20,7 @@ public static class GlobalizationExtensions
         using var scope = app.ApplicationServices.CreateScope();
         var serviceProvider = scope.ServiceProvider;
 
-        var dsmSettings = serviceProvider.GetRequiredService<DsmSettingsService>();
+        var dsmSettings = serviceProvider.GetRequiredService<IDsmSettingsService>();
         var settings = serviceProvider.GetRequiredService<IGlobalizationSettings>();
         var systemCulture = DsmLanguageToCultureConverter.Convert(dsmSettings.Language);
         settings.SystemCulture = systemCulture;

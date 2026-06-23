@@ -1,7 +1,7 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** June 21, 2026 (Over-engineering reduction completed: Benchmarks removed, API constants merged,
+**Last Updated:** June 23, 2026 (DsmApiClient refactoring complete: Phases 1-8, consumer regression tests (16), total 415 tests; over-engineering reduction: Benchmarks removed, API constants merged,
 PHP converters consolidated, UriExtensions inlined, LicenseConstants inlined, two interfaces dropped,
 DsmParameterNameAttribute replaced with virtual property, LocalizedText+ResourceManagerCache removed,
 ILocalizer returns string directly, 13 new tests added for LogDownload/License/TreeContent services)
@@ -1523,8 +1523,10 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 ### Immediate Priorities
 
 1. **Unit Test Implementation — Partially Complete**
-   - ✅ 400 tests across 10 phases (Data validation, domain, Result types, threading, extensions, I/O, parsing, platform, LogDownloadService, LicenseService, TreeContentService)
-   - ⏳ Deferred: `DsmApiClient` (no interface), `DownloaderService` (external library), `WebSiteHostingService` (complex orchestration)
+   - ✅ 415 tests across 12 phases (Data validation, domain, Result types, threading, extensions,
+     I/O, parsing, platform, LogDownloadService, LicenseService, TreeContentService,
+     DsmApiClient refactoring, consumer regression)
+   - ⏳ Deferred: `DownloaderService` (external library), `WebSiteHostingService` (complex orchestration)
    - See `docs/ai/test-plan-2026-05-04.md` for results and coverage gaps
 
 2. **Certificate Management**
@@ -1618,6 +1620,7 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 
 | Date | Changes |
 |------|---------|
+| June 23, 2026 | DsmApiClient refactoring complete (Phases 1-8): `DsmApiClient` is pure HTTP client (no session state); `DsmSession` (Scoped) owns per-user SID, TTL cache, preferences; `DsmSettingsService` (Singleton) reads `/etc/synoinfo.conf` with graceful defaults; `IDsmSession`/`IDsmSettingsService` interfaces extracted; consumer regression tests (16 tests: `FileSystemServiceTests` 8, `ReverseProxyManagerServiceTests` 8); total 415 tests |
 | June 20, 2026 | Over-engineering reduction: removed Benchmarks project (-260 lines, -BenchmarkDotNet dep); merged ApiVersions+ApiMethods+ApiNames into ApiConstants; inlined LicenseConstants into LicenseService; consolidated PHP date/time converters into PhpFormatToDotNetConverter with PhpDotNetFormatTokens (ImmutableDictionary) in Constants; inlined UriExtensions (1 consumer); dropped IPlatformInfoService and IWebSitesConfigurationService interfaces (single impl, no tests); added 13 tests for LogDownloadService (3), LicenseService (5), TreeContentService (5); separated DsmLanguageCodes (data) from DsmLanguageToCultureConverter (logic) |
 | May 11, 2026 | Dead code sweep: removed `ApiGenericResponse`, `PaginationDefaults`, `LicenseRoutes`, `DirectoryFilesResult`, `DsmToolsExtensions`; removed NuGet packages `Microsoft.AspNetCore.Mvc.Versioning` and `Microsoft.FluentUI.AspNetCore.Components.Emoji`; preserved `EmptyResponse` as standalone type (used by `DsmApiClient`); cleaned stale references in Constants tree diagram and Tools Extensions listing |
 | May 1, 2026 | Replaced custom `CloneGenerator` source generator with C# records (`init` setters) — 41 classes converted, `GenerateCloneAttribute`/`IGenericCloneable<T>` removed, `ApiParametersBase<T>` simplified (no cloning needed with immutability); SiteLifecycleManager hardening: lifecycle manager recreation on config update (stale config fix), removed vestigial `.Clone()` calls (Interactive WASM has no shared memory), removed `ProcessTimeoutSeconds` (inlined 10s constant), added `IOException` to `StopAsync` exception filter, `ProcessInfo` converted to snapshot record, parallel startup in `StartEligibleSitesAsync`, `CancellationToken` forwarding in `StopAllSitesAsync` and `GetRuntimeStateAsync`, removed dead null check and misleading `CancellationToken` from `StartAsync`; **post-review fixes**: `RemoveInstanceAsync` restructured to remove persistent config before in-memory state (prevents orphaned configs on failure), `StopAllSitesAsync` wraps `Dispose()` in `finally` (prevents `SemaphoreSlim` leak on exception), `StartAsync` disposes stale `_process` handle before restart (prevents handle leak on crash-restart cycles); **SiteLifecycleManager concurrency rewrite**: replaced `SemaphoreSlim` + `ISemaphoreOwner` with `Channel<LifecycleCommand>` + single consumer loop — eliminates TOCTOU races, no `ObjectDisposedException` boilerplate, safe disposal via queued `DisposeCommand`, `ConfigurationRequiresRestart` uses order-independent dictionary comparison |

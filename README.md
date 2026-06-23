@@ -33,7 +33,8 @@ A modern .NET web applications and sites hosting manager tailored for Synology D
 - [ ] **Lifecycle & Uninstallation:** Fix version mismatch bugs during uninstall routines when `Microsoft.NETCore.App` and `Microsoft.AspNetCore.App` run separate revisions (observed in 9.0.0 RC2).
 
 ### 🧪 Technical & Quality Assurance
-- [ ] **Integration Testing:** Implement comprehensive test suites for `DsmApiClient`, `FileSystemService`, and `DownloaderService`.
+- [x] **DsmApiClient Refactoring:** Split into `DsmApiClient` (pure HTTP), `DsmSession` (Scoped, per-user), `DsmSettingsService` (Singleton) — eliminates session leakage between concurrent users.
+- [x] **Consumer Regression Tests:** `FileSystemService` and `ReverseProxyManagerService` verified to correctly delegate to `IDsmSession`.
+- [ ] **Integration Testing:** Implement comprehensive test suites for `DownloaderService`.
 - [ ] **UI Testing:** Add Blazor component unit tests leveraging `bUnit`.
 - [ ] **Exception Handling:** Refactor global error boundaries and implement specialized exceptions management.
-- [ ] **Architecture Refactoring:** Optimize `DsmApiClient` life cycle management.

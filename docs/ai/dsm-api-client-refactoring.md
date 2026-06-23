@@ -611,5 +611,7 @@ Parameters are pure serialization shells with zero API metadata awareness.
 
 ## Future Work
 
-- **Consumer regression tests:** Now feasible with `IDsmSession` and `IDsmSettingsService` interfaces — verify
-  `FileSystemService` and `ReverseProxyManagerService` correctly delegate to `IDsmSession`.
+- **Consumer regression tests:** ✅ COMPLETE (2026-06-23) — 16 tests across 2 files:
+  - `FileSystemServiceTests` (8): shared folders, directory contents (directory-only, with files, path traversal x2), ACL permissions (success + path traversal)
+  - `ReverseProxyManagerServiceTests` (8): create (success, idempotent, failure), update (success, not found), delete (success, not found, already deleted externally)
+  - Uses `FakeDsmSession` instead of Moq to avoid Moq's generic method handling issues on interfaces
