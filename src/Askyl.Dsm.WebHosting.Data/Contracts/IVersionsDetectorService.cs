@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 
 namespace Askyl.Dsm.WebHosting.Data.Contracts;
@@ -20,7 +21,7 @@ public interface IVersionsDetectorService
     /// <param name="channel">The channel to check (e.g., "8.0").</param>
     /// <param name="frameworkType">The framework type to check.</param>
     /// <returns>True if the channel is installed, false otherwise.</returns>
-    bool IsChannelInstalled(string channel, string frameworkType = "ASP.NET Core");
+    bool IsChannelInstalled(string channel, string frameworkType = DotNetFrameworkTypes.AspNetCore);
 
     /// <summary>
     /// Checks if a specific version is installed.
@@ -28,7 +29,7 @@ public interface IVersionsDetectorService
     /// <param name="version">The version to check (e.g., "8.0.5").</param>
     /// <param name="frameworkType">The framework type to check.</param>
     /// <returns>True if the version is installed, false otherwise.</returns>
-    bool IsVersionInstalled(string version, string frameworkType = "ASP.NET Core");
+    bool IsVersionInstalled(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore);
 
     /// <summary>
     /// Forces a cache refresh by re-executing dotnet --info.
