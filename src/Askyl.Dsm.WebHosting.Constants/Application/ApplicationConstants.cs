@@ -99,4 +99,13 @@ public static class ApplicationConstants
     public const int DoubleClickTimeoutMilliseconds = 400;
 
     #endregion
+
+    #region File Operations
+
+    /// <summary>
+    /// Filename used to test write permissions on a directory.
+    /// </summary>
+    public const string WriteTestFileName = ".write_test";
+
+    #endregion
 }

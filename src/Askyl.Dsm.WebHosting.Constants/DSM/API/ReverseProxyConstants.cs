@@ -22,6 +22,16 @@ public static class ReverseProxyConstants
     /// </summary>
     public const string AclPermissionTypeAllow = "allow";
 
+    /// <summary>
+    /// ACL owner type value for group-based access control entries.
+    /// </summary>
+    public const string AclOwnerTypeGroup = "group";
+
+    /// <summary>
+    /// ACL owner name for the HTTP web server group.
+    /// </summary>
+    public const string AclOwnerNameHttp = "http";
+
     #endregion
 
     #region Error Codes

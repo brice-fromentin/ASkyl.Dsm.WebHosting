@@ -25,4 +25,9 @@ public static class NetworkConstants
     /// The MIME type for JSON content.
     /// </summary>
     public const string ApplicationJson = "application/json";
+
+    /// <summary>
+    /// The MIME type for URL-encoded form data.
+    /// </summary>
+    public const string ApplicationFormUrlEncoded = "application/x-www-form-urlencoded";
 }
