@@ -288,7 +288,7 @@ public class WebSiteHostingService(
                 .Where(e => e.Instance.Configuration.IsEnabled && e.Instance.Configuration.AutoStart)
                 .Select(e => StartWebsiteAsync(e.Instance.Id)));
 
-        var failures = results.Where(r => !r.Success).ToList();
+        List<ApiResult> failures = [.. results.Where(r => !r.Success)];
         if (failures.Count != 0)
         {
             logger.SitesFailedToStart(failures.Count, String.Join(", ", failures.Select(f => f.Message)));
@@ -422,7 +422,7 @@ public class WebSiteHostingService(
 
     private async Task StopAllSitesAsync(CancellationToken cancellationToken)
     {
-        var stopTasks = _sites.Values.Select(
+        List<Task> stopTasks = [.. _sites.Values.Select(
             async entry =>
             {
                 try
@@ -433,8 +433,7 @@ public class WebSiteHostingService(
                 {
                     entry.LifecycleManager.Dispose();
                 }
-            })
-            .ToList();
+            })];
         await Task.WhenAll(stopTasks);
 
         _sites.Clear();

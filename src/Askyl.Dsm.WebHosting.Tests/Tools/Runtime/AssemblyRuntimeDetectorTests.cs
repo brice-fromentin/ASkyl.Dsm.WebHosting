@@ -24,7 +24,7 @@ public class AssemblyRuntimeDetectorTests : IDisposable
 
     private void WriteRuntimeConfig(string assemblyPath, string frameworkVersion, string? tfm = null)
     {
-        var directory = Path.GetDirectoryName(assemblyPath) ?? string.Empty;
+        var directory = Path.GetDirectoryName(assemblyPath) ?? String.Empty;
         var configPath = Path.Combine(directory, "App.runtimeconfig.json");
 
         var actualTfm = tfm ?? "net8.0";
@@ -47,7 +47,7 @@ public class AssemblyRuntimeDetectorTests : IDisposable
 
     private void WriteTfmOnlyRuntimeConfig(string assemblyPath, string tfm)
     {
-        var directory = Path.GetDirectoryName(assemblyPath) ?? string.Empty;
+        var directory = Path.GetDirectoryName(assemblyPath) ?? String.Empty;
         var configPath = Path.Combine(directory, "App.runtimeconfig.json");
 
         var json =
@@ -108,7 +108,7 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         // Arrange
         var path = Path.Combine(_tempDir, "App.dll");
         File.WriteAllText(path, "fake dll");
-        var directory = Path.GetDirectoryName(path) ?? string.Empty;
+        var directory = Path.GetDirectoryName(path) ?? String.Empty;
         var configPath = Path.Combine(directory, "App.runtimeconfig.json");
         File.WriteAllText(configPath, "{ invalid json content");
 
@@ -125,7 +125,7 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         // Arrange
         var path = Path.Combine(_tempDir, "App.dll");
         File.WriteAllText(path, "fake dll");
-        var directory = Path.GetDirectoryName(path) ?? string.Empty;
+        var directory = Path.GetDirectoryName(path) ?? String.Empty;
         var configPath = Path.Combine(directory, "App.runtimeconfig.json");
         File.WriteAllText(configPath, """{"otherKey": "value"}""");
 
@@ -142,7 +142,7 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         // Arrange
         var path = Path.Combine(_tempDir, "App.dll");
         File.WriteAllText(path, "fake dll");
-        var directory = Path.GetDirectoryName(path) ?? string.Empty;
+        var directory = Path.GetDirectoryName(path) ?? String.Empty;
         var configPath = Path.Combine(directory, "App.runtimeconfig.json");
         File.WriteAllText(configPath, """{"runtimeOptions": {"tfm": "net"}}""");
 

@@ -80,7 +80,6 @@
     [Parameter]
     public EventCallback<TItem> OnRowDoubleClick { get; set; }
 
-
     // NOTE: Emulating double-click because FluentDataGrid's OnRowDoubleClick is buggy and never fires.
     // Using a timer-based approach with timestamp comparison (simplest solution).
     private TItem? SelectedItem { get; set; }

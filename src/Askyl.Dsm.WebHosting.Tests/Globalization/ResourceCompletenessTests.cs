@@ -72,7 +72,7 @@ public class ResourceCompletenessTests
             foreach (DictionaryEntry entry in reader)
             {
                 var value = entry.Value?.ToString();
-                if (string.IsNullOrWhiteSpace(value))
+                if (String.IsNullOrWhiteSpace(value))
                 {
                     emptyKeys.Add(entry.Key.ToString()!);
                 }
@@ -171,7 +171,7 @@ public class ResourceCompletenessTests
         foreach (var field in type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.FlattenHierarchy))
         {
             var value = field.GetValue(null)?.ToString();
-            if (!string.IsNullOrEmpty(value))
+            if (!String.IsNullOrEmpty(value))
             {
                 keys.Add(value);
             }

@@ -25,7 +25,7 @@ public interface IAuthenticationService
 
     /// <summary>
     /// Checks if the current session is authenticated by validating against the DSM server.
-    /// Returns the cached result if validation occurred within the TTL window (5 minutes).
+    /// Returns the cached result if validation occurred within the TTL window (1 minute).
     /// If the session is invalid or expired, it is cleared from the local session store.
     /// </summary>
     /// <returns>An ApiResultBool containing a boolean indicating authentication status.</returns>

@@ -7,7 +7,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Authorization;
 /// <summary>
 /// Authorizes access only if the user has an active server-side session.
 /// Validates against the DSM server to detect sessions that expired or were revoked outside the application.
-/// Validation results are cached (TTL: 5 minutes) to avoid per-request API overhead.
+/// Validation results are cached (TTL: 1 minute) to avoid per-request API overhead.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
 public class AuthorizeSessionAttribute : Attribute, IAsyncAuthorizationFilter

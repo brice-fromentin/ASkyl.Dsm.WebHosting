@@ -82,7 +82,7 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
 
             var channels = await downloader.GetAspNetCoreChannelsAsync(cancellationToken);
 
-            var channelList = channels.ToList();
+            List<AspNetCoreReleaseInfo> channelList = [.. channels];
             return ChannelsResult.CreateSuccess(channelList);
         }
         catch (Exception ex)

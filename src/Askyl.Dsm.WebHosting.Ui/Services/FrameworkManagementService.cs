@@ -107,10 +107,9 @@ public class FrameworkManagementService(
 
         var channelPrefix = configuredChannel + ".";
 
-        var releasesInChannel = installed.Where(f => f.Type == DotNetFrameworkTypes.AspNetCore && f.Version.StartsWith(channelPrefix, StringComparison.OrdinalIgnoreCase))
-                                         .Select(f => f.Version)
-                                         .Distinct(StringComparer.OrdinalIgnoreCase)
-                                         .ToList();
+        List<string> releasesInChannel = [.. installed.Where(f => f.Type == DotNetFrameworkTypes.AspNetCore && f.Version.StartsWith(channelPrefix, StringComparison.OrdinalIgnoreCase))
+                                                     .Select(f => f.Version)
+                                                     .Distinct(StringComparer.OrdinalIgnoreCase)];
 
         if (releasesInChannel.Count <= 1 && releasesInChannel.Contains(version, StringComparer.OrdinalIgnoreCase))
         {

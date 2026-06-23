@@ -43,7 +43,7 @@ public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<ILogLi
         var tasks = LicenseFileNames.Select(async fileName => await LoadLicenseAsync(fileName));
         var results = await Task.WhenAll(tasks);
 
-        return results.Where(result => result is not null).Cast<LicenseInfo>().ToList().AsReadOnly();
+        return ((List<LicenseInfo>)[.. results.Where(result => result is not null).Cast<LicenseInfo>()]).AsReadOnly();
     }
 
     private async Task<LicenseInfo?> LoadLicenseAsync(string fileName)
