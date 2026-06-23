@@ -72,7 +72,7 @@ static class LogEventIds
 
     #endregion
 
-    #region Infrastructure — 2100000–2700999
+    #region Infrastructure — 2100000–2800999
 
     /// <summary>ArchiveExtractorService — IDs 2100001–2100006.</summary>
     public const int ArchiveExtractorBase = 2100000;
@@ -97,6 +97,12 @@ static class LogEventIds
 
     /// <summary>GlobalizationSettings — IDs 2700001–2700004.</summary>
     public const int GlobalizationSettingsBase = 2700000;
+
+    /// <summary>DsmSettingsService — IDs 2800001–2800005.</summary>
+    public const int DsmSettingsBase = 2800000;
+
+    /// <summary>DsmSession — IDs 2900001–2900007.</summary>
+    public const int DsmSessionBase = 2900000;
 
     #endregion
 

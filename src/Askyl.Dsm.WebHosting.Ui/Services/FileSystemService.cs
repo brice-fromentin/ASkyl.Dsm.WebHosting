@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
@@ -11,7 +12,6 @@ using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
-using Askyl.Dsm.WebHosting.Tools.Network;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -19,7 +19,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Server-side implementation of IFileSystemService for Synology DSM FileStation API operations.
 /// Returns simple FileSystemItem data objects; UI-specific rendering is handled by the client layer.
 /// </summary>
-public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemService> logger, ILocalizer localizer) : Data.Contracts.IFileSystemService
+public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemService> logger, ILocalizer localizer) : Data.Contracts.IFileSystemService
 {
     public async Task<SharedFoldersResult> GetSharedFoldersAsync()
     {
@@ -141,9 +141,9 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
             ]
         };
 
-        var parameters = new CoreAclSetParameters(apiClient.ApiInformations, aclSet);
+        var parameters = new CoreAclSetParameters(aclSet);
 
-        var response = await apiClient.ExecuteAsync<CoreAclSetResponse>(parameters);
+        var response = await dsmSession.ExecuteAsync<CoreAclSetResponse>(parameters);
 
         if (response?.Success != true || response.Data?.TaskId is null)
         {
@@ -164,9 +164,9 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
             SortDirection = FileStationDefaults.SortDirectionAsc
         };
 
-        var parameters = new FileStationListShareParameters(apiClient.ApiInformations, entry);
+        var parameters = new FileStationListShareParameters(entry);
 
-        var response = await apiClient.ExecuteAsync<FileStationListShareResponse>(parameters);
+        var response = await dsmSession.ExecuteAsync<FileStationListShareResponse>(parameters);
 
         if (response?.Success != true || response.Data?.Shares is null)
         {
@@ -188,9 +188,9 @@ public class FileSystemService(DsmApiClient apiClient, ILogger<ILogFileSystemSer
             FileType = !String.IsNullOrEmpty(fileType) ? fileType : FileStationDefaults.TypeAll
         };
 
-        var parameters = new FileStationListParameters(apiClient.ApiInformations, entry);
+        var parameters = new FileStationListParameters(entry);
 
-        var response = await apiClient.ExecuteAsync<FileStationListResponse>(parameters);
+        var response = await dsmSession.ExecuteAsync<FileStationListResponse>(parameters);
 
         if (response?.Success != true || response.Data?.Files is null)
         {

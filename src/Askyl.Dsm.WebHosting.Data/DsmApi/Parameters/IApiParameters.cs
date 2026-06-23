@@ -6,15 +6,13 @@ public interface IApiParameters
 {
     public string Name { get; }
 
-    public string Path { get; }
-
     public int Version { get; }
 
     public string Method { get; }
 
     public SerializationFormats SerializationFormat { get; }
 
-    public string BuildUrl(string server, int port);
+    public string BuildUrl(string server, int port, string path);
 
     public StringContent ToForm();
 

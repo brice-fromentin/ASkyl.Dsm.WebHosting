@@ -1,7 +1,7 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** June 21, 2026 (Over-engineering reduction completed: Benchmarks removed, API constants merged,
+**Last Updated:** June 23, 2026 (DsmApiClient refactoring complete: Phases 1-8, consumer regression tests (16), total 415 tests; over-engineering reduction: Benchmarks removed, API constants merged,
 PHP converters consolidated, UriExtensions inlined, LicenseConstants inlined, two interfaces dropped,
 DsmParameterNameAttribute replaced with virtual property, LocalizedText+ResourceManagerCache removed,
 ILocalizer returns string directly, 13 new tests added for LogDownload/License/TreeContent services)
@@ -293,6 +293,8 @@ Constants/
 | **IDownloaderService** | `Contracts/IDownloaderService.cs` | DownloadToAsync(), DownloadVersionToAsync(), GetAspNetCoreReleasesAsync() | Tools.Runtime.DownloaderService |
 | **IVersionsDetectorService** | `Contracts/IVersionsDetectorService.cs` | GetInstalledVersionsAsync(), IsChannelInstalled(), RefreshCacheAsync() | Tools.Runtime.VersionsDetectorService |
 | **IAssemblyRuntimeDetector** | `Contracts/IAssemblyRuntimeDetector.cs` | Detect() | Tools.Runtime.AssemblyRuntimeDetector |
+| **IDsmSession** | `Contracts/IDsmSession.cs` | ConnectAsync(), ValidateSessionAsync(), Disconnect(), ExecuteAsync(), ExecuteSimpleAsync() | Ui.Services.DsmSession |
+| **IDsmSettingsService** | `Contracts/IDsmSettingsService.cs` | Server, Port, Language | Tools.Infrastructure.DsmSettingsService |
 
 **Structure:**
 
@@ -306,6 +308,8 @@ Data/
 │   ├── ILogDownloadService.cs              # Log file retrieval
 │   ├── IReverseProxyManagerService.cs      # Proxy configuration
 │   ├── IWebSiteHostingService.cs           # Website lifecycle
+│   ├── IDsmSession.cs                      # Per-user DSM session wrapper
+│   ├── IDsmSettingsService.cs              # DSM system settings (server, port, language)
 │   ├── IFileManagerService.cs              # File management (Scoped, configurable root)
 │   ├── IArchiveExtractorService.cs         # Archive extraction (Scoped)
 │   ├── IDownloaderService.cs               # .NET downloads with cancellation (Scoped)
@@ -492,7 +496,9 @@ See `Tools/Network/DsmApiClient.cs` for full implementation.
 **Key Features:**
 
 - Singleton pattern (registered in DI container)
-- Session management with SID validation and restoration
+- Implements `ISemaphoreOwner` for thread-safe lazy initialization of `ApiInformations`
+- `EnsureInitializedAsync()` — double-checked locking via `SemaphoreLock`; fetches API metadata once, cached forever
+- `ExecuteAsync<R>` — resolves API path from `ApiInformations`, passes to `BuildUrl(server, port, path)`
 - Automatic serialization based on `IApiParameters.SerializationFormat`
 - Strategy pattern for Form vs JSON serialization
 - Compile-time generic constraint `where R : IApiResponse` on `ExecuteAsync<R>` — enables compile-time access to `Success`/`Error` properties (no reflection)
@@ -800,9 +806,9 @@ Client-side components use `ClientLoggingExtensions.cs` for structured logging i
 
 **Architectural Trade-off — Singleton `DsmApiClient`:**
 
-`DsmApiClient` is registered as Singleton despite holding per-session state (`_sid`, `_httpClient` cookie header, session validation cache). This is intentional because:
+`DsmApiClient` is registered as Singleton as a pure HTTP client with no per-session state. SID is passed per-call; cookie attached per-request via `HttpRequestMessage`. This is intentional because:
 
-1. **Shared `ApiInformations`:** API discovery cache is expensive to re-fetch (handshake call)
+1. **Shared `ApiInformations`:** API metadata cached via lazy-init with `SemaphoreLock` — fetched once, cached forever
 2. **`HttpClient` reuse:** Named client with configured `BaseAddress` and timeouts — benefits from connection pooling
 3. **`BackgroundService` anchor:** `WebSiteHostingService` (Singleton) depends on services using `DsmApiClient`. `IHostedService` is always Singleton.
 
@@ -1019,10 +1025,10 @@ using var timer = new OperationTimer(elapsed => logger.FrameworkInstalledDuratio
 
 ```text
 1. Client → LoginCredentials { Username, Password, [LotP] }
-2. DsmApiClient.ReadSettings() → Load /etc/synoinfo.conf
-3. DsmApiClient.HandShakeAsync() → SYNO.API.Info query
-4. DsmApiClient.AuthenticateAsync() → auth.login API call
-5. Response: SID stored in cookie header (ssid=...)
+2. DsmSettingsService → Load /etc/synoinfo.conf (graceful fallback defaults)
+3. DsmApiClient.EnsureInitializedAsync() → SYNO.API.Info query (lazy-init, SemaphoreLock)
+4. DsmSession.AuthenticateAsync() → auth.login API call
+5. Response: SID stored per-request via HttpRequestMessage cookie header
 6. Session persisted in ASP.NET Core session (DsmSid + DsmUsername)
 ```
 
@@ -1048,9 +1054,9 @@ The `IsAuthenticatedAsync()` method performs server-side validation against the 
 
 **Singleton Architectural Trade-off:**
 
-`DsmApiClient` is intentionally Singleton despite holding per-session state (`_sid`, `_sessionValid`, `_lastSessionValidation`):
+`DsmApiClient` is intentionally Singleton as a pure HTTP client with no per-session state (all per-user state extracted to Scoped `DsmSession`):
 
-1. **Shared `ApiInformations`:** API discovery cache is expensive to re-fetch (handshake call)
+1. **Shared `ApiInformations`:** API metadata cached via lazy-init with `SemaphoreLock` — fetched once, cached forever
 2. **`HttpClient` reuse:** Named client with configured `BaseAddress` and timeouts — benefits from connection pooling
 3. **`BackgroundService` anchor:** `WebSiteHostingService` (Singleton) depends on services using `DsmApiClient`. `IHostedService` is always Singleton.
 
@@ -1430,7 +1436,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
 
 **Current Implementation:**
 
-- **ApiInformations Cache:** DSM API metadata cached after handshake
+- **ApiInformations Cache:** DSM API metadata via lazy-init with `SemaphoreLock` double-checked locking in `DsmApiClient`; fetched once, cached forever
 - **Session Validation Cache:** 1-minute TTL for DSM session validation results (avoids per-request API overhead)
 - **Instance Cache:** In-memory `ConcurrentDictionary` for website instances
 - **Configuration Cache:** JSON file read on startup, in-memory during runtime
@@ -1517,8 +1523,10 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 ### Immediate Priorities
 
 1. **Unit Test Implementation — Partially Complete**
-   - ✅ 400 tests across 10 phases (Data validation, domain, Result types, threading, extensions, I/O, parsing, platform, LogDownloadService, LicenseService, TreeContentService)
-   - ⏳ Deferred: `DsmApiClient` (no interface), `DownloaderService` (external library), `WebSiteHostingService` (complex orchestration)
+   - ✅ 415 tests across 12 phases (Data validation, domain, Result types, threading, extensions,
+     I/O, parsing, platform, LogDownloadService, LicenseService, TreeContentService,
+     DsmApiClient refactoring, consumer regression)
+   - ⏳ Deferred: `DownloaderService` (external library), `WebSiteHostingService` (complex orchestration)
    - See `docs/ai/test-plan-2026-05-04.md` for results and coverage gaps
 
 2. **Certificate Management**
@@ -1612,6 +1620,7 @@ dotnet publish ./src/Askyl.Dsm.WebHosting.Ui/Askyl.Dsm.WebHosting.Ui.csproj -c R
 
 | Date | Changes |
 |------|---------|
+| June 23, 2026 | DsmApiClient refactoring complete (Phases 1-8): `DsmApiClient` is pure HTTP client (no session state); `DsmSession` (Scoped) owns per-user SID, TTL cache, preferences; `DsmSettingsService` (Singleton) reads `/etc/synoinfo.conf` with graceful defaults; `IDsmSession`/`IDsmSettingsService` interfaces extracted; consumer regression tests (16 tests: `FileSystemServiceTests` 8, `ReverseProxyManagerServiceTests` 8); total 415 tests |
 | June 20, 2026 | Over-engineering reduction: removed Benchmarks project (-260 lines, -BenchmarkDotNet dep); merged ApiVersions+ApiMethods+ApiNames into ApiConstants; inlined LicenseConstants into LicenseService; consolidated PHP date/time converters into PhpFormatToDotNetConverter with PhpDotNetFormatTokens (ImmutableDictionary) in Constants; inlined UriExtensions (1 consumer); dropped IPlatformInfoService and IWebSitesConfigurationService interfaces (single impl, no tests); added 13 tests for LogDownloadService (3), LicenseService (5), TreeContentService (5); separated DsmLanguageCodes (data) from DsmLanguageToCultureConverter (logic) |
 | May 11, 2026 | Dead code sweep: removed `ApiGenericResponse`, `PaginationDefaults`, `LicenseRoutes`, `DirectoryFilesResult`, `DsmToolsExtensions`; removed NuGet packages `Microsoft.AspNetCore.Mvc.Versioning` and `Microsoft.FluentUI.AspNetCore.Components.Emoji`; preserved `EmptyResponse` as standalone type (used by `DsmApiClient`); cleaned stale references in Constants tree diagram and Tools Extensions listing |
 | May 1, 2026 | Replaced custom `CloneGenerator` source generator with C# records (`init` setters) — 41 classes converted, `GenerateCloneAttribute`/`IGenericCloneable<T>` removed, `ApiParametersBase<T>` simplified (no cloning needed with immutability); SiteLifecycleManager hardening: lifecycle manager recreation on config update (stale config fix), removed vestigial `.Clone()` calls (Interactive WASM has no shared memory), removed `ProcessTimeoutSeconds` (inlined 10s constant), added `IOException` to `StopAsync` exception filter, `ProcessInfo` converted to snapshot record, parallel startup in `StartEligibleSitesAsync`, `CancellationToken` forwarding in `StopAllSitesAsync` and `GetRuntimeStateAsync`, removed dead null check and misleading `CancellationToken` from `StartAsync`; **post-review fixes**: `RemoveInstanceAsync` restructured to remove persistent config before in-memory state (prevents orphaned configs on failure), `StopAllSitesAsync` wraps `Dispose()` in `finally` (prevents `SemaphoreSlim` leak on exception), `StartAsync` disposes stale `_process` handle before restart (prevents handle leak on crash-restart cycles); **SiteLifecycleManager concurrency rewrite**: replaced `SemaphoreSlim` + `ISemaphoreOwner` with `Channel<LifecycleCommand>` + single consumer loop — eliminates TOCTOU races, no `ObjectDisposedException` boilerplate, safe disposal via queued `DisposeCommand`, `ConfigurationRequiresRestart` uses order-independent dictionary comparison |

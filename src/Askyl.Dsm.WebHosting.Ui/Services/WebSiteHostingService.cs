@@ -6,7 +6,6 @@ using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
-using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
@@ -20,8 +19,7 @@ public class WebSiteHostingService(
     ILoggerFactory loggerFactory,
     IProcessRunner processRunner,
     WebSitesConfigurationService configService,
-    IFileSystemService fileSystemService,
-    IReverseProxyManagerService reverseProxyManager,
+    IServiceScopeFactory scopeFactory,
     IAssemblyRuntimeDetector assemblyRuntimeDetector,
     IVersionsDetectorService versionsDetector,
     ILocalizer localizer) : BackgroundService, IWebSiteHostingService
@@ -462,6 +460,8 @@ public class WebSiteHostingService(
 
         logger.SettingHttpGroupPermissions(configuration.Name, configuration.ApplicationRealPath, isDirectory);
 
+        using var scope = scopeFactory.CreateScope();
+        var fileSystemService = scope.ServiceProvider.GetRequiredService<IFileSystemService>();
         return await fileSystemService.SetHttpGroupPermissionsAsync(configuration.ApplicationRealPath, isDirectory);
     }
 
@@ -476,6 +476,8 @@ public class WebSiteHostingService(
     {
         try
         {
+            using var scope = scopeFactory.CreateScope();
+            var reverseProxyManager = scope.ServiceProvider.GetRequiredService<IReverseProxyManagerService>();
             await reverseProxyManager.CreateAsync(configuration);
             logger.ReverseProxyRuleCreated(configuration.Name);
             return ApiResult.CreateSuccess();
@@ -494,6 +496,8 @@ public class WebSiteHostingService(
     {
         try
         {
+            using var scope = scopeFactory.CreateScope();
+            var reverseProxyManager = scope.ServiceProvider.GetRequiredService<IReverseProxyManagerService>();
             await reverseProxyManager.UpdateAsync(configuration);
             logger.ReverseProxyRuleUpdated(configuration.Name);
             return ApiResult.CreateSuccess();
@@ -512,6 +516,8 @@ public class WebSiteHostingService(
     {
         try
         {
+            using var scope = scopeFactory.CreateScope();
+            var reverseProxyManager = scope.ServiceProvider.GetRequiredService<IReverseProxyManagerService>();
             await reverseProxyManager.DeleteAsync(configuration);
             logger.ReverseProxyRuleDeleted(configuration.Name);
             return ApiResult.CreateSuccess();

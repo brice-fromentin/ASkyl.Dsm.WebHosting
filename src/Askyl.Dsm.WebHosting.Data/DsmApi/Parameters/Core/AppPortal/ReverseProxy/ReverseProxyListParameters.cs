@@ -1,9 +1,9 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
-using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.AppPortal.ReverseProxy;
 
-public class ReverseProxyListParameters(ApiInformationCollection informations) : ApiParametersBase<ApiParametersNone>(informations)
+public class ReverseProxyListParameters()
+    : ApiParametersBase<ApiParametersNone>()
 {
     public override string Name => ApiConstants.AppPortalReverseProxy;
 

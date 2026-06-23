@@ -7,15 +7,13 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.AppPortal.ReverseProxy;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.AppPortal.ReverseProxy;
 using Askyl.Dsm.WebHosting.Data.Exceptions;
 using Askyl.Dsm.WebHosting.Logging;
-using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Extensions;
-using Askyl.Dsm.WebHosting.Tools.Network;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
 public class ReverseProxyManagerService(
     ILogger<ILogReverseProxyManagerService> logger,
-    DsmApiClient dsmApiClient) : IReverseProxyManagerService
+    IDsmSession dsmSession) : IReverseProxyManagerService
 {
     #region Public API
 
@@ -43,9 +41,9 @@ public class ReverseProxyManagerService(
             Backend = new(NetworkConstants.Localhost, site.InternalPort, (int)ProtocolType.HTTP)
         };
 
-        var createParams = new ReverseProxyCreateParameters(dsmApiClient.ApiInformations, proxy);
+        var createParams = new ReverseProxyCreateParameters(proxy);
 
-        var response = await dsmApiClient.ExecuteSimpleAsync(createParams);
+        var response = await dsmSession.ExecuteSimpleAsync(createParams);
 
         if (!response.IsValid())
         {
@@ -83,9 +81,9 @@ public class ReverseProxyManagerService(
             Backend = new(NetworkConstants.Localhost, config.InternalPort, (int)ProtocolType.HTTP)
         };
 
-        var updateParams = new ReverseProxyUpdateParameters(dsmApiClient.ApiInformations, updatedProxy);
+        var updateParams = new ReverseProxyUpdateParameters(updatedProxy);
 
-        var response = await dsmApiClient.ExecuteSimpleAsync(updateParams);
+        var response = await dsmSession.ExecuteSimpleAsync(updateParams);
 
         if (!response.IsValid())
         {
@@ -160,8 +158,8 @@ public class ReverseProxyManagerService(
     /// </summary>
     private async Task<List<ReverseProxy>> GetAllReverseProxiesAsync()
     {
-        var parameters = new ReverseProxyListParameters(dsmApiClient.ApiInformations);
-        var response = await dsmApiClient.ExecuteAsync<ReverseProxyListResponse>(parameters);
+        var parameters = new ReverseProxyListParameters();
+        var response = await dsmSession.ExecuteAsync<ReverseProxyListResponse>(parameters);
 
         return response?.Data?.Entries ?? [];
     }
@@ -171,10 +169,10 @@ public class ReverseProxyManagerService(
     /// </summary>
     private async Task DeleteByUuidAsync(Guid uuid, string siteName)
     {
-        var deleteParams = new ReverseProxyDeleteParameters(dsmApiClient.ApiInformations);
+        var deleteParams = new ReverseProxyDeleteParameters();
         deleteParams.Parameters.Add(uuid);
 
-        var deleteResponse = await dsmApiClient.ExecuteSimpleAsync(deleteParams);
+        var deleteResponse = await dsmSession.ExecuteSimpleAsync(deleteParams);
 
         if (!deleteResponse.IsValid())
         {
@@ -215,8 +213,8 @@ public class ReverseProxyManagerService(
             return false;
         }
 
-        return message.IndexOf("not found", StringComparison.OrdinalIgnoreCase) >= 0 ||
-               message.IndexOf("does not exist", StringComparison.OrdinalIgnoreCase) >= 0;
+        return message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
+               message.Contains("does not exist", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
