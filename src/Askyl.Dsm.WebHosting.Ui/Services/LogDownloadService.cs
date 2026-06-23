@@ -20,12 +20,12 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.C
         using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
         {
             // Add package logs directory if it exists
-            await TryAddDirectoryToArchiveAsync(archive, LogConstants.PackageLogDirectoryPath, "package-logs", "Package logs", baseDirectory);
+            await TryAddDirectoryToArchiveAsync(archive, LogConstants.PackageLogDirectoryPath, LogConstants.LogArchivePackagePrefix, LogConstants.LogArchivePackageDisplayName, baseDirectory);
 
             // Add debug log file if it exists
             if (File.Exists(LogConstants.DebugLogFilePath))
             {
-                await AddFileToArchiveAsync(archive, LogConstants.DebugLogFilePath, "debug-logs/adwh-debug.log");
+                await AddFileToArchiveAsync(archive, LogConstants.DebugLogFilePath, LogConstants.LogArchiveDebugEntryPath);
                 logger.AddedDebugLogFile(LogConstants.DebugLogFilePath);
             }
             else
@@ -35,7 +35,7 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.C
 
             // Add application logs directory if it exists
             var logsPath = Path.Combine(baseDirectory, LogConstants.LogsDirectoryName);
-            await TryAddDirectoryToArchiveAsync(archive, logsPath, "application-logs", "Application logs", baseDirectory);
+            await TryAddDirectoryToArchiveAsync(archive, logsPath, LogConstants.LogArchiveAppPrefix, LogConstants.LogArchiveAppDisplayName, baseDirectory);
         }
 
         memoryStream.Position = 0;
