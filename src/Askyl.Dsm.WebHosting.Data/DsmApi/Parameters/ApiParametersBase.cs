@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.JSON;
+using Askyl.Dsm.WebHosting.Constants.Network;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 
@@ -60,7 +61,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
     {
         var content = BuildForm().ToString();
 
-        return new(content, Encoding.UTF8, "application/x-www-form-urlencoded");
+        return new(content, Encoding.UTF8, NetworkConstants.ApplicationFormUrlEncoded);
     }
 
     public StringContent ToJson()
@@ -76,7 +77,7 @@ public abstract class ApiParametersBase<T> : IApiParameters where T : class, new
 
         var content = builder.ToString();
 
-        return new(content, Encoding.UTF8, "application/x-www-form-urlencoded");
+        return new(content, Encoding.UTF8, NetworkConstants.ApplicationFormUrlEncoded);
     }
 
     private StringBuilder BuildForm(bool skipParameters = false)

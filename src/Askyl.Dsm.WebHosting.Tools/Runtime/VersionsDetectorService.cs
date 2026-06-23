@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Logging;
@@ -68,11 +69,11 @@ public sealed partial class VersionsDetectorService(ILogger<ILogVersionsDetector
     }
 
     /// <inheritdoc/>
-    public bool IsChannelInstalled(string channel, string frameworkType = "ASP.NET Core")
+    public bool IsChannelInstalled(string channel, string frameworkType = DotNetFrameworkTypes.AspNetCore)
         => _cachedFrameworks.Any(x => x.Type == frameworkType && x.Version.StartsWith(channel + "."));
 
     /// <inheritdoc/>
-    public bool IsVersionInstalled(string version, string frameworkType = "ASP.NET Core")
+    public bool IsVersionInstalled(string version, string frameworkType = DotNetFrameworkTypes.AspNetCore)
         => _cachedFrameworks.Any(x => x.Type == frameworkType && x.Version == version);
 
     /// <inheritdoc/>
