@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 using Askyl.Dsm.WebHosting.Data.Contracts;
@@ -111,8 +112,8 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
             [
                 new()
                 {
-                    OwnerType = "group",
-                    OwnerName = "http",
+                    OwnerType = ReverseProxyConstants.AclOwnerTypeGroup,
+                    OwnerName = ReverseProxyConstants.AclOwnerNameHttp,
                     PermissionType = ReverseProxyConstants.AclPermissionTypeAllow,
                     Permission = new()
                     {
@@ -225,13 +226,13 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
         }
 
         // Check for literal path traversal
-        if (path.Contains(".."))
+        if (path.Contains(ValidationConstants.PathTraversalLiteral))
         {
             return false;
         }
 
         // Check for URL-encoded path traversal (%2e = '.', %2f = '/')
         var lowerPath = path.ToLowerInvariant();
-        return !lowerPath.Contains("%2e") && !lowerPath.Contains("%2f");
+        return !lowerPath.Contains(ValidationConstants.PathTraversalEncodedDot) && !lowerPath.Contains(ValidationConstants.PathTraversalEncodedSlash);
     }
 }
