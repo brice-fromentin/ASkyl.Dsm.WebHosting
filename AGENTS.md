@@ -364,70 +364,37 @@ logger.LogWarning("Login failed for user: {Login}", login);
 
 ### Tooling-Enforced Patterns (No Manual Check Required)
 
-These patterns are automatically enforced by `dotnet format`. Trust the tooling:
+These patterns are automatically enforced by `dotnet format` or custom Roslyn analyzers. Trust the tooling:
 
 - **Using directives**: System first, then alphabetical; unused usings removed
 - **Primary constructors**: Mandatory for classes with constructor parameters
 - **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()` (only when target type is inferable — `var` takes precedence)
+- **String/String Pattern** (ADWH02001): `String.` for static members, `string` for types — enforced by `StringStaticMemberAnalyzer` with auto-fix
+- **Logger Call Compliance** (ADWH03001): No direct `logger.LogXxx()` calls — enforced by `LoggerDirectCallAnalyzer`
+- **Control Flow Blank Lines** (ADWH01001/01002): Blank lines before/after control flow — enforced by `BlankLineAnalyzer` with auto-fix
 
 ### Manual Checks Required (NOT Enforced by Tooling)
 
 These require manual verification BEFORE responding:
 
-1. **String/String Pattern** (CRITICAL — most frequently violated rule)
-   - Search for `string\.` in all modified files — every match is a violation
-   - Static members MUST use `String.` prefix: `String.Equals`, `String.IsNullOrWhiteSpace`, `String.Empty`, `String.Format`
-   - Type/variable usage MUST use lowercase `string`: `string name`, `Func<string>`
-
-2. **Magic Strings and Numbers**
+1. **Magic Strings and Numbers**
    - Have ALL hardcoded strings (e.g., "X-Location-Path") been replaced by constants?
    - Have ALL hardcoded numbers been replaced by constants?
    - Search for all string literals and numeric literals in modified code
 
-3. **Logger Call Compliance**
-   - Are ALL log calls using `[LoggerMessage]` extension methods (e.g., `logger.LoginFailed(login)`)?
-   - Are there ZERO direct calls to `logger.LogInformation()`, `logger.LogError()`, `logger.LogWarning()`, etc.?
-   - Do services inject `ILogger<ILogXxx>` (not bare `ILogger`)?
-
-4. **Control Flow Blank Lines** (CRITICAL — frequently violated)
-   - **BEFORE control flow:** blank line required before `if`, `else`, `foreach`, `for`, `while`, `switch`, `try`, `catch` — **unless** first in scope or preceded by a comment
-   - **AFTER control flow:** blank line required after the closing `}` — **unless** last in parent scope
-   - **NEVER** blank lines between individual statements inside a block
-   - **Search pattern:** scan every `if`, `else`, `foreach`, `for`, `while` — verify blank line before (if not first/comment) and after (if not last)
-
-   ```csharp
-   // ✅ CORRECT — blank line before control flow (not first in scope)
-   var x = GetValue();
-
-   if (condition)  // blank line above because not first
-   {
-       DoA();
-       DoB();       // NO blank line between statements
-   }
-
-   DoNext();        // blank line after complete control structure
-
-   // ❌ WRONG — missing blank line before control flow
-   var x = GetValue();
-   if (condition)   // missing blank line above!
-   {
-       DoSomething();
-   }
-   ```
-
-5. **Target-Typed `new` Expressions** (MANUAL CHECK)
+2. **Target-Typed `new` Expressions** (MANUAL CHECK)
    - Use target-typed `new` when type can be inferred: `new(1, 1)` instead of `new SemaphoreSlim(1, 1)`
    - **Exception:** When the variable name already includes the type name (e.g., `lockInstance` for `SemaphoreLock`), `var` is acceptable — the type is already evident
    - Applies to: local variables, fields, auto-properties, explicit interface implementations
    - Note: Analyzers (IDE0295/RCS1187) don't catch all cases (e.g., explicit interface properties), so manual verification is required
 
-6. **Markdown Documentation Validation** (when creating/modifying .md files)
+3. **Markdown Documentation Validation** (when creating/modifying .md files)
    - Run `markdownlint <file-path>` to validate markdown syntax and style
    - Fix ALL errors before responding (target: zero errors)
    - Common fixes: add language tags to code blocks, fix line lengths (>200 chars), add blank lines around headings/lists
    - Example: `markdownlint docs/ai/technical-architecture.md`
 
-### Common Manual Check Mistakes to Avoid
+### Common Analyzer Error Examples (for reference)
 
 **❌ WRONG: Blank lines inside control flow blocks**
 
@@ -490,9 +457,9 @@ if (header.Key == HttpHeaderNames.LocationPath)
 After EVERY code modification, you MUST:
 
 1. **Format immediately** - Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet`
-2. **Review manual checks** - Verify magic strings, logging style, control flow blank lines
-3. **Build immediately** - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
-4. **Fix any issues** - Do NOT respond until format, build, and manual checks pass
+2. **Build immediately** - Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx`
+3. **Fix any issues** - Do NOT respond until format and build pass (including analyzer errors ADWH01001, ADWH01002, ADWH02001, ADWH03001)
+4. **Review manual checks** - Verify magic strings/numbers only (blank lines, String/String pattern, and logger calls are enforced by analyzers)
 
 **FAILURE TO VERIFY IS UNACCEPTABLE.** Context compression does not excuse non-compliance. Always re-read AGENTS.md rules when in doubt.
 
@@ -505,27 +472,26 @@ After EVERY code modification, you MUST:
 - [ ] Read "Compliance Enforcement" section
 - [ ] Identify required constants (no magic strings/numbers)
 - [ ] Identify correct `[LoggerMessage]` extension method (or plan new one)
-- [ ] Review control flow blank line requirements
 - [ ] Review Git Safety Rules if git operations are needed
 
 ### During Writing
 
 - [ ] Use constants from `Askyl.Dsm.WebHosting.Constants` (create if needed)
 - [ ] Use `[LoggerMessage]` extension methods (no direct `ILogger` calls)
-- [ ] Add blank lines before/after control flow (not inside blocks)
 - [ ] Method declarations with ≤ 4 params on one line (unless > 200 chars)
 - [ ] Comments ONLY in English
 - [ ] Messages ONLY in English
 - [ ] Apply all architectural guidelines from `docs/ai/technical-architecture.md`
 - [ ] Trust `dotnet format` for: String/String pattern, using directives, primary constructors, collection expressions
+- [ ] Trust analyzers for: blank lines (ADWH01001/01002), String/String pattern (ADWH02001), logger calls (ADWH03001)
 
 ### After Writing
 
 - [ ] Run `dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet` (for C# changes)
 - [ ] Run `dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx` (for C# changes)
 - [ ] Verify no magic strings remain (MANUAL CHECK)
-- [ ] Verify no direct `ILogger` calls remain (MANUAL CHECK — use `[LoggerMessage]` extensions only)
-- [ ] Verify control flow blank lines (MANUAL CHECK)
+- [ ] Verify no direct `ILogger` calls remain (enforced by ADWH03001 analyzer)
+- [ ] Verify control flow blank lines (enforced by ADWH01001/01002 analyzers)
 - [ ] Verify method declarations with ≤ 4 params are on one line (unless > 200 chars) (MANUAL CHECK)
 - [ ] Validate English-only comments
 - [ ] Ensure successful build with no errors or warnings
@@ -535,10 +501,10 @@ After EVERY code modification, you MUST:
 
 - [ ] Format command executed (`dotnet format`) - for C# code
 - [ ] Build command executed with `/nr:false` flag - for C# code
-- [ ] **String/String pattern correct** — no `string\.` for static members (MANUAL)
+- [ ] **String/String pattern correct** — enforced by ADWH02001 analyzer
 - [ ] No magic strings/numbers in code (MANUAL)
-- [ ] No direct `ILogger` calls — all logging via `[LoggerMessage]` extensions (MANUAL)
-- [ ] **Control flow blank lines** — blank line before every `if/else/foreach/for/while` (unless first/comment) and after closing `}` (unless last) (MANUAL)
+- [ ] No direct `ILogger` calls — enforced by ADWH03001 analyzer
+- [ ] **Control flow blank lines** — enforced by ADWH01001/01002 analyzers
 - [ ] Method declarations with ≤ 4 params on one line (unless > 200 chars) (MANUAL)
 - [ ] Markdown validation passed (`markdownlint`) - for .md files
 - [ ] All comments/messages in English
