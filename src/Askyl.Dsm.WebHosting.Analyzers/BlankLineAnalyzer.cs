@@ -45,8 +45,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
             SyntaxKind.ForEachStatement,
             SyntaxKind.ForEachVariableStatement,
             SyntaxKind.SwitchStatement,
-            SyntaxKind.TryStatement,
-            SyntaxKind.CatchClause);
+            SyntaxKind.TryStatement);
     }
 
     static void AnalyzeNode(SyntaxNodeAnalysisContext context)
@@ -145,7 +144,6 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         ForEachStatementSyntax or ForEachVariableStatementSyntax => AnalyzerConstants.KeywordForeach,
         SwitchStatementSyntax => AnalyzerConstants.KeywordSwitch,
         TryStatementSyntax => AnalyzerConstants.KeywordTry,
-        CatchClauseSyntax => AnalyzerConstants.KeywordCatch,
         _ => node.ToString().Split('\n')[0]
     };
 
@@ -159,7 +157,6 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         ForEachVariableStatementSyntax forEachVarStmt => forEachVarStmt.ForEachKeyword.GetLocation(),
         SwitchStatementSyntax switchStmt => switchStmt.SwitchKeyword.GetLocation(),
         TryStatementSyntax tryStmt => tryStmt.TryKeyword.GetLocation(),
-        CatchClauseSyntax catchClause => catchClause.CatchKeyword.GetLocation(),
         _ => node.GetLocation()
     };
 

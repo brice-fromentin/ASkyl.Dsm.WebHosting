@@ -190,15 +190,12 @@ public class BlankLineAnalyzerTests
                 new DiagnosticResult(BlankLineAnalyzer.MissingBeforeId, DiagnosticSeverity.Error)
                     .WithSpan(6, 9, 6, 12)
                     .WithArguments("try"),
-                new DiagnosticResult(BlankLineAnalyzer.MissingBeforeId, DiagnosticSeverity.Error)
-                    .WithSpan(9, 9, 9, 14)
-                    .WithArguments("catch"),
             },
         }.RunAsync();
     }
 
     [Fact]
-    public async Task CatchClause_DetectsMissingBlankLineBefore()
+    public async Task TryCatch_NoDiagnosticBeforeCatch()
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
@@ -214,18 +211,9 @@ public class BlankLineAnalyzerTests
                         catch
                         {
                         }
-                        var x = 1;
                     }
                 }
                 """,
-            ExpectedDiagnostics = {
-                new DiagnosticResult(BlankLineAnalyzer.MissingBeforeId, DiagnosticSeverity.Error)
-                    .WithSpan(8, 9, 8, 14)
-                    .WithArguments("catch"),
-                new DiagnosticResult(BlankLineAnalyzer.MissingAfterId, DiagnosticSeverity.Error)
-                    .WithSpan(5, 9, 5, 12)
-                    .WithArguments("try"),
-            },
         }.RunAsync();
     }
 

@@ -21,5 +21,4 @@ static class AnalyzerConstants
     public const string KeywordForeach = "foreach";
     public const string KeywordSwitch = "switch";
     public const string KeywordTry = "try";
-    public const string KeywordCatch = "catch";
 }
