@@ -72,6 +72,7 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
                     logger.CultureResolvedFromLogin(match.Name);
                     targetCulture = match;
                 }
+
                 else
                 {
                     // Unsupported culture — fall back to system resolution (system → browser → default)
@@ -79,12 +80,14 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
                     logger.UserCultureUnsupported(culture, targetCulture.Name);
                 }
             }
+
             catch (CultureNotFoundException)
             {
                 // Invalid culture name from server — fall back to system resolution
                 targetCulture = ResolveSystemCulture();
                 logger.UserCultureUnsupported(culture, targetCulture.Name);
             }
+
             catch (ArgumentException)
             {
                 // Invalid culture name format — fall back to system resolution
@@ -92,6 +95,7 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
                 logger.UserCultureUnsupported(culture, targetCulture.Name);
             }
         }
+
         else
         {
             targetCulture = ResolveSystemCulture();
@@ -198,14 +202,17 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
         {
             return ParseSupportedCultures();
         }
+
         catch (JsonException)
         {
             return [GlobalizationConstants.DefaultCultureInfo];
         }
+
         catch (CultureNotFoundException)
         {
             return [GlobalizationConstants.DefaultCultureInfo];
         }
+
         catch (ArgumentException)
         {
             return [GlobalizationConstants.DefaultCultureInfo];
@@ -237,10 +244,12 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
         {
             return new(CultureInfo.CurrentUICulture.Name);
         }
+
         catch (CultureNotFoundException)
         {
             return GlobalizationConstants.DefaultCultureInfo;
         }
+
         catch (ArgumentException)
         {
             return GlobalizationConstants.DefaultCultureInfo;
@@ -253,10 +262,12 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
         {
             return ResolveSystemCultureFromEnv();
         }
+
         catch (CultureNotFoundException)
         {
             return null;
         }
+
         catch (ArgumentException)
         {
             return null;
@@ -282,6 +293,7 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
             await jsRuntime.InvokeVoidAsync("document.documentElement.setAttribute", "lang", culture.Name);
             await jsRuntime.InvokeVoidAsync("document.documentElement.setAttribute", "dir", culture.GetTextDirection());
         }
+
         catch (JSException)
         {
             // JS interop may fail during early startup (before DOM is ready) — non-critical, safe to ignore.
@@ -307,10 +319,12 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
                 dtfi.ShortDatePattern = dateFormat;
                 dtfi.LongDatePattern = dateFormat;
             }
+
             catch (FormatException)
             {
                 logger.InvalidDateFormatIgnored(dateFormat);
             }
+
             catch (NotSupportedException)
             {
                 logger.InvalidDateFormatIgnored(dateFormat);
@@ -325,10 +339,12 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
                 dtfi.ShortTimePattern = timeFormat;
                 dtfi.LongTimePattern = timeFormat;
             }
+
             catch (FormatException)
             {
                 logger.InvalidTimeFormatIgnored(timeFormat);
             }
+
             catch (NotSupportedException)
             {
                 logger.InvalidTimeFormatIgnored(timeFormat);

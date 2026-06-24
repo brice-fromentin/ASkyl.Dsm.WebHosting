@@ -161,6 +161,7 @@ public sealed class DownloaderService(ILogger<ILogDownloaderService> logger, Pla
             var size = new FileInfo(fullDestinationPath).Length;
             logger.DownloadCompleted(fullDestinationPath, size);
         }
+
         catch (Exception ex)
         {
             logger.DownloadFailed(ex, file.FileName);

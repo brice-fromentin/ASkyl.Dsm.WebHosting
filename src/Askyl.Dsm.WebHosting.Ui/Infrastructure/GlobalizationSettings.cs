@@ -62,6 +62,7 @@ public class GlobalizationSettings : IGlobalizationSettings
             {
                 cultures.Add(new(name));
             }
+
             catch (CultureNotFoundException)
             {
                 logger.CultureSkippedNotSupported(name);

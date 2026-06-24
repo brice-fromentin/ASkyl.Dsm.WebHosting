@@ -46,6 +46,7 @@ public static class PhpFormatToDotNetConverter
             {
                 result.Append(replacement);
             }
+
             else
             {
                 result.Append(ch);

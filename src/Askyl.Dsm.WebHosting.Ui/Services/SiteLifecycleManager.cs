@@ -205,6 +205,7 @@ public sealed class SiteLifecycleManager : IDisposable
             _logger.SiteStarted(_configuration.Name, _process.Id);
             return ApiResult.CreateSuccess();
         }
+
         catch (Exception ex)
         {
             _logger.FailedToStartSite(ex, _configuration.Name);
@@ -230,11 +231,13 @@ public sealed class SiteLifecycleManager : IDisposable
             _logger.SiteStopped(_configuration.Name);
             return ApiResult.CreateSuccess();
         }
+
         catch (Exception ex) when (ex is IOException or InvalidOperationException or Win32Exception)
         {
             _logger.SiteProcessNotFound(ex, _configuration.Name);
             return ApiResult.CreateSuccess();
         }
+
         catch (Exception ex)
         {
             _logger.FailedToStopSite(ex, _configuration.Name);
@@ -261,11 +264,13 @@ public sealed class SiteLifecycleManager : IDisposable
         if (_process?.HasExited == false)
         {
             _logger.ForceKillingProcessOnDispose(_configuration.Name);
+
             try
             {
                 _process.Kill();
                 await Task.Delay(WebSiteConstants.ProcessKillCleanupDelayMs).ConfigureAwait(false);
             }
+
             catch (Exception ex)
             {
                 _logger.FailedToKillProcessOnDispose(ex, _configuration.Name);
@@ -302,6 +307,7 @@ public sealed class SiteLifecycleManager : IDisposable
         {
             await process.WaitForExitAsync(timeoutCts.Token);
         }
+
         catch (OperationCanceledException)
         {
             if (!process.HasExited)
@@ -324,6 +330,7 @@ public sealed class SiteLifecycleManager : IDisposable
             process.Kill();
             await Task.Delay(WebSiteConstants.ProcessKillCleanupDelayMs, cancellationToken);
         }
+
         catch (Exception killEx)
         {
             _logger.FailedToForceKill(killEx, _configuration.Name);

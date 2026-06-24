@@ -59,6 +59,7 @@ public sealed partial class AssemblyRuntimeDetector(
 
             return new AssemblyRuntimeInfo(channel, isCompatible, null);
         }
+
         catch (Exception ex)
         {
             logger.FailedToReadAssembly(assemblyPath, ex);

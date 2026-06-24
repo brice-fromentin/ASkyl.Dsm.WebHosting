@@ -57,6 +57,7 @@ public class LicenseService(IHttpClientFactory httpClientFactory, ILogger<ILogLi
                 return new(Path.GetFileNameWithoutExtension(fileName), content);
             }
         }
+
         catch (Exception exception)
         {
             // Skip licenses that fail to load silently in production

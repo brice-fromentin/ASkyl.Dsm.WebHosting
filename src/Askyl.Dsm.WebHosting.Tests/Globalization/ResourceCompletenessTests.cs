@@ -21,6 +21,7 @@ public class ResourceCompletenessTests
         // Uses manifest inspection rather than GetResourceSet to avoid satellite assembly timing issues.
         var hasResource = assembly.GetManifestResourceNames()
             .Any(n => n.Contains("SharedResource"));
+
         if (!hasResource)
         {
             throw new InvalidOperationException("Embedded SharedResource not found — run a full build before executing resource completeness tests.");
@@ -72,6 +73,7 @@ public class ResourceCompletenessTests
             foreach (DictionaryEntry entry in reader)
             {
                 var value = entry.Value?.ToString();
+
                 if (String.IsNullOrWhiteSpace(value))
                 {
                     emptyKeys.Add(entry.Key.ToString()!);
@@ -154,6 +156,7 @@ public class ResourceCompletenessTests
         {
             using var stream = assembly.GetManifestResourceStream(resourceName)!;
             using var reader = new ResourceReader(stream);
+
             foreach (DictionaryEntry entry in reader)
             {
                 keys.Add(entry.Key.ToString()!);
@@ -171,6 +174,7 @@ public class ResourceCompletenessTests
         foreach (var field in type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.FlattenHierarchy))
         {
             var value = field.GetValue(null)?.ToString();
+
             if (!String.IsNullOrEmpty(value))
             {
                 keys.Add(value);

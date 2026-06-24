@@ -120,12 +120,14 @@ public class ReverseProxyManagerService(
         {
             await DeleteByUuidAsync((Guid)proxy.UUID, site.Name);
         }
+
         catch (Exception ex) when (IsNotFoundError(ex.Message))
         {
             // Already deleted externally - graceful handling
             logger.ReverseProxyAlreadyDeleted(site.Name);
             return; // Graceful no-op — duration logged on scope exit
         }
+
         catch (Exception ex)
         {
             logger.FailedToDeleteReverseProxy(ex, proxy.UUID, site.Name);

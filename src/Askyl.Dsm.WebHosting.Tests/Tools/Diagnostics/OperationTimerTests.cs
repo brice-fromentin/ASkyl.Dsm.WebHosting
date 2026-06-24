@@ -198,6 +198,7 @@ public class OperationTimerTests
                 throw new InvalidOperationException("Simulated failure");
             }
         }
+
         catch
         {
             // Expected

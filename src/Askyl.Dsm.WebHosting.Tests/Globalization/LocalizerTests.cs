@@ -18,6 +18,7 @@ public class LocalizerTests
     {
         // Arrange
         var original = CultureInfo.CurrentUICulture;
+
         try
         {
             CultureInfo.CurrentUICulture = new CultureInfo("en-US");
@@ -44,6 +45,7 @@ public class LocalizerTests
     {
         // Arrange
         var original = CultureInfo.CurrentUICulture;
+
         try
         {
             CultureInfo.CurrentUICulture = new CultureInfo("en-US");

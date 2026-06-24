@@ -36,6 +36,7 @@ public class TreeContentService(IFileSystemService fileSystemService, ILocalizer
             // All items are already directories - no filtering needed!
             return [.. contents.Select(f => CreateTreeViewItemWithLazyLoading(f.Path, f.Name, loadChildrenAsync))];
         }
+
         catch (Exception ex)
         {
             await errorHandler($"{localizer[LK.Error.FailedToLoadDirectoryContents]}: {ex.Message}");

@@ -255,6 +255,7 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         {
             Directory.Delete(_tempDir, recursive: true);
         }
+
         catch
         {
             // Best-effort cleanup

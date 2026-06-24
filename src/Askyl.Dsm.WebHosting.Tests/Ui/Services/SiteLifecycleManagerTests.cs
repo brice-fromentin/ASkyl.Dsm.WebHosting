@@ -69,6 +69,7 @@ public class SiteLifecycleManagerTests : IDisposable
         {
             Directory.Delete(_tempDir, recursive: true);
         }
+
         catch
         {
             // Best-effort

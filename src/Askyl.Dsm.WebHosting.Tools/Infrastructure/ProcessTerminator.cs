@@ -30,6 +30,7 @@ public static partial class ProcessTerminator
         {
             process.CloseMainWindow();
         }
+
         else
         {
             int result = SysKill(process.Id, SigtermSignal);

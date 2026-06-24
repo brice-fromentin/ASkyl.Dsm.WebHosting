@@ -28,6 +28,7 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.C
                 await AddFileToArchiveAsync(archive, LogConstants.DebugLogFilePath, LogConstants.LogArchiveDebugEntryPath);
                 logger.AddedDebugLogFile(LogConstants.DebugLogFilePath);
             }
+
             else
             {
                 logger.DebugLogNotFound(LogConstants.DebugLogFilePath);
@@ -52,6 +53,7 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.C
             await AddDirectoryToArchiveAsync(archive, directoryPath, entryPrefix);
             logger.AddedAppLog(logName, directoryPath, baseDirectory);
         }
+
         else
         {
             logger.AppLogDirectoryNotFound(logName, directoryPath, baseDirectory);

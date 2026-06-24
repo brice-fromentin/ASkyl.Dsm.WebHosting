@@ -57,6 +57,7 @@ public sealed class ArchiveExtractorService(IFileManagerService fileManager, ILo
                 {
                     Directory.CreateDirectory(absoluteTargetPath);
                 }
+
                 else
                 {
                     entry.ExtractToFile(absoluteTargetPath, true);
@@ -65,16 +66,19 @@ public sealed class ArchiveExtractorService(IFileManagerService fileManager, ILo
 
             logger.ArchiveExtracted(inputFile, targetDirectory);
         }
+
         catch (InvalidDataException exception)
         {
             logger.ArchiveExtractionCorrupted(exception, inputFile);
             throw;
         }
+
         catch (UnauthorizedAccessException exception)
         {
             logger.ArchiveExtractionPermissionDenied(exception, targetDirectory);
             throw;
         }
+
         catch (IOException exception)
         {
             logger.ArchiveExtractionIoError(exception, inputFile);

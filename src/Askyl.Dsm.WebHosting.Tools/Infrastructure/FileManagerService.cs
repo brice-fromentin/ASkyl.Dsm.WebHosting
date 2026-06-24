@@ -105,6 +105,7 @@ public sealed class FileManagerService(ILogger<ILogFileManagerService> logger, s
             logger.DeletingDirectory(path);
             Directory.Delete(path, true);
         }
+
         else
         {
             logger.DirectoryNotFoundSkippingDeletion(path);
