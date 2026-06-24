@@ -775,7 +775,16 @@ double-checked locking for thread-safe initialization.
 
 ---
 
-## 14. CONTEXT COMPRESSION WARNING (CRITICAL)
+## 14. EXECUTION ARCHITECTURE & SUB-AGENTS (SUPERPOWERS)
+
+CRITICAL: To prevent VRAM saturation (PCIe swap) on the local host, all tools, skills, and sub-agents MUST be executed sequentially.
+•	STRICT SEQUENTIAL EXECUTION: You must invoke exactly ONE tool, skill, or sub-agent per output turn.
+•	WAIT FOR FEEDBACK: You are strictly forbidden from guessing the output of a superpower skill. Await the system's explicit response before determining your next action.
+•	AVOID PARALLEL ARRAYS: Never group tool calls. Generate only the single function required for the immediate next step.
+	
+---
+
+## 15. CONTEXT COMPRESSION WARNING (CRITICAL)
 
 **If you detect that context has been compressed or session state reset:**
 
@@ -785,9 +794,10 @@ double-checked locking for thread-safe initialization.
 4. **Verify before responding** - Format → Build + manual checks compliance is mandatory
 
 **DO NOT rely on memory from previous tasks.** Context compression causes rule emphasis to fade. Always re-read AGENTS.md when in doubt or after any indication of context reset.
+AVOID PARALLEL ARRAYS: Never group tool calls. Generate only the single function required for the immediate next step.
 
 ---
 
-## 15. NON-COMPLIANCE CONSEQUENCES
+## 16. NON-COMPLIANCE CONSEQUENCES
 
 Failure to follow these instructions systematically is considered a critical error and must be corrected immediately.

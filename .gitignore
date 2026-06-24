@@ -8,6 +8,9 @@ Thumbs.db
 dist/
 *.spk
 
+# SuperPowers
+.superpowers/
+
 # Temporary files
 temp/
 *~
