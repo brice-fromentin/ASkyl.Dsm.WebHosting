@@ -23,7 +23,7 @@ public sealed class SiteLifecycleManager : IDisposable
     private readonly IProcessRunner _processRunner;
     private readonly IAssemblyRuntimeDetector _assemblyRuntimeDetector;
     private readonly WebSiteConfiguration _configuration;
-    private readonly Channel<LifecycleCommand> _channel = Channel.CreateBounded<LifecycleCommand>(new BoundedChannelOptions(16)
+    private readonly Channel<LifecycleCommand> _channel = Channel.CreateBounded<LifecycleCommand>(new BoundedChannelOptions(WebSiteConstants.CommandChannelCapacity)
     {
         FullMode = BoundedChannelFullMode.Wait,
         SingleReader = true,
@@ -61,6 +61,7 @@ public sealed class SiteLifecycleManager : IDisposable
         }
 
         var tcs = new TaskCompletionSource<ApiResult>();
+
         if (!_channel.Writer.TryWrite(new StartCommand(tcs)))
         {
             return ApiResult.CreateFailure(_localizer[LK.Error.FailedToQueueStart]);
@@ -82,6 +83,7 @@ public sealed class SiteLifecycleManager : IDisposable
         }
 
         var tcs = new TaskCompletionSource<ApiResult>();
+
         if (!_channel.Writer.TryWrite(new StopCommand(tcs, cancellationToken)))
         {
             return ApiResult.CreateFailure(_localizer[LK.Error.FailedToQueueStop]);
@@ -101,6 +103,7 @@ public sealed class SiteLifecycleManager : IDisposable
         }
 
         var tcs = new TaskCompletionSource<WebSiteRuntimeState>();
+
         if (!_channel.Writer.TryWrite(new GetStateCommand(tcs)))
         {
             return new WebSiteRuntimeState(false, null);
@@ -186,6 +189,7 @@ public sealed class SiteLifecycleManager : IDisposable
 
         // Detect and validate framework compatibility
         var runtimeInfo = _assemblyRuntimeDetector.Detect(_configuration.ApplicationRealPath);
+
         if (runtimeInfo is { IsCompatible: false })
         {
             var incompatibleMessage = _localizer[LK.Error.RuntimeNotInstalled, runtimeInfo.Channel];
@@ -292,7 +296,7 @@ public sealed class SiteLifecycleManager : IDisposable
         _logger.SentSigTerm(_configuration.Name, timeoutSeconds);
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(timeoutSeconds * 1000);
+        timeoutCts.CancelAfter(timeoutSeconds * WebSiteConstants.MillisecondsPerSecond);
 
         try
         {
@@ -302,7 +306,7 @@ public sealed class SiteLifecycleManager : IDisposable
         {
             if (!process.HasExited)
             {
-                _logger.ProcessWaitTimeout(_configuration.Name, process.Id, timeoutSeconds * 1000L);
+                _logger.ProcessWaitTimeout(_configuration.Name, process.Id, timeoutSeconds * WebSiteConstants.MillisecondsPerSecond);
                 await ForceKillProcessAsync(process, cancellationToken);
             }
         }
