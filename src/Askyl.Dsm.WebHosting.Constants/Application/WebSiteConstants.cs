@@ -38,6 +38,15 @@ public static class WebSiteConstants
 
     #endregion
 
+    #region Channel
+
+    /// <summary>
+    /// Maximum concurrent lifecycle commands per site.
+    /// </summary>
+    public const int CommandChannelCapacity = 16;
+
+    #endregion
+
     #region Process Lifecycle
 
     /// <summary>
@@ -59,6 +68,11 @@ public static class WebSiteConstants
     /// Delay in milliseconds to wait after process kill for OS cleanup.
     /// </summary>
     public const int ProcessKillCleanupDelayMs = 500;
+
+    /// <summary>
+    /// Milliseconds per second conversion factor.
+    /// </summary>
+    public const int MillisecondsPerSecond = 1000;
 
     #endregion
 

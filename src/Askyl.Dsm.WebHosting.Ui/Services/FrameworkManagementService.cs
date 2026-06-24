@@ -105,7 +105,7 @@ public class FrameworkManagementService(
         var installedResult = await dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);
         var installed = installedResult.Value ?? [];
 
-        var channelPrefix = configuredChannel + ".";
+        var channelPrefix = $"{configuredChannel}.";
 
         var releasesInChannel = installed.Where(f => f.Type == DotNetFrameworkTypes.AspNetCore && f.Version.StartsWith(channelPrefix, StringComparison.OrdinalIgnoreCase))
                                       .Select(f => f.Version)
