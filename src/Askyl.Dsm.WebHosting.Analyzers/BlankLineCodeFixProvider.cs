@@ -58,6 +58,10 @@ public class BlankLineCodeFixProvider : CodeFixProvider
         var newNode = node.WithLeadingTrivia(newTrivia);
         var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var newRoot = root?.ReplaceNode(node, newNode);
+
+        if (newRoot is null)
+            return document;
+
         return document.WithSyntaxRoot(newRoot);
     }
 
@@ -68,6 +72,10 @@ public class BlankLineCodeFixProvider : CodeFixProvider
         var newNode = node.WithTrailingTrivia(newTrivia);
         var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
         var newRoot = root?.ReplaceNode(node, newNode);
+
+        if (newRoot is null)
+            return document;
+
         return document.WithSyntaxRoot(newRoot);
     }
 }
