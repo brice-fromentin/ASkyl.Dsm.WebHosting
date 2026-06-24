@@ -129,7 +129,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
 
         HttpResponseMessage? response = null;
 
-        using var timer = new OperationTimer(elapsed => logger.ApiRequest(HttpMethod.Post.ToString(), url, (int)response!.StatusCode, elapsed));
+        using var timer = new OperationTimer(elapsed => logger.ApiRequest(request.Method.Method, url, (int)response!.StatusCode, elapsed));
 
         response = await _httpClient.SendAsync(request);
 
