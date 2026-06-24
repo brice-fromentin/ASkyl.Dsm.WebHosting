@@ -15,7 +15,7 @@ public class StringStaticMemberAnalyzer : DiagnosticAnalyzer
         id: DiagnosticId,
         title: Resources.ADWH02001_Title,
         messageFormat: Resources.ADWH02001_Message,
-        category: "Usage",
+        category: AnalyzerConstants.DiagnosticCategoryUsage,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: Resources.ADWH02001_Description);
@@ -33,17 +33,16 @@ public class StringStaticMemberAnalyzer : DiagnosticAnalyzer
     static void AnalyzeNode(SyntaxNodeAnalysisContext context)
     {
         var memberAccess = (MemberAccessExpressionSyntax)context.Node;
-
         var expression = memberAccess.Expression;
 
         if (expression is IdentifierNameSyntax identifier)
         {
-            if (identifier.Identifier.Text != "string")
+            if (identifier.Identifier.Text != AnalyzerConstants.StringKeyword)
                 return;
         }
         else if (expression is PredefinedTypeSyntax predefined)
         {
-            if (predefined.Keyword.Text != "string")
+            if (predefined.Keyword.Text != AnalyzerConstants.StringKeyword)
                 return;
         }
         else
@@ -56,7 +55,7 @@ public class StringStaticMemberAnalyzer : DiagnosticAnalyzer
         if (symbolInfo.Symbol is not INamedTypeSymbol typeSymbol)
             return;
 
-        if (!SymbolEqualityComparer.Default.Equals(typeSymbol, context.SemanticModel.Compilation.GetTypeByMetadataName("System.String")))
+        if (!SymbolEqualityComparer.Default.Equals(typeSymbol, context.SemanticModel.Compilation.GetTypeByMetadataName(AnalyzerConstants.StringTypeName)))
             return;
 
         var memberName = memberAccess.Name.Identifier.Text;

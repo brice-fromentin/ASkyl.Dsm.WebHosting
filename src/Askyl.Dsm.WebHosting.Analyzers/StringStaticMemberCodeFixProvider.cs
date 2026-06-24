@@ -50,10 +50,10 @@ public class StringStaticMemberCodeFixProvider : CodeFixProvider
 
     static bool IsStringExpression(ExpressionSyntax expression)
     {
-        if (expression is IdentifierNameSyntax id && id.Identifier.Text == "string")
+        if (expression is IdentifierNameSyntax id && id.Identifier.Text == AnalyzerConstants.StringKeyword)
             return true;
 
-        if (expression is PredefinedTypeSyntax predefined && predefined.Keyword.Text == "string")
+        if (expression is PredefinedTypeSyntax predefined && predefined.Keyword.Text == AnalyzerConstants.StringKeyword)
             return true;
 
         return false;

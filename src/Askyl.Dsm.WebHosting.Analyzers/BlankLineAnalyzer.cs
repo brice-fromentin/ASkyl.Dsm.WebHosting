@@ -16,7 +16,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         id: MissingBeforeId,
         title: Resources.ADWH01001_Title,
         messageFormat: Resources.ADWH01001_Message,
-        category: "Style",
+        category: AnalyzerConstants.DiagnosticCategoryStyle,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: Resources.ADWH01001_Description);
@@ -25,7 +25,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         id: MissingAfterId,
         title: Resources.ADWH01002_Title,
         messageFormat: Resources.ADWH01002_Message,
-        category: "Style",
+        category: AnalyzerConstants.DiagnosticCategoryStyle,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: Resources.ADWH01002_Description);
@@ -90,7 +90,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         if (IsPrecededByComment(elseKeyword))
             return;
 
-        var diagnostic = Diagnostic.Create(_missingBeforeRule, elseKeyword.GetLocation(), "else");
+        var diagnostic = Diagnostic.Create(_missingBeforeRule, elseKeyword.GetLocation(), AnalyzerConstants.KeywordElse);
         context.ReportDiagnostic(diagnostic);
     }
 
@@ -139,14 +139,14 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
 
     static string GetKeywordName(SyntaxNode node) => node switch
     {
-        IfStatementSyntax => "if",
-        WhileStatementSyntax => "while",
-        DoStatementSyntax => "do",
-        ForStatementSyntax => "for",
-        ForEachStatementSyntax or ForEachVariableStatementSyntax => "foreach",
-        SwitchStatementSyntax => "switch",
-        TryStatementSyntax => "try",
-        CatchClauseSyntax => "catch",
+        IfStatementSyntax => AnalyzerConstants.KeywordIf,
+        WhileStatementSyntax => AnalyzerConstants.KeywordWhile,
+        DoStatementSyntax => AnalyzerConstants.KeywordDo,
+        ForStatementSyntax => AnalyzerConstants.KeywordFor,
+        ForEachStatementSyntax or ForEachVariableStatementSyntax => AnalyzerConstants.KeywordForeach,
+        SwitchStatementSyntax => AnalyzerConstants.KeywordSwitch,
+        TryStatementSyntax => AnalyzerConstants.KeywordTry,
+        CatchClauseSyntax => AnalyzerConstants.KeywordCatch,
         _ => node.ToString().Split('\n')[0]
     };
 

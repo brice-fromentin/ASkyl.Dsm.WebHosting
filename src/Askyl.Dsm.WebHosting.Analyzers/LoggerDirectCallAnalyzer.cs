@@ -11,14 +11,11 @@ public class LoggerDirectCallAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "ADWH03001";
 
-    static readonly ImmutableHashSet<string> _forbiddenMethods =
-        ["Log", "LogInformation", "LogDebug", "LogWarning", "LogError", "LogCritical"];
-
     static readonly DiagnosticDescriptor s_rule = new(
         id: DiagnosticId,
         title: Resources.ADWH03001_Title,
         messageFormat: Resources.ADWH03001_Message,
-        category: "Usage",
+        category: AnalyzerConstants.DiagnosticCategoryUsage,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: Resources.ADWH03001_Description);
@@ -42,7 +39,7 @@ public class LoggerDirectCallAnalyzer : DiagnosticAnalyzer
 
         var methodName = memberAccess.Name.Identifier.Text;
 
-        if (!_forbiddenMethods.Contains(methodName))
+        if (!AnalyzerConstants.ForbiddenLoggerMethods.Contains(methodName))
             return;
 
         var semanticModel = context.SemanticModel;
@@ -53,7 +50,7 @@ public class LoggerDirectCallAnalyzer : DiagnosticAnalyzer
 
         var containingType = methodSymbol.ContainingType;
 
-        if (containingType.ToString() != "Microsoft.Extensions.Logging.ILogger")
+        if (containingType.ToString() != AnalyzerConstants.ILoggerFullName)
             return;
 
         var diagnostic = Diagnostic.Create(s_rule, memberAccess.Name.GetLocation(), methodName);
