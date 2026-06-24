@@ -90,7 +90,7 @@ The format command enforces ALL rules configured in `.editorconfig`:
 - ✅ **Using directives**: System first, then alphabetical; removes unused usings
 - ✅ **String/String pattern**: `string` for types/variables, `String.` for static members
 - ✅ **Primary constructors**: Mandatory for classes with constructor parameters
-- ✅ **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()`
+- ✅ **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()` (only when target type is inferable — `var` takes precedence)
 - ✅ **Braces**: Always use `{}` for control flow statements
 - ✅ **Blank lines**: After `#region`, before `#endregion`
 - ✅ **Naming conventions**: PascalCase for properties/methods, camelCase for parameters/locals
@@ -310,7 +310,7 @@ if (condition)  // Don't separate comment from code!
 - Use `var` with `[]` initializers when type is obvious from immediate context
 - Use explicit type declarations with `[]` when type clarity is needed
 - Always use `new()` when type can be inferred and constructor parameters are provided
-- Prefer collection expressions `[..]` over `.ToList()`, `.ToArray()` for materializing LINQ queries or spreading existing collections - enforced by dotnet format
+- Prefer collection expressions `[..]` over `.ToList()`, `.ToArray()` for materializing LINQ queries or spreading existing collections — **only when target type is inferable** (`var` takes precedence; `[..]` needs explicit type or return/parameter context) — enforced by dotnet format
 - **Keep parameterized constructors on DTOs/records** when they enable one-line declarations (e.g., `new AuthenticateLogin(login, password, otp)`) — do not remove them in favor of object initializers
 
 ### 6.5 Using Directives (Enforced by dotnet format)
@@ -368,7 +368,7 @@ These patterns are automatically enforced by `dotnet format`. Trust the tooling:
 
 - **Using directives**: System first, then alphabetical; unused usings removed
 - **Primary constructors**: Mandatory for classes with constructor parameters
-- **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()`
+- **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()` (only when target type is inferable — `var` takes precedence)
 
 ### Manual Checks Required (NOT Enforced by Tooling)
 
