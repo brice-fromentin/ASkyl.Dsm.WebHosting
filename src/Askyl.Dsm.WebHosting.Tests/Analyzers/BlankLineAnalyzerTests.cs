@@ -139,29 +139,7 @@ public class BlankLineAnalyzerTests
         }.RunAsync();
     }
 
-    [Fact]
-    public async Task ElseStatement_DetectsMissingBlankLineBefore()
-    {
-        await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
-        {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
-            MarkupOptions = MarkupOptions.UseFirstDescriptor,
-            TestCode = """
-                class C
-                {
-                    void M()
-                    {
-                        if (true)
-                        {
-                        }
-                        [|else|]
-                        {
-                        }
-                    }
-                }
-                """,
-        }.RunAsync();
-    }
+
 
     [Fact]
     public async Task ForeachStatement_DetectsMissingBlankLineBefore()

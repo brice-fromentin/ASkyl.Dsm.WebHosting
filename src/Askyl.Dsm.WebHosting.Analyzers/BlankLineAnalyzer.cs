@@ -57,7 +57,6 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         {
             case IfStatementSyntax ifStmt:
                 AnalyzeControlFlowStatement(context, ifStmt);
-                AnalyzeElseClause(context, ifStmt);
                 break;
 
             case TryStatementSyntax tryStmt:
@@ -74,30 +73,6 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     {
         AnalyzeBlankLineBefore(context, node);
         AnalyzeBlankLineAfter(context, node);
-    }
-
-    static void AnalyzeElseClause(SyntaxNodeAnalysisContext context, IfStatementSyntax ifStmt)
-    {
-        if (ifStmt.Else is null)
-        {
-            return;
-        }
-
-        var elseKeyword = ifStmt.Else.ElseKeyword;
-        var ifBody = ifStmt.Statement;
-
-        if (HasBlankLineBetween(ifBody, elseKeyword))
-        {
-            return;
-        }
-
-        if (IsPrecededByComment(elseKeyword))
-        {
-            return;
-        }
-
-        var diagnostic = Diagnostic.Create(_missingBeforeRule, elseKeyword.GetLocation(), AnalyzerConstants.KeywordElse);
-        context.ReportDiagnostic(diagnostic);
     }
 
     static void AnalyzeBlankLineBefore(SyntaxNodeAnalysisContext context, SyntaxNode node)

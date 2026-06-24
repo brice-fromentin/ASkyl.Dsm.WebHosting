@@ -15,7 +15,6 @@ static class AnalyzerConstants
         ["Log", "LogInformation", "LogDebug", "LogWarning", "LogError", "LogCritical"];
 
     public const string KeywordIf = "if";
-    public const string KeywordElse = "else";
     public const string KeywordWhile = "while";
     public const string KeywordDo = "do";
     public const string KeywordFor = "for";
