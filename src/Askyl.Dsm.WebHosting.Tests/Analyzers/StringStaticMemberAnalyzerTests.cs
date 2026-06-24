@@ -133,7 +133,7 @@ public class StringStaticMemberCodeFixTests
         await new CSharpCodeFixTest<StringStaticMemberAnalyzer, StringStaticMemberCodeFixProvider, DefaultVerifier>
         {
             ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
-      TestCode = """
+            TestCode = """
                  using System;
 
                  class C

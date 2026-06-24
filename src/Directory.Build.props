@@ -30,6 +30,11 @@
     <EnablePreviewFeatures>true</EnablePreviewFeatures>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- Suppress blank line analyzer until codebase is remediated -->
+    <NoWarn>$(NoWarn);ADWH01001;ADWH01002</NoWarn>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(MSBuildProjectName)' != 'Askyl.Dsm.WebHosting.Analyzers'">
     <ProjectReference Include="../Askyl.Dsm.WebHosting.Analyzers/Askyl.Dsm.WebHosting.Analyzers.csproj"
                       OutputItemType="Analyzer"
