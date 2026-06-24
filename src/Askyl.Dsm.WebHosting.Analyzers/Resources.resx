@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ADWH01001_Title" xml:space="preserve">
+    <value>Missing blank line before control flow statement</value>
+  </data>
+  <data name="ADWH01001_Message" xml:space="preserve">
+    <value>Add a blank line before '{0}' statement (unless first in scope or preceded by a comment)</value>
+  </data>
+  <data name="ADWH01001_Description" xml:space="preserve">
+    <value>Control flow statements (if, else, foreach, for, while, switch, try, catch) must be preceded by a blank line unless they are the first statement in their scope or immediately preceded by a comment.</value>
+  </data>
+  <data name="ADWH01002_Title" xml:space="preserve">
+    <value>Missing blank line after control flow statement</value>
+  </data>
+  <data name="ADWH01002_Message" xml:space="preserve">
+    <value>Add a blank line after the closing brace of '{0}' statement (unless last in scope)</value>
+  </data>
+  <data name="ADWH01002_Description" xml:space="preserve">
+    <value>Control flow statements must be followed by a blank line after their closing brace unless they are the last statement in their parent scope.</value>
+  </data>
+  <data name="ADWH02001_Title" xml:space="preserve">
+    <value>Use 'String.' for static member access</value>
+  </data>
+  <data name="ADWH02001_Message" xml:space="preserve">
+    <value>Use 'String.{0}' instead of 'string.{0}' for static member access</value>
+  </data>
+  <data name="ADWH02001_Description" xml:space="preserve">
+    <value>Static members of the String type must use the PascalCase 'String.' prefix (e.g., String.Equals, String.IsNullOrWhiteSpace) rather than the lowercase 'string.' keyword.</value>
+  </data>
+  <data name="ADWH03001_Title" xml:space="preserve">
+    <value>Do not call ILogger.LogXxx methods directly</value>
+  </data>
+  <data name="ADWH03001_Message" xml:space="preserve">
+    <value>Do not call 'ILogger.{0}' directly; use a [LoggerMessage] source-generated extension method instead</value>
+  </data>
+  <data name="ADWH03001_Description" xml:space="preserve">
+    <value>All logging must use [LoggerMessage] source-generated extension methods. Direct calls to ILogger.LogInformation(), ILogger.LogError(), ILogger.LogWarning(), ILogger.LogDebug(), ILogger.LogCritical(), and ILogger.Log() are forbidden.</value>
+  </data>
+</root>

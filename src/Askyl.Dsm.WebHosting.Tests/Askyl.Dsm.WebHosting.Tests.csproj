@@ -21,6 +21,11 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzer.Testing" Version="1.1.2" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" Version="1.1.2" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing" Version="1.1.2" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" Version="1.1.2" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.11.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,6 +35,7 @@
     <ProjectReference Include="..\Askyl.Dsm.WebHosting.Tools\Askyl.Dsm.WebHosting.Tools.csproj" />
     <ProjectReference Include="..\Askyl.Dsm.WebHosting.Ui\Askyl.Dsm.WebHosting.Ui.csproj" />
     <ProjectReference Include="..\Askyl.Dsm.WebHosting.Ui.Client\Askyl.Dsm.WebHosting.Ui.Client.csproj" />
+    <ProjectReference Include="..\Askyl.Dsm.WebHosting.Analyzers\Askyl.Dsm.WebHosting.Analyzers.csproj" />
   </ItemGroup>
 
   <ItemGroup>
