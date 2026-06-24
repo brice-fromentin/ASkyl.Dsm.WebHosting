@@ -40,18 +40,24 @@ public class LoggerDirectCallAnalyzer : DiagnosticAnalyzer
         var methodName = memberAccess.Name.Identifier.Text;
 
         if (!AnalyzerConstants.ForbiddenLoggerMethods.Contains(methodName))
+        {
             return;
+        }
 
         var semanticModel = context.SemanticModel;
         var symbolInfo = semanticModel.GetSymbolInfo(memberAccess);
 
         if (symbolInfo.Symbol is not IMethodSymbol methodSymbol)
+        {
             return;
+        }
 
         var containingType = methodSymbol.ContainingType;
 
         if (containingType.ToString() != AnalyzerConstants.ILoggerFullName)
+        {
             return;
+        }
 
         var diagnostic = Diagnostic.Create(s_rule, memberAccess.Name.GetLocation(), methodName);
         context.ReportDiagnostic(diagnostic);

@@ -31,7 +31,9 @@ public class StringStaticMemberCodeFixProvider : CodeFixProvider
             .FirstOrDefault(m => IsStringExpression(m.Expression));
 
         if (memberAccess is null)
+        {
             return;
+        }
 
         var newIdentifier = SyntaxFactory.Identifier("String")
             .WithLeadingTrivia(memberAccess.Expression.GetLeadingTrivia())
@@ -51,10 +53,14 @@ public class StringStaticMemberCodeFixProvider : CodeFixProvider
     static bool IsStringExpression(ExpressionSyntax expression)
     {
         if (expression is IdentifierNameSyntax id && id.Identifier.Text == AnalyzerConstants.StringKeyword)
+        {
             return true;
+        }
 
         if (expression is PredefinedTypeSyntax predefined && predefined.Keyword.Text == AnalyzerConstants.StringKeyword)
+        {
             return true;
+        }
 
         return false;
     }

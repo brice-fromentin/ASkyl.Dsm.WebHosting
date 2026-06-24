@@ -28,7 +28,9 @@ public class BlankLineCodeFixProvider : CodeFixProvider
         var node = root?.FindNode(diagnostic.Location.SourceSpan);
 
         if (node is null)
+        {
             return;
+        }
 
         if (diagnostic.Id == BlankLineAnalyzer.MissingBeforeId)
         {
@@ -60,7 +62,9 @@ public class BlankLineCodeFixProvider : CodeFixProvider
         var newRoot = root?.ReplaceNode(node, newNode);
 
         if (newRoot is null)
+        {
             return document;
+        }
 
         return document.WithSyntaxRoot(newRoot);
     }
@@ -74,7 +78,9 @@ public class BlankLineCodeFixProvider : CodeFixProvider
         var newRoot = root?.ReplaceNode(node, newNode);
 
         if (newRoot is null)
+        {
             return document;
+        }
 
         return document.WithSyntaxRoot(newRoot);
     }

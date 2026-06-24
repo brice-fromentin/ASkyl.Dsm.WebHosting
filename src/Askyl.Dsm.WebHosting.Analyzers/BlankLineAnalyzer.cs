@@ -79,16 +79,22 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     static void AnalyzeElseClause(SyntaxNodeAnalysisContext context, IfStatementSyntax ifStmt)
     {
         if (ifStmt.Else is null)
+        {
             return;
+        }
 
         var elseKeyword = ifStmt.Else.ElseKeyword;
         var ifBody = ifStmt.Statement;
 
         if (HasBlankLineBetween(ifBody, elseKeyword))
+        {
             return;
+        }
 
         if (IsPrecededByComment(elseKeyword))
+        {
             return;
+        }
 
         var diagnostic = Diagnostic.Create(_missingBeforeRule, elseKeyword.GetLocation(), AnalyzerConstants.KeywordElse);
         context.ReportDiagnostic(diagnostic);
@@ -98,17 +104,25 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     {
         var parent = node.Parent;
         if (parent is null)
+        {
             return;
+        }
 
         var previousSibling = GetPreviousStatement(node);
         if (previousSibling is null)
+        {
             return;
+        }
 
         if (HasBlankLineBetween(previousSibling, node))
+        {
             return;
+        }
 
         if (IsPrecededByComment(node))
+        {
             return;
+        }
 
         var keyword = GetKeywordName(node);
         var location = GetKeywordLocation(node);
@@ -121,14 +135,20 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     {
         var parent = node.Parent;
         if (parent is null)
+        {
             return;
+        }
 
         var nextSibling = GetNextStatement(node);
         if (nextSibling is null)
+        {
             return;
+        }
 
         if (HasBlankLineBetween(node, nextSibling))
+        {
             return;
+        }
 
         var keyword = GetKeywordName(node);
         var location = GetKeywordLocation(node);
@@ -168,7 +188,9 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     {
         var parent = node.Parent;
         if (parent is null)
+        {
             return null;
+        }
 
         if (parent is BlockSyntax block)
         {
@@ -182,11 +204,15 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
             for (var i = 0; i < catches.Count; i++)
             {
                 if (catches[i] == node)
+                {
                     return i > 0 ? catches[i - 1] : tryStmt.Block;
+                }
             }
 
             if (tryStmt.Finally is not null && tryStmt.Finally.Block == node)
+            {
                 return tryStmt.Catches.Count > 0 ? tryStmt.Catches[tryStmt.Catches.Count - 1] : tryStmt.Block;
+            }
         }
 
         return null;
@@ -196,7 +222,9 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     {
         var parent = node.Parent;
         if (parent is null)
+        {
             return null;
+        }
 
         if (parent is BlockSyntax block)
         {
@@ -227,10 +255,14 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         foreach (var trivia in leadingTrivia)
         {
             if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
+            {
                 return true;
+            }
 
             if (trivia.IsKind(SyntaxKind.EndOfLineTrivia))
+            {
                 return false;
+            }
         }
 
         return false;
@@ -242,10 +274,14 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         foreach (var trivia in leadingTrivia)
         {
             if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
+            {
                 return true;
+            }
 
             if (trivia.IsKind(SyntaxKind.EndOfLineTrivia))
+            {
                 return false;
+            }
         }
 
         return false;

@@ -38,12 +38,16 @@ public class StringStaticMemberAnalyzer : DiagnosticAnalyzer
         if (expression is IdentifierNameSyntax identifier)
         {
             if (identifier.Identifier.Text != AnalyzerConstants.StringKeyword)
+            {
                 return;
+            }
         }
         else if (expression is PredefinedTypeSyntax predefined)
         {
             if (predefined.Keyword.Text != AnalyzerConstants.StringKeyword)
+            {
                 return;
+            }
         }
         else
         {
@@ -53,10 +57,14 @@ public class StringStaticMemberAnalyzer : DiagnosticAnalyzer
         var symbolInfo = context.SemanticModel.GetSymbolInfo(expression);
 
         if (symbolInfo.Symbol is not INamedTypeSymbol typeSymbol)
+        {
             return;
+        }
 
         if (!SymbolEqualityComparer.Default.Equals(typeSymbol, context.SemanticModel.Compilation.GetTypeByMetadataName(AnalyzerConstants.StringTypeName)))
+        {
             return;
+        }
 
         var memberName = memberAccess.Name.Identifier.Text;
         context.ReportDiagnostic(Diagnostic.Create(s_rule, memberAccess.Name.GetLocation(), memberName));
