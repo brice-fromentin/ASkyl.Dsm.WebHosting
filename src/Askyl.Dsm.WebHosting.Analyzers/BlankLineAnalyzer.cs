@@ -78,12 +78,14 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     static void AnalyzeBlankLineBefore(SyntaxNodeAnalysisContext context, SyntaxNode node)
     {
         var parent = node.Parent;
+
         if (parent is null)
         {
             return;
         }
 
         var previousSibling = GetPreviousStatement(node);
+
         if (previousSibling is null)
         {
             return;
@@ -109,12 +111,14 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     static void AnalyzeBlankLineAfter(SyntaxNodeAnalysisContext context, SyntaxNode node)
     {
         var parent = node.Parent;
+
         if (parent is null)
         {
             return;
         }
 
         var nextSibling = GetNextStatement(node);
+
         if (nextSibling is null)
         {
             return;
@@ -162,6 +166,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     static SyntaxNode? GetPreviousStatement(SyntaxNode node)
     {
         var parent = node.Parent;
+
         if (parent is null)
         {
             return null;
@@ -176,6 +181,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         if (parent is TryStatementSyntax tryStmt)
         {
             var catches = tryStmt.Catches;
+
             for (var i = 0; i < catches.Count; i++)
             {
                 if (catches[i] == node)
@@ -196,6 +202,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     static SyntaxNode? GetNextStatement(SyntaxNode node)
     {
         var parent = node.Parent;
+
         if (parent is null)
         {
             return null;
@@ -227,6 +234,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     static bool IsPrecededByComment(SyntaxNode node)
     {
         var leadingTrivia = node.GetLeadingTrivia();
+
         foreach (var trivia in leadingTrivia)
         {
             if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
@@ -246,6 +254,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     static bool IsPrecededByComment(SyntaxToken token)
     {
         var leadingTrivia = token.LeadingTrivia;
+
         foreach (var trivia in leadingTrivia)
         {
             if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
