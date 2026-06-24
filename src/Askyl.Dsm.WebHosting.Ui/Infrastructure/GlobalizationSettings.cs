@@ -15,7 +15,7 @@ public class GlobalizationSettings : IGlobalizationSettings
     public GlobalizationSettings(ILogger<ILogGlobalizationSettings> logger)
     {
         SupportedCultures = DiscoverSupportedCultures(logger);
-        SupportedCultureNamesJson = JsonSerializer.Serialize((string[])[.. SupportedCultures.Select(c => c.Name)]);
+        SupportedCultureNamesJson = JsonSerializer.Serialize(SupportedCultures.Select(c => c.Name).ToArray());
     }
 
     public CultureInfo[] SupportedCultures { get; }
