@@ -128,7 +128,6 @@ if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
 }
-
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);

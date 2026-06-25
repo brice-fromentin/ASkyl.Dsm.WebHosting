@@ -71,7 +71,6 @@ public sealed class SemaphoreLock : IDisposable
 
             return lockInstance;
         }
-
         catch
         {
             // Dispose on any exception to prevent semaphore leak during initialization

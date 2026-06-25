@@ -39,7 +39,6 @@ public class FrameworkManagementService(
             logger.FrameworkInstalled(version);
             return InstallationResult.CreateSuccess(localizer[LK.Success.InstallationCompleted]);
         }
-
         catch (Exception ex)
         {
             logger.FrameworkInstallError(ex, version);
@@ -77,19 +76,16 @@ public class FrameworkManagementService(
             logger.FrameworkUninstalled(version);
             return InstallationResult.CreateSuccess(localizer[LK.Success.UninstallationCompleted]);
         }
-
         catch (LastReleaseUninstallException ex)
         {
             logger.UninstallFailed(ex.Message);
             return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
-
         catch (MissingChannelConfigurationException ex)
         {
             logger.UninstallFailed(ex.Message);
             return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
-
         catch (Exception ex)
         {
             logger.FrameworkUninstallError(ex, version);

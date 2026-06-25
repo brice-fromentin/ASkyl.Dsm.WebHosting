@@ -61,7 +61,6 @@ internal sealed class SystemProcessHandle(ILogger<ILogSystemProcessHandle> logge
         {
             ProcessTerminator.SendGracefulShutdownSignal(process);
         }
-
         catch (Exception ex)
         {
             logger.FailedToTerminateProcess(ex, process.Id);

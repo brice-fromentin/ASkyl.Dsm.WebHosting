@@ -107,7 +107,6 @@ public class WebSiteHostingService(
 
             return result;
         }
-
         catch (Exception ex)
         {
             logger.ErrorAddingWebsite(ex, configuration.Name);
@@ -165,7 +164,6 @@ public class WebSiteHostingService(
             // STEP 5: Detect framework from assembly and warn if incompatible
             return AttachRuntimeInfo(existingInstance, configuration.ApplicationRealPath);
         }
-
         catch (Exception ex)
         {
             logger.ErrorUpdatingWebsite(ex, configuration.Name);
@@ -244,7 +242,6 @@ public class WebSiteHostingService(
         {
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
-
         catch (OperationCanceledException)
         {
             // Expected when service is stopping
@@ -405,7 +402,6 @@ public class WebSiteHostingService(
             logger.InstanceRemoved(siteName);
             return ApiResult.CreateSuccess();
         }
-
         catch (Exception ex)
         {
             logger.FailedToRemoveSite(ex, siteName);
@@ -488,7 +484,6 @@ public class WebSiteHostingService(
             logger.ReverseProxyRuleCreated(configuration.Name);
             return ApiResult.CreateSuccess();
         }
-
         catch (Exception ex)
         {
             logger.FailedToCreateReverseProxyRule(ex, configuration.Name);
@@ -509,7 +504,6 @@ public class WebSiteHostingService(
             logger.ReverseProxyRuleUpdated(configuration.Name);
             return ApiResult.CreateSuccess();
         }
-
         catch (Exception ex)
         {
             logger.FailedToUpdateReverseProxyRule(ex, configuration.Name);
@@ -530,7 +524,6 @@ public class WebSiteHostingService(
             logger.ReverseProxyRuleDeleted(configuration.Name);
             return ApiResult.CreateSuccess();
         }
-
         catch (Exception ex)
         {
             logger.FailedToDeleteReverseProxyRule(ex, configuration.Name);

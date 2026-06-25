@@ -143,7 +143,6 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         {
             _session.SetString(key, value);
         }
-
         else
         {
             _session.Remove(key);
@@ -191,7 +190,6 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
                 UserTimeFormat = timeFormat;
             }
         }
-
         catch (Exception ex)
         {
             logger.FetchUserPreferencesFailed(ex.Message);

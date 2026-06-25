@@ -43,12 +43,10 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger) :
 
             return new DsmSystemPreferences(server, port, language);
         }
-
         catch (InvalidOperationException)
         {
             throw;
         }
-
         catch (Exception ex)
         {
             logger.SettingsReadFailed(ex.Message);

@@ -34,7 +34,6 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
 
             return SharedFoldersResult.CreateSuccess([.. sharedFolders.Select(CreateFsEntry)]);
         }
-
         catch (Exception ex)
         {
             logger.ErrorRetrievingSharedFolders(ex);
@@ -79,7 +78,6 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
 
             return DirectoryContentsResult.CreateSuccess(allContents);
         }
-
         catch (Exception ex)
         {
             logger.ErrorRetrievingDirectory(ex, path);

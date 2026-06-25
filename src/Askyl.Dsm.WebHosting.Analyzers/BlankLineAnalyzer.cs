@@ -11,6 +11,8 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
 {
     public const string MissingBeforeId = "ADWH01001";
     public const string MissingAfterId = "ADWH01002";
+    public const string ExtraBeforeElseId = "ADWH01003";
+    public const string ExtraBeforeCatchId = "ADWH01004";
 
     static readonly DiagnosticDescriptor _missingBeforeRule = new(
         id: MissingBeforeId,
@@ -30,8 +32,26 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: Resources.ADWH01002_Description);
 
+    static readonly DiagnosticDescriptor _extraBeforeElseRule = new(
+        id: ExtraBeforeElseId,
+        title: Resources.ADWH01003_Title,
+        messageFormat: Resources.ADWH01003_Message,
+        category: AnalyzerConstants.DiagnosticCategoryStyle,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: Resources.ADWH01003_Description);
+
+    static readonly DiagnosticDescriptor _extraBeforeCatchRule = new(
+        id: ExtraBeforeCatchId,
+        title: Resources.ADWH01004_Title,
+        messageFormat: Resources.ADWH01004_Message,
+        category: AnalyzerConstants.DiagnosticCategoryStyle,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: Resources.ADWH01004_Description);
+
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [_missingBeforeRule, _missingAfterRule];
+        [_missingBeforeRule, _missingAfterRule, _extraBeforeElseRule, _extraBeforeCatchRule];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -56,10 +76,12 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         {
             case IfStatementSyntax ifStmt:
                 AnalyzeControlFlowStatement(context, ifStmt);
+                AnalyzeElseBlankLine(context, ifStmt);
                 break;
 
             case TryStatementSyntax tryStmt:
                 AnalyzeControlFlowStatement(context, tryStmt);
+                AnalyzeCatchBlankLines(context, tryStmt);
                 break;
 
             default:
@@ -133,6 +155,76 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
 
         var diagnostic = Diagnostic.Create(_missingAfterRule, location, keyword);
         context.ReportDiagnostic(diagnostic);
+    }
+
+    static void AnalyzeElseBlankLine(SyntaxNodeAnalysisContext context, IfStatementSyntax ifStmt)
+    {
+        var elseClause = ifStmt.Else;
+
+        if (elseClause is null)
+        {
+            return;
+        }
+
+        var elseKeyword = elseClause.ElseKeyword;
+
+        if (!HasBlankLineBetween(ifStmt.Statement, elseKeyword))
+        {
+            return;
+        }
+
+        var diagnostic = Diagnostic.Create(_extraBeforeElseRule, elseKeyword.GetLocation());
+        context.ReportDiagnostic(diagnostic);
+    }
+
+    static void AnalyzeCatchBlankLines(SyntaxNodeAnalysisContext context, TryStatementSyntax tryStmt)
+    {
+        var catches = tryStmt.Catches;
+
+        if (catches.Count == 0)
+        {
+            return;
+        }
+
+        // Check blank line between try block and first catch
+        if (HasBlankLineBetween(tryStmt.Block, catches[0].CatchKeyword))
+        {
+            var diagnostic = Diagnostic.Create(_extraBeforeCatchRule, catches[0].CatchKeyword.GetLocation());
+            context.ReportDiagnostic(diagnostic);
+        }
+
+        // Check blank line between consecutive catch blocks
+        for (var i = 1; i < catches.Count; i++)
+        {
+            var previousCatch = catches[i - 1];
+            var currentCatch = catches[i];
+
+            if (HasBlankLineBetween(previousCatch.Block, currentCatch.CatchKeyword))
+            {
+                var diagnostic = Diagnostic.Create(_extraBeforeCatchRule, currentCatch.CatchKeyword.GetLocation());
+                context.ReportDiagnostic(diagnostic);
+            }
+        }
+
+        // Check blank line between last catch and finally
+        if (tryStmt.Finally is not null && catches.Count > 0)
+        {
+            var lastCatch = catches[catches.Count - 1];
+
+            if (HasBlankLineBetween(lastCatch.Block, tryStmt.Finally.FinallyKeyword))
+            {
+                var diagnostic = Diagnostic.Create(_extraBeforeCatchRule, tryStmt.Finally.FinallyKeyword.GetLocation());
+                context.ReportDiagnostic(diagnostic);
+            }
+        }
+        else if (tryStmt.Finally is not null)
+        {
+            if (HasBlankLineBetween(tryStmt.Block, tryStmt.Finally.FinallyKeyword))
+            {
+                var diagnostic = Diagnostic.Create(_extraBeforeCatchRule, tryStmt.Finally.FinallyKeyword.GetLocation());
+                context.ReportDiagnostic(diagnostic);
+            }
+        }
     }
 
     static string GetKeywordName(SyntaxNode node) => node switch

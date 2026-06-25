@@ -65,7 +65,6 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
             File.WriteAllText(testPath, "");
             File.Delete(testPath);
         }
-
         catch (UnauthorizedAccessException ex)
         {
             throw new UnauthorizedAccessException($"Insufficient permissions to write to application directory: {baseDirectory}", ex);
@@ -108,7 +107,6 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
             logger.ConfigurationLoadedSuccessfully(collection.Sites.Count);
             return collection;
         }
-
         catch (JsonException jsonEx)
         {
             logger.ConfigurationCorrupted(jsonEx);
@@ -116,7 +114,6 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
             await HandleCorruptedConfigurationAsync();
             return new();
         }
-
         catch (Exception ex)
         {
             logger.FailedToLoadConfiguration(ex, _configurationFilePath);
@@ -135,7 +132,6 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
 
             logger.ConfigurationSaved(_configurationFilePath);
         }
-
         catch (Exception ex)
         {
             logger.FailedToSaveConfiguration(ex, _configurationFilePath);
@@ -155,7 +151,6 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
             File.Move(_configurationFilePath, backupPath);
             logger.ConfigurationBackedUp(backupPath);
         }
-
         catch (Exception backupEx)
         {
             logger.FailedToCreateBackup(backupEx);

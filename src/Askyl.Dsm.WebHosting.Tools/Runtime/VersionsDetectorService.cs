@@ -110,14 +110,12 @@ public sealed partial class VersionsDetectorService(ILogger<ILogVersionsDetector
                 newFrameworks = ParseDotnetInfo(output);
                 logger.FrameworkCacheRefreshed(newFrameworks.Count);
             }
-
             else
             {
                 logger.DotnetInfoEmptyOutput();
                 return;  // Preserve existing cache on empty output
             }
         }
-
         catch (Exception ex)
         {
             logger.FailedToRefreshFrameworkCache(ex);
@@ -197,12 +195,10 @@ public sealed partial class VersionsDetectorService(ILogger<ILogVersionsDetector
         {
             return DotnetInfoParserConstants.FrameworkTypeSdk;
         }
-
         else if (trimmedLine.StartsWith(DotnetInfoParserConstants.RuntimeSectionHeader))
         {
             return DotnetInfoParserConstants.FrameworkTypeRuntime;
         }
-
         else if (trimmedLine.StartsWith(DotnetInfoParserConstants.MainSdkSectionHeader))
         {
             // Main SDK base section
@@ -220,7 +216,6 @@ public sealed partial class VersionsDetectorService(ILogger<ILogVersionsDetector
             // Format: "  9.0.300 [/usr/local/share/dotnet/sdk]"
             TryAddFrameworkFromRegex(frameworks, SdkVersionRegex(), trimmedLine, DotnetInfoParserConstants.FrameworkTypeSdk);
         }
-
         else if (currentSection == DotnetInfoParserConstants.FrameworkTypeRuntime)
         {
             // Format: "  Microsoft.AspNetCore.App 9.0.5 [/usr/local/share/dotnet/shared/Microsoft.AspNetCore.App]"
@@ -228,13 +223,11 @@ public sealed partial class VersionsDetectorService(ILogger<ILogVersionsDetector
             {
                 TryAddFrameworkFromRegex(frameworks, AspNetCoreVersionRegex(), trimmedLine, DotnetInfoParserConstants.FrameworkTypeAspNetCore);
             }
-
             else if (trimmedLine.Contains(DotnetInfoParserConstants.NetCoreProductName))
             {
                 TryAddFrameworkFromRegex(frameworks, NetCoreVersionRegex(), trimmedLine, DotnetInfoParserConstants.FrameworkTypeRuntime);
             }
         }
-
         else if (currentSection == DotnetInfoParserConstants.FrameworkTypeMainSdk)
         {
             // Format: " Version:           9.0.301"

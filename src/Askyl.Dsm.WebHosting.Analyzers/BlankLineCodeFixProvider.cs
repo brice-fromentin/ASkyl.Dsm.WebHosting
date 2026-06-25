@@ -15,9 +15,11 @@ public class BlankLineCodeFixProvider : CodeFixProvider
 {
     public const string AddBeforeTitle = "Add blank line before statement";
     public const string AddAfterTitle = "Add blank line after statement";
+    public const string RemoveBeforeElseTitle = "Remove blank line before 'else'";
+    public const string RemoveBeforeCatchTitle = "Remove blank line before 'catch'";
 
     public sealed override ImmutableArray<string> FixableDiagnosticIds =>
-        [BlankLineAnalyzer.MissingBeforeId, BlankLineAnalyzer.MissingAfterId];
+        [BlankLineAnalyzer.MissingBeforeId, BlankLineAnalyzer.MissingAfterId, BlankLineAnalyzer.ExtraBeforeElseId, BlankLineAnalyzer.ExtraBeforeCatchId];
 
     public sealed override FixAllProvider? GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
@@ -48,6 +50,24 @@ public class BlankLineCodeFixProvider : CodeFixProvider
                     AddAfterTitle,
                     _ => AddBlankLineAfterAsync(context.Document, node, context.CancellationToken),
                     AddAfterTitle),
+                diagnostic);
+        }
+        else if (diagnostic.Id == BlankLineAnalyzer.ExtraBeforeElseId)
+        {
+            context.RegisterCodeFix(
+                CodeAction.Create(
+                    RemoveBeforeElseTitle,
+                    _ => RemoveBlankLineBeforeAsync(context.Document, node),
+                    RemoveBeforeElseTitle),
+                diagnostic);
+        }
+        else if (diagnostic.Id == BlankLineAnalyzer.ExtraBeforeCatchId)
+        {
+            context.RegisterCodeFix(
+                CodeAction.Create(
+                    RemoveBeforeCatchTitle,
+                    _ => RemoveBlankLineBeforeAsync(context.Document, node),
+                    RemoveBeforeCatchTitle),
                 diagnostic);
         }
     }
@@ -83,5 +103,109 @@ public class BlankLineCodeFixProvider : CodeFixProvider
         }
 
         return document.WithSyntaxRoot(newRoot);
+    }
+
+    static async Task<Document> RemoveBlankLineBeforeAsync(Document document, SyntaxNode node)
+    {
+        var root = await document.GetSyntaxRootAsync().ConfigureAwait(false);
+
+        if (root is null)
+        {
+            return document;
+        }
+
+        // Find the previous sibling statement
+        var parent = node.Parent;
+
+        if (parent is BlockSyntax block)
+        {
+            var index = block.Statements.IndexOf((StatementSyntax)node);
+
+            if (index > 0)
+            {
+                var previousStatement = block.Statements[index - 1];
+                var previousTrailing = previousStatement.GetTrailingTrivia();
+                var newTrailing = RemoveTrailingBlankLine(previousTrailing);
+
+                if (newTrailing != previousTrailing)
+                {
+                    var newPrevious = previousStatement.WithTrailingTrivia(newTrailing);
+                    var newRoot = root.ReplaceNode(previousStatement, newPrevious);
+                    return document.WithSyntaxRoot(newRoot);
+                }
+            }
+        }
+        else if (parent is IfStatementSyntax ifStmt && node is ElseClauseSyntax elseClause)
+        {
+            // For else, the previous node is the if statement body
+            var ifBody = ifStmt.Statement;
+            var ifBodyTrailing = ifBody.GetTrailingTrivia();
+            var newIfBodyTrailing = RemoveTrailingBlankLine(ifBodyTrailing);
+
+            if (newIfBodyTrailing != ifBodyTrailing)
+            {
+                var newIfBody = ifBody.WithTrailingTrivia(newIfBodyTrailing);
+                var newIfStmt = ifStmt.WithStatement(newIfBody);
+                var newRoot = root.ReplaceNode(ifStmt, newIfStmt);
+                return document.WithSyntaxRoot(newRoot);
+            }
+        }
+        else if (parent is TryStatementSyntax tryStmt)
+        {
+            // For catch/finally, find the previous catch/finally or try body
+            SyntaxNode? previousNode = null;
+
+            if (node is CatchClauseSyntax catchClause)
+            {
+                var index = tryStmt.Catches.IndexOf(catchClause);
+
+                if (index > 0)
+                {
+                    previousNode = tryStmt.Catches[index - 1];
+                }
+                else
+                {
+                    previousNode = tryStmt.Block;
+                }
+            }
+            else if (node is FinallyClauseSyntax finallyClause)
+            {
+                previousNode = tryStmt.Catches.Count > 0 ? tryStmt.Catches[tryStmt.Catches.Count - 1] : tryStmt.Block;
+            }
+
+            if (previousNode is not null)
+            {
+                var previousTrailing = previousNode.GetTrailingTrivia();
+                var newTrailing = RemoveTrailingBlankLine(previousTrailing);
+
+                if (newTrailing != previousTrailing)
+                {
+                    var newPrevious = previousNode.WithTrailingTrivia(newTrailing);
+                    var newRoot = root.ReplaceNode(previousNode, newPrevious);
+                    return document.WithSyntaxRoot(newRoot);
+                }
+            }
+        }
+
+        return document;
+    }
+
+    static SyntaxTriviaList RemoveTrailingBlankLine(SyntaxTriviaList trivia)
+    {
+        // Find the first consecutive EndOfLine at the end and remove all but one
+        var i = trivia.Count - 1;
+
+        while (i >= 0 && trivia[i].IsKind(SyntaxKind.EndOfLineTrivia))
+        {
+            i--;
+        }
+
+        // If we found more than one EndOfLine at the end, keep only one
+        if (i < trivia.Count - 2)
+        {
+            return SyntaxFactory.TriviaList(trivia.Take(i + 1).Append(SyntaxFactory.EndOfLine("\n")));
+        }
+
+        return trivia;
     }
 }

@@ -38,6 +38,12 @@ internal static class Resources
     internal static string ADWH01002_Title => ResourceManager.GetString(nameof(ADWH01002_Title), Culture)!;
     internal static string ADWH01002_Message => ResourceManager.GetString(nameof(ADWH01002_Message), Culture)!;
     internal static string ADWH01002_Description => ResourceManager.GetString(nameof(ADWH01002_Description), Culture)!;
+    internal static string ADWH01003_Title => ResourceManager.GetString(nameof(ADWH01003_Title), Culture)!;
+    internal static string ADWH01003_Message => ResourceManager.GetString(nameof(ADWH01003_Message), Culture)!;
+    internal static string ADWH01003_Description => ResourceManager.GetString(nameof(ADWH01003_Description), Culture)!;
+    internal static string ADWH01004_Title => ResourceManager.GetString(nameof(ADWH01004_Title), Culture)!;
+    internal static string ADWH01004_Message => ResourceManager.GetString(nameof(ADWH01004_Message), Culture)!;
+    internal static string ADWH01004_Description => ResourceManager.GetString(nameof(ADWH01004_Description), Culture)!;
     internal static string ADWH02001_Title => ResourceManager.GetString(nameof(ADWH02001_Title), Culture)!;
     internal static string ADWH02001_Message => ResourceManager.GetString(nameof(ADWH02001_Message), Culture)!;
     internal static string ADWH02001_Description => ResourceManager.GetString(nameof(ADWH02001_Description), Culture)!;

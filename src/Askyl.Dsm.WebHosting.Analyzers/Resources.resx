@@ -76,6 +76,24 @@
   <data name="ADWH01002_Description" xml:space="preserve">
     <value>Control flow statements must be followed by a blank line after their closing brace unless they are the last statement in their parent scope.</value>
   </data>
+  <data name="ADWH01003_Title" xml:space="preserve">
+    <value>Extra blank line before 'else' keyword</value>
+  </data>
+  <data name="ADWH01003_Message" xml:space="preserve">
+    <value>Remove blank line before 'else' keyword to keep if-else pair visually connected</value>
+  </data>
+  <data name="ADWH01003_Description" xml:space="preserve">
+    <value>Do not add a blank line between an 'if' block's closing brace and its 'else' keyword. The blank line visually disconnects the if-else pair.</value>
+  </data>
+  <data name="ADWH01004_Title" xml:space="preserve">
+    <value>Extra blank line before 'catch' keyword</value>
+  </data>
+  <data name="ADWH01004_Message" xml:space="preserve">
+    <value>Remove blank line before 'catch' keyword to keep try-catch pair visually connected</value>
+  </data>
+  <data name="ADWH01004_Description" xml:space="preserve">
+    <value>Do not add a blank line between a 'try' block's (or prior 'catch' block's) closing brace and the next 'catch' keyword. The blank line visually disconnects the try-catch pair.</value>
+  </data>
   <data name="ADWH02001_Title" xml:space="preserve">
     <value>Use 'String.' for static member access</value>
   </data>

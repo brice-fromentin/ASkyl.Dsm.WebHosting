@@ -306,6 +306,170 @@ public class BlankLineAnalyzerTests
                 """,
         }.RunAsync();
     }
+
+    [Fact]
+    public async Task IfElse_ExtraBlankLineBeforeElse_DetectsDiagnostic()
+    {
+        await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
+        {
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            TestCode = """
+                class C
+                {
+                    void M()
+                    {
+                        if (true)
+                        {
+                        }
+
+                        else
+                        {
+                        }
+                    }
+                }
+                """,
+            ExpectedDiagnostics = {
+                new DiagnosticResult(BlankLineAnalyzer.ExtraBeforeElseId, DiagnosticSeverity.Error)
+                    .WithSpan(9, 9, 9, 13),
+            },
+        }.RunAsync();
+    }
+
+    [Fact]
+    public async Task IfElse_NoBlankLineBeforeElse_NoDiagnostic()
+    {
+        await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
+        {
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            TestCode = """
+                class C
+                {
+                    void M()
+                    {
+                        if (true)
+                        {
+                        }
+                        else
+                        {
+                        }
+                    }
+                }
+                """,
+        }.RunAsync();
+    }
+
+    [Fact]
+    public async Task TryCatch_ExtraBlankLineBeforeCatch_DetectsDiagnostic()
+    {
+        await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
+        {
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            TestCode = """
+                class C
+                {
+                    void M()
+                    {
+                        try
+                        {
+                        }
+
+                        catch
+                        {
+                        }
+                    }
+                }
+                """,
+            ExpectedDiagnostics = {
+                new DiagnosticResult(BlankLineAnalyzer.ExtraBeforeCatchId, DiagnosticSeverity.Error)
+                    .WithSpan(9, 9, 9, 14),
+            },
+        }.RunAsync();
+    }
+
+    [Fact]
+    public async Task TryCatch_NoBlankLineBeforeCatch_NoDiagnostic()
+    {
+        await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
+        {
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            TestCode = """
+                class C
+                {
+                    void M()
+                    {
+                        try
+                        {
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+                """,
+        }.RunAsync();
+    }
+
+    [Fact]
+    public async Task TryCatchMultiple_ExtraBlankLineBeforeSecondCatch_DetectsDiagnostic()
+    {
+        await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
+        {
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            TestCode = """
+                class C
+                {
+                    void M()
+                    {
+                        try
+                        {
+                        }
+                        catch (System.Exception)
+                        {
+                        }
+
+                        catch
+                        {
+                        }
+                    }
+                }
+                """,
+            ExpectedDiagnostics = {
+                new DiagnosticResult(BlankLineAnalyzer.ExtraBeforeCatchId, DiagnosticSeverity.Error)
+                    .WithSpan(12, 9, 12, 14),
+            },
+        }.RunAsync();
+    }
+
+    [Fact]
+    public async Task TryCatchFinally_ExtraBlankLineBeforeFinally_DetectsDiagnostic()
+    {
+        await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
+        {
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            TestCode = """
+                class C
+                {
+                    void M()
+                    {
+                        try
+                        {
+                        }
+                        catch
+                        {
+                        }
+
+                        finally
+                        {
+                        }
+                    }
+                }
+                """,
+            ExpectedDiagnostics = {
+                new DiagnosticResult(BlankLineAnalyzer.ExtraBeforeCatchId, DiagnosticSeverity.Error)
+                    .WithSpan(12, 9, 12, 16),
+            },
+        }.RunAsync();
+    }
 }
 
 public class BlankLineCodeFixTests
@@ -380,6 +544,90 @@ public class BlankLineCodeFixTests
                 new DiagnosticResult(BlankLineAnalyzer.MissingAfterId, DiagnosticSeverity.Error)
                     .WithSpan(5, 9, 5, 11)
                     .WithArguments("if"),
+            },
+        }.RunAsync();
+    }
+
+    [Fact]
+    public async Task CodeFix_RemovesBlankLineBeforeElse()
+    {
+        await new CSharpCodeFixTest<BlankLineAnalyzer, BlankLineCodeFixProvider, DefaultVerifier>
+        {
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            TestCode = """
+                class C
+                {
+                    void M()
+                    {
+                        if (true)
+                        {
+                        }
+
+                        else
+                        {
+                        }
+                    }
+                }
+                """,
+            FixedCode = """
+                class C
+                {
+                    void M()
+                    {
+                        if (true)
+                        {
+                        }
+                        else
+                        {
+                        }
+                    }
+                }
+                """,
+            ExpectedDiagnostics = {
+                new DiagnosticResult(BlankLineAnalyzer.ExtraBeforeElseId, DiagnosticSeverity.Error)
+                    .WithSpan(9, 9, 9, 13),
+            },
+        }.RunAsync();
+    }
+
+    [Fact]
+    public async Task CodeFix_RemovesBlankLineBeforeCatch()
+    {
+        await new CSharpCodeFixTest<BlankLineAnalyzer, BlankLineCodeFixProvider, DefaultVerifier>
+        {
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            TestCode = """
+                class C
+                {
+                    void M()
+                    {
+                        try
+                        {
+                        }
+
+                        catch
+                        {
+                        }
+                    }
+                }
+                """,
+            FixedCode = """
+                class C
+                {
+                    void M()
+                    {
+                        try
+                        {
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+                """,
+            ExpectedDiagnostics = {
+                new DiagnosticResult(BlankLineAnalyzer.ExtraBeforeCatchId, DiagnosticSeverity.Error)
+                    .WithSpan(9, 9, 9, 14),
             },
         }.RunAsync();
     }

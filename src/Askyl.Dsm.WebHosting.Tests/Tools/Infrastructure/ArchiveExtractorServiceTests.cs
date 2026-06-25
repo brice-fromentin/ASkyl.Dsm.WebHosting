@@ -30,7 +30,6 @@ public class ArchiveExtractorServiceTests : IDisposable
                 Directory.Delete(_tempBase, true);
             }
         }
-
         catch
         {
             // Best-effort cleanup
@@ -43,7 +42,6 @@ public class ArchiveExtractorServiceTests : IDisposable
                 Directory.Delete(_tempExtract, true);
             }
         }
-
         catch
         {
             // Best-effort cleanup
