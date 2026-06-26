@@ -54,21 +54,67 @@ public class BlankLineCodeFixProvider : CodeFixProvider
         }
         else if (diagnostic.Id == BlankLineAnalyzer.ExtraBeforeElseId)
         {
+            if (root?.FindToken(diagnostic.Location.SourceSpan.Start) is not SyntaxToken elseToken)
+            {
+                return;
+            }
+
+            if (elseToken.Parent is not ElseClauseSyntax elseClause)
+            {
+                return;
+            }
+
+            if (elseClause.Parent is not IfStatementSyntax ifStmt)
+            {
+                return;
+            }
+
+            if (ifStmt.Statement is not BlockSyntax ifBody)
+            {
+                return;
+            }
+
             context.RegisterCodeFix(
                 CodeAction.Create(
                     RemoveBeforeElseTitle,
-                    _ => RemoveBlankLineBeforeAsync(context.Document, node),
+                    _ => RemoveBlankLineBetweenNodesAsync(context.Document, ifBody.CloseBraceToken, elseToken),
                     RemoveBeforeElseTitle),
                 diagnostic);
         }
         else if (diagnostic.Id == BlankLineAnalyzer.ExtraBeforeCatchId)
         {
-            context.RegisterCodeFix(
-                CodeAction.Create(
-                    RemoveBeforeCatchTitle,
-                    _ => RemoveBlankLineBeforeAsync(context.Document, node),
-                    RemoveBeforeCatchTitle),
-                diagnostic);
+            if (root?.FindToken(diagnostic.Location.SourceSpan.Start) is not SyntaxToken keywordToken)
+            {
+                return;
+            }
+
+            var parentNode = keywordToken.Parent;
+
+            if (parentNode is CatchClauseSyntax catchClause && catchClause.Parent is TryStatementSyntax tryStmt)
+            {
+                var index = tryStmt.Catches.IndexOf(catchClause);
+                BlockSyntax prevBlock = index > 0 ? ((CatchClauseSyntax)tryStmt.Catches[index - 1]).Block : tryStmt.Block;
+
+                context.RegisterCodeFix(
+                    CodeAction.Create(
+                        RemoveBeforeCatchTitle,
+                        _ => RemoveBlankLineBetweenNodesAsync(context.Document, prevBlock.CloseBraceToken, keywordToken),
+                        RemoveBeforeCatchTitle),
+                    diagnostic);
+            }
+            else if (parentNode is FinallyClauseSyntax finallyClause && finallyClause.Parent is TryStatementSyntax tryStmt2)
+            {
+                BlockSyntax prevBlock2 = tryStmt2.Catches.Count > 0
+                    ? ((CatchClauseSyntax)tryStmt2.Catches[tryStmt2.Catches.Count - 1]).Block
+                    : tryStmt2.Block;
+
+                context.RegisterCodeFix(
+                    CodeAction.Create(
+                        RemoveBeforeCatchTitle,
+                        _ => RemoveBlankLineBetweenNodesAsync(context.Document, prevBlock2.CloseBraceToken, keywordToken),
+                        RemoveBeforeCatchTitle),
+                    diagnostic);
+            }
         }
     }
 
@@ -105,7 +151,7 @@ public class BlankLineCodeFixProvider : CodeFixProvider
         return document.WithSyntaxRoot(newRoot);
     }
 
-    static async Task<Document> RemoveBlankLineBeforeAsync(Document document, SyntaxNode node)
+    static async Task<Document> RemoveBlankLineBetweenNodesAsync(Document document, SyntaxToken closingBrace, SyntaxToken keyword)
     {
         var root = await document.GetSyntaxRootAsync().ConfigureAwait(false);
 
@@ -114,96 +160,100 @@ public class BlankLineCodeFixProvider : CodeFixProvider
             return document;
         }
 
-        // Find the previous sibling statement
-        var parent = node.Parent;
+        // The blank line between } and else/catch/finally is typically represented as:
+        // - }'s trailing trivia: EndOfLine (newline after })
+        // - keyword's leading trivia: EndOfLine (blank line) + Whitespace (indentation)
+        // To remove the blank line, strip leading EndOfLines from the keyword.
+        var newKeyword = RemoveLeadingBlankLinesToken(keyword);
 
-        if (parent is BlockSyntax block)
+        if (newKeyword != keyword)
         {
-            var index = block.Statements.IndexOf((StatementSyntax)node);
-
-            if (index > 0)
-            {
-                var previousStatement = block.Statements[index - 1];
-                var previousTrailing = previousStatement.GetTrailingTrivia();
-                var newTrailing = RemoveTrailingBlankLine(previousTrailing);
-
-                if (newTrailing != previousTrailing)
-                {
-                    var newPrevious = previousStatement.WithTrailingTrivia(newTrailing);
-                    var newRoot = root.ReplaceNode(previousStatement, newPrevious);
-                    return document.WithSyntaxRoot(newRoot);
-                }
-            }
+            var newRoot = root.ReplaceToken(keyword, newKeyword);
+            return document.WithSyntaxRoot(newRoot);
         }
-        else if (parent is IfStatementSyntax ifStmt && node is ElseClauseSyntax elseClause)
+
+        // Fallback: try removing extra EndOfLines from closing brace's trailing trivia
+        var newClosingBrace = RemoveExtraTrailingEndOfLinesToken(closingBrace);
+
+        if (newClosingBrace != closingBrace)
         {
-            // For else, the previous node is the if statement body
-            var ifBody = ifStmt.Statement;
-            var ifBodyTrailing = ifBody.GetTrailingTrivia();
-            var newIfBodyTrailing = RemoveTrailingBlankLine(ifBodyTrailing);
-
-            if (newIfBodyTrailing != ifBodyTrailing)
-            {
-                var newIfBody = ifBody.WithTrailingTrivia(newIfBodyTrailing);
-                var newIfStmt = ifStmt.WithStatement(newIfBody);
-                var newRoot = root.ReplaceNode(ifStmt, newIfStmt);
-                return document.WithSyntaxRoot(newRoot);
-            }
-        }
-        else if (parent is TryStatementSyntax tryStmt)
-        {
-            // For catch/finally, find the previous catch/finally or try body
-            SyntaxNode? previousNode = null;
-
-            if (node is CatchClauseSyntax catchClause)
-            {
-                var index = tryStmt.Catches.IndexOf(catchClause);
-
-                if (index > 0)
-                {
-                    previousNode = tryStmt.Catches[index - 1];
-                }
-                else
-                {
-                    previousNode = tryStmt.Block;
-                }
-            }
-            else if (node is FinallyClauseSyntax finallyClause)
-            {
-                previousNode = tryStmt.Catches.Count > 0 ? tryStmt.Catches[tryStmt.Catches.Count - 1] : tryStmt.Block;
-            }
-
-            if (previousNode is not null)
-            {
-                var previousTrailing = previousNode.GetTrailingTrivia();
-                var newTrailing = RemoveTrailingBlankLine(previousTrailing);
-
-                if (newTrailing != previousTrailing)
-                {
-                    var newPrevious = previousNode.WithTrailingTrivia(newTrailing);
-                    var newRoot = root.ReplaceNode(previousNode, newPrevious);
-                    return document.WithSyntaxRoot(newRoot);
-                }
-            }
+            var newRoot = root.ReplaceToken(closingBrace, newClosingBrace);
+            return document.WithSyntaxRoot(newRoot);
         }
 
         return document;
     }
 
-    static SyntaxTriviaList RemoveTrailingBlankLine(SyntaxTriviaList trivia)
+    static SyntaxToken RemoveLeadingBlankLinesToken(SyntaxToken token)
     {
-        // Find the first consecutive EndOfLine at the end and remove all but one
-        var i = trivia.Count - 1;
+        // Remove leading EndOfLine(s) from the token's leading trivia
+        // These represent the blank line(s) before the keyword
+        var leading = token.LeadingTrivia;
 
-        while (i >= 0 && trivia[i].IsKind(SyntaxKind.EndOfLineTrivia))
+        if (leading.Count == 0)
         {
-            i--;
+            return token;
         }
 
-        // If we found more than one EndOfLine at the end, keep only one
-        if (i < trivia.Count - 2)
+        // Check if first trivia is EndOfLine (blank line)
+        if (leading[0].IsKind(SyntaxKind.EndOfLineTrivia))
         {
-            return SyntaxFactory.TriviaList(trivia.Take(i + 1).Append(SyntaxFactory.EndOfLine("\n")));
+            // Keep only non-EndOfLine trivia (preserve indentation whitespace)
+            var newLeading = SyntaxFactory.TriviaList(leading.Where(t => !t.IsKind(SyntaxKind.EndOfLineTrivia)));
+
+            if (newLeading != leading)
+            {
+                return token.WithLeadingTrivia(newLeading);
+            }
+        }
+
+        return token;
+    }
+
+    static SyntaxToken RemoveExtraTrailingEndOfLinesToken(SyntaxToken token)
+    {
+        var trailing = token.TrailingTrivia;
+        var newTrailing = RemoveOneEndOfLine(trailing);
+
+        if (newTrailing != trailing)
+        {
+            return token.WithTrailingTrivia(newTrailing);
+        }
+
+        return token;
+    }
+
+    static SyntaxTriviaList RemoveOneEndOfLine(SyntaxTriviaList trivia)
+    {
+        // Count total EndOfLines
+        var eolCount = 0;
+
+        for (var i = 0; i < trivia.Count; i++)
+        {
+            if (trivia[i].IsKind(SyntaxKind.EndOfLineTrivia))
+            {
+                eolCount++;
+            }
+        }
+
+        // If more than one EndOfLine, remove the first one
+        if (eolCount > 1)
+        {
+            var result = new List<SyntaxTrivia>();
+            var removed = false;
+
+            for (var i = 0; i < trivia.Count; i++)
+            {
+                if (trivia[i].IsKind(SyntaxKind.EndOfLineTrivia) && !removed)
+                {
+                    removed = true;
+                    continue;
+                }
+
+                result.Add(trivia[i]);
+            }
+
+            return SyntaxFactory.TriviaList(result);
         }
 
         return trivia;
