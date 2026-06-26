@@ -80,7 +80,6 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal("8.0", result.Channel);
         Assert.True(result.IsCompatible);
-        Assert.Null(result.MissingMessage);
     }
 
     [Fact]
@@ -99,7 +98,6 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal("9.0", result.Channel);
         Assert.False(result.IsCompatible);
-        Assert.NotNull(result.MissingMessage);
     }
 
     [Fact]
@@ -187,7 +185,6 @@ public class AssemblyRuntimeDetectorTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal("10.0", result.Channel);
         Assert.True(result.IsCompatible);
-        Assert.Null(result.MissingMessage);
     }
 
     #endregion

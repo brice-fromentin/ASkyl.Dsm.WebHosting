@@ -456,8 +456,9 @@ public class SiteLifecycleManagerTests : IDisposable
     {
         // Arrange
         _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath))
-            .Returns(new AssemblyRuntimeInfo(
-                "9.0", false, "Requires .NET 9.0, but this runtime is not installed"));
+            .Returns(new AssemblyRuntimeInfo("9.0", false));
+        _localizer.Setup(l => l[LK.Error.RuntimeNotInstalled, "9.0"])
+            .Returns("Requires .NET 9.0, but this runtime is not installed");
         var manager = CreateManager();
 
         // Act
@@ -476,7 +477,7 @@ public class SiteLifecycleManagerTests : IDisposable
     {
         // Arrange
         _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath))
-            .Returns(new AssemblyRuntimeInfo("8.0", true, null));
+            .Returns(new AssemblyRuntimeInfo("8.0", true));
         var manager = CreateManager();
 
         // Act

@@ -57,7 +57,7 @@ public sealed partial class AssemblyRuntimeDetector(
                 logger.FrameworkNotInstalled(assemblyPath, channel);
             }
 
-            return new AssemblyRuntimeInfo(channel, isCompatible, null);
+            return new AssemblyRuntimeInfo(channel, isCompatible);
         }
         catch (Exception ex)
         {
