@@ -55,6 +55,9 @@ builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddRazorComponents()
                 .AddInteractiveWebAssemblyComponents();
 
+// Register file reader abstraction (singleton - stateless file system wrapper)
+builder.Services.AddSingleton<IFileReader, SystemFileReader>();
+
 // Register DSM settings service (singleton - reads /etc/synoinfo.conf once at startup)
 builder.Services.AddSingleton<IDsmSettingsService, DsmSettingsService>();
 

@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -8,7 +9,9 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Server-side implementation of ILogDownloadService for creating log archive streams.
 /// Gathers logs from package logs directory, debug log file, and application logs directory.
 /// </summary>
-public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.Contracts.ILogDownloadService
+/// <param name="logger">Logger instance.</param>
+/// <param name="fileReader">File system abstraction for reading files and directories.</param>
+public class LogDownloadService(ILogger<ILogLogDownloadService> logger, IFileReader fileReader) : Data.Contracts.ILogDownloadService
 {
     public async Task<Stream> CreateLogZipStreamAsync(CancellationToken cancellationToken = default)
     {
@@ -23,7 +26,7 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.C
             await TryAddDirectoryToArchiveAsync(archive, LogConstants.PackageLogDirectoryPath, LogConstants.LogArchivePackagePrefix, LogConstants.LogArchivePackageDisplayName, baseDirectory, cancellationToken);
 
             // Add debug log file if it exists
-            if (File.Exists(LogConstants.DebugLogFilePath))
+            if (fileReader.FileExists(LogConstants.DebugLogFilePath))
             {
                 await AddFileToArchiveAsync(archive, LogConstants.DebugLogFilePath, LogConstants.LogArchiveDebugEntryPath, cancellationToken);
                 logger.AddedDebugLogFile(LogConstants.DebugLogFilePath);
@@ -47,7 +50,7 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.C
 
     private async Task TryAddDirectoryToArchiveAsync(ZipArchive archive, string directoryPath, string entryPrefix, string logName, string baseDirectory, CancellationToken cancellationToken)
     {
-        if (Directory.Exists(directoryPath))
+        if (fileReader.DirectoryExists(directoryPath))
         {
             await AddDirectoryToArchiveAsync(archive, directoryPath, entryPrefix, cancellationToken);
             logger.AddedAppLog(logName, directoryPath, baseDirectory);
@@ -60,7 +63,7 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.C
 
     private async Task AddDirectoryToArchiveAsync(ZipArchive archive, string directoryPath, string entryPrefix, CancellationToken cancellationToken)
     {
-        foreach (var file in Directory.EnumerateFiles(directoryPath, "*", new EnumerationOptions { RecurseSubdirectories = true }))
+        foreach (var file in fileReader.EnumerateFiles(directoryPath, "*", true))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -78,7 +81,7 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.C
         var entry = archive.CreateEntry(entryName);
 
         using var entryStream = entry.Open();
-        using var fileStream = File.OpenRead(filePath);
+        using var fileStream = fileReader.OpenRead(filePath);
 
         await fileStream.CopyToAsync(entryStream, cancellationToken);
 

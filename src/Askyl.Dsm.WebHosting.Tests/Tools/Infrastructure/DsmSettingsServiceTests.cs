@@ -1,4 +1,5 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
+using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Microsoft.Extensions.Logging;
@@ -9,10 +10,12 @@ namespace Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
 public class DsmSettingsServiceTests
 {
     readonly Mock<ILogger<ILogDsmSettingsService>> _logger;
+    readonly Mock<IFileReader> _fileReader;
 
     public DsmSettingsServiceTests()
     {
         _logger = new Mock<ILogger<ILogDsmSettingsService>>();
+        _fileReader = new Mock<IFileReader>();
     }
 
     #region Service Construction
@@ -20,122 +23,182 @@ public class DsmSettingsServiceTests
     [Fact]
     public void Constructor_ServiceInitializes_WithoutException()
     {
-        // DsmSettingsService reads /etc/synoinfo.conf with graceful fallback
-        // On systems without the file, it returns defaults without throwing
-        var service = new DsmSettingsService(_logger.Object);
+        // Arrange — config file doesn't exist, service should use defaults
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(false);
 
-        Assert.NotNull(service.Server);
-        Assert.True(service.Port > 0);
-        Assert.NotNull(service.Language);
+        // Act
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
+
+        // Assert — defaults
+        Assert.Equal(NetworkConstants.Localhost, service.Server);
+        Assert.Equal(SystemDefaults.DefaultHttpsPort, service.Port);
+        Assert.Equal(SystemDefaults.DefaultLanguage, service.Language);
     }
 
     #endregion
 
-    #region Parsing Logic
+    #region Valid Configuration File
 
     [Fact]
-    public void ParseConfigFile_ValidContent_ReturnsCorrectSettings()
+    public void Constructor_ValidConfig_ReturnsParsedSettings()
     {
         // Arrange
-        var tempDir = Path.Combine(Path.GetTempPath(), $"asl_wh_settings_{Guid.NewGuid():N}");
-        var configFile = Path.Combine(tempDir, "synoinfo.conf");
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Returns([
+                       "external_host_ip=192.168.1.100",
+                       "external_port_dsm_https=9001",
+                       "language=fra",
+                       "other_setting=value",
+                   ]);
 
-        try
-        {
-            Directory.CreateDirectory(tempDir);
+        // Act
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
 
-            File.WriteAllText(configFile, @"
-external_host_ip=192.168.1.100
-external_port_dsm_https=9001
-language=fra
-other_setting=value
-");
-
-            // Act — replicate ReadSettings parsing logic
-            var lines = File.ReadAllLines(configFile);
-            var settings = lines.Where(x => x.Contains('='))
-                                .ToDictionary(k => k.Split(['='], 2)[0], v => v.Split(['='], 2)[1].Replace("\"", String.Empty));
-
-            // Assert
-            Assert.Equal("192.168.1.100", settings[SystemDefaults.KeyExternalHostIp]);
-            Assert.Equal("9001", settings[SystemDefaults.KeyExternalHttpsPort]);
-            Assert.Equal("fra", settings[SystemDefaults.KeyLanguage]);
-        }
-        finally
-        {
-            Directory.Delete(tempDir, recursive: true);
-        }
+        // Assert
+        Assert.Equal("192.168.1.100", service.Server);
+        Assert.Equal(9001, service.Port);
+        Assert.Equal("fra", service.Language);
     }
 
     [Fact]
-    public void ParseConfigFile_MalformedLines_ReturnsEmptySettings()
+    public void Constructor_ConfigWithQuotedValues_RemovesQuotes()
     {
-        // A file with no = lines produces an empty dictionary
-        var malformedLines = new[] { "no_equals_here", "another_line", "123" };
+        // Arrange
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Returns([
+                       $"external_host_ip=\"192.168.1.200\"",
+                       "external_port_dsm_https=443",
+                       "language=\"enu\"",
+                   ]);
 
-        var settings = malformedLines.Where(x => x.Contains('='))
-                                     .ToDictionary(k => k.Split(['='], 2)[0], v => v.Split(['='], 2)[1].Replace("\"", String.Empty));
+        // Act
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
 
-        Assert.Empty(settings);
+        // Assert
+        Assert.Equal("192.168.1.200", service.Server);
+        Assert.Equal(443, service.Port);
+        Assert.Equal("enu", service.Language);
     }
 
     #endregion
 
-    #region Mandatory Setting
+    #region Missing Optional Settings
 
     [Fact]
-    public void GetMandatorySetting_PresentKey_ReturnsValue()
+    public void Constructor_MissingLanguage_UsesDefault()
     {
-        var settings = new Dictionary<string, string>
-        {
-            [SystemDefaults.KeyExternalHostIp] = "10.0.0.1"
-        };
+        // Arrange
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Returns([
+                       "external_host_ip=10.0.0.1",
+                       "external_port_dsm_https=5001",
+                   ]);
 
-        var result = GetMandatorySetting(settings, SystemDefaults.KeyExternalHostIp);
+        // Act
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
 
-        Assert.Equal("10.0.0.1", result);
+        // Assert
+        Assert.Equal("10.0.0.1", service.Server);
+        Assert.Equal(5001, service.Port);
+        Assert.Equal(SystemDefaults.DefaultLanguage, service.Language);
     }
 
     [Fact]
-    public void GetMandatorySetting_MissingKey_ThrowsInvalidOperationException()
+    public void Constructor_InvalidPort_UsesDefault()
     {
-        var settings = new Dictionary<string, string>
-        {
-            [SystemDefaults.KeyExternalHttpsPort] = "5001"
-        };
+        // Arrange
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Returns([
+                       "external_host_ip=10.0.0.1",
+                       "external_port_dsm_https=not_a_number",
+                   ]);
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            GetMandatorySetting(settings, SystemDefaults.KeyExternalHostIp));
+        // Act
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
 
+        // Assert
+        Assert.Equal(SystemDefaults.DefaultHttpsPort, service.Port);
+    }
+
+    #endregion
+
+    #region Missing Mandatory Settings
+
+    [Fact]
+    public void Constructor_MissingServerIp_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Returns([
+                       "external_port_dsm_https=5001",
+                   ]);
+
+        // Act & Assert
+        var ex = Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object));
         Assert.Contains(SystemDefaults.KeyExternalHostIp, ex.Message);
     }
 
     [Fact]
-    public void GetMandatorySetting_EmptyValue_ThrowsInvalidOperationException()
+    public void Constructor_EmptyServerIp_ThrowsInvalidOperationException()
     {
-        var settings = new Dictionary<string, string>
-        {
-            [SystemDefaults.KeyExternalHostIp] = String.Empty
-        };
+        // Arrange
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Returns([
+                       "external_host_ip=",
+                       "external_port_dsm_https=5001",
+                   ]);
 
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            GetMandatorySetting(settings, SystemDefaults.KeyExternalHostIp));
-
+        // Act & Assert
+        var ex = Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object));
         Assert.Contains(SystemDefaults.KeyExternalHostIp, ex.Message);
     }
 
     #endregion
 
-    #region Helpers
+    #region Malformed Configuration
 
-    static string GetMandatorySetting(Dictionary<string, string> settings, string key)
+    [Fact]
+    public void Constructor_ConfigReadThrowsException_UsesDefaults()
     {
-        if (!settings.TryGetValue(key, out var value) || value.Length == 0)
-        {
-            throw new InvalidOperationException($"Mandatory setting '{key}' is missing.");
-        }
+        // Arrange
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Throws(new System.IO.IOException("Simulated read failure"));
 
-        return value;
+        // Act
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
+
+        // Assert — falls back to defaults
+        Assert.Equal(NetworkConstants.Localhost, service.Server);
+        Assert.Equal(SystemDefaults.DefaultHttpsPort, service.Port);
+        Assert.Equal(SystemDefaults.DefaultLanguage, service.Language);
+    }
+
+    [Fact]
+    public void Constructor_MalformedLines_IgnoresLinesWithoutEquals()
+    {
+        // Arrange — lines without = are ignored by the parsing logic
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Returns([
+                       "no_equals_here",
+                       "external_host_ip=10.0.0.5",
+                       "another_bad_line",
+                       "external_port_dsm_https=8443",
+                   ]);
+
+        // Act
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
+
+        // Assert
+        Assert.Equal("10.0.0.5", service.Server);
+        Assert.Equal(8443, service.Port);
     }
 
     #endregion

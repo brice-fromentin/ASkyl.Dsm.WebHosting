@@ -11,9 +11,11 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// Reads DSM system preferences from /etc/synoinfo.conf once at startup.
 /// Provides graceful fallback defaults if the configuration file is missing or malformed.
 /// </summary>
-public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger) : IDsmSettingsService
+/// <param name="logger">Logger instance.</param>
+/// <param name="fileReader">File system abstraction for reading configuration files.</param>
+public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, IFileReader fileReader) : IDsmSettingsService
 {
-    private readonly DsmSystemPreferences _preferences = ReadSettings(logger);
+    private readonly DsmSystemPreferences _preferences = ReadSettings(logger, fileReader);
 
     public string Server => _preferences.Server;
 
@@ -21,9 +23,9 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger) :
 
     public string Language => _preferences.Language;
 
-    static DsmSystemPreferences ReadSettings(ILogger<ILogDsmSettingsService> logger)
+    static DsmSystemPreferences ReadSettings(ILogger<ILogDsmSettingsService> logger, IFileReader fileReader)
     {
-        if (!File.Exists(SystemDefaults.SynoInfoConfPath))
+        if (!fileReader.FileExists(SystemDefaults.SynoInfoConfPath))
         {
             logger.ConfigurationFileNotFound(SystemDefaults.SynoInfoConfPath);
             return CreateDefaults(logger);
@@ -31,7 +33,7 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger) :
 
         try
         {
-            var lines = File.ReadAllLines(SystemDefaults.SynoInfoConfPath);
+            var lines = fileReader.ReadAllLines(SystemDefaults.SynoInfoConfPath);
             var settings = lines.Where(x => x.Contains('='))
                                 .ToDictionary(k => k.Split(['='], 2)[0], v => v.Split(['='], 2)[1].Replace("\"", String.Empty));
 

@@ -8,6 +8,7 @@ using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
 
+[Trait("Category", "FileSystem")]
 public class ArchiveExtractorServiceTests : IDisposable
 {
     private readonly string _tempBase;

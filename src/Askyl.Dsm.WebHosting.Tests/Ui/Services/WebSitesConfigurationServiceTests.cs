@@ -7,6 +7,7 @@ using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 
+[Trait("Category", "FileSystem")]
 public class WebSitesConfigurationServiceTests : IDisposable
 {
     readonly Mock<ILogger<ILogWebSitesConfigurationService>> _logger;

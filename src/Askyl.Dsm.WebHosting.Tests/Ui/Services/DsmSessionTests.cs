@@ -30,7 +30,7 @@ public class DsmSessionTests : IDisposable
     {
         _httpHandler = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_httpHandler.Object) { BaseAddress = new Uri("https://localhost:5001/") };
-        _settingsService = new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object);
+        _settingsService = new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object, new SystemFileReader());
         _clientLogger = new Mock<ILogger<ILogDsmApiClient>>();
         _session = new FakeSession();
         _httpContextAccessor = new Mock<IHttpContextAccessor>();

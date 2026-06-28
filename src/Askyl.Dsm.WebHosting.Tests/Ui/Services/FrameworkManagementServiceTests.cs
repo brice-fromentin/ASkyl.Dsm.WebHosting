@@ -12,6 +12,7 @@ using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 
+[Trait("Category", "FileSystem")]
 public class FrameworkManagementServiceTests : IDisposable
 {
     readonly Mock<IDotnetVersionService> _dotnetVersionService;

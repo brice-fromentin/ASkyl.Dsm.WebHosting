@@ -1,0 +1,6 @@
+{
+  "$schema": "https://xunit.net/schema/current/xunit.runner.schema.json",
+  "testTimeoutInMilliseconds": 30000,
+  "diagnosticMessages": false,
+  "longRunningTestSeconds": 10
+}

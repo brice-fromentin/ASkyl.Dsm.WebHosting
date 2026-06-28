@@ -16,6 +16,7 @@ namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 /// Tests for SiteLifecycleManager using fake IProcessRunner/IProcessHandle.
 /// Validates the IProcessRunner abstraction enables testable process lifecycle management.
 /// </summary>
+[Trait("Category", "FileSystem")]
 public class SiteLifecycleManagerTests : IDisposable
 {
     private readonly Mock<ILogger<ILogSiteLifecycleManager>> _logger;

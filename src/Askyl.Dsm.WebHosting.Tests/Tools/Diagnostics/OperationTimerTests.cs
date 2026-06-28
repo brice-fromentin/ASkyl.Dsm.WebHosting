@@ -13,8 +13,9 @@ public class OperationTimerTests
         // Act
         var timer = new OperationTimer(_ => { });
 
-        // Assert — timer should show some elapsed time (even if minimal)
-        Assert.True(timer.ElapsedMilliseconds >= 0);
+        // Assert — timer should show elapsed time near zero (stopwatch just started)
+        Assert.InRange(timer.ElapsedMilliseconds, 0L, 5L);
+        timer.Dispose();
     }
 
     [Fact]
@@ -55,8 +56,8 @@ public class OperationTimerTests
             Thread.Sleep(10);
         }
 
-        // Assert
-        Assert.True(capturedDuration >= 0);
+        // Assert — callback should receive elapsed time >= sleep duration
+        Assert.InRange(capturedDuration, 10L, 100L);
     }
 
     [Fact]
@@ -137,7 +138,7 @@ public class OperationTimerTests
         var timer = new OperationTimer(_ => { });
 
         // Assert — should be 0 or very close to 0
-        Assert.True(timer.ElapsedMilliseconds <= 5);
+        Assert.InRange(timer.ElapsedMilliseconds, 0L, 5L);
         timer.Dispose();
     }
 
@@ -157,8 +158,8 @@ public class OperationTimerTests
             Thread.Sleep(5);
         }
 
-        // Assert
-        Assert.True(capturedDuration >= 0);
+        // Assert — callback should receive elapsed time >= sleep duration
+        Assert.InRange(capturedDuration, 5L, 100L);
     }
 
     [Fact]
@@ -179,8 +180,8 @@ public class OperationTimerTests
 
         MethodWithEarlyReturn();
 
-        // Assert
-        Assert.True(capturedDuration >= 0);
+        // Assert — callback should receive elapsed time >= sleep duration
+        Assert.InRange(capturedDuration, 5L, 100L);
     }
 
     [Fact]
@@ -203,8 +204,8 @@ public class OperationTimerTests
             // Expected
         }
 
-        // Assert — callback should still be invoked on exception
-        Assert.True(capturedDuration >= 0);
+        // Assert — callback should still be invoked on exception with elapsed time
+        Assert.InRange(capturedDuration, 5L, 100L);
     }
 
     #endregion
@@ -226,7 +227,7 @@ public class OperationTimerTests
         }
 
         // Assert
-        Assert.True(capturedDuration >= 0);
+        Assert.InRange(capturedDuration, 5L, 100L);
         Assert.Equal(1, owner.Semaphore.CurrentCount); // Semaphore released
     }
 

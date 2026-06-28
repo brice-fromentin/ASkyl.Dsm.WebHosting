@@ -179,9 +179,9 @@ public class ResultTypesTests
         var result = createSuccess(value, "OK");
 
         // Assert
-        Assert.True(((dynamic)result).Success);
-        Assert.Same(value, ((dynamic)result).Value);
-        Assert.Equal(ApiErrorCode.None, ((dynamic)result).ErrorCode);
+        Assert.True(GetSuccess(result));
+        Assert.Same(value, GetValue(result));
+        Assert.Equal(ApiErrorCode.None, GetErrorCode(result));
     }
 
     public static IEnumerable<object[]> GetItemsFailureTestData()
@@ -196,12 +196,12 @@ public class ResultTypesTests
 
     [Theory]
     [MemberData(nameof(GetItemsFailureTestData))]
-    public void ItemsResults_CreateFailure_SetsExpectedProperties(string _, object defaultFailureResult)
+    public void ItemsResults_CreateFailure_SetsExpectedProperties(string _, object failureResult)
     {
-        // Default failure
-        Assert.False(((dynamic)defaultFailureResult).Success);
-        Assert.Null(((dynamic)defaultFailureResult).Value);
-        Assert.Equal(ApiErrorCode.Failure, ((dynamic)defaultFailureResult).ErrorCode);
+        // Assert
+        Assert.False(GetSuccess(failureResult));
+        Assert.Null(GetValue(failureResult));
+        Assert.Equal(ApiErrorCode.Failure, GetErrorCode(failureResult));
     }
 
     #endregion
@@ -249,6 +249,15 @@ public class ResultTypesTests
     {
         return new(version, productVersion, DateTimeOffset.UtcNow, isSecurity, isLts, releaseType);
     }
+
+    static bool GetSuccess(object result)
+        => (bool)result.GetType().GetProperty("Success")!.GetValue(result)!;
+
+    static object? GetValue(object result)
+        => result.GetType().GetProperty("Value")!.GetValue(result);
+
+    static ApiErrorCode GetErrorCode(object result)
+        => (ApiErrorCode)result.GetType().GetProperty("ErrorCode")!.GetValue(result)!;
 
     #endregion
 }

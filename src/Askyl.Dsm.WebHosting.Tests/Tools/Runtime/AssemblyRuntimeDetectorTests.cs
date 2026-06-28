@@ -7,6 +7,7 @@ using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Tools.Runtime;
 
+[Trait("Category", "FileSystem")]
 public class AssemblyRuntimeDetectorTests : IDisposable
 {
     private readonly Mock<IVersionsDetectorService> _versionsDetector;
