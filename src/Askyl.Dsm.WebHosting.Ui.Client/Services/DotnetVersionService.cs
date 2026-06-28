@@ -47,10 +47,10 @@ public class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocaliz
     }
 
     /// <inheritdoc/>
-    public async Task RefreshCacheAsync()
+    public async Task RefreshCacheAsync(CancellationToken cancellationToken = default)
     {
         // Client-side: Just reload versions which will get fresh data from server
-        await GetInstalledVersionsAsync(CancellationToken.None);
+        await GetInstalledVersionsAsync(cancellationToken);
     }
 
     public bool IsValidVersionFormat(string version)

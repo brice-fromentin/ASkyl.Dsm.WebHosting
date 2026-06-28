@@ -34,7 +34,7 @@ public class FrameworkManagementService(
             archiveExtractor.Decompress(fileName);
 
             // Force cache refresh to detect the new installation
-            await dotnetVersionService.RefreshCacheAsync();
+            await dotnetVersionService.RefreshCacheAsync(cancellationToken);
 
             logger.FrameworkInstalled(version);
             return InstallationResult.CreateSuccess(localizer[LK.Success.InstallationCompleted]);
@@ -71,7 +71,7 @@ public class FrameworkManagementService(
             fileManager.DeleteDirectory($"shared/Microsoft.NETCore.App/{version}");
 
             // Force cache refresh to detect the removal
-            await dotnetVersionService.RefreshCacheAsync();
+            await dotnetVersionService.RefreshCacheAsync(cancellationToken);
 
             logger.FrameworkUninstalled(version);
             return InstallationResult.CreateSuccess(localizer[LK.Success.UninstallationCompleted]);

@@ -67,9 +67,9 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
     /// Forces a cache refresh by re-executing dotnet --info.
     /// Call this after install/uninstall operations.
     /// </summary>
-    public async Task RefreshCacheAsync()
+    public async Task RefreshCacheAsync(CancellationToken cancellationToken = default)
     {
-        await versionsDetector.RefreshCacheAsync();
+        await versionsDetector.RefreshCacheAsync(cancellationToken);
     }
 
     public async Task<ChannelsResult> GetChannelsAsync(CancellationToken cancellationToken = default)
