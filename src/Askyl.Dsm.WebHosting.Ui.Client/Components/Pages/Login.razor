@@ -16,11 +16,11 @@
 @inject ILocalizer localizer
 @inject ICultureManager cultureManager
 
-<LoadingOverlay WorkingStateComponent="@this" />
+<LoadingOverlay WorkingStateComponent="@this" OnStateChanged="StateHasChanged" />
 
 <PageTitle>@localizer[LK.Login.PageTitle]</PageTitle>
 
-<FluentDialog Modal="true" TrapFocus="true" PreventScroll="true">
+<FluentDialog Modal="true" TrapFocus="true" PreventScroll="true" Open="true">
     <EditForm Model="@Model" OnValidSubmit="Authenticate">
         <FluentValidator />
 

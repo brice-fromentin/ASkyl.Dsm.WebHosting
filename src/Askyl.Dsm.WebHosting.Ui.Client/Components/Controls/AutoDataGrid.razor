@@ -1,6 +1,8 @@
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Globalization
+@using System.Timers
 
+@implements IDisposable
 @inject ILocalizer localizer
 @typeparam TItem where TItem : class
 
@@ -81,10 +83,10 @@
     public EventCallback<TItem> OnRowDoubleClick { get; set; }
 
     // NOTE: Emulating double-click because FluentDataGrid's OnRowDoubleClick is buggy and never fires.
-    // Using a timer-based approach with timestamp comparison (simplest solution).
+    // Using a timer-based approach: defer single-click, cancel if double-click fires within threshold.
     private TItem? SelectedItem { get; set; }
-    private TItem? _lastClickedItem { get; set; }
-    private DateTime _lastClickTime { get; set; }
+    private Timer? _clickTimer { get; set; }
+    private TItem? _pendingClickItem { get; set; }
 
     public static IQueryable<TItem> Empty() => Enumerable.Empty<TItem>().AsQueryable();
 
@@ -98,7 +100,7 @@
         }
     }
 
-    private async Task HandleRowClick(FluentDataGridRow<TItem> row)
+    private void HandleRowClick(FluentDataGridRow<TItem> row)
     {
         if (row.Item is null)
         {
@@ -107,48 +109,49 @@
 
         SelectedItem = row.Item;
 
-        // Try to emulate double-click detection - returns true if handled as double-click
-        var isDoubleClick = await TryHandleDoubleClickAsync(row.Item);
-        if (isDoubleClick)
+        if (_clickTimer is not null && _pendingClickItem is not null && _pendingClickItem.Equals(row.Item))
         {
-            return; // Double-click was handled, skip single-click logic
+            _clickTimer.Dispose();
+            _clickTimer = null;
+            _pendingClickItem = null;
+
+            if (OnRowDoubleClick.HasDelegate)
+            {
+                _ = InvokeAsync(async () => await OnRowDoubleClick.InvokeAsync(SelectedItem));
+            }
+
+            return;
         }
 
-        // Handle single-click event
-        if (OnRowClick.HasDelegate)
+        _pendingClickItem = row.Item;
+        _clickTimer?.Dispose();
+        _clickTimer = new Timer
         {
-            await OnRowClick.InvokeAsync(row.Item);
-        }
-
-        // Update state for potential next double-click only after successful single-click
-        _lastClickedItem = SelectedItem;
-        _lastClickTime = DateTime.UtcNow;
+            Interval = ApplicationConstants.DoubleClickTimeoutMilliseconds,
+            AutoReset = false
+        };
+        _clickTimer.Elapsed += OnClickTimeout;
+        _clickTimer.Start();
     }
 
-    /// <summary>
-    /// Emulates double-click detection by comparing current click with previous one.
-    /// This is a workaround because FluentDataGrid's OnRowDoubleClick event never fires.
-    /// Returns true if this was detected as a double-click and handled.
-    /// </summary>
-    private async Task<bool> TryHandleDoubleClickAsync(TItem item)
+    private void OnClickTimeout(object? sender, ElapsedEventArgs e)
     {
-        var now = DateTime.UtcNow;
-        var timeSinceLastClick = (now - _lastClickTime).TotalMilliseconds;
+        var timer = (Timer?)sender;
+        timer?.Dispose();
 
-        if (_lastClickedItem is null || timeSinceLastClick > ApplicationConstants.DoubleClickTimeoutMilliseconds || false == SelectedItem?.Equals(_lastClickedItem))
+        var item = _pendingClickItem;
+        _pendingClickItem = null;
+        _clickTimer = null;
+
+        if (item is not null && OnRowClick.HasDelegate)
         {
-            return false; // Not a double-click
+            _ = InvokeAsync(async () => await OnRowClick.InvokeAsync(item));
         }
+    }
 
-        // This is a double-click
-        _lastClickedItem = null;
-
-        if (!OnRowDoubleClick.HasDelegate)
-        {
-            return false;
-        }
-
-        await OnRowDoubleClick.InvokeAsync(SelectedItem);
-        return true;
+    public void Dispose()
+    {
+        _clickTimer?.Dispose();
+        _clickTimer = null;
     }
 }

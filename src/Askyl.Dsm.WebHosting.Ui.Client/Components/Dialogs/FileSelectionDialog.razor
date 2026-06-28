@@ -16,7 +16,7 @@
 @inject ILogger<ILogClient> logger
 @inject ILocalizer localizer
 
-<LoadingOverlay WorkingStateComponent="@this" />
+<LoadingOverlay WorkingStateComponent="@this" OnStateChanged="StateHasChanged" />
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">@localizer[LK.FileSelection.DialogTitle]</FluentLabel>
