@@ -63,9 +63,4 @@ public class AuthenticationService(IHttpClientFactory httpClientFactory, ILocali
         var httpClient = _httpClient;
         return await httpClient.GetJsonOrDefaultAsync(AuthenticationRoutes.StatusFullRoute, () => ApiResultBool.CreateFailure(localizer[LK.Error.FailedToCheckAuthStatus]), cancellationToken);
     }
-
-    public Task<bool> IsSessionValidAsync()
-    {
-        throw new NotImplementedException();
-    }
 }

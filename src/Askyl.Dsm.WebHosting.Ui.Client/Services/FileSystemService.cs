@@ -33,5 +33,5 @@ public class FileSystemService(IHttpClientFactory httpClientFactory, ILocalizer 
     /// It should not be called from the client - permissions are automatically set when adding/updating websites.
     /// </remarks>
     public Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory, CancellationToken cancellationToken = default)
-        => throw new NotImplementedException("Permission setting is now handled internally by WebSiteHostingService. This method should not be called from the client.");
+        => throw new NotSupportedException("Permission setting is handled internally by WebSiteHostingService and is not available through the client proxy.");
 }
