@@ -63,7 +63,7 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger, IFileRea
 
     private async Task AddDirectoryToArchiveAsync(ZipArchive archive, string directoryPath, string entryPrefix, CancellationToken cancellationToken)
     {
-        foreach (var file in fileReader.EnumerateFiles(directoryPath, "*", true))
+        foreach (var file in fileReader.GetFiles(directoryPath, "*", true))
         {
             cancellationToken.ThrowIfCancellationRequested();
 

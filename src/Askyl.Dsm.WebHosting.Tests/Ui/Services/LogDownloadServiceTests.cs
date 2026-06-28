@@ -87,8 +87,8 @@ public class LogDownloadServiceTests
         _fileReader.Setup(f => f.FileExists(It.IsAny<string>())).Returns(false);
         _fileReader.Setup(f => f.DirectoryExists(logDir)).Returns(true);
         _fileReader.Setup(f => f.DirectoryExists(It.Is<string>(p => p != logDir))).Returns(false);
-        _fileReader.Setup(f => f.EnumerateFiles(logDir, "*", true))
-                   .Returns(new[] { logFile1, logFile2 });
+        _fileReader.Setup(f => f.GetFiles(logDir, "*", true))
+                      .Returns([logFile1, logFile2]);
 
         _fileReader.Setup(f => f.OpenRead(logFile1)).Returns(new MemoryStream(System.Text.Encoding.UTF8.GetBytes("log file 1")));
         _fileReader.Setup(f => f.OpenRead(logFile2)).Returns(new MemoryStream(System.Text.Encoding.UTF8.GetBytes("log file 2")));

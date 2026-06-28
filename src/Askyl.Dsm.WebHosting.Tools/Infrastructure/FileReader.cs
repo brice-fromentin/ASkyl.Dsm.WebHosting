@@ -26,9 +26,9 @@ public interface IFileReader
     Stream OpenRead(string path);
 
     /// <summary>
-    /// Enumerates files in the specified directory, optionally recursing into subdirectories.
+    /// Gets all files in the specified directory, optionally recursing into subdirectories.
     /// </summary>
-    IEnumerable<string> EnumerateFiles(string directoryPath, string searchPattern, bool recurseSubdirectories);
+    string[] GetFiles(string directoryPath, string searchPattern, bool recurseSubdirectories);
 }
 
 /// <summary>
@@ -44,6 +44,6 @@ public sealed class SystemFileReader : IFileReader
 
     public Stream OpenRead(string path) => File.OpenRead(path);
 
-    public IEnumerable<string> EnumerateFiles(string directoryPath, string searchPattern, bool recurseSubdirectories)
-        => Directory.EnumerateFiles(directoryPath, searchPattern, new EnumerationOptions { RecurseSubdirectories = recurseSubdirectories });
+    public string[] GetFiles(string directoryPath, string searchPattern, bool recurseSubdirectories)
+        => Directory.GetFiles(directoryPath, searchPattern, recurseSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
 }
