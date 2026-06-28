@@ -108,13 +108,7 @@
     private string ProtocolProxy
     {
         get => ((int)Configuration.Protocol).ToString();
-        set
-        {
-            if (Enum.TryParse<ProtocolType>(value, out var protocol))
-            {
-                Configuration.Protocol = protocol;
-            }
-        }
+        set => Configuration.Protocol = Enum.Parse<ProtocolType>(value);
     }
 
     #endregion
