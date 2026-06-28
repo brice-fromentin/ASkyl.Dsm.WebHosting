@@ -10,7 +10,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 /// <summary>
 /// Service that provides platform information including operating system, architecture, and configured channel version.
 /// </summary>
-public sealed class PlatformInfoService
+public sealed class PlatformInfoService(ILogger<ILogPlatformInfoService> logger)
 {
     private enum Platform
     {
@@ -19,19 +19,11 @@ public sealed class PlatformInfoService
         Windows
     }
 
-    private readonly ILogger<ILogPlatformInfoService> _logger;
+    public string ChannelVersion { get; } = LoadChannelVersion();
+    public string CurrentArchitecture { get; } = DetectAndLogArchitecture(logger);
+    public string CurrentOS { get; } = DetectAndLogOS(logger);
 
-    public string ChannelVersion { get; private set; } = null!; // Initialized in constructor, will throw if config missing
-    public string CurrentArchitecture { get; private set; } = String.Empty;
-    public string CurrentOS { get; private set; } = String.Empty;
-
-    public PlatformInfoService(ILogger<ILogPlatformInfoService> logger)
-    {
-        _logger = logger;
-        InitializePlatformInfo();
-    }
-
-    private void InitializePlatformInfo()
+    private static string LoadChannelVersion()
     {
         var basePath = AppContext.BaseDirectory;
 
@@ -48,17 +40,21 @@ public sealed class PlatformInfoService
             throw new InvalidOperationException($"Required setting '{ApplicationConstants.ChannelVersionKey}' is missing or empty in '{ApplicationConstants.SettingsFileName}'. The application cannot function without a configured .NET channel version.");
         }
 
-        ChannelVersion = channelVersion;
+        return channelVersion;
+    }
 
-        // Detect architecture
-        var osArchitecture = RuntimeInformation.OSArchitecture;
-        CurrentArchitecture = MapArchitectureToOsString(osArchitecture);
-        _logger.DetectedArchitecture(CurrentArchitecture);
+    private static string DetectAndLogArchitecture(ILogger<ILogPlatformInfoService> log)
+    {
+        var architecture = MapArchitectureToOsString(RuntimeInformation.OSArchitecture);
+        log.DetectedArchitecture(architecture);
+        return architecture;
+    }
 
-        // Detect operating system
-        var platform = DetectPlatform();
-        CurrentOS = MapPlatformToOsString(platform, allowAllPlatforms: IsDebugMode());
-        _logger.DetectedOS(CurrentOS);
+    private static string DetectAndLogOS(ILogger<ILogPlatformInfoService> log)
+    {
+        var os = MapPlatformToOsString(DetectPlatform(), IsDebugMode());
+        log.DetectedOS(os);
+        return os;
     }
 
     private static string MapArchitectureToOsString(Architecture architecture)
