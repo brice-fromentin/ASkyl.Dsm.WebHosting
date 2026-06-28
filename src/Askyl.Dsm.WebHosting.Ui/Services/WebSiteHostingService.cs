@@ -107,7 +107,31 @@ public class WebSiteHostingService(
 
             return result;
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (IOException ex)
+        {
+            logger.ErrorAddingWebsite(ex, configuration.Name);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            logger.ErrorAddingWebsite(ex, configuration.Name);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.ErrorAddingWebsite(ex, configuration.Name);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.ErrorAddingWebsite(ex, configuration.Name);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
+        }
+        catch (Exception ex) // Fallback: service contract requires returning a result rather than rethrowing.
         {
             logger.ErrorAddingWebsite(ex, configuration.Name);
             return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
@@ -164,7 +188,31 @@ public class WebSiteHostingService(
             // STEP 5: Detect framework from assembly and warn if incompatible
             return AttachRuntimeInfo(existingInstance, configuration.ApplicationRealPath);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (IOException ex)
+        {
+            logger.ErrorUpdatingWebsite(ex, configuration.Name);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            logger.ErrorUpdatingWebsite(ex, configuration.Name);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.ErrorUpdatingWebsite(ex, configuration.Name);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.ErrorUpdatingWebsite(ex, configuration.Name);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
+        }
+        catch (Exception ex) // Fallback: service contract requires returning a result rather than rethrowing.
         {
             logger.ErrorUpdatingWebsite(ex, configuration.Name);
             return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.OperationFailed]);
