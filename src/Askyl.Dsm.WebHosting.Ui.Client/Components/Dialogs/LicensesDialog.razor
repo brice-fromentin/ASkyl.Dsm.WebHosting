@@ -21,7 +21,7 @@
 <FluentDialogBody>
     @if (_licenses is not null)
     {
-        <FluentTabs Orientation="Orientation.Vertical" Class="full-size" @bind-SelectedIndex="_selectedTabIndex">
+        <FluentTabs Orientation="Orientation.Vertical" Class="full-size">
             @foreach (var license in _licenses)
             {
                 <FluentTab>
@@ -47,7 +47,6 @@
     public FluentDialog Dialog { get; set; } = default!;
 
     private IReadOnlyList<LicenseInfo>? _licenses;
-    private int _selectedTabIndex;
 
     protected override async Task OnInitializedAsync()
     {
