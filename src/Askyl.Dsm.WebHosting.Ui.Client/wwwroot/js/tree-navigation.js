@@ -48,3 +48,6 @@ function selectChildItem(childId, parentId) {
         }, 100);
     }
 }
+
+window.ADWH = window.ADWH || {};
+window.ADWH.selectChildItem = selectChildItem;

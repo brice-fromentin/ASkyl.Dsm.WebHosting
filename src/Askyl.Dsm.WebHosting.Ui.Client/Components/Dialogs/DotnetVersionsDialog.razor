@@ -33,9 +33,8 @@
                 {
                     <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                         <FluentIcon Value="@GetFrameworkIcon(framework.Type)" />
-                        <FluentLabel Typo="Typography.Body">
-                            <strong>@framework.Type:</strong> @framework.Version
-                        </FluentLabel>
+                        <FluentLabel Typo="Typography.Body" Weight="FontWeight.Bold">@framework.Type:</FluentLabel>
+                        <FluentLabel Typo="Typography.Body">@framework.Version</FluentLabel>
                     </FluentStack>
                 }
             </FluentStack>
@@ -107,13 +106,16 @@
 
     private Icon GetFrameworkIcon(string frameworkType)
     {
-        return frameworkType switch
-        {
-            DotNetFrameworkTypes.SdkMain => new IconsRegular16.Star(),
-            DotNetFrameworkTypes.Sdk => new IconsRegular16.Settings(),
-            DotNetFrameworkTypes.AspNetCore => new IconsRegular16.Globe(),
-            DotNetFrameworkTypes.Runtime => new IconsRegular16.Play(),
-            _ => new IconsRegular16.Code()
-        };
+        return s_frameworkIcons.GetValueOrDefault(frameworkType, s_defaultIcon);
     }
+
+    private static readonly Dictionary<string, Icon> s_frameworkIcons = new(StringComparer.Ordinal)
+    {
+        { DotNetFrameworkTypes.SdkMain, new IconsRegular16.Star() },
+        { DotNetFrameworkTypes.Sdk, new IconsRegular16.Settings() },
+        { DotNetFrameworkTypes.AspNetCore, new IconsRegular16.Globe() },
+        { DotNetFrameworkTypes.Runtime, new IconsRegular16.Play() }
+    };
+
+    private static readonly Icon s_defaultIcon = new IconsRegular16.Code();
 }

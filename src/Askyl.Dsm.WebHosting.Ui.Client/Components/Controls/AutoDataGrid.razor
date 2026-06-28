@@ -49,7 +49,7 @@
             @if (OnReload.HasDelegate)
             {
                 <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
-                <FluentButton Appearance="Appearance.Stealth" OnClick="@HandleReloadClick" Disabled="@(!OnReload.HasDelegate)">
+                <FluentButton Appearance="Appearance.Stealth" OnClick="@HandleReloadClick" Disabled="@(!OnReload.HasDelegate)" AriaLabel="@localizer[LK.Common.Refresh]">
                     <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
                 </FluentButton>
             }

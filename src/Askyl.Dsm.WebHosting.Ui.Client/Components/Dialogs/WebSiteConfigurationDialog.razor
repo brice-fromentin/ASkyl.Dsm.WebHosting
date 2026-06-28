@@ -108,7 +108,13 @@
     private string ProtocolProxy
     {
         get => ((int)Configuration.Protocol).ToString();
-        set => Configuration.Protocol = Enum.Parse<ProtocolType>(value);
+        set
+        {
+            if (Enum.TryParse<ProtocolType>(value, out var protocol))
+            {
+                Configuration.Protocol = protocol;
+            }
+        }
     }
 
     #endregion
@@ -128,7 +134,7 @@
 
     private async Task SelectApplicationPath()
     {
-        var parameters = new DialogParameters { Width = "80%", Modal = true, TrapFocus = false, PreventScroll = true, PreventDismissOnOverlayClick = true };
+        var parameters = new DialogParameters { Width = DialogConstants.WidthLarge, Modal = true, TrapFocus = false, PreventScroll = true, PreventDismissOnOverlayClick = true };
         var dialog = await DialogService.ShowDialogAsync<FileSelectionDialog>(parameters);
         var result = await dialog.Result;
 

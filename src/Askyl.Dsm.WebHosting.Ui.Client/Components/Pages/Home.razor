@@ -23,42 +23,42 @@
 <LoadingOverlay WorkingStateComponent="@this" OnStateChanged="StateHasChanged" />
 
 <FluentToolbar Class="full-width">
-    <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral" OnClick="AddWebSite">
+    <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral" OnClick="@_onAddWebSite">
         @localizer[LK.Home.AddButton]
     </FluentButton>
-    <FluentButton IconStart="@(new IconsRegular20.Edit())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="EditWebSite">
+    <FluentButton IconStart="@(new IconsRegular20.Edit())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="@_onEditWebSite">
         @localizer[LK.Home.EditButton]
     </FluentButton>
-    <FluentButton IconStart="@(new IconsRegular20.Delete())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="DeleteWebSite">
+    <FluentButton IconStart="@(new IconsRegular20.Delete())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="@_onDeleteWebSite">
         @localizer[LK.Common.Delete]
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
-    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance">
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="@_onStartSelectedInstance" AriaLabel="@localizer[LK.Home.StartButton]">
         <FluentIcon Value="@(new IconsRegular20.Play())" Color="Color.Success" />
     </FluentButton>
-    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="StopSelectedInstance">
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="@_onStopSelectedInstance" AriaLabel="@localizer[LK.Home.StopButton]">
         <FluentIcon Value="@(new IconsRegular20.Stop())" Color="Color.Error" />
     </FluentButton>
     <FluentSpacer />
-    <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="Appearance.Outline">
+    <FluentButton OnClick="@_onShowDotnetVersionsDialog" Appearance="Appearance.Outline">
         @localizer[LK.Home.DotnetVersionButton]
     </FluentButton>
-    <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="Appearance.Outline">
+    <FluentButton OnClick="@_onShowAspNetReleasesDialog" Appearance="Appearance.Outline">
         @localizer[LK.Home.AspNetOnlineButton]
     </FluentButton>
-    <FluentButton OnClick="ShowLicensesDialog" Appearance="Appearance.Outline">
+    <FluentButton OnClick="@_onShowLicensesDialog" Appearance="Appearance.Outline">
         @localizer[LK.Home.LicensesButton]
     </FluentButton>
-    <FluentButton OnClick="DownloadLogs" Appearance="Appearance.Outline">
+    <FluentButton OnClick="@_onDownloadLogs" Appearance="Appearance.Outline">
         @localizer[LK.Home.DownloadLogsButton]
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
-    <FluentButton OnClick="Logout" Appearance="Appearance.Outline" IconStart="@(new IconsRegular20.SignOut())">
+    <FluentButton OnClick="@_onLogout" Appearance="Appearance.Outline" IconStart="@(new IconsRegular20.SignOut())">
         @localizer[LK.Home.LogoutButton]
     </FluentButton>
 </FluentToolbar>
 
-<AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr 1fr">
+<AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="@_onGridReload" OnRowClick="@_onRowClick" OnRowDoubleClick="@_onRowDoubleClick" GridTemplateColumns="1fr 2fr 1fr 1fr 1fr">
     <ChildContent>
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnName]" Property="@(i => i.Configuration.Name)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnPath]" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
@@ -79,6 +79,37 @@
     private WebSiteInstance? SelectedInstance { get; set; }
 
     private IQueryable<WebSiteInstance> GridInstances => Instances.AsQueryable();
+
+    private EventCallback _onAddWebSite;
+    private EventCallback _onEditWebSite;
+    private EventCallback _onDeleteWebSite;
+    private EventCallback _onStartSelectedInstance;
+    private EventCallback _onStopSelectedInstance;
+    private EventCallback _onShowDotnetVersionsDialog;
+    private EventCallback _onShowAspNetReleasesDialog;
+    private EventCallback _onShowLicensesDialog;
+    private EventCallback _onDownloadLogs;
+    private EventCallback _onLogout;
+    private EventCallback _onGridReload;
+    private EventCallback<WebSiteInstance> _onRowClick;
+    private EventCallback<WebSiteInstance> _onRowDoubleClick;
+
+    protected override void OnInitialized()
+    {
+        _onAddWebSite = EventCallback.Factory.Create(this, AddWebSite);
+        _onEditWebSite = EventCallback.Factory.Create(this, EditWebSite);
+        _onDeleteWebSite = EventCallback.Factory.Create(this, DeleteWebSite);
+        _onStartSelectedInstance = EventCallback.Factory.Create(this, StartSelectedInstance);
+        _onStopSelectedInstance = EventCallback.Factory.Create(this, StopSelectedInstance);
+        _onShowDotnetVersionsDialog = EventCallback.Factory.Create(this, ShowDotnetVersionsDialog);
+        _onShowAspNetReleasesDialog = EventCallback.Factory.Create(this, ShowAspNetReleasesDialog);
+        _onShowLicensesDialog = EventCallback.Factory.Create(this, ShowLicensesDialog);
+        _onDownloadLogs = EventCallback.Factory.Create(this, DownloadLogs);
+        _onLogout = EventCallback.Factory.Create(this, Logout);
+        _onGridReload = EventCallback.Factory.Create(this, LoadInstancesAsync);
+        _onRowClick = EventCallback.Factory.Create<WebSiteInstance>(this, HandleInstanceSelected);
+        _onRowDoubleClick = EventCallback.Factory.Create<WebSiteInstance>(this, HandleInstanceDoubleClicked);
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -110,8 +141,6 @@
         }
     }
 
-    private async Task EditWebSiteInstance(WebSiteInstance instance) => await EditWebSite(instance);
-
     private void HandleInstanceDoubleClicked(WebSiteInstance instance)
     {
         SelectedInstance = instance;
@@ -121,8 +150,6 @@
     private async Task AddWebSite() => await ShowWebSiteConfigurationDialogAsync(new WebSiteInstance());
 
     private async Task EditWebSite() => await ShowWebSiteConfigurationDialogAsync(SelectedInstance);
-
-    private async Task EditWebSite(WebSiteInstance instance) => await EditWebSite();
 
     private void HandleInstanceSelected(WebSiteInstance instance) => SelectedInstance = instance;
 

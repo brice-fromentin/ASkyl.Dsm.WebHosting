@@ -19,4 +19,9 @@ public static class DialogConstants
     /// Width for medium dialogs (75% of container).
     /// </summary>
     public const string WidthMedium = "75%";
+
+    /// <summary>
+    /// Width for large dialogs (80% of container).
+    /// </summary>
+    public const string WidthLarge = "80%";
 }
