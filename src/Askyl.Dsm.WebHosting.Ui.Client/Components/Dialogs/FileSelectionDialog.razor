@@ -5,9 +5,10 @@
 @using Askyl.Dsm.WebHosting.Logging
 @using Microsoft.JSInterop
 
+@inherits WorkingStateBase
 @implements IDialogContentComponent
-@implements IWorkingState
 
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @inject IDialogService DialogService
 @inject IFileSystemService FileSystemService
 @inject ITreeContentService TreeContentService
@@ -98,14 +99,7 @@
 
     #endregion
 
-    #region IWorkingState Implementation
-
-    public bool IsWorking { get; set; }
-    public string Message { get; set; } = String.Empty;
-
-    public void NotifyStateChanged() => StateHasChanged();
-
-    #endregion
+    public override void NotifyStateChanged() => StateHasChanged();
 
     #region Lifecycle
 

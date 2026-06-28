@@ -1,7 +1,8 @@
 @page "/login"
 
-@implements IWorkingState
+@inherits WorkingStateBase
 
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @using System.Runtime.InteropServices
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Data.Domain.Authentication
@@ -43,15 +44,7 @@
 
 @code
 {
-    #region IWorkingState Implementation
-
-    public bool IsWorking { get; set; }
-
-    public string Message { get; set; } = String.Empty;
-
-    public void NotifyStateChanged() => StateHasChanged();
-
-    #endregion
+    public override void NotifyStateChanged() => StateHasChanged();
 
     private LoginCredentials Model = new();
 

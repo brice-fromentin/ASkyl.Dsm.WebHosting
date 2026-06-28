@@ -2,9 +2,10 @@
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
 
+@inherits WorkingStateBase
 @implements IDialogContentComponent
-@implements IWorkingState
 
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @inject IDialogService DialogService
 @inject IDotnetVersionService DotnetVersionService
 @inject IFrameworkManagementService ManagementService
@@ -59,15 +60,7 @@
 
 @code
 {
-    #region IWorkingState Implementation
-
-    public bool IsWorking { get; set; }
-
-    public string Message { get; set; } = String.Empty;
-
-    public void NotifyStateChanged() => StateHasChanged();
-
-    #endregion
+    public override void NotifyStateChanged() => StateHasChanged();
 
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
