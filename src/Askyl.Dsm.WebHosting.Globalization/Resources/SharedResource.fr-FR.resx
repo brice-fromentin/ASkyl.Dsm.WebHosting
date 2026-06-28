@@ -172,6 +172,12 @@
   <data name="Home_GridColumnState" xml:space="preserve">
     <value>État</value>
   </data>
+  <data name="Home_StateRunning" xml:space="preserve">
+    <value>En cours</value>
+  </data>
+  <data name="Home_StateStopped" xml:space="preserve">
+    <value>Arrêté</value>
+  </data>
   <data name="Home_DeleteConfirmation" xml:space="preserve">
     <value>Êtes-vous sûr de vouloir supprimer le site web '{0}' ? Cette action est irréversible.</value>
   </data>

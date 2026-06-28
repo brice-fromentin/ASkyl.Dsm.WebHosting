@@ -56,6 +56,8 @@ public static class LK
         public const string GridColumnFramework = "Home_GridColumnFramework";
         public const string GridColumnInternalPort = "Home_GridColumnInternalPort";
         public const string GridColumnState = "Home_GridColumnState";
+        public const string StateRunning = "Home_StateRunning";
+        public const string StateStopped = "Home_StateStopped";
         public const string LoadingWebsites = "Home_LoadingWebsites";
         public const string DeleteConfirmation = "Home_DeleteConfirmation";
         public const string ErrorDeleting = "Home_ErrorDeleting";

@@ -109,18 +109,4 @@ public static class WebSiteConstants
     public const string DllFileExtension = ".dll";
 
     #endregion
-
-    #region Instance State
-
-    /// <summary>
-    /// Human-readable label for a running website instance.
-    /// </summary>
-    public const string StateRunning = "Running";
-
-    /// <summary>
-    /// Human-readable label for a stopped website instance.
-    /// </summary>
-    public const string StateStopped = "Stopped";
-
-    #endregion
 }

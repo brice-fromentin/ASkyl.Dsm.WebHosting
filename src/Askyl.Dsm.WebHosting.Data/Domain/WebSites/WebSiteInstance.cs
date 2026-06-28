@@ -48,11 +48,6 @@ public class WebSiteInstance
     }
 
     /// <summary>
-    /// Gets a human-readable state description.
-    /// </summary>
-    public string State => IsRunning ? WebSiteConstants.StateRunning : WebSiteConstants.StateStopped;
-
-    /// <summary>
     /// Gets or sets the required .NET framework channel detected from the assembly (e.g., "8.0").
     /// This is a runtime-derived property, not persisted in configuration.
     /// NOTE: Remains mutable (get; set;) because it is set after construction during initialization
