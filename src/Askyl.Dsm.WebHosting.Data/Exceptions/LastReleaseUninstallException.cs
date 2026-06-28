@@ -9,12 +9,12 @@ public sealed class LastReleaseUninstallException : InvalidOperationException
     /// <summary>
     /// The version that was attempted to be uninstalled.
     /// </summary>
-    public string Version { get; }
+    public string Version { get; } = default!;
 
     /// <summary>
     /// The configured channel for which this is the last release.
     /// </summary>
-    public string Channel { get; }
+    public string Channel { get; } = default!;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LastReleaseUninstallException"/> class.
@@ -57,19 +57,13 @@ public sealed class LastReleaseUninstallException : InvalidOperationException
 
     public LastReleaseUninstallException() : base()
     {
-        Version = String.Empty;
-        Channel = String.Empty;
     }
 
     public LastReleaseUninstallException(string? message) : base(message)
     {
-        Version = String.Empty;
-        Channel = String.Empty;
     }
 
     public LastReleaseUninstallException(string? message, Exception? innerException) : base(message, innerException)
     {
-        Version = String.Empty;
-        Channel = String.Empty;
     }
 }

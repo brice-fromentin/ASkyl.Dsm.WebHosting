@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.ReverseProxy;
 
@@ -23,17 +24,17 @@ public record ReverseProxy
     public ReverseProxyFrontend Frontend { get; init; } = default!;
 
     [JsonPropertyName("proxy_connect_timeout")]
-    public int ProxyConnectTimeout { get; init; } = 60;
+    public int ProxyConnectTimeout { get; init; } = ReverseProxyConstants.DefaultProxyTimeoutSeconds;
 
     [JsonPropertyName("proxy_http_version")]
-    public int ProxyHttpVersion { get; init; } = 1;
+    public int ProxyHttpVersion { get; init; } = ReverseProxyConstants.DefaultProxyHttpVersion;
 
     [JsonPropertyName("proxy_intercept_errors")]
     public bool ProxyInterceptErrors { get; init; } = false;
 
     [JsonPropertyName("proxy_read_timeout")]
-    public int ProxyReadTimeout { get; init; } = 60;
+    public int ProxyReadTimeout { get; init; } = ReverseProxyConstants.DefaultProxyTimeoutSeconds;
 
     [JsonPropertyName("proxy_send_timeout")]
-    public int ProxySendTimeout { get; init; } = 60;
+    public int ProxySendTimeout { get; init; } = ReverseProxyConstants.DefaultProxyTimeoutSeconds;
 }

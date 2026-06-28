@@ -15,29 +15,29 @@ public interface IApiResponse
 public class ApiResponseBase<T> : IApiResponse where T : class, new()
 {
     [JsonPropertyName("data")]
-    public T? Data { get; set; }
+    public T? Data { get; init; }
 
     [JsonPropertyName("error")]
-    public ApiError? Error { get; set; }
+    public ApiError? Error { get; init; }
 
     [JsonPropertyName("success")]
-    public bool Success { get; set; }
+    public bool Success { get; init; }
 }
 
 public class ApiError
 {
     [JsonPropertyName("code")]
-    public int Code { get; set; }
+    public int Code { get; init; }
 
     [JsonPropertyName("errors")]
-    public ApiErrors? Errors { get; set; }
+    public ApiErrors? Errors { get; init; }
 }
 
 public class ApiErrors
 {
     [JsonPropertyName("reason")]
-    public string? Reason { get; set; }
+    public string? Reason { get; init; }
 
     [JsonPropertyName("index")]
-    public int[]? Index { get; set; }
+    public int[]? Index { get; init; }
 }

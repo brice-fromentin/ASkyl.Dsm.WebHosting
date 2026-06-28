@@ -1,5 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 
 /// <summary>
@@ -27,49 +25,43 @@ public enum AspNetCoreReleaseType
 /// <summary>
 /// Represents information about an ASP.NET Core release, including both channel and version details.
 /// </summary>
-public sealed class AspNetCoreReleaseInfo
+public sealed class AspNetCoreReleaseInfo(
+    string version,
+    string productVersion,
+    DateTimeOffset? releaseDate = null,
+    bool isSecurity = false,
+    bool isLts = false,
+    AspNetCoreReleaseType releaseType = AspNetCoreReleaseType.Unknown)
 {
     /// <summary>
     /// The specific version of the ASP.NET Core release (e.g., "8.0.1").
     /// </summary>
-    public required string Version { get; init; }
+    public string Version { get; init; } = version ?? throw new ArgumentNullException(nameof(version));
 
     /// <summary>
     /// The product version/channel (e.g., "8.0").
     /// </summary>
-    public required string ProductVersion { get; init; }
+    public string ProductVersion { get; init; } = productVersion ?? throw new ArgumentNullException(nameof(productVersion));
 
     /// <summary>
     /// The release date of this version.
     /// </summary>
-    public DateTimeOffset? ReleaseDate { get; init; }
+    public DateTimeOffset? ReleaseDate { get; init; } = releaseDate;
 
     /// <summary>
     /// Indicates whether this release is a security update.
     /// </summary>
-    public bool IsSecurity { get; init; }
+    public bool IsSecurity { get; init; } = isSecurity;
 
     /// <summary>
     /// Indicates whether this release is part of a Long Term Support (LTS) channel.
     /// </summary>
-    public bool IsLts { get; init; }
+    public bool IsLts { get; init; } = isLts;
 
     /// <summary>
     /// The release type of the channel (LTS, Current, etc.).
     /// </summary>
-    public AspNetCoreReleaseType ReleaseType { get; init; }
-
-    [SetsRequiredMembers]
-    [SuppressMessage("Style", "IDE0290", Justification = "Explicit constructor call improves clarity and documents SetsRequiredMembers initialization.")]
-    public AspNetCoreReleaseInfo(string version, string productVersion, DateTimeOffset? releaseDate = null, bool isSecurity = false, bool isLts = false, AspNetCoreReleaseType releaseType = AspNetCoreReleaseType.Unknown)
-    {
-        Version = version ?? throw new ArgumentNullException(nameof(version));
-        ProductVersion = productVersion ?? throw new ArgumentNullException(nameof(productVersion));
-        ReleaseDate = releaseDate;
-        IsSecurity = isSecurity;
-        IsLts = isLts;
-        ReleaseType = releaseType;
-    }
+    public AspNetCoreReleaseType ReleaseType { get; init; } = releaseType;
 
     /// <summary>
     /// Creates a channel-only instance for representing available channels.

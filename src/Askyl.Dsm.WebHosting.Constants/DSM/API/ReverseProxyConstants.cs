@@ -15,6 +15,11 @@ public static class ReverseProxyConstants
     /// </summary>
     public const int DefaultProxyTimeoutSeconds = 60;
 
+    /// <summary>
+    /// Default proxy HTTP version for reverse proxy connections (HTTP/1.1).
+    /// </summary>
+    public const int DefaultProxyHttpVersion = 1;
+
     #region ACL
 
     /// <summary>
