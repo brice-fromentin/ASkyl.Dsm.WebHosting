@@ -148,60 +148,126 @@ public class ResultTypesTests
 
     #endregion
 
-    #region Items Result Types - Parameterized
+    #region Items Result Types
 
-    public static IEnumerable<object[]> GetItemsSuccessTestData()
+    [Fact]
+    public void SharedFoldersResult_CreateSuccess_SetsValueAndSuccess()
     {
-        var sharedFolders = new List<FsEntry> { new("/path/folder1", "folder1", true, "/real/folder1", null, DateTime.UtcNow) };
-        yield return new object[] { "SharedFoldersResult", sharedFolders, (Func<object, string, object>)((v, m) => SharedFoldersResult.CreateSuccess((List<FsEntry>)v, m)) };
+        var items = new List<FsEntry> { new("/path/folder1", "folder1", true, "/real/folder1", null, DateTime.UtcNow) };
+        var result = SharedFoldersResult.CreateSuccess(items, "OK");
 
-        var directoryContents = new List<FsEntry> { new("/path/subdir", "subdir", true, "/real/subdir", null, DateTime.UtcNow) };
-        yield return new object[] { "DirectoryContentsResult", directoryContents, (Func<object, string, object>)((v, _) => DirectoryContentsResult.CreateSuccess((List<FsEntry>)v)) };
-
-        var channels = new List<AspNetCoreReleaseInfo> { CreateReleaseInfo("8.0.1", "8.0", isLts: true) };
-        yield return new object[] { "ChannelsResult", channels, (Func<object, string, object>)((v, m) => ChannelsResult.CreateSuccess((List<AspNetCoreReleaseInfo>)v, m)) };
-
-        var releases = new List<AspNetRelease> { AspNetRelease.Create(CreateReleaseInfo("8.0.1", "8.0")) };
-        yield return new object[] { "ReleasesResult", releases, (Func<object, string, object>)((v, _) => ReleasesResult.CreateSuccess((List<AspNetRelease>)v)) };
-
-        var versions = new List<FrameworkInfo> { new("Microsoft.NETCore.App", "8.0.1") };
-        yield return new object[] { "InstalledVersionsResult", versions, (Func<object, string, object>)((v, _) => InstalledVersionsResult.CreateSuccess((List<FrameworkInfo>)v)) };
-
-        var instances = new List<WebSiteInstance> { new(new WebSiteConfiguration { Name = "Test" }) };
-        yield return new object[] { "WebSiteInstancesResult", instances, (Func<object, string, object>)((v, _) => WebSiteInstancesResult.CreateSuccess((List<WebSiteInstance>)v)) };
+        Assert.True(result.Success);
+        Assert.Same(items, result.Value);
+        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
     }
 
-    [Theory]
-    [MemberData(nameof(GetItemsSuccessTestData))]
-    public void ItemsResults_CreateSuccess_SetsValueAndSuccess(string _, object value, Func<object, string, object> createSuccess)
+    [Fact]
+    public void DirectoryContentsResult_CreateSuccess_SetsValueAndSuccess()
     {
-        // Act
-        var result = createSuccess(value, "OK");
+        var items = new List<FsEntry> { new("/path/subdir", "subdir", true, "/real/subdir", null, DateTime.UtcNow) };
+        var result = DirectoryContentsResult.CreateSuccess(items);
 
-        // Assert
-        Assert.True(GetSuccess(result));
-        Assert.Same(value, GetValue(result));
-        Assert.Equal(ApiErrorCode.None, GetErrorCode(result));
+        Assert.True(result.Success);
+        Assert.Same(items, result.Value);
+        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
     }
 
-    public static IEnumerable<object[]> GetItemsFailureTestData()
+    [Fact]
+    public void ChannelsResult_CreateSuccess_SetsValueAndSuccess()
     {
-        yield return new object[] { "SharedFoldersResult", SharedFoldersResult.CreateFailure("Disk error") };
-        yield return new object[] { "DirectoryContentsResult", DirectoryContentsResult.CreateFailure("Permission denied") };
-        yield return new object[] { "ChannelsResult", ChannelsResult.CreateFailure("Network error") };
-        yield return new object[] { "ReleasesResult", ReleasesResult.CreateFailure("Fetch failed") };
-        yield return new object[] { "InstalledVersionsResult", InstalledVersionsResult.CreateFailure("Parse failed") };
-        yield return new object[] { "WebSiteInstancesResult", WebSiteInstancesResult.CreateFailure("Load failed") };
+        var items = new List<AspNetCoreReleaseInfo> { CreateReleaseInfo("8.0.1", "8.0", isLts: true) };
+        var result = ChannelsResult.CreateSuccess(items, "OK");
+
+        Assert.True(result.Success);
+        Assert.Same(items, result.Value);
+        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
     }
 
-    [Theory]
-    [MemberData(nameof(GetItemsFailureTestData))]
-    public void ItemsResults_CreateFailure_SetsExpectedProperties(string _, object failureResult)
+    [Fact]
+    public void ReleasesResult_CreateSuccess_SetsValueAndSuccess()
     {
-        // Assert
-        Assert.False(GetSuccess(failureResult));
-        Assert.Null(GetValue(failureResult));
-        Assert.Equal(ApiErrorCode.Failure, GetErrorCode(failureResult));
+        var items = new List<AspNetRelease> { AspNetRelease.Create(CreateReleaseInfo("8.0.1", "8.0")) };
+        var result = ReleasesResult.CreateSuccess(items);
+
+        Assert.True(result.Success);
+        Assert.Same(items, result.Value);
+        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
+    }
+
+    [Fact]
+    public void InstalledVersionsResult_CreateSuccess_SetsValueAndSuccess()
+    {
+        var items = new List<FrameworkInfo> { new("Microsoft.NETCore.App", "8.0.1") };
+        var result = InstalledVersionsResult.CreateSuccess(items);
+
+        Assert.True(result.Success);
+        Assert.Same(items, result.Value);
+        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
+    }
+
+    [Fact]
+    public void WebSiteInstancesResult_CreateSuccess_SetsValueAndSuccess()
+    {
+        var items = new List<WebSiteInstance> { new(new WebSiteConfiguration { Name = "Test" }) };
+        var result = WebSiteInstancesResult.CreateSuccess(items);
+
+        Assert.True(result.Success);
+        Assert.Same(items, result.Value);
+        Assert.Equal(ApiErrorCode.None, result.ErrorCode);
+    }
+
+    [Fact]
+    public void SharedFoldersResult_CreateFailure_SetsExpectedProperties()
+    {
+        var result = SharedFoldersResult.CreateFailure("Disk error");
+        Assert.False(result.Success);
+        Assert.Null(result.Value);
+        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
+    }
+
+    [Fact]
+    public void DirectoryContentsResult_CreateFailure_SetsExpectedProperties()
+    {
+        var result = DirectoryContentsResult.CreateFailure("Permission denied");
+        Assert.False(result.Success);
+        Assert.Null(result.Value);
+        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
+    }
+
+    [Fact]
+    public void ChannelsResult_CreateFailure_SetsExpectedProperties()
+    {
+        var result = ChannelsResult.CreateFailure("Network error");
+        Assert.False(result.Success);
+        Assert.Null(result.Value);
+        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
+    }
+
+    [Fact]
+    public void ReleasesResult_CreateFailure_SetsExpectedProperties()
+    {
+        var result = ReleasesResult.CreateFailure("Fetch failed");
+        Assert.False(result.Success);
+        Assert.Null(result.Value);
+        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
+    }
+
+    [Fact]
+    public void InstalledVersionsResult_CreateFailure_SetsExpectedProperties()
+    {
+        var result = InstalledVersionsResult.CreateFailure("Parse failed");
+        Assert.False(result.Success);
+        Assert.Null(result.Value);
+        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
+    }
+
+    [Fact]
+    public void WebSiteInstancesResult_CreateFailure_SetsExpectedProperties()
+    {
+        var result = WebSiteInstancesResult.CreateFailure("Load failed");
+        Assert.False(result.Success);
+        Assert.Null(result.Value);
+        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
     }
 
     #endregion
@@ -249,15 +315,6 @@ public class ResultTypesTests
     {
         return new(version, productVersion, DateTimeOffset.UtcNow, isSecurity, isLts, releaseType);
     }
-
-    static bool GetSuccess(object result)
-        => (bool)result.GetType().GetProperty("Success")!.GetValue(result)!;
-
-    static object? GetValue(object result)
-        => result.GetType().GetProperty("Value")!.GetValue(result);
-
-    static ApiErrorCode GetErrorCode(object result)
-        => (ApiErrorCode)result.GetType().GetProperty("ErrorCode")!.GetValue(result)!;
 
     #endregion
 }
