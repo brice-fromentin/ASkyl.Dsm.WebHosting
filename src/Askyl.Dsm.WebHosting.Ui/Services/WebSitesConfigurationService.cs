@@ -21,7 +21,7 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
 
     private WebSitesConfiguration? _cachedConfiguration;
 
-    private bool _initialized = false;
+    private volatile bool _initialized = false;
 
     #endregion
 

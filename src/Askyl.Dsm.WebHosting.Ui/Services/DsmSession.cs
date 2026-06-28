@@ -1,3 +1,4 @@
+using System.Threading;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.Contracts;
@@ -70,7 +71,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         Sid = sid;
         Username = model.Login;
 
-        _sessionValid = false;
+        Volatile.Write(ref _sessionValid, false);
         _lastSessionValidation = DateTime.MinValue;
 
         await FetchUserPreferencesAsync(sid, cancellationToken);
@@ -89,7 +90,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
             return false;
         }
 
-        if (_sessionValid && (DateTime.UtcNow - _lastSessionValidation).TotalMinutes < ApplicationConstants.SessionValidationTtlMinutes)
+        if (Volatile.Read(ref _sessionValid) && (DateTime.UtcNow - _lastSessionValidation).TotalMinutes < ApplicationConstants.SessionValidationTtlMinutes)
         {
             return true;
         }
@@ -99,12 +100,12 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
 
         if (response is null || response.Error?.Code == DsmConstants.ErrorCodeAuthenticationFailed)
         {
-            _sessionValid = false;
+            Volatile.Write(ref _sessionValid, false);
             _lastSessionValidation = DateTime.UtcNow;
             return false;
         }
 
-        _sessionValid = true;
+        Volatile.Write(ref _sessionValid, true);
         _lastSessionValidation = DateTime.UtcNow;
         return true;
     }
@@ -117,7 +118,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         Sid = null;
         Username = null;
 
-        _sessionValid = false;
+        Volatile.Write(ref _sessionValid, false);
         _lastSessionValidation = DateTime.MinValue;
 
         UserLanguage = null;

@@ -24,7 +24,7 @@ public sealed partial class VersionsDetectorService(ILogger<ILogVersionsDetector
 
     #region Fields
 
-    private List<FrameworkInfo> _cachedFrameworks = [];
+    private volatile List<FrameworkInfo> _cachedFrameworks = [];
     private bool _cacheInitialized = false;
 
     #endregion
