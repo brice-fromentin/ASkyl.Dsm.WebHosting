@@ -60,10 +60,10 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.C
 
     private async Task AddDirectoryToArchiveAsync(ZipArchive archive, string directoryPath, string entryPrefix, CancellationToken cancellationToken)
     {
-        var files = Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories);
-
-        foreach (var file in files)
+        foreach (var file in Directory.EnumerateFiles(directoryPath, "*", new EnumerationOptions { RecurseSubdirectories = true }))
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var relativePath = Path.GetRelativePath(directoryPath, file);
             var entryName = Path.Combine(entryPrefix, relativePath).Replace(Path.DirectorySeparatorChar, '/');
 
@@ -73,6 +73,8 @@ public class LogDownloadService(ILogger<ILogLogDownloadService> logger) : Data.C
 
     private async Task AddFileToArchiveAsync(ZipArchive archive, string filePath, string entryName, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var entry = archive.CreateEntry(entryName);
 
         using var entryStream = entry.Open();

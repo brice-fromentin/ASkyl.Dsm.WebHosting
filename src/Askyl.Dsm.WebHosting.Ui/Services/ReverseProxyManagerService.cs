@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Data.Contracts;
@@ -11,7 +13,7 @@ using Askyl.Dsm.WebHosting.Tools.Extensions;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
-public class ReverseProxyManagerService(
+public partial class ReverseProxyManagerService(
     ILogger<ILogReverseProxyManagerService> logger,
     IDsmSession dsmSession) : IReverseProxyManagerService
 {
@@ -187,24 +189,25 @@ public class ReverseProxyManagerService(
         logger.ReverseProxyDeleted(uuid);
     }
 
+    private static readonly int[] NotFoundErrorCodes =
+    [
+        ReverseProxyConstants.ErrorCodeNotFound,
+        ReverseProxyConstants.ErrorCodeGenericNotFound,
+        ReverseProxyConstants.ErrorCodeResourceNotFound
+    ];
+
+    [GeneratedRegex(@"\b(not found|does not exist)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex NotFoundPattern();
+
     /// <summary>
     /// Checks if an error code indicates a "not found" scenario.
     /// </summary>
     private static bool IsNotFoundError(int? errorCode)
-    {
-        if (!errorCode.HasValue)
-        {
-            return false;
-        }
-
-        // Common DSM API error codes for "not found"
-        return errorCode.Value is ReverseProxyConstants.ErrorCodeNotFound or
-               ReverseProxyConstants.ErrorCodeGenericNotFound or
-               ReverseProxyConstants.ErrorCodeResourceNotFound;
-    }
+        => NotFoundErrorCodes.Contains(errorCode ?? int.MinValue);
 
     /// <summary>
     /// Checks if an error message indicates a "not found" scenario.
+    /// Attempts JSON parsing to extract error codes, then falls back to regex matching.
     /// </summary>
     private static bool IsNotFoundError(string message)
     {
@@ -213,8 +216,22 @@ public class ReverseProxyManagerService(
             return false;
         }
 
-        return message.Contains("not found", StringComparison.OrdinalIgnoreCase) ||
-               message.Contains("does not exist", StringComparison.OrdinalIgnoreCase);
+        try
+        {
+            using var doc = JsonDocument.Parse(message);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("error", out var error) && error.TryGetProperty("code", out var code))
+            {
+                return NotFoundErrorCodes.Contains(code.GetInt32());
+            }
+        }
+        catch (JsonException)
+        {
+            // Not JSON - fall through to regex matching
+        }
+
+        return NotFoundPattern().IsMatch(message);
     }
 
     /// <summary>
