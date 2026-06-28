@@ -114,5 +114,8 @@ static class LogEventIds
     /// <summary>CultureManager (client) — IDs 7600001–7600010.</summary>
     public const int CultureManagerBase = 7600000;
 
+    /// <summary>Client utilities (JS interop) — ID 7100001.</summary>
+    public const int ClientUtilitiesBase = 7100000;
+
     #endregion
 }

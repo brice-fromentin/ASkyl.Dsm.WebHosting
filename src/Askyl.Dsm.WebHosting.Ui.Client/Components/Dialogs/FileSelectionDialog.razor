@@ -2,6 +2,8 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Logging
+@using Microsoft.JSInterop
 
 @implements IDialogContentComponent
 @implements IWorkingState
@@ -10,6 +12,7 @@
 @inject IFileSystemService FileSystemService
 @inject ITreeContentService TreeContentService
 @inject IJSRuntime JSRuntime
+@inject ILogger<ILogClient> logger
 @inject ILocalizer localizer
 
 <LoadingOverlay WorkingStateComponent="@this" />
@@ -210,7 +213,15 @@
     {
         if (file.IsDirectory)
         {
-            await JSRuntime.InvokeVoidAsync("selectChildItem", file.Path, Path.GetDirectoryName(file.Path));
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("selectChildItem", file.Path, Path.GetDirectoryName(file.Path));
+            }
+            catch (JSException ex)
+            {
+                logger.JsInteropFailed(ex);
+            }
+
             return;
         }
 

@@ -27,22 +27,24 @@ function selectChildItem(childId, parentId) {
     }
 
     const parentItem = document.querySelector(`fluent-tree-item[id="${parentId}"]`);
-    parentItem.expanded = true;
+    if (parentItem) {
+        parentItem.expanded = true;
 
-    setTimeout(() => {
-        const waitForElement = () => {
-            const childItem = parentItem.querySelector(`fluent-tree-item[id="${childId}"]`);
+        setTimeout(() => {
+            const waitForElement = () => {
+                const childItem = parentItem.querySelector(`fluent-tree-item[id="${childId}"]`);
 
-            if (childItem) {
-                childItem.click();
+                if (childItem) {
+                    childItem.click();
 
-                createSelectionObserver(childItem, () => scrollToTreeItem(childItem));
-            }
-            else {
-                setTimeout(waitForElement, 100);
-            }
-        };
-        
-        waitForElement();
-    }, 100);
+                    createSelectionObserver(childItem, () => scrollToTreeItem(childItem));
+                }
+                else {
+                    setTimeout(waitForElement, 100);
+                }
+            };
+
+            waitForElement();
+        }, 100);
+    }
 }
