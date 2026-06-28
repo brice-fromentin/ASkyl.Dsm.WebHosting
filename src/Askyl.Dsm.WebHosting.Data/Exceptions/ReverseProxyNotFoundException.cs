@@ -4,7 +4,7 @@ namespace Askyl.Dsm.WebHosting.Data.Exceptions;
 /// Exception thrown when a reverse proxy is not found during update operations.
 /// Signals that recovery mechanisms should be attempted or the proxy was externally deleted.
 /// </summary>
-public class ReverseProxyNotFoundException : Exception
+public sealed class ReverseProxyNotFoundException : Exception
 {
     /// <summary>
     /// Creates a new instance with a custom message.

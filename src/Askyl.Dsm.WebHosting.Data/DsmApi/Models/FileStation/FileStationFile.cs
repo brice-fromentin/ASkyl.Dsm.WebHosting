@@ -2,6 +2,24 @@ using System.Text.Json.Serialization;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 
+/// <summary>
+/// Represents the type of a FileStation entry.
+/// </summary>
+public enum FileStationType
+{
+    /// <summary>
+    /// A regular file.
+    /// </summary>
+    [JsonPropertyName("file")]
+    File,
+
+    /// <summary>
+    /// A directory.
+    /// </summary>
+    [JsonPropertyName("dir")]
+    Directory
+}
+
 public record FileStationFile
 {
     [JsonPropertyName("name")]
@@ -11,7 +29,7 @@ public record FileStationFile
     public string Path { get; init; } = default!;
 
     [JsonPropertyName("type")]
-    public string Type { get; init; } = default!; // "file" or "dir"
+    public FileStationType Type { get; init; }
 
     [JsonPropertyName("isdir")]
     public bool IsDirectory { get; init; }

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.Constants.Application;
 
 namespace Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
@@ -49,7 +50,7 @@ public class WebSiteInstance
     /// <summary>
     /// Gets a human-readable state description.
     /// </summary>
-    public string State => IsRunning ? "Running" : "Stopped";
+    public string State => IsRunning ? WebSiteConstants.StateRunning : WebSiteConstants.StateStopped;
 
     /// <summary>
     /// Gets or sets the required .NET framework channel detected from the assembly (e.g., "8.0").

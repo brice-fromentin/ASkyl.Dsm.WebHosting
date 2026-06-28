@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
 namespace Askyl.Dsm.WebHosting.Tests.Data.Domain.WebSites;
@@ -47,7 +48,7 @@ public class WebSiteInstanceTests
         var instance = new WebSiteInstance { IsRunning = true };
 
         // Act & Assert
-        Assert.Equal("Running", instance.State);
+        Assert.Equal(WebSiteConstants.StateRunning, instance.State);
     }
 
     [Fact]
@@ -57,7 +58,7 @@ public class WebSiteInstanceTests
         var instance = new WebSiteInstance { IsRunning = false };
 
         // Act & Assert
-        Assert.Equal("Stopped", instance.State);
+        Assert.Equal(WebSiteConstants.StateStopped, instance.State);
     }
 
     #endregion
