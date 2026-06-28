@@ -10,7 +10,7 @@ public class InformationsQueryParameters()
 
     public override int Version => 1;
 
-    public override string Method => "query";
+    public override string Method => ApiConstants.MethodQuery;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }

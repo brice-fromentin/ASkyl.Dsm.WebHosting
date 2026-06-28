@@ -23,15 +23,15 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger) :
 
     static DsmSystemPreferences ReadSettings(ILogger<ILogDsmSettingsService> logger)
     {
-        if (!File.Exists(SystemDefaults.ConfigurationFileName))
+        if (!File.Exists(SystemDefaults.SynoInfoConfPath))
         {
-            logger.ConfigurationFileNotFound(SystemDefaults.ConfigurationFileName);
+            logger.ConfigurationFileNotFound(SystemDefaults.SynoInfoConfPath);
             return CreateDefaults(logger);
         }
 
         try
         {
-            var lines = File.ReadAllLines(SystemDefaults.ConfigurationFileName);
+            var lines = File.ReadAllLines(SystemDefaults.SynoInfoConfPath);
             var settings = lines.Where(x => x.Contains('='))
                                 .ToDictionary(k => k.Split(['='], 2)[0], v => v.Split(['='], 2)[1].Replace("\"", String.Empty));
 
@@ -65,7 +65,7 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger) :
         if (!settings.TryGetValue(key, out var value) || value.Length == 0)
         {
             logger.MandatorySettingMissing(key);
-            throw new InvalidOperationException($"Mandatory setting '{key}' is missing from '{SystemDefaults.ConfigurationFileName}'.");
+            throw new InvalidOperationException($"Mandatory setting '{key}' is missing from '{SystemDefaults.SynoInfoConfPath}'.");
         }
 
         return value;

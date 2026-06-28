@@ -10,7 +10,7 @@ public class FileStationListShareParameters(FileStationListShare? entry = null)
 
     public override int Version => 2;
 
-    public override string Method => "list_share";
+    public override string Method => ApiConstants.MethodListShare;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }
