@@ -13,6 +13,7 @@ using Moq.Protected;
 
 namespace Askyl.Dsm.WebHosting.Tests.Tools.Network;
 
+[Trait("Category", "FileSystem")]
 public class DsmApiClientTests : IDisposable
 {
     readonly Mock<HttpMessageHandler> _httpHandler;
@@ -24,7 +25,7 @@ public class DsmApiClientTests : IDisposable
     {
         _httpHandler = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_httpHandler.Object) { BaseAddress = new Uri("https://localhost:5001/") };
-        _settingsService = new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object);
+        _settingsService = new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object, new SystemFileReader());
         _logger = new Mock<ILogger<ILogDsmApiClient>>();
     }
 
