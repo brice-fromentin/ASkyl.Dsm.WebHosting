@@ -24,19 +24,19 @@ public sealed class AuthenticationResult : ApiResult
     /// The server chooses between user preference and system fallback.
     /// Only populated on successful authentication.
     /// </summary>
-    public string? Culture { get; set; }
+    public string? Culture { get; init; }
 
     /// <summary>
     /// The user's preferred date format converted to .NET format string (e.g. "yyyy/MM/dd").
     /// Populated from DSM UserSettings.Personal.dateFormat. Null if unavailable.
     /// </summary>
-    public string? DateFormat { get; set; }
+    public string? DateFormat { get; init; }
 
     /// <summary>
     /// The user's preferred time format converted to .NET format string (e.g. "H:mm").
     /// Populated from DSM UserSettings.Personal.timeFormat. Null if unavailable.
     /// </summary>
-    public string? TimeFormat { get; set; }
+    public string? TimeFormat { get; init; }
 
     /// <summary>
     /// Indicates whether the user is authenticated. This property is an alias for Success

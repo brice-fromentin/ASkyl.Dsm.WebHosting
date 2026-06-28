@@ -13,20 +13,20 @@ public class ApiResult(bool success, string? message, ApiErrorCode errorCode = d
     /// <summary>
     /// Indicates whether the operation succeeded (true) or failed (false).
     /// </summary>
-    public bool Success { get; set; } = success;
+    public bool Success { get; init; } = success;
 
     /// <summary>
     /// Message describing the result. Can be null or contain informational text in both
     /// successful and failed operations. For example: "Installation completed successfully."
     /// or "Invalid credentials".
     /// </summary>
-    public string? Message { get; set; } = message;
+    public string? Message { get; init; } = message;
 
     /// <summary>
     /// Error code providing programmatic access to the type of error.
     /// Use ApiErrorCode.None for success.
     /// </summary>
-    public ApiErrorCode ErrorCode { get; set; } = errorCode != default ? errorCode : (success ? ApiErrorCode.None : ApiErrorCode.Failure);
+    public ApiErrorCode ErrorCode { get; init; } = errorCode != default ? errorCode : (success ? ApiErrorCode.None : ApiErrorCode.Failure);
 
     /// <summary>
     /// Creates a successful result.

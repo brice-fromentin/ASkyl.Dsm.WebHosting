@@ -540,23 +540,21 @@ public class WebSiteHostingService(
     /// </summary>
     private WebSiteInstanceResult AttachRuntimeInfo(WebSiteInstance instance, string applicationPath)
     {
-        var result = WebSiteInstanceResult.CreateSuccess(instance);
         var runtimeInfo = assemblyRuntimeDetector.Detect(applicationPath);
 
         if (runtimeInfo is null)
         {
-            result.WarningMessage = localizer[LK.Error.RuntimeDetectionFailed];
-            return result;
+            return WebSiteInstanceResult.CreateSuccess(instance, warningMessage: localizer[LK.Error.RuntimeDetectionFailed]);
         }
 
         instance.RequiredFramework = runtimeInfo.Channel;
 
         if (!runtimeInfo.IsCompatible)
         {
-            result.WarningMessage = localizer[LK.Error.RuntimeNotInstalled, runtimeInfo.Channel];
+            return WebSiteInstanceResult.CreateSuccess(instance, warningMessage: localizer[LK.Error.RuntimeNotInstalled, runtimeInfo.Channel]);
         }
 
-        return result;
+        return WebSiteInstanceResult.CreateSuccess(instance);
     }
 
     /// <summary>
