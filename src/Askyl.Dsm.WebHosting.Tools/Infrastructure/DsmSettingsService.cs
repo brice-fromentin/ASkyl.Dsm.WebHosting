@@ -49,7 +49,7 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger) :
         }
         catch (Exception ex)
         {
-            logger.SettingsReadFailed(ex.Message);
+            logger.SettingsReadFailed(ex);
             return CreateDefaults(logger);
         }
     }

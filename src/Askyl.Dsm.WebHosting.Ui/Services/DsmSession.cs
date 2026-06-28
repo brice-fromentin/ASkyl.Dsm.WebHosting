@@ -192,7 +192,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         }
         catch (Exception ex)
         {
-            logger.FetchUserPreferencesFailed(ex.Message);
+            logger.FetchUserPreferencesFailed(ex);
         }
     }
 }

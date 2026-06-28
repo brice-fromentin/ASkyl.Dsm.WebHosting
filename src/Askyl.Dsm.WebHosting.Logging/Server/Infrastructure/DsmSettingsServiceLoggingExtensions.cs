@@ -31,8 +31,8 @@ public static partial class DsmSettingsServiceLoggingExtensions
     /// <summary>
     /// Logs that reading the configuration file failed with an unexpected exception.
     /// </summary>
-    [LoggerMessage(EventId = 2800004, Level = LogLevel.Error, Message = "Failed to read DSM settings: {ErrorMessage}")]
-    public static partial void SettingsReadFailed(this ILogger<ILogDsmSettingsService> logger, string errorMessage);
+    [LoggerMessage(EventId = 2800004, Level = LogLevel.Error, Message = "Failed to read DSM settings")]
+    public static partial void SettingsReadFailed(this ILogger<ILogDsmSettingsService> logger, Exception exception);
 
     /// <summary>
     /// Logs that default values are being used for DSM settings.

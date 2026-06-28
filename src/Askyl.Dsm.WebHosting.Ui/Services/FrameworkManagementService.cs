@@ -78,12 +78,12 @@ public class FrameworkManagementService(
         }
         catch (LastReleaseUninstallException ex)
         {
-            logger.UninstallFailed(ex.Message);
+            logger.UninstallFailed(ex);
             return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
         catch (MissingChannelConfigurationException ex)
         {
-            logger.UninstallFailed(ex.Message);
+            logger.UninstallFailed(ex);
             return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
         catch (Exception ex)
