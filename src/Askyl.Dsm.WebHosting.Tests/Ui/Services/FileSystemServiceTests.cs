@@ -290,8 +290,15 @@ public class FileSystemServiceTests
 
         public Task<R?> ExecuteAsync<R>(IApiParameters parameters, CancellationToken cancellationToken = default) where R : IApiResponse
         {
+            var allowedNames = new[] { "SYNO.FileStation.List", "SYNO.Core.ACL" };
+
+            if (!allowedNames.Contains(parameters.Name))
+            {
+                throw new ArgumentException($"Unexpected API name: {parameters.Name}", nameof(parameters));
+            }
+
             var key = typeof(R).Name;
-            ExecuteCalls.Add(key);
+            ExecuteCalls.Add($"{parameters.Name}/{parameters.Method}");
 
             if (_sequences.TryGetValue(key, out var queue) && queue!.Count > 0)
             {

@@ -39,23 +39,39 @@ public class SiteLifecycleManagerTests : IDisposable
         _tempDir = Path.Combine(Path.GetTempPath(), $"asl_wh_{Guid.NewGuid():N}");
         _tempDll = Path.Combine(_tempDir, "MyApp.dll");
 
-        Directory.CreateDirectory(_tempDir);
-        File.WriteAllText(_tempDll, "");
-
-        _configuration = new WebSiteConfiguration
+        try
         {
-            Id = Guid.NewGuid(),
-            Name = "TestSite",
-            ApplicationPath = _tempDir,
-            ApplicationRealPath = _tempDll,
-            InternalPort = 5001,
-            HostName = "test.local",
-            Environment = "Production",
-            ProcessTimeoutSeconds = 1,
-            AdditionalEnvironmentVariables = new Dictionary<string, string> { ["CUSTOM_VAR"] = "test" }
-        };
+            Directory.CreateDirectory(_tempDir);
+            File.WriteAllText(_tempDll, "");
 
-        _processRunner.HandleToReturn = _processHandle;
+            _configuration = new WebSiteConfiguration
+            {
+                Id = Guid.NewGuid(),
+                Name = "TestSite",
+                ApplicationPath = _tempDir,
+                ApplicationRealPath = _tempDll,
+                InternalPort = 5001,
+                HostName = "test.local",
+                Environment = "Production",
+                ProcessTimeoutSeconds = 1,
+                AdditionalEnvironmentVariables = new Dictionary<string, string> { ["CUSTOM_VAR"] = "test" }
+            };
+
+            _processRunner.HandleToReturn = _processHandle;
+        }
+        catch
+        {
+            try
+            {
+                Directory.Delete(_tempDir, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup
+            }
+
+            throw;
+        }
     }
 
     private SiteLifecycleManager CreateManager()

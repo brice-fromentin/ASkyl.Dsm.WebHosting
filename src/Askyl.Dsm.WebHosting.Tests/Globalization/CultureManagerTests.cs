@@ -249,23 +249,16 @@ public class CultureManagerTests
     #region Safe Static Initialization (Fallback Paths)
 
     [Fact]
-    public void StaticInitialization_SupportedCultures_FallsBackToDefaultCulture()
+    public void StaticInitialization_AllFallbacks_ConvergeOnExpectedValues()
     {
         // Act — force static initialization
         _ = new CultureManager(CreateJsRuntimeMock().Object, CreateLoggerMock().Object);
 
-        // Assert
+        // Assert — supported cultures defaults to en-US when environment variable is not set
         Assert.Single(CultureManager.SupportedCultures);
         Assert.Equal("en-US", CultureManager.SupportedCultures[0].Name);
-    }
 
-    [Fact]
-    public void StaticInitialization_AllFallbacks_ConvergeOnUserFriendlyCulture()
-    {
-        // Act — force static initialization
-        _ = new CultureManager(CreateJsRuntimeMock().Object, CreateLoggerMock().Object);
-
-        // Assert — browser is not InvariantCulture, system is null, supported is non-empty
+        // Assert — browser is not InvariantCulture, system is null (no environment variable)
         Assert.NotEqual(CultureInfo.InvariantCulture.Name, CultureManager.BrowserCulture.Name);
         Assert.NotEqual("Invariant-Language", CultureManager.BrowserCulture.Name);
         Assert.Null(CultureManager.SystemCulture);

@@ -47,6 +47,7 @@ public class DsmApiClientTests : IDisposable
     public void Dispose()
     {
         _httpClient.Dispose();
+        _httpHandler.Object.Dispose();
     }
 
     #region Cookie Header

@@ -96,6 +96,10 @@ public class ReverseProxyManagerServiceTests
 
         // Assert
         _dsmSession.Verify(
+            s => s.ExecuteAsync<ReverseProxyListResponse>(It.Is<IApiParameters>(p => p.Name == "SYNO.Core.AppPortal.ReverseProxy" && p.Method == "list")),
+            Times.Exactly(2));
+
+        _dsmSession.Verify(
             s => s.ExecuteSimpleAsync(It.IsAny<ReverseProxyCreateParameters>()),
             Times.Once);
     }
@@ -116,6 +120,10 @@ public class ReverseProxyManagerServiceTests
         await service.CreateAsync(site);
 
         // Assert - no create call should be made
+        _dsmSession.Verify(
+            s => s.ExecuteAsync<ReverseProxyListResponse>(It.Is<IApiParameters>(p => p.Name == "SYNO.Core.AppPortal.ReverseProxy" && p.Method == "list")),
+            Times.Once);
+
         _dsmSession.Verify(
             s => s.ExecuteSimpleAsync(It.IsAny<ReverseProxyCreateParameters>()),
             Times.Never);
@@ -149,6 +157,11 @@ public class ReverseProxyManagerServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(site));
+
+        // Assert - List was called once (before create attempt; create fails so verification List is not reached)
+        _dsmSession.Verify(
+            s => s.ExecuteAsync<ReverseProxyListResponse>(It.Is<IApiParameters>(p => p.Name == "SYNO.Core.AppPortal.ReverseProxy" && p.Method == "list")),
+            Times.Once);
     }
 
     #endregion
@@ -176,6 +189,10 @@ public class ReverseProxyManagerServiceTests
 
         // Assert
         _dsmSession.Verify(
+            s => s.ExecuteAsync<ReverseProxyListResponse>(It.Is<IApiParameters>(p => p.Name == "SYNO.Core.AppPortal.ReverseProxy" && p.Method == "list")),
+            Times.Once);
+
+        _dsmSession.Verify(
             s => s.ExecuteSimpleAsync(It.IsAny<ReverseProxyUpdateParameters>()),
             Times.Once);
     }
@@ -193,6 +210,11 @@ public class ReverseProxyManagerServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<ReverseProxyNotFoundException>(() => service.UpdateAsync(site));
+
+        // Assert - List was called once to find the proxy
+        _dsmSession.Verify(
+            s => s.ExecuteAsync<ReverseProxyListResponse>(It.Is<IApiParameters>(p => p.Name == "SYNO.Core.AppPortal.ReverseProxy" && p.Method == "list")),
+            Times.Once);
     }
 
     #endregion
@@ -221,6 +243,10 @@ public class ReverseProxyManagerServiceTests
 
         // Assert
         _dsmSession.Verify(
+            s => s.ExecuteAsync<ReverseProxyListResponse>(It.Is<IApiParameters>(p => p.Name == "SYNO.Core.AppPortal.ReverseProxy" && p.Method == "list")),
+            Times.Once);
+
+        _dsmSession.Verify(
             s => s.ExecuteSimpleAsync(It.IsAny<ReverseProxyDeleteParameters>()),
             Times.Once);
     }
@@ -240,6 +266,10 @@ public class ReverseProxyManagerServiceTests
         await service.DeleteAsync(site);
 
         // Assert - no delete call should be made
+        _dsmSession.Verify(
+            s => s.ExecuteAsync<ReverseProxyListResponse>(It.Is<IApiParameters>(p => p.Name == "SYNO.Core.AppPortal.ReverseProxy" && p.Method == "list")),
+            Times.Once);
+
         _dsmSession.Verify(
             s => s.ExecuteSimpleAsync(It.IsAny<ReverseProxyDeleteParameters>()),
             Times.Never);
@@ -270,6 +300,10 @@ public class ReverseProxyManagerServiceTests
         await service.DeleteAsync(site);
 
         // Assert - delete was attempted
+        _dsmSession.Verify(
+            s => s.ExecuteAsync<ReverseProxyListResponse>(It.Is<IApiParameters>(p => p.Name == "SYNO.Core.AppPortal.ReverseProxy" && p.Method == "list")),
+            Times.Once);
+
         _dsmSession.Verify(
             s => s.ExecuteSimpleAsync(It.IsAny<ReverseProxyDeleteParameters>()),
             Times.Once);

@@ -78,6 +78,27 @@ public class AuthenticationNavigationGuardTests : IDisposable
         Assert.Equal(initialUri, _navigation.Uri);
     }
 
+    [Fact]
+    public async Task OnNavigateAsync_ApiFailure_RedirectsToLogin()
+    {
+        _authService.Setup(a => a.IsAuthenticatedAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ApiResultBool(false, "Session expired", false));
+
+        var context = CreateNavigationContext("dashboard");
+        await _guard.OnNavigateAsync(context);
+
+        Assert.EndsWith("/login", _navigation.Uri);
+    }
+
+    [Fact]
+    public async Task OnNavigateAsync_LoginPathCaseInsensitive_AllowsWithoutAuth()
+    {
+        var context = CreateNavigationContext("LOGIN");
+        await _guard.OnNavigateAsync(context);
+
+        _authService.Verify(a => a.IsAuthenticatedAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     static NavigationContext CreateNavigationContext(string path)
     {
         var normalizedPath = path.StartsWith('/') ? path : $"/{path}";

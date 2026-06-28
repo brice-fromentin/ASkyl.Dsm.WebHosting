@@ -62,6 +62,7 @@ public class DsmSessionTests : IDisposable
     public void Dispose()
     {
         _httpClient.Dispose();
+        _httpHandler.Object.Dispose();
     }
 
     #region ValidateSessionAsync
