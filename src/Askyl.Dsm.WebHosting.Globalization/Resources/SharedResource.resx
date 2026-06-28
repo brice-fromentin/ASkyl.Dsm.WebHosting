@@ -136,6 +136,12 @@
   <data name="Home_EditButton" xml:space="preserve">
     <value>Edit</value>
   </data>
+  <data name="Home_StartButton" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="Home_StopButton" xml:space="preserve">
+    <value>Stop</value>
+  </data>
   <data name="Home_DotnetVersionButton" xml:space="preserve">
     <value>.NET Version</value>
   </data>

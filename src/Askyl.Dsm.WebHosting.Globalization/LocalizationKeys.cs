@@ -44,6 +44,8 @@ public static class LK
         public const string PageTitle = "Home_PageTitle";
         public const string AddButton = "Home_AddButton";
         public const string EditButton = "Home_EditButton";
+        public const string StartButton = "Home_StartButton";
+        public const string StopButton = "Home_StopButton";
         public const string DotnetVersionButton = "Home_DotnetVersionButton";
         public const string AspNetOnlineButton = "Home_AspNetOnlineButton";
         public const string LicensesButton = "Home_LicensesButton";
