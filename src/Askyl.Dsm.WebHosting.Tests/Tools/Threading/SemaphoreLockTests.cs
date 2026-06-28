@@ -122,7 +122,6 @@ public class SemaphoreLockTests
         var owner = new TestSemaphoreOwner(1);
         var concurrentCount = 0;
         var maxConcurrent = 0;
-        var gateTcs = new TaskCompletionSource<bool>();
 
         // Act
         var tasks = Enumerable.Range(0, 10)
@@ -148,12 +147,11 @@ public class SemaphoreLockTests
                     }
                 }
 
-                await gateTcs.Task;
+                await Task.Delay(10);
                 Interlocked.Decrement(ref concurrentCount);
             })
             .ToList();
 
-        gateTcs.SetResult(true);
         await Task.WhenAll(tasks);
 
         // Assert
