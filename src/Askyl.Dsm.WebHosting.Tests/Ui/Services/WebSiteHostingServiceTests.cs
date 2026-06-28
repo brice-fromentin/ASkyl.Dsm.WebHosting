@@ -12,6 +12,7 @@ using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 
+[Collection("WebSiteHostingService")]
 public class WebSiteHostingServiceTests
 {
     readonly Mock<ILogger<ILogWebSiteHostingService>> _logger;
