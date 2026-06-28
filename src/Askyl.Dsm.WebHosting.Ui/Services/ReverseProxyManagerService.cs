@@ -20,12 +20,12 @@ public class ReverseProxyManagerService(
     /// <summary>
     /// Creates a reverse proxy for the specified site with idempotency check.
     /// </summary>
-    public async Task CreateAsync(WebSiteConfiguration site)
+    public async Task CreateAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default)
     {
         logger.CreatingReverseProxy(site.Name);
 
         // Idempotency check: See if proxy already exists using composite key
-        var existingProxy = await FindByCompositeKeyAsync(site);
+        var existingProxy = await FindByCompositeKeyAsync(site, cancellationToken);
 
         if (existingProxy is not null)
         {
@@ -43,7 +43,7 @@ public class ReverseProxyManagerService(
 
         var createParams = new ReverseProxyCreateParameters(proxy);
 
-        var response = await dsmSession.ExecuteSimpleAsync(createParams);
+        var response = await dsmSession.ExecuteSimpleAsync(createParams, cancellationToken);
 
         if (!response.IsValid())
         {
@@ -52,7 +52,7 @@ public class ReverseProxyManagerService(
         }
 
         // Verify creation by searching using composite key (more reliable than relying on response UUID)
-        var createdProxy = await FindByCompositeKeyAsync(site);
+        var createdProxy = await FindByCompositeKeyAsync(site, cancellationToken);
 
         if (createdProxy is null)
         {
@@ -66,12 +66,12 @@ public class ReverseProxyManagerService(
     /// <summary>
     /// Updates a reverse proxy using composite key lookup.
     /// </summary>
-    public async Task UpdateAsync(WebSiteConfiguration config)
+    public async Task UpdateAsync(WebSiteConfiguration config, CancellationToken cancellationToken = default)
     {
         logger.UpdatingReverseProxy(config.Name);
 
         // Find the proxy using composite key (backend port + frontend config)
-        var proxy = await FindByCompositeKeyAsync(config) ?? throw new ReverseProxyNotFoundException($"Reverse proxy not found for site '{config.Name}'. You may need to recreate it.");
+        var proxy = await FindByCompositeKeyAsync(config, cancellationToken) ?? throw new ReverseProxyNotFoundException($"Reverse proxy not found for site '{config.Name}'. You may need to recreate it.");
 
         // Update using record 'with' expression — preserves all existing properties
         var updatedProxy = proxy with
@@ -83,7 +83,7 @@ public class ReverseProxyManagerService(
 
         var updateParams = new ReverseProxyUpdateParameters(updatedProxy);
 
-        var response = await dsmSession.ExecuteSimpleAsync(updateParams);
+        var response = await dsmSession.ExecuteSimpleAsync(updateParams, cancellationToken);
 
         if (!response.IsValid())
         {
@@ -98,7 +98,7 @@ public class ReverseProxyManagerService(
     /// <summary>
     /// Deletes a reverse proxy using composite key lookup.
     /// </summary>
-    public async Task DeleteAsync(WebSiteConfiguration site)
+    public async Task DeleteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default)
     {
         if (site is null)
         {
@@ -106,7 +106,7 @@ public class ReverseProxyManagerService(
         }
 
         // Find the proxy using composite key
-        var proxy = await FindByCompositeKeyAsync(site);
+        var proxy = await FindByCompositeKeyAsync(site, cancellationToken);
 
         if (proxy is null || !proxy.UUID.HasValue)
         {
@@ -118,7 +118,7 @@ public class ReverseProxyManagerService(
 
         try
         {
-            await DeleteByUuidAsync((Guid)proxy.UUID, site.Name);
+            await DeleteByUuidAsync((Guid)proxy.UUID, site.Name, cancellationToken);
         }
         catch (Exception ex) when (IsNotFoundError(ex.Message))
         {
@@ -142,9 +142,9 @@ public class ReverseProxyManagerService(
     /// Finds a reverse proxy using composite key (backend port + frontend configuration).
     /// This is the primary identification method (no UUID storage).
     /// </summary>
-    private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config)
+    private async Task<ReverseProxy?> FindByCompositeKeyAsync(WebSiteConfiguration config, CancellationToken cancellationToken)
     {
-        var allProxies = await GetAllReverseProxiesAsync();
+        var allProxies = await GetAllReverseProxiesAsync(cancellationToken);
 
         return allProxies.FirstOrDefault(p =>
             p.Backend.Port == config.InternalPort &&
@@ -156,10 +156,10 @@ public class ReverseProxyManagerService(
     /// <summary>
     /// Gets all reverse proxies from DSM.
     /// </summary>
-    private async Task<List<ReverseProxy>> GetAllReverseProxiesAsync()
+    private async Task<List<ReverseProxy>> GetAllReverseProxiesAsync(CancellationToken cancellationToken)
     {
         var parameters = new ReverseProxyListParameters();
-        var response = await dsmSession.ExecuteAsync<ReverseProxyListResponse>(parameters);
+        var response = await dsmSession.ExecuteAsync<ReverseProxyListResponse>(parameters, cancellationToken);
 
         return response?.Data?.Entries ?? [];
     }
@@ -167,12 +167,12 @@ public class ReverseProxyManagerService(
     /// <summary>
     /// Deletes a reverse proxy by UUID.
     /// </summary>
-    private async Task DeleteByUuidAsync(Guid uuid, string siteName)
+    private async Task DeleteByUuidAsync(Guid uuid, string siteName, CancellationToken cancellationToken)
     {
         var deleteParams = new ReverseProxyDeleteParameters();
         deleteParams.Parameters.Add(uuid);
 
-        var deleteResponse = await dsmSession.ExecuteSimpleAsync(deleteParams);
+        var deleteResponse = await dsmSession.ExecuteSimpleAsync(deleteParams, cancellationToken);
 
         if (!deleteResponse.IsValid())
         {

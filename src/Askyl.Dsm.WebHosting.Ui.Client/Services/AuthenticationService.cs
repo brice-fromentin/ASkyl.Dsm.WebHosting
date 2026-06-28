@@ -25,13 +25,13 @@ public class AuthenticationService(IHttpClientFactory httpClientFactory, ILocali
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     /// <inheritdoc/>
-    public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
+    public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode, CancellationToken cancellationToken = default)
     {
         var httpClient = _httpClient;
 
         var jsonContent = new StringContent(JsonSerializer.Serialize(new LoginCredentials(login, password, otpCode), JsonOptionsCache.Options), Encoding.UTF8, NetworkConstants.ApplicationJson);
 
-        var response = await httpClient.PostAsync(AuthenticationRoutes.LoginFullRoute, jsonContent);
+        var response = await httpClient.PostAsync(AuthenticationRoutes.LoginFullRoute, jsonContent, cancellationToken);
 
         // Handle rate limiting (HTTP 429) with a user-friendly message
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
@@ -51,17 +51,17 @@ public class AuthenticationService(IHttpClientFactory httpClientFactory, ILocali
     }
 
     /// <inheritdoc/>
-    public async Task<ApiResult> LogoutAsync()
+    public async Task<ApiResult> LogoutAsync(CancellationToken cancellationToken = default)
     {
         var httpClient = _httpClient;
-        return await httpClient.PostJsonOrDefaultAsync<object, ApiResult>(AuthenticationRoutes.LogoutFullRoute, null, () => ApiResult.CreateFailure(localizer[LK.Error.Unknown]));
+        return await httpClient.PostJsonOrDefaultAsync<object, ApiResult>(AuthenticationRoutes.LogoutFullRoute, null, () => ApiResult.CreateFailure(localizer[LK.Error.Unknown]), cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<ApiResultBool> IsAuthenticatedAsync()
+    public async Task<ApiResultBool> IsAuthenticatedAsync(CancellationToken cancellationToken = default)
     {
         var httpClient = _httpClient;
-        return await httpClient.GetJsonOrDefaultAsync(AuthenticationRoutes.StatusFullRoute, () => ApiResultBool.CreateFailure(localizer[LK.Error.FailedToCheckAuthStatus]));
+        return await httpClient.GetJsonOrDefaultAsync(AuthenticationRoutes.StatusFullRoute, () => ApiResultBool.CreateFailure(localizer[LK.Error.FailedToCheckAuthStatus]), cancellationToken);
     }
 
     public Task<bool> IsSessionValidAsync()

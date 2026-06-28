@@ -27,7 +27,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
 
     #region HTTP Request calls
 
-    public async Task<R?> ExecuteAsync<R>(string? sid, IApiParameters parameters)
+    public async Task<R?> ExecuteAsync<R>(string? sid, IApiParameters parameters, CancellationToken cancellationToken = default)
         where R : IApiResponse
     {
         await EnsureInitializedAsync();
@@ -42,9 +42,9 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
         var result = parameters.SerializationFormat switch
         {
             SerializationFormats.Form
-                => await ExecuteFormAsync<R>(sid, url, parameters),
+                => await ExecuteFormAsync<R>(sid, url, parameters, cancellationToken),
             SerializationFormats.Json
-                => await ExecuteJsonAsync<R>(sid, url, parameters),
+                => await ExecuteJsonAsync<R>(sid, url, parameters, cancellationToken),
             _
                 => throw new NotSupportedException($"SerializationFormat : {parameters.SerializationFormat} not supported.")
         };
@@ -54,8 +54,8 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
         return result;
     }
 
-    public async Task<ApiResponseBase<object>?> ExecuteSimpleAsync(string? sid, IApiParameters parameters)
-        => await ExecuteAsync<ApiResponseBase<object>>(sid, parameters);
+    public async Task<ApiResponseBase<object>?> ExecuteSimpleAsync(string? sid, IApiParameters parameters, CancellationToken cancellationToken = default)
+        => await ExecuteAsync<ApiResponseBase<object>>(sid, parameters, cancellationToken);
 
     private async Task EnsureInitializedAsync()
     {
@@ -82,7 +82,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
         var parameters = new InformationsQueryParameters();
         var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, ApiConstants.Handshake);
 
-        var result = await ExecuteFormAsync<ApiInformationResponse>(null, url, parameters);
+        var result = await ExecuteFormAsync<ApiInformationResponse>(null, url, parameters, CancellationToken.None);
 
         if (result?.Success != true || result.Data is null || result.Data.Count == 0)
         {
@@ -109,15 +109,15 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
         }
     }
 
-    private async Task<R?> ExecuteFormAsync<R>(string? sid, string url, IApiParameters parameters)
+    private async Task<R?> ExecuteFormAsync<R>(string? sid, string url, IApiParameters parameters, CancellationToken cancellationToken)
         where R : IApiResponse
-        => await ExecutePostAsync<R>(sid, url, parameters.ToForm());
+        => await ExecutePostAsync<R>(sid, url, parameters.ToForm(), cancellationToken);
 
-    private async Task<R?> ExecuteJsonAsync<R>(string? sid, string url, IApiParameters parameters)
+    private async Task<R?> ExecuteJsonAsync<R>(string? sid, string url, IApiParameters parameters, CancellationToken cancellationToken)
         where R : IApiResponse
-        => await ExecutePostAsync<R>(sid, url, parameters.ToJson());
+        => await ExecutePostAsync<R>(sid, url, parameters.ToJson(), cancellationToken);
 
-    private async Task<R?> ExecutePostAsync<R>(string? sid, string url, StringContent content)
+    private async Task<R?> ExecutePostAsync<R>(string? sid, string url, StringContent content, CancellationToken cancellationToken)
         where R : IApiResponse
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
@@ -131,9 +131,9 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
 
         using var timer = new OperationTimer(elapsed => logger.ApiRequest(request.Method.Method, url, (int)response!.StatusCode, elapsed));
 
-        response = await _httpClient.SendAsync(request);
+        response = await _httpClient.SendAsync(request, cancellationToken);
 
-        var text = await response.Content.ReadAsStringAsync();
+        var text = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (response.StatusCode != HttpStatusCode.OK)
         {

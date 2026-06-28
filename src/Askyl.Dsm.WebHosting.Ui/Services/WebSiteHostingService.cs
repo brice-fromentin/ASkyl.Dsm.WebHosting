@@ -49,7 +49,7 @@ public class WebSiteHostingService(
     /// Gets all website instances with their current runtime status.
     /// Updates runtime state from lifecycle managers before returning.
     /// </summary>
-    public async Task<WebSiteInstancesResult> GetAllWebsitesAsync()
+    public async Task<WebSiteInstancesResult> GetAllWebsitesAsync(CancellationToken cancellationToken = default)
     {
         var instances = new List<WebSiteInstance>();
 
@@ -66,7 +66,7 @@ public class WebSiteHostingService(
     /// <summary>
     /// Adds a new website configuration and creates an instance.
     /// </summary>
-    public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration)
+    public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken = default)
     {
         // Validate environment variables before any side effects
         var envVarResult = ValidateEnvironmentVariables(configuration.AdditionalEnvironmentVariables);
@@ -79,7 +79,7 @@ public class WebSiteHostingService(
         try
         {
             // STEP 1: Set HTTP group permissions BEFORE adding website (CRITICAL - must succeed)
-            var permissionResult = await SetHttpGroupPermissionsForApplicationAsync(configuration);
+            var permissionResult = await SetHttpGroupPermissionsForApplicationAsync(configuration, cancellationToken);
 
             if (!permissionResult.Success)
             {
@@ -88,7 +88,7 @@ public class WebSiteHostingService(
             }
 
             // STEP 2: Create reverse proxy rule (CRITICAL - must succeed)
-            var proxyResult = await CreateReverseProxyRuleAsync(configuration);
+            var proxyResult = await CreateReverseProxyRuleAsync(configuration, cancellationToken);
 
             if (!proxyResult.Success)
             {
@@ -117,7 +117,7 @@ public class WebSiteHostingService(
     /// <summary>
     /// Updates an existing website configuration and refreshes the instance.
     /// </summary>
-    public async Task<WebSiteInstanceResult> UpdateWebsiteAsync(WebSiteConfiguration configuration)
+    public async Task<WebSiteInstanceResult> UpdateWebsiteAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken = default)
     {
         if (!_sites.TryGetValue(configuration.Id, out var entry))
         {
@@ -138,7 +138,7 @@ public class WebSiteHostingService(
         try
         {
             // STEP 1: ALWAYS set HTTP group permissions (CRITICAL - must succeed, allows easy repairs)
-            var permissionResult = await SetHttpGroupPermissionsForApplicationAsync(configuration);
+            var permissionResult = await SetHttpGroupPermissionsForApplicationAsync(configuration, cancellationToken);
 
             if (!permissionResult.Success)
             {
@@ -147,7 +147,7 @@ public class WebSiteHostingService(
             }
 
             // STEP 2: Update reverse proxy rule (CRITICAL - must succeed)
-            var proxyResult = await UpdateReverseProxyRuleAsync(configuration);
+            var proxyResult = await UpdateReverseProxyRuleAsync(configuration, cancellationToken);
 
             if (!proxyResult.Success)
             {
@@ -174,13 +174,13 @@ public class WebSiteHostingService(
     /// <summary>
     /// Removes a website by ID.
     /// </summary>
-    public async Task<ApiResult> RemoveWebsiteAsync(Guid id)
-        => await RemoveInstanceAsync(id);
+    public async Task<ApiResult> RemoveWebsiteAsync(Guid id, CancellationToken cancellationToken = default)
+        => await RemoveInstanceAsync(id, cancellationToken);
 
     /// <summary>
     /// Starts a website by ID. Synchronous — waits for process to start and update runtime state.
     /// </summary>
-    public async Task<ApiResult> StartWebsiteAsync(Guid id)
+    public async Task<ApiResult> StartWebsiteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         if (!_sites.TryGetValue(id, out var entry))
         {
@@ -202,7 +202,7 @@ public class WebSiteHostingService(
     /// <summary>
     /// Stops a website by ID. Synchronous — waits for SIGTERM signal and process exit (typically 1-3 seconds).
     /// </summary>
-    public async Task<ApiResult> StopWebsiteAsync(Guid id)
+    public async Task<ApiResult> StopWebsiteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         if (!_sites.TryGetValue(id, out var entry))
         {
@@ -359,7 +359,7 @@ public class WebSiteHostingService(
 
     #region Instance Lifecycle Operations
 
-    public async Task<ApiResult> RemoveInstanceAsync(Guid instanceId)
+    public async Task<ApiResult> RemoveInstanceAsync(Guid instanceId, CancellationToken cancellationToken = default)
     {
         if (!_sites.TryGetValue(instanceId, out var entry))
         {
@@ -385,7 +385,7 @@ public class WebSiteHostingService(
             }
 
             // Delete reverse proxy rule (best effort - log but don't fail if it errors)
-            var proxyDeleteResult = await DeleteReverseProxyRuleAsync(instance.Configuration);
+            var proxyDeleteResult = await DeleteReverseProxyRuleAsync(instance.Configuration, cancellationToken);
 
             if (!proxyDeleteResult.Success)
             {
@@ -393,7 +393,7 @@ public class WebSiteHostingService(
             }
 
             // Remove configuration (persistent storage) — MUST succeed before removing from memory
-            await configService.RemoveSiteAsync(instance.Configuration.Id);
+            await configService.RemoveSiteAsync(instance.Configuration.Id, cancellationToken);
 
             // Safe to remove from memory now — persistent config is gone
             _ = _sites.TryRemove(instanceId, out var removedEntry);
@@ -449,7 +449,7 @@ public class WebSiteHostingService(
     /// <summary>
     /// Sets HTTP group permissions for the application path in the configuration.
     /// </summary>
-    private async Task<ApiResult> SetHttpGroupPermissionsForApplicationAsync(WebSiteConfiguration configuration)
+    private async Task<ApiResult> SetHttpGroupPermissionsForApplicationAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken)
     {
         if (String.IsNullOrEmpty(configuration.ApplicationRealPath))
         {
@@ -464,7 +464,7 @@ public class WebSiteHostingService(
 
         using var scope = scopeFactory.CreateScope();
         var fileSystemService = scope.ServiceProvider.GetRequiredService<IFileSystemService>();
-        return await fileSystemService.SetHttpGroupPermissionsAsync(configuration.ApplicationRealPath, isDirectory);
+        return await fileSystemService.SetHttpGroupPermissionsAsync(configuration.ApplicationRealPath, isDirectory, cancellationToken);
     }
 
     #endregion
@@ -474,13 +474,13 @@ public class WebSiteHostingService(
     /// <summary>
     /// Creates a reverse proxy rule for the specified website configuration.
     /// </summary>
-    private async Task<ApiResult> CreateReverseProxyRuleAsync(WebSiteConfiguration configuration)
+    private async Task<ApiResult> CreateReverseProxyRuleAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken)
     {
         try
         {
             using var scope = scopeFactory.CreateScope();
             var reverseProxyManager = scope.ServiceProvider.GetRequiredService<IReverseProxyManagerService>();
-            await reverseProxyManager.CreateAsync(configuration);
+            await reverseProxyManager.CreateAsync(configuration, cancellationToken);
             logger.ReverseProxyRuleCreated(configuration.Name);
             return ApiResult.CreateSuccess();
         }
@@ -494,13 +494,13 @@ public class WebSiteHostingService(
     /// <summary>
     /// Updates a reverse proxy rule for the specified website configuration.
     /// </summary>
-    private async Task<ApiResult> UpdateReverseProxyRuleAsync(WebSiteConfiguration configuration)
+    private async Task<ApiResult> UpdateReverseProxyRuleAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken)
     {
         try
         {
             using var scope = scopeFactory.CreateScope();
             var reverseProxyManager = scope.ServiceProvider.GetRequiredService<IReverseProxyManagerService>();
-            await reverseProxyManager.UpdateAsync(configuration);
+            await reverseProxyManager.UpdateAsync(configuration, cancellationToken);
             logger.ReverseProxyRuleUpdated(configuration.Name);
             return ApiResult.CreateSuccess();
         }
@@ -514,13 +514,13 @@ public class WebSiteHostingService(
     /// <summary>
     /// Deletes a reverse proxy rule for the specified website configuration.
     /// </summary>
-    private async Task<ApiResult> DeleteReverseProxyRuleAsync(WebSiteConfiguration configuration)
+    private async Task<ApiResult> DeleteReverseProxyRuleAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken)
     {
         try
         {
             using var scope = scopeFactory.CreateScope();
             var reverseProxyManager = scope.ServiceProvider.GetRequiredService<IReverseProxyManagerService>();
-            await reverseProxyManager.DeleteAsync(configuration);
+            await reverseProxyManager.DeleteAsync(configuration, cancellationToken);
             logger.ReverseProxyRuleDeleted(configuration.Name);
             return ApiResult.CreateSuccess();
         }

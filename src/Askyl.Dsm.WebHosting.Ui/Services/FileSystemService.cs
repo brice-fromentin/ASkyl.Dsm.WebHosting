@@ -22,13 +22,13 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// </summary>
 public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemService> logger, ILocalizer localizer) : Data.Contracts.IFileSystemService
 {
-    public async Task<SharedFoldersResult> GetSharedFoldersAsync()
+    public async Task<SharedFoldersResult> GetSharedFoldersAsync(CancellationToken cancellationToken = default)
     {
         logger.RetrievingSharedFolders();
 
         try
         {
-            var sharedFolders = await ExecuteFileStationListShareAsync();
+            var sharedFolders = await ExecuteFileStationListShareAsync(cancellationToken);
 
             logger.RetrievedSharedFolders(sharedFolders.Count);
 
@@ -41,7 +41,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
         }
     }
 
-    public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly)
+    public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly, CancellationToken cancellationToken = default)
     {
         // Validate path to prevent path traversal attacks
         if (!IsPathValid(path))
@@ -57,7 +57,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
             if (directoryOnly)
             {
                 // Single API call for directories only - more efficient
-                var directoryFiles = await ExecuteFileStationListAsync(path, FileStationDefaults.PatternAll, FileStationDefaults.TypeDirectory);
+                var directoryFiles = await ExecuteFileStationListAsync(path, FileStationDefaults.PatternAll, FileStationDefaults.TypeDirectory, cancellationToken);
 
                 logger.RetrievedDirectories(directoryFiles.Count, path);
 
@@ -65,8 +65,8 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
             }
 
             // Original behavior: both directories and files (for backward compatibility)
-            var dirsTask = ExecuteFileStationListAsync(path, FileStationDefaults.PatternAll, FileStationDefaults.TypeDirectory);
-            var filesTask = ExecuteFileStationListAsync(path, FileStationDefaults.PatternDllsExes, FileStationDefaults.TypeFile);
+            var dirsTask = ExecuteFileStationListAsync(path, FileStationDefaults.PatternAll, FileStationDefaults.TypeDirectory, cancellationToken);
+            var filesTask = ExecuteFileStationListAsync(path, FileStationDefaults.PatternDllsExes, FileStationDefaults.TypeFile, cancellationToken);
 
             var allResults = await Task.WhenAll(dirsTask, filesTask);
             var directories = allResults[0];
@@ -85,7 +85,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
         }
     }
 
-    public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory)
+    public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory, CancellationToken cancellationToken = default)
     {
         logger.SettingHttpGroupPermissions(path);
 
@@ -144,7 +144,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
 
         var parameters = new CoreAclSetParameters(aclSet);
 
-        var response = await dsmSession.ExecuteAsync<CoreAclSetResponse>(parameters);
+        var response = await dsmSession.ExecuteAsync<CoreAclSetResponse>(parameters, cancellationToken);
 
         if (response?.Success != true || response.Data?.TaskId is null)
         {
@@ -156,7 +156,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
         return ApiResult.CreateSuccess();
     }
 
-    private async Task<List<FileStationShare>> ExecuteFileStationListShareAsync()
+    private async Task<List<FileStationShare>> ExecuteFileStationListShareAsync(CancellationToken cancellationToken)
     {
         var entry = new FileStationListShare
         {
@@ -167,7 +167,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
 
         var parameters = new FileStationListShareParameters(entry);
 
-        var response = await dsmSession.ExecuteAsync<FileStationListShareResponse>(parameters);
+        var response = await dsmSession.ExecuteAsync<FileStationListShareResponse>(parameters, cancellationToken);
 
         if (response?.Success != true || response.Data?.Shares is null)
         {
@@ -177,7 +177,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
         return response.Data.Shares;
     }
 
-    private async Task<List<FileStationFile>> ExecuteFileStationListAsync(string path, string pattern, string fileType)
+    private async Task<List<FileStationFile>> ExecuteFileStationListAsync(string path, string pattern, string fileType, CancellationToken cancellationToken)
     {
         var entry = new FileStationList
         {
@@ -191,7 +191,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
 
         var parameters = new FileStationListParameters(entry);
 
-        var response = await dsmSession.ExecuteAsync<FileStationListResponse>(parameters);
+        var response = await dsmSession.ExecuteAsync<FileStationListResponse>(parameters, cancellationToken);
 
         if (response?.Success != true || response.Data?.Files is null)
         {

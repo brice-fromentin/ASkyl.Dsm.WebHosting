@@ -17,14 +17,14 @@ public class FileSystemService(IHttpClientFactory httpClientFactory, ILocalizer 
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     /// <inheritdoc/>
-    public async Task<SharedFoldersResult> GetSharedFoldersAsync()
-        => await _httpClient.GetJsonOrDefaultAsync(FileManagementRoutes.SharedFoldersFullRoute, () => SharedFoldersResult.CreateFailure(localizer[LK.Error.FailedToLoadSharedFolders]));
+    public async Task<SharedFoldersResult> GetSharedFoldersAsync(CancellationToken cancellationToken = default)
+        => await _httpClient.GetJsonOrDefaultAsync(FileManagementRoutes.SharedFoldersFullRoute, () => SharedFoldersResult.CreateFailure(localizer[LK.Error.FailedToLoadSharedFolders]), cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly)
+    public async Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly, CancellationToken cancellationToken = default)
     {
         var url = $"{FileManagementRoutes.DirectoryContentsFullRoute}?path={Uri.EscapeDataString(path)}&directoryOnly={(directoryOnly ? "true" : "false")}";
-        return await _httpClient.GetJsonOrDefaultAsync(url, () => DirectoryContentsResult.CreateFailure(localizer[LK.Error.FailedToLoadDirectoryContentsWithPath, path]));
+        return await _httpClient.GetJsonOrDefaultAsync(url, () => DirectoryContentsResult.CreateFailure(localizer[LK.Error.FailedToLoadDirectoryContentsWithPath, path]), cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -32,6 +32,6 @@ public class FileSystemService(IHttpClientFactory httpClientFactory, ILocalizer 
     /// This method is now handled internally by WebSiteHostingService on the server side.
     /// It should not be called from the client - permissions are automatically set when adding/updating websites.
     /// </remarks>
-    public Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory)
+    public Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory, CancellationToken cancellationToken = default)
         => throw new NotImplementedException("Permission setting is now handled internally by WebSiteHostingService. This method should not be called from the client.");
 }

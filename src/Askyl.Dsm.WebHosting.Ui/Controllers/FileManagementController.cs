@@ -25,8 +25,8 @@ public class FileManagementController(IFileSystemService fileSystemService) : Co
     /// </summary>
     /// <returns>A SharedFoldersResult containing a list of file system items.</returns>
     [HttpGet(FileManagementRoutes.SharedFoldersRoute)]
-    public async Task<ActionResult<SharedFoldersResult>> GetSharedFoldersAsync()
-        => Ok(await fileSystemService.GetSharedFoldersAsync());
+    public async Task<ActionResult<SharedFoldersResult>> GetSharedFoldersAsync(CancellationToken cancellationToken)
+        => Ok(await fileSystemService.GetSharedFoldersAsync(cancellationToken));
 
     /// <summary>
     /// Gets the contents of a directory.
@@ -35,6 +35,6 @@ public class FileManagementController(IFileSystemService fileSystemService) : Co
     /// <param name="directoryOnly">If true, returns only directories (no files). Default is false.</param>
     /// <returns>A DirectoryContentsResult containing a list of file system items.</returns>
     [HttpGet(FileManagementRoutes.DirectoryContentsRoute)]
-    public async Task<ActionResult<DirectoryContentsResult>> GetDirectoryContentsAsync(string path, [FromQuery] bool directoryOnly)
-        => Ok(await fileSystemService.GetDirectoryContentsAsync(path, directoryOnly));
+    public async Task<ActionResult<DirectoryContentsResult>> GetDirectoryContentsAsync(string path, [FromQuery] bool directoryOnly, CancellationToken cancellationToken)
+        => Ok(await fileSystemService.GetDirectoryContentsAsync(path, directoryOnly, cancellationToken));
 }

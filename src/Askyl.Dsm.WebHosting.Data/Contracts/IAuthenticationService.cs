@@ -15,19 +15,21 @@ public interface IAuthenticationService
     /// <param name="password">The user's password.</param>
     /// <param name="otpCode">Optional one-time password code for two-factor authentication.</param>
     /// <returns>An AuthenticationResult indicating success or failure with message.</returns>
-    Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode);
+    Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Logs out the current user and clears session state.
     /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>An ApiResult indicating logout success or failure.</returns>
-    Task<ApiResult> LogoutAsync();
+    Task<ApiResult> LogoutAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks if the current session is authenticated by validating against the DSM server.
     /// Returns the cached result if validation occurred within the TTL window (1 minute).
     /// If the session is invalid or expired, it is cleared from the local session store.
     /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>An ApiResultBool containing a boolean indicating authentication status.</returns>
-    Task<ApiResultBool> IsAuthenticatedAsync();
+    Task<ApiResultBool> IsAuthenticatedAsync(CancellationToken cancellationToken = default);
 }

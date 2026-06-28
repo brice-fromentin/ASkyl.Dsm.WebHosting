@@ -18,26 +18,26 @@ public class WebSiteHostingService(IHttpClientFactory httpClientFactory, ILocali
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     /// <inheritdoc/>
-    public async Task<WebSiteInstancesResult> GetAllWebsitesAsync()
-        => await _httpClient.GetJsonOrDefaultAsync(WebsiteHostingRoutes.AllFullRoute, () => WebSiteInstancesResult.CreateFailure(localizer[LK.Error.FailedToLoadWebsites]));
+    public async Task<WebSiteInstancesResult> GetAllWebsitesAsync(CancellationToken cancellationToken = default)
+        => await _httpClient.GetJsonOrDefaultAsync(WebsiteHostingRoutes.AllFullRoute, () => WebSiteInstancesResult.CreateFailure(localizer[LK.Error.FailedToLoadWebsites]), cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration)
-        => await _httpClient.PostJsonOrDefaultAsync(WebsiteHostingRoutes.AddFullRoute, configuration, () => WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToAddWebsite]));
+    public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken = default)
+        => await _httpClient.PostJsonOrDefaultAsync(WebsiteHostingRoutes.AddFullRoute, configuration, () => WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToAddWebsite]), cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<WebSiteInstanceResult> UpdateWebsiteAsync(WebSiteConfiguration configuration)
-        => await _httpClient.PostJsonOrDefaultAsync(WebsiteHostingRoutes.UpdateFullRoute, configuration, () => WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToUpdateWebsite]));
+    public async Task<WebSiteInstanceResult> UpdateWebsiteAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken = default)
+        => await _httpClient.PostJsonOrDefaultAsync(WebsiteHostingRoutes.UpdateFullRoute, configuration, () => WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToUpdateWebsite]), cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<ApiResult> RemoveWebsiteAsync(Guid id)
-        => await _httpClient.DeleteJsonOrDefaultAsync($"{WebsiteHostingRoutes.RemoveFullRoute}/{id}", () => ApiResult.CreateFailure(localizer[LK.Error.FailedToRemoveWebsite]));
+    public async Task<ApiResult> RemoveWebsiteAsync(Guid id, CancellationToken cancellationToken = default)
+        => await _httpClient.DeleteJsonOrDefaultAsync($"{WebsiteHostingRoutes.RemoveFullRoute}/{id}", () => ApiResult.CreateFailure(localizer[LK.Error.FailedToRemoveWebsite]), cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<ApiResult> StartWebsiteAsync(Guid id)
-        => await _httpClient.PostJsonOrDefaultAsync<object, ApiResult>($"{WebsiteHostingRoutes.StartFullRoute}/{id}", null, () => ApiResult.CreateFailure(localizer[LK.Error.FailedToStartWebsite]));
+    public async Task<ApiResult> StartWebsiteAsync(Guid id, CancellationToken cancellationToken = default)
+        => await _httpClient.PostJsonOrDefaultAsync<object, ApiResult>($"{WebsiteHostingRoutes.StartFullRoute}/{id}", null, () => ApiResult.CreateFailure(localizer[LK.Error.FailedToStartWebsite]), cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<ApiResult> StopWebsiteAsync(Guid id)
-        => await _httpClient.PostJsonOrDefaultAsync<object, ApiResult>($"{WebsiteHostingRoutes.StopFullRoute}/{id}", null, () => ApiResult.CreateFailure(localizer[LK.Error.FailedToStopWebsite]));
+    public async Task<ApiResult> StopWebsiteAsync(Guid id, CancellationToken cancellationToken = default)
+        => await _httpClient.PostJsonOrDefaultAsync<object, ApiResult>($"{WebsiteHostingRoutes.StopFullRoute}/{id}", null, () => ApiResult.CreateFailure(localizer[LK.Error.FailedToStopWebsite]), cancellationToken);
 }

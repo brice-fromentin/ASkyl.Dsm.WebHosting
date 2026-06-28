@@ -28,8 +28,8 @@ public class FrameworkManagementController(IFrameworkManagementService managemen
     /// <param name="model">The installation model containing version and channel.</param>
     /// <returns>An InstallationResult indicating success or failure (always HTTP 200).</returns>
     [HttpPost(FrameworkManagementRoutes.InstallRoute)]
-    public async Task<ActionResult<InstallationResult>> InstallFramework([FromBody] InstallFramework model)
-        => Ok(await managementService.InstallFrameworkAsync(model.Version, model.Channel));
+    public async Task<ActionResult<InstallationResult>> InstallFramework([FromBody] InstallFramework model, CancellationToken cancellationToken)
+        => Ok(await managementService.InstallFrameworkAsync(model.Version, model.Channel, cancellationToken));
 
     /// <summary>
     /// Uninstalls the specified ASP.NET framework version.
@@ -37,6 +37,6 @@ public class FrameworkManagementController(IFrameworkManagementService managemen
     /// <param name="version">The version to uninstall.</param>
     /// <returns>An InstallationResult indicating success or failure (always HTTP 200).</returns>
     [HttpPost(FrameworkManagementRoutes.UninstallRoute + "/{version}")]
-    public async Task<ActionResult<InstallationResult>> UninstallFramework(string version)
-        => Ok(await managementService.UninstallFrameworkAsync(version));
+    public async Task<ActionResult<InstallationResult>> UninstallFramework(string version, CancellationToken cancellationToken)
+        => Ok(await managementService.UninstallFrameworkAsync(version, cancellationToken));
 }

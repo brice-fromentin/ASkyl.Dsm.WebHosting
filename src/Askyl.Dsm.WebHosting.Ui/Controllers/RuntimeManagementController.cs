@@ -26,8 +26,8 @@ public class RuntimeManagementController(IDotnetVersionService dotnetVersionServ
     /// </summary>
     /// <returns>A list of FrameworkInfo objects representing installed frameworks.</returns>
     [HttpGet(RuntimeManagementRoutes.VersionsRoute)]
-    public async Task<ActionResult<List<FrameworkInfo>>> GetInstalledVersionsAsync()
-        => Ok(await dotnetVersionService.GetInstalledVersionsAsync());
+    public async Task<ActionResult<List<FrameworkInfo>>> GetInstalledVersionsAsync(CancellationToken cancellationToken)
+        => Ok(await dotnetVersionService.GetInstalledVersionsAsync(cancellationToken));
 
     /// <summary>
     /// Checks if a specific channel is installed for a given framework type.
@@ -35,8 +35,8 @@ public class RuntimeManagementController(IDotnetVersionService dotnetVersionServ
     /// <param name="productVersion">The product version/channel to check (e.g., "8.0").</param>
     /// <returns>True if the channel is installed, false otherwise.</returns>
     [HttpGet(RuntimeManagementRoutes.ChannelInstalledRoute + "/{productVersion}")]
-    public async Task<ActionResult<bool>> IsChannelInstalled(string productVersion)
-        => Ok(await dotnetVersionService.IsChannelInstalledAsync(productVersion));
+    public async Task<ActionResult<bool>> IsChannelInstalled(string productVersion, CancellationToken cancellationToken)
+        => Ok(await dotnetVersionService.IsChannelInstalledAsync(productVersion, cancellationToken: cancellationToken));
 
     /// <summary>
     /// Checks if a specific version is installed for a given framework type.
@@ -44,16 +44,16 @@ public class RuntimeManagementController(IDotnetVersionService dotnetVersionServ
     /// <param name="version">The version to check (e.g., "8.0.1").</param>
     /// <returns>True if the version is installed, false otherwise.</returns>
     [HttpGet(RuntimeManagementRoutes.VersionInstalledRoute + "/{version}")]
-    public async Task<ActionResult<bool>> IsVersionInstalled(string version)
-        => Ok(await dotnetVersionService.IsVersionInstalledAsync(version));
+    public async Task<ActionResult<bool>> IsVersionInstalled(string version, CancellationToken cancellationToken)
+        => Ok(await dotnetVersionService.IsVersionInstalledAsync(version, cancellationToken: cancellationToken));
 
     /// <summary>
     /// Gets the list of available ASP.NET channels.
     /// </summary>
     /// <returns>A list of AspNetCoreReleaseInfo objects representing available channels.</returns>
     [HttpGet(RuntimeManagementRoutes.ChannelsRoute)]
-    public async Task<ActionResult<List<AspNetCoreReleaseInfo>>> GetChannelsAsync()
-        => Ok(await dotnetVersionService.GetChannelsAsync());
+    public async Task<ActionResult<List<AspNetCoreReleaseInfo>>> GetChannelsAsync(CancellationToken cancellationToken)
+        => Ok(await dotnetVersionService.GetChannelsAsync(cancellationToken));
 
     /// <summary>
     /// Gets the list of ASP.NET releases with installation status for a given channel.
@@ -61,6 +61,6 @@ public class RuntimeManagementController(IDotnetVersionService dotnetVersionServ
     /// <param name="productVersion">The product version/channel to check (e.g., "8.0").</param>
     /// <returns>A list of AspNetRelease objects with installation status.</returns>
     [HttpGet(RuntimeManagementRoutes.ReleasesWithStatusRoute + "/{productVersion}")]
-    public async Task<ActionResult<List<AspNetRelease>>> GetReleasesWithStatusAsync(string productVersion)
-        => Ok(await dotnetVersionService.GetReleasesWithStatusAsync(productVersion));
+    public async Task<ActionResult<List<AspNetRelease>>> GetReleasesWithStatusAsync(string productVersion, CancellationToken cancellationToken)
+        => Ok(await dotnetVersionService.GetReleasesWithStatusAsync(productVersion, cancellationToken));
 }

@@ -28,6 +28,6 @@ public class LogDownloadController(ILogDownloadService logDownloadService) : Con
     /// </summary>
     /// <returns>A file result with the log archive.</returns>
     [HttpGet(LogDownloadRoutes.LogsRoute)]
-    public async Task<FileResult> DownloadLogs()
-        => File(await logDownloadService.CreateLogZipStreamAsync(), "application/zip", $"adwh-logs-{DateTime.Now:yyyy-MM-dd_HHmmss}{LogConstants.ZipFileExtension}");
+    public async Task<FileResult> DownloadLogs(CancellationToken cancellationToken)
+        => File(await logDownloadService.CreateLogZipStreamAsync(cancellationToken), "application/zip", $"adwh-logs-{DateTime.Now:yyyy-MM-dd_HHmmss}{LogConstants.ZipFileExtension}");
 }

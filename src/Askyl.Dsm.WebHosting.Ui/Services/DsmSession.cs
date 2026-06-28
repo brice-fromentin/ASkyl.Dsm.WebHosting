@@ -58,9 +58,9 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     /// <summary>
     /// Authenticates against DSM, persists SID to session, and fetches user preferences.
     /// </summary>
-    public async Task<bool> ConnectAsync(LoginCredentials model)
+    public async Task<bool> ConnectAsync(LoginCredentials model, CancellationToken cancellationToken = default)
     {
-        var sid = await AuthenticateAsync(model);
+        var sid = await AuthenticateAsync(model, cancellationToken);
 
         if (sid is null)
         {
@@ -73,7 +73,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         _sessionValid = false;
         _lastSessionValidation = DateTime.MinValue;
 
-        await FetchUserPreferencesAsync(sid);
+        await FetchUserPreferencesAsync(sid, cancellationToken);
 
         return true;
     }
@@ -82,7 +82,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     /// Validates whether the current DSM session is still active on the server.
     /// Uses per-user TTL cache to avoid per-request API overhead.
     /// </summary>
-    public async Task<bool> ValidateSessionAsync()
+    public async Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrEmpty(Sid) || String.IsNullOrEmpty(Username))
         {
@@ -95,7 +95,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         }
 
         var parameters = new CoreUserGetParameters(new CoreUserGetEntry(Username));
-        var response = await _client.ExecuteAsync<CoreUserGetResponse>(Sid, parameters);
+        var response = await _client.ExecuteAsync<CoreUserGetResponse>(Sid, parameters, cancellationToken);
 
         if (response is null || response.Error?.Code == DsmConstants.ErrorCodeAuthenticationFailed)
         {
@@ -128,14 +128,14 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     /// <summary>
     /// Executes an API call with the session's SID attached.
     /// </summary>
-    public Task<R?> ExecuteAsync<R>(IApiParameters parameters) where R : IApiResponse
-        => _client.ExecuteAsync<R>(Sid, parameters);
+    public Task<R?> ExecuteAsync<R>(IApiParameters parameters, CancellationToken cancellationToken = default) where R : IApiResponse
+        => _client.ExecuteAsync<R>(Sid, parameters, cancellationToken);
 
     /// <summary>
     /// Executes a simple API call with the session's SID attached.
     /// </summary>
-    public Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters)
-        => _client.ExecuteAsync<ApiResponseBase<object>>(Sid, parameters);
+    public Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters, CancellationToken cancellationToken = default)
+        => _client.ExecuteAsync<ApiResponseBase<object>>(Sid, parameters, cancellationToken);
 
     private void UpdateSessionValue(string key, string? value)
     {
@@ -149,11 +149,11 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         }
     }
 
-    private async Task<string?> AuthenticateAsync(LoginCredentials model)
+    private async Task<string?> AuthenticateAsync(LoginCredentials model, CancellationToken cancellationToken)
     {
         var login = new AuthenticateLogin(model.Login, model.Password, model.OtpCode);
         var parameters = new AuthLoginParameters(login);
-        var response = await _client.ExecuteAsync<AuthLoginResponse>(null, parameters);
+        var response = await _client.ExecuteAsync<AuthLoginResponse>(null, parameters, cancellationToken);
 
         if (response?.Success != true || response.Data is null)
         {
@@ -166,12 +166,12 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         return response.Data.Sid;
     }
 
-    private async Task FetchUserPreferencesAsync(string sid)
+    private async Task FetchUserPreferencesAsync(string sid, CancellationToken cancellationToken)
     {
         try
         {
             var parameters = new CoreUserSettingsParameters();
-            var response = await _client.ExecuteAsync<CoreUserSettingsResponse>(sid, parameters);
+            var response = await _client.ExecuteAsync<CoreUserSettingsResponse>(sid, parameters, cancellationToken);
 
             var personal = response?.Data?.Personal;
 

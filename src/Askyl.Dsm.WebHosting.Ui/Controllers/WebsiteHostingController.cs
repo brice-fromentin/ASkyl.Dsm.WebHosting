@@ -26,8 +26,8 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// </summary>
     /// <returns>A list of WebSiteInstance objects.</returns>
     [HttpGet(WebsiteHostingRoutes.AllRoute)]
-    public async Task<ActionResult<List<WebSiteInstance>>> GetAllWebsitesAsync()
-        => Ok(await hostingService.GetAllWebsitesAsync());
+    public async Task<ActionResult<List<WebSiteInstance>>> GetAllWebsitesAsync(CancellationToken cancellationToken)
+        => Ok(await hostingService.GetAllWebsitesAsync(cancellationToken));
 
     /// <summary>
     /// Adds a new website.
@@ -35,8 +35,8 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// <param name="configuration">The website configuration.</param>
     /// <returns>The created WebSiteInstance with runtime status.</returns>
     [HttpPost(WebsiteHostingRoutes.AddRoute)]
-    public async Task<ActionResult<WebSiteInstance>> AddWebsite([FromBody] WebSiteConfiguration configuration)
-        => Ok(await hostingService.AddWebsiteAsync(configuration));
+    public async Task<ActionResult<WebSiteInstance>> AddWebsite([FromBody] WebSiteConfiguration configuration, CancellationToken cancellationToken)
+        => Ok(await hostingService.AddWebsiteAsync(configuration, cancellationToken));
 
     /// <summary>
     /// Updates an existing website.
@@ -44,8 +44,8 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// <param name="configuration">The updated website configuration.</param>
     /// <returns>The updated WebSiteInstance with runtime status.</returns>
     [HttpPost(WebsiteHostingRoutes.UpdateRoute)]
-    public async Task<ActionResult<WebSiteInstance>> UpdateWebsite([FromBody] WebSiteConfiguration configuration)
-        => Ok(await hostingService.UpdateWebsiteAsync(configuration));
+    public async Task<ActionResult<WebSiteInstance>> UpdateWebsite([FromBody] WebSiteConfiguration configuration, CancellationToken cancellationToken)
+        => Ok(await hostingService.UpdateWebsiteAsync(configuration, cancellationToken));
 
     /// <summary>
     /// Removes a website.
@@ -53,8 +53,8 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// <param name="id">The ID of the website to remove.</param>
     /// <returns>An ApiResult indicating success or failure (always HTTP 200).</returns>
     [HttpDelete(WebsiteHostingRoutes.RemoveRoute + "/{id}")]
-    public async Task<ActionResult<ApiResult>> RemoveWebsite(Guid id)
-        => Ok(await hostingService.RemoveWebsiteAsync(id));
+    public async Task<ActionResult<ApiResult>> RemoveWebsite(Guid id, CancellationToken cancellationToken)
+        => Ok(await hostingService.RemoveWebsiteAsync(id, cancellationToken));
 
     /// <summary>
     /// Starts a website.
@@ -62,8 +62,8 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// <param name="id">The ID of the website to start.</param>
     /// <returns>An ApiResult indicating success or failure (always HTTP 200).</returns>
     [HttpPost(WebsiteHostingRoutes.StartRoute + "/{id}")]
-    public async Task<ActionResult<ApiResult>> StartWebsite(Guid id)
-        => Ok(await hostingService.StartWebsiteAsync(id));
+    public async Task<ActionResult<ApiResult>> StartWebsite(Guid id, CancellationToken cancellationToken)
+        => Ok(await hostingService.StartWebsiteAsync(id, cancellationToken));
 
     /// <summary>
     /// Stops a website.
@@ -71,6 +71,6 @@ public class WebsiteHostingController(IWebSiteHostingService hostingService) : C
     /// <param name="id">The ID of the website to stop.</param>
     /// <returns>An ApiResult indicating success or failure (always HTTP 200).</returns>
     [HttpPost(WebsiteHostingRoutes.StopRoute + "/{id}")]
-    public async Task<ActionResult<ApiResult>> StopWebsite(Guid id)
-        => Ok(await hostingService.StopWebsiteAsync(id));
+    public async Task<ActionResult<ApiResult>> StopWebsite(Guid id, CancellationToken cancellationToken)
+        => Ok(await hostingService.StopWebsiteAsync(id, cancellationToken));
 }

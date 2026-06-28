@@ -1,4 +1,5 @@
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
@@ -283,11 +284,11 @@ public class FileSystemServiceTests
             _sequences[typeof(T).Name] = new Queue<object?>(responses.Cast<object?>());
         }
 
-        public Task<bool> ConnectAsync(Askyl.Dsm.WebHosting.Data.Domain.Authentication.LoginCredentials model) => Task.FromResult(true);
-        public Task<bool> ValidateSessionAsync() => Task.FromResult(true);
+        public Task<bool> ConnectAsync(Askyl.Dsm.WebHosting.Data.Domain.Authentication.LoginCredentials model, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default) => Task.FromResult(true);
         public void Disconnect() { }
 
-        public Task<R?> ExecuteAsync<R>(IApiParameters parameters) where R : IApiResponse
+        public Task<R?> ExecuteAsync<R>(IApiParameters parameters, CancellationToken cancellationToken = default) where R : IApiResponse
         {
             var key = typeof(R).Name;
             ExecuteCalls.Add(key);
@@ -305,7 +306,7 @@ public class FileSystemServiceTests
             return Task.FromResult<R?>(default!);
         }
 
-        public Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters)
+        public Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters, CancellationToken cancellationToken = default)
         {
             ExecuteCalls.Add("ApiResponseBase<object>");
             return Task.FromResult<ApiResponseBase<object>?>(null);
