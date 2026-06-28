@@ -46,8 +46,5 @@ function selectChildItem(childId, parentId) {
 
             waitForElement();
         }, 100);
-    }
+   }
 }
-
-window.ADWH = window.ADWH || {};
-window.ADWH.selectChildItem = selectChildItem;
