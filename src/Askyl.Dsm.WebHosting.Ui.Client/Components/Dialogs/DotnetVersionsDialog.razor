@@ -1,3 +1,4 @@
+@using System.Collections.Immutable
 @using Askyl.Dsm.WebHosting.Constants.Runtime
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
@@ -109,13 +110,13 @@
         return s_frameworkIcons.GetValueOrDefault(frameworkType, s_defaultIcon);
     }
 
-    private static readonly Dictionary<string, Icon> s_frameworkIcons = new(StringComparer.Ordinal)
+    private static readonly ImmutableDictionary<string, Icon> s_frameworkIcons = new Dictionary<string, Icon>(StringComparer.Ordinal)
     {
-        { DotNetFrameworkTypes.SdkMain, new IconsRegular16.Star() },
-        { DotNetFrameworkTypes.Sdk, new IconsRegular16.Settings() },
         { DotNetFrameworkTypes.AspNetCore, new IconsRegular16.Globe() },
-        { DotNetFrameworkTypes.Runtime, new IconsRegular16.Play() }
-    };
+        { DotNetFrameworkTypes.Runtime, new IconsRegular16.Play() },
+        { DotNetFrameworkTypes.Sdk, new IconsRegular16.Settings() },
+        { DotNetFrameworkTypes.SdkMain, new IconsRegular16.Star() }
+    }.ToImmutableDictionary();
 
     private static readonly Icon s_defaultIcon = new IconsRegular16.Code();
 }
