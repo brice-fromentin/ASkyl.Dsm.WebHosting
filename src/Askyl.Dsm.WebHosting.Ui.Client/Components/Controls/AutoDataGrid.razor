@@ -1,8 +1,6 @@
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Globalization
-@using System.Timers
 
-@implements IDisposable
 @inject ILocalizer localizer
 @typeparam TItem where TItem : class
 
@@ -83,10 +81,10 @@
     public EventCallback<TItem> OnRowDoubleClick { get; set; }
 
     // NOTE: Emulating double-click because FluentDataGrid's OnRowDoubleClick is buggy and never fires.
-    // Using a timer-based approach: defer single-click, cancel if double-click fires within threshold.
+    // Using timestamp comparison — simplest solution.
     private TItem? SelectedItem { get; set; }
-    private Timer? _clickTimer { get; set; }
-    private TItem? _pendingClickItem { get; set; }
+    private TItem? _lastClickedItem { get; set; }
+    private DateTime _lastClickTime { get; set; }
 
     public static IQueryable<TItem> Empty() => Enumerable.Empty<TItem>().AsQueryable();
 
@@ -100,7 +98,7 @@
         }
     }
 
-    private void HandleRowClick(FluentDataGridRow<TItem> row)
+    private async Task HandleRowClick(FluentDataGridRow<TItem> row)
     {
         if (row.Item is null)
         {
@@ -109,49 +107,38 @@
 
         SelectedItem = row.Item;
 
-        if (_clickTimer is not null && _pendingClickItem is not null && _pendingClickItem.Equals(row.Item))
+        var isDoubleClick = await TryHandleDoubleClickAsync(row.Item);
+        if (isDoubleClick)
         {
-            _clickTimer.Dispose();
-            _clickTimer = null;
-            _pendingClickItem = null;
-
-            if (OnRowDoubleClick.HasDelegate)
-            {
-                _ = InvokeAsync(async () => await OnRowDoubleClick.InvokeAsync(SelectedItem));
-            }
-
             return;
         }
 
-        _pendingClickItem = row.Item;
-        _clickTimer?.Dispose();
-        _clickTimer = new Timer
+        if (OnRowClick.HasDelegate)
         {
-            Interval = ApplicationConstants.DoubleClickTimeoutMilliseconds,
-            AutoReset = false
-        };
-        _clickTimer.Elapsed += OnClickTimeout;
-        _clickTimer.Start();
-    }
-
-    private void OnClickTimeout(object? sender, ElapsedEventArgs e)
-    {
-        var timer = (Timer?)sender;
-        timer?.Dispose();
-
-        var item = _pendingClickItem;
-        _pendingClickItem = null;
-        _clickTimer = null;
-
-        if (item is not null && OnRowClick.HasDelegate)
-        {
-            _ = InvokeAsync(async () => await OnRowClick.InvokeAsync(item));
+            await OnRowClick.InvokeAsync(row.Item);
         }
+
+        _lastClickedItem = SelectedItem;
+        _lastClickTime = DateTime.UtcNow;
     }
 
-    public void Dispose()
+    private async Task<bool> TryHandleDoubleClickAsync(TItem item)
     {
-        _clickTimer?.Dispose();
-        _clickTimer = null;
+        var timeSinceLastClick = (DateTime.UtcNow - _lastClickTime).TotalMilliseconds;
+
+        if (_lastClickedItem is null || timeSinceLastClick > ApplicationConstants.DoubleClickTimeoutMilliseconds || false == SelectedItem?.Equals(_lastClickedItem))
+        {
+            return false;
+        }
+
+        _lastClickedItem = null;
+
+        if (!OnRowDoubleClick.HasDelegate)
+        {
+            return false;
+        }
+
+        await OnRowDoubleClick.InvokeAsync(SelectedItem);
+        return true;
     }
 }
