@@ -122,18 +122,11 @@ public partial class ReverseProxyManagerService(
         {
             await DeleteByUuidAsync((Guid)proxy.UUID, site.Name, cancellationToken);
         }
-        catch (Exception ex) when (IsNotFoundError(ex.Message))
-        {
-            // Already deleted externally - graceful handling
-            logger.ReverseProxyAlreadyDeleted(site.Name);
-            return; // Graceful no-op — duration logged on scope exit
-        }
         catch (Exception ex)
         {
             logger.FailedToDeleteReverseProxy(ex, proxy.UUID, site.Name);
-            throw; // Duration logged on scope exit
+            throw;
         }
-        // Duration logged on scope exit
     }
 
     #endregion
@@ -178,60 +171,10 @@ public partial class ReverseProxyManagerService(
 
         if (!deleteResponse.IsValid())
         {
-            if (IsNotFoundError(deleteResponse?.Error?.Code))
-            {
-                throw new InvalidOperationException($"Reverse proxy with UUID {uuid} not found (already deleted?)");
-            }
-
             throw new InvalidOperationException($"Failed to delete reverse proxy for site '{siteName}'. API error code: {deleteResponse?.Error?.Code}");
         }
 
         logger.ReverseProxyDeleted(uuid);
-    }
-
-    private static readonly int[] NotFoundErrorCodes =
-    [
-        ReverseProxyConstants.ErrorCodeNotFound,
-        ReverseProxyConstants.ErrorCodeGenericNotFound,
-        ReverseProxyConstants.ErrorCodeResourceNotFound
-    ];
-
-    [GeneratedRegex(@"\b(not found|does not exist)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex NotFoundPattern();
-
-    /// <summary>
-    /// Checks if an error code indicates a "not found" scenario.
-    /// </summary>
-    private static bool IsNotFoundError(int? errorCode)
-        => NotFoundErrorCodes.Contains(errorCode ?? int.MinValue);
-
-    /// <summary>
-    /// Checks if an error message indicates a "not found" scenario.
-    /// Attempts JSON parsing to extract error codes, then falls back to regex matching.
-    /// </summary>
-    private static bool IsNotFoundError(string message)
-    {
-        if (String.IsNullOrEmpty(message))
-        {
-            return false;
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(message);
-            var root = doc.RootElement;
-
-            if (root.TryGetProperty("error", out var error) && error.TryGetProperty("code", out var code))
-            {
-                return NotFoundErrorCodes.Contains(code.GetInt32());
-            }
-        }
-        catch (JsonException)
-        {
-            // Not JSON - fall through to regex matching
-        }
-
-        return NotFoundPattern().IsMatch(message);
     }
 
     /// <summary>

@@ -75,12 +75,6 @@ public static partial class ReverseProxyLoggingExtensions
     public static partial void DeletingReverseProxy(this ILogger<ILogReverseProxyManagerService> logger, Guid? uuid, string siteName);
 
     /// <summary>
-    /// Logs that the reverse proxy was already deleted externally.
-    /// </summary>
-    [LoggerMessage(EventId = 1700010, Level = LogLevel.Warning, Message = "Reverse proxy for site {SiteName} was already deleted.")]
-    public static partial void ReverseProxyAlreadyDeleted(this ILogger<ILogReverseProxyManagerService> logger, string siteName);
-
-    /// <summary>
     /// Logs successful reverse proxy deletion.
     /// </summary>
     [LoggerMessage(EventId = 1700011, Level = LogLevel.Information, Message = "Deleted reverse proxy {Uuid} successfully")]
