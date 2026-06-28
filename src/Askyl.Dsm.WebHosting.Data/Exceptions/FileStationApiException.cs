@@ -23,12 +23,6 @@ public sealed class FileStationApiException : InvalidOperationException
     public string? Path { get; }
 
     /// <summary>
-    /// Gets the formatted error message including the error code if available.
-    /// </summary>
-    public string FormattedMessage =>
-        ErrorCode.HasValue ? $"{Message ?? "FileStation API call failed."} (Error Code: {ErrorCode})" : (Message ?? "FileStation API call failed.");
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="FileStationApiException"/> class.
     /// </summary>
     public FileStationApiException()
