@@ -1,4 +1,3 @@
-using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 
 namespace Askyl.Dsm.WebHosting.Tests.Data.Domain.WebSites;

@@ -1,24 +1,7 @@
 using System.Text.Json.Serialization;
+using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
-
-/// <summary>
-/// Represents the type of a FileStation entry.
-/// </summary>
-public enum FileStationType
-{
-    /// <summary>
-    /// A regular file.
-    /// </summary>
-    [JsonPropertyName("file")]
-    File,
-
-    /// <summary>
-    /// A directory.
-    /// </summary>
-    [JsonPropertyName("dir")]
-    Directory
-}
 
 public record FileStationFile
 {
