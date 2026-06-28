@@ -1,4 +1,4 @@
-<FluentNumberField Value="@BoundValue" @oninput="HandleInput" @onchange="HandleChange" Label="@Label" Class="@Class" Style="@Style" Name="@Name">
+<FluentNumberField Value="@BoundValue" @oninput="HandleInput" @onchange="HandleChange" Label="@Label" Class="@Class" Name="@Name">
     @ChildContent
 </FluentNumberField>
 
@@ -36,12 +36,6 @@
     /// </summary>
     [Parameter]
     public string? Class { get; set; }
-
-    /// <summary>
-    /// Inline style for the component.
-    /// </summary>
-    [Parameter]
-    public string? Style { get; set; }
 
     /// <summary>
     /// Name attribute for form submission and browser autofill.

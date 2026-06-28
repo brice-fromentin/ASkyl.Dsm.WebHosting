@@ -1,4 +1,4 @@
-<FluentTextField Value="@BoundValue" @oninput="HandleInput" @onchange="HandleChange" Label="@Label" Class="@Class" Style="@Style" Autofocus="@Autofocus" TextFieldType="@TextFieldType" Name="@Name">
+<FluentTextField Value="@BoundValue" @oninput="HandleInput" @onchange="HandleChange" Label="@Label" Class="@Class" Autofocus="@Autofocus" TextFieldType="@TextFieldType" Name="@Name">
     @ChildContent
 </FluentTextField>
 
@@ -36,12 +36,6 @@
     /// </summary>
     [Parameter]
     public string? Class { get; set; }
-
-    /// <summary>
-    /// Inline style for the component.
-    /// </summary>
-    [Parameter]
-    public string? Style { get; set; }
 
     /// <summary>
     /// Whether the field should receive focus automatically.
