@@ -169,7 +169,7 @@
                 return;
             }
 
-            if (!String.IsNullOrEmpty(result.WarningMessage) && result.Value?.RequiredFramework is string channel)
+            if (!String.IsNullOrEmpty(result.Message) && result.Value?.RequiredFramework is string channel)
             {
                 var confirmMessage = localizer[LK.WebsiteConfig.FrameworkNotInstalled, channel];
                 var confirm = await DialogService.ShowConfirmationAsync(confirmMessage);

@@ -335,7 +335,7 @@ public class WebSiteHostingServiceTests
         // Assert
         Assert.True(result.Success);
         Assert.NotNull(result.Value);
-        Assert.NotNull(result.WarningMessage);
+        Assert.NotNull(result.Message);
     }
 
     #endregion

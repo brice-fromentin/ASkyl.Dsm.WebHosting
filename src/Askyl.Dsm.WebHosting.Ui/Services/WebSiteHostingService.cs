@@ -551,14 +551,14 @@ public class WebSiteHostingService(
 
         if (runtimeInfo is null)
         {
-            return WebSiteInstanceResult.CreateSuccess(instance, warningMessage: localizer[LK.Error.RuntimeDetectionFailed]);
+            return WebSiteInstanceResult.CreateSuccess(instance, localizer[LK.Error.RuntimeDetectionFailed]);
         }
 
         instance.RequiredFramework = runtimeInfo.Channel;
 
         if (!runtimeInfo.IsCompatible)
         {
-            return WebSiteInstanceResult.CreateSuccess(instance, warningMessage: localizer[LK.Error.RuntimeNotInstalled, runtimeInfo.Channel]);
+            return WebSiteInstanceResult.CreateSuccess(instance, localizer[LK.Error.RuntimeNotInstalled, runtimeInfo.Channel]);
         }
 
         return WebSiteInstanceResult.CreateSuccess(instance);
