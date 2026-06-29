@@ -4,22 +4,14 @@ public sealed class WorkingState : IDisposable
 {
     private readonly WorkingStateBase _component;
     private readonly Action _stopWorking;
-    private readonly Action _stateChanged;
     private bool _disposed;
 
-    private WorkingState(WorkingStateBase component, Action startWorking, Action stopWorking, Action stateChanged)
+    private WorkingState(WorkingStateBase component, Action startWorking, Action stopWorking)
     {
-        ArgumentNullException.ThrowIfNull(component);
-        ArgumentNullException.ThrowIfNull(startWorking);
-        ArgumentNullException.ThrowIfNull(stopWorking);
-        ArgumentNullException.ThrowIfNull(stateChanged);
-
         _component = component;
         _stopWorking = stopWorking;
-        _stateChanged = stateChanged;
-
-        startWorking.Invoke();
-        _stateChanged.Invoke();
+        startWorking();
+        component.NotifyStateChanged();
     }
 
     public void UpdateMessage(string message)
@@ -30,7 +22,7 @@ public sealed class WorkingState : IDisposable
         }
 
         _component.Message = message;
-        _stateChanged.Invoke();
+        _component.NotifyStateChanged();
     }
 
     public void Dispose()
@@ -41,7 +33,7 @@ public sealed class WorkingState : IDisposable
         }
 
         _stopWorking();
-        _stateChanged.Invoke();
+        _component.NotifyStateChanged();
         _disposed = true;
     }
 
@@ -54,8 +46,7 @@ public sealed class WorkingState : IDisposable
                 component.IsWorking = true;
                 component.Message = message;
             },
-            stopWorking: () => component.IsWorking = false,
-            stateChanged: component.NotifyStateChanged
+            stopWorking: () => component.IsWorking = false
         );
     }
 }
