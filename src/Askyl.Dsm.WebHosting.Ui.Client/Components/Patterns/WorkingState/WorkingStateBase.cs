@@ -8,5 +8,5 @@ public abstract class WorkingStateBase : ComponentBase, IWorkingState
 
     public string Message { get; set; } = String.Empty;
 
-    public abstract void NotifyStateChanged();
+    void IWorkingState.NotifyStateChanged() => StateHasChanged();
 }
