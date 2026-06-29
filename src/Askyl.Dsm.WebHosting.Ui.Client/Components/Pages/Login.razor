@@ -18,8 +18,8 @@
 
 <PageTitle>@localizer[LK.Login.PageTitle]</PageTitle>
 
-<CascadingValue Value="this">
-    <LoadingOverlay />
+<LoadingOverlay WorkingState="@this" />
+
 
     <FluentDialog Modal="true" TrapFocus="true" PreventScroll="true" Open="true">
     <EditForm Model="@Model" OnValidSubmit="Authenticate">
@@ -42,7 +42,7 @@
         </FluentDialogFooter>
     </EditForm>
 </FluentDialog>
-</CascadingValue>
+
 
 @code
 {

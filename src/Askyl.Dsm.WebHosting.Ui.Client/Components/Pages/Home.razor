@@ -20,8 +20,8 @@
 
 <PageTitle>@localizer[LK.Home.PageTitle]</PageTitle>
 
-<CascadingValue Value="this">
-    <LoadingOverlay />
+<LoadingOverlay WorkingState="@this" />
+
 
     <FluentToolbar Class="full-width">
     <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral" OnClick="AddWebSite">
@@ -72,7 +72,7 @@
         </TemplateColumn>
     </ChildContent>
 </AutoDataGrid>
-</CascadingValue>
+
 
 @code
 {

@@ -17,8 +17,8 @@
 @inject ILogger<ILogClient> logger
 @inject ILocalizer localizer
 
-<CascadingValue Value="this">
-    <LoadingOverlay />
+<LoadingOverlay WorkingState="@this" />
+
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">@localizer[LK.FileSelection.DialogTitle]</FluentLabel>
@@ -79,7 +79,7 @@
     </FluentStack>
 </FluentDialogFooter>
 
-</CascadingValue>
+
 
 @code
 {
