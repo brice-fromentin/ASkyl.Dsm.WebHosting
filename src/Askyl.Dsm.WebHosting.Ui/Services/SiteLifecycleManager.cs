@@ -121,13 +121,7 @@ public sealed class SiteLifecycleManager(
 
     #region Command Loop
 
-    private void EnsureLoopStarted()
-    {
-        if (_commandLoop is null)
-        {
-            _commandLoop = ProcessSiteCommandsAsync();
-        }
-    }
+    private void EnsureLoopStarted() => _commandLoop ??= ProcessSiteCommandsAsync();
 
     /// <summary>
     /// Single consumer loop — all state mutation happens here.
