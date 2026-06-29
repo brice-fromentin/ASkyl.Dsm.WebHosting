@@ -14,9 +14,11 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// </summary>
 /// <param name="httpClientFactory">HttpClientFactory to create the named client.</param>
 /// <param name="localizer">Localizer for user-facing strings.</param>
-public class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocalizer localizer) : IDotnetVersionService
+public partial class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocalizer localizer) : IDotnetVersionService
 {
-    private static readonly Regex VersionPattern = new(@"^\d+\.\d+(\.\d+)?$", RegexOptions.Compiled);
+    [GeneratedRegex(@"^\d+\.\d+(\.\d+)?$")]
+    private static partial Regex VersionPattern();
+
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     /// <inheritdoc/>
@@ -56,5 +58,5 @@ public class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocaliz
     }
 
     public bool IsValidVersionFormat(string version)
-        => !String.IsNullOrWhiteSpace(version) && VersionPattern.IsMatch(version);
+        => !String.IsNullOrWhiteSpace(version) && VersionPattern().IsMatch(version);
 }
