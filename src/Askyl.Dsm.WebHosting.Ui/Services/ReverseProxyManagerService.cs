@@ -171,6 +171,12 @@ public partial class ReverseProxyManagerService(
 
         if (!deleteResponse.IsValid())
         {
+            if (deleteResponse?.Error?.Code == ReverseProxyConstants.ErrorCodeNotFound)
+            {
+                logger.ReverseProxyAlreadyDeleted(siteName);
+                return;
+            }
+
             throw new InvalidOperationException($"Failed to delete reverse proxy for site '{siteName}'. API error code: {deleteResponse?.Error?.Code}");
         }
 

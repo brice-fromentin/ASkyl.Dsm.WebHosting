@@ -46,7 +46,7 @@ static class LogEventIds
 
     #region Reverse Proxy — 1700000–1700999
 
-    /// <summary>ReverseProxyManagerService — IDs 1700001–1700013.</summary>
+    /// <summary>ReverseProxyManagerService — IDs 1700001–1700014.</summary>
     public const int ReverseProxyBase = 1700000;
 
     #endregion

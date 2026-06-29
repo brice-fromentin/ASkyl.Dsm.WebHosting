@@ -80,6 +80,12 @@ public static partial class ReverseProxyLoggingExtensions
     [LoggerMessage(EventId = 1700011, Level = LogLevel.Information, Message = "Deleted reverse proxy {Uuid} successfully")]
     public static partial void ReverseProxyDeleted(this ILogger<ILogReverseProxyManagerService> logger, Guid? uuid);
 
+    /// <summary>
+    /// Logs that reverse proxy was already deleted (idempotent delete).
+    /// </summary>
+    [LoggerMessage(EventId = 1700014, Level = LogLevel.Information, Message = "Reverse proxy for site {SiteName} already deleted (idempotent)")]
+    public static partial void ReverseProxyAlreadyDeleted(this ILogger<ILogReverseProxyManagerService> logger, string siteName);
+
     #endregion
 
     #region Failure
