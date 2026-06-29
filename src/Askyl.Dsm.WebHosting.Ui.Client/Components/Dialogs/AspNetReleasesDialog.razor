@@ -12,7 +12,8 @@
 @inject IToastService ToastService
 @inject ILocalizer localizer
 
-<LoadingOverlay WorkingStateComponent="@this" />
+<CascadingValue Value="this">
+    <LoadingOverlay />
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">@localizer[LK.AspNetReleases.DialogTitle]</FluentLabel>
@@ -57,6 +58,8 @@
         </AutoDataGrid>
     </div>
 </FluentDialogBody>
+
+</CascadingValue>
 
 @code
 {

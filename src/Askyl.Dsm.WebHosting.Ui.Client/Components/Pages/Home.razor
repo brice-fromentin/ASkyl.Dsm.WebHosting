@@ -20,9 +20,10 @@
 
 <PageTitle>@localizer[LK.Home.PageTitle]</PageTitle>
 
-<LoadingOverlay WorkingStateComponent="@this" />
+<CascadingValue Value="this">
+    <LoadingOverlay />
 
-<FluentToolbar Class="full-width">
+    <FluentToolbar Class="full-width">
     <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral" OnClick="AddWebSite">
         @localizer[LK.Home.AddButton]
     </FluentButton>
@@ -71,6 +72,7 @@
         </TemplateColumn>
     </ChildContent>
 </AutoDataGrid>
+</CascadingValue>
 
 @code
 {

@@ -9,9 +9,14 @@
 
 @code
 {
-    [Parameter, EditorRequired]
-    public WorkingStateBase WorkingStateComponent { get; set; } = default!;
+    [CascadingParameter]
+    private WorkingStateBase WorkingStateComponent { get; set; } = default!;
 
     [Parameter]
     public double Opacity { get; set; } = 0.4;
+
+    protected override void OnParametersSet()
+    {
+        ArgumentNullException.ThrowIfNull(WorkingStateComponent, nameof(WorkingStateComponent));
+    }
 }

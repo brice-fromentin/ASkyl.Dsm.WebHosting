@@ -13,7 +13,8 @@
 @inject IWebSiteHostingService HostingService
 @inject ILocalizer localizer
 
-<LoadingOverlay WorkingStateComponent="@this" />
+<CascadingValue Value="this">
+    <LoadingOverlay />
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">@(IsEditMode ? localizer[LK.WebsiteConfig.EditTitle] : localizer[LK.WebsiteConfig.AddTitle])</FluentLabel>
@@ -86,6 +87,8 @@
         </div>
     </EditForm>
 </FluentDialogBody>
+
+</CascadingValue>
 
 @code
 {
