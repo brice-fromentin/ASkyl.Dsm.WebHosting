@@ -8,7 +8,7 @@
 @inject ILicenseService LicenseService
 @inject ILocalizer localizer
 
-<LoadingOverlay WorkingStateComponent="@this" OnStateChanged="StateHasChanged" />
+<LoadingOverlay WorkingStateComponent="@this" />
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">@localizer[LK.Licenses.DialogTitle]</FluentLabel>
