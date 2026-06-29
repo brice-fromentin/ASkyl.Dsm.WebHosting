@@ -33,9 +33,12 @@ UI for managing .NET web applications on Synology NAS devices.
 dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
 dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
+dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build --blame-hang-timeout 30s
 ```
 
 **NEVER** use `dotnet run` or variants without exact flags and solution path.
+
+**Test command:** `--blame-hang-timeout 30s` is required — the xUnit VSTest adapter (v3.1.5) on .NET 10 does not exit after tests complete. This flag kills the hung process. Tests complete in ~4s.
 
 ### Mandatory Sequence: Format → Build → Verify
 
