@@ -2,12 +2,12 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState;
 
 public sealed class WorkingState : IDisposable
 {
-    private readonly IWorkingState _component;
+    private readonly WorkingStateBase _component;
     private readonly Action _stopWorking;
     private readonly Action _stateChanged;
     private bool _disposed;
 
-    private WorkingState(IWorkingState component, Action startWorking, Action stopWorking, Action stateChanged)
+    private WorkingState(WorkingStateBase component, Action startWorking, Action stopWorking, Action stateChanged)
     {
         ArgumentNullException.ThrowIfNull(component);
         ArgumentNullException.ThrowIfNull(startWorking);
@@ -45,7 +45,7 @@ public sealed class WorkingState : IDisposable
         _disposed = true;
     }
 
-    public static WorkingState Create(IWorkingState component, string message)
+    public static WorkingState Create(WorkingStateBase component, string message)
     {
         return new WorkingState(
             component: component,

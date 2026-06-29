@@ -10,7 +10,7 @@
 @code
 {
     [Parameter, EditorRequired]
-    public IWorkingState WorkingStateComponent { get; set; } = default!;
+    public WorkingStateBase WorkingStateComponent { get; set; } = default!;
 
     [Parameter]
     public double Opacity { get; set; } = 0.4;

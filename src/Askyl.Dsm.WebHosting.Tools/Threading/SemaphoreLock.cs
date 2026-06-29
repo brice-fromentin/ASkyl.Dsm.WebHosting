@@ -2,7 +2,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Threading;
 
 /// <summary>
 /// Interface for components that own a semaphore for thread-safe operations.
-/// Similar to IWorkingState pattern - forces explicit ownership declaration.
+/// Similar to WorkingStateBase pattern — forces explicit ownership declaration.
 /// </summary>
 public interface ISemaphoreOwner
 {
