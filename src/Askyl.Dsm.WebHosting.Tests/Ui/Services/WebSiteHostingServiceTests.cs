@@ -13,6 +13,7 @@ using Moq;
 namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 
 [Collection("WebSiteHostingService")]
+[Trait("Category", "FileSystem")]
 public class WebSiteHostingServiceTests
 {
     readonly Mock<ILogger<ILogWebSiteHostingService>> _logger;
@@ -27,9 +28,12 @@ public class WebSiteHostingServiceTests
     readonly Mock<ILocalizer> _localizer;
     readonly Mock<IFileSystemService> _fileSystemService;
     readonly Mock<IReverseProxyManagerService> _reverseProxyManager;
+    readonly string _tempDir;
 
     public WebSiteHostingServiceTests()
     {
+        _tempDir = Path.Combine(Path.GetTempPath(), $"asm_host_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
         _logger = new Mock<ILogger<ILogWebSiteHostingService>>();
         _configLogger = new Mock<ILogger<ILogWebSitesConfigurationService>>();
         _loggerFactory = new Mock<ILoggerFactory>();
@@ -73,7 +77,7 @@ public class WebSiteHostingServiceTests
 
     WebSiteHostingService CreateService()
     {
-        var configService = new WebSitesConfigurationService(_configLogger.Object);
+        var configService = new WebSitesConfigurationService(_configLogger.Object, _tempDir);
         return new WebSiteHostingService(
             _logger.Object,
             _loggerFactory.Object,

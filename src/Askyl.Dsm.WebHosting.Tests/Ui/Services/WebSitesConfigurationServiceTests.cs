@@ -12,19 +12,19 @@ public class WebSitesConfigurationServiceTests : IDisposable
 {
     readonly Mock<ILogger<ILogWebSitesConfigurationService>> _logger;
     readonly string _configFilePath;
-    readonly string _backupDir;
+    readonly string _tempDir;
 
     public WebSitesConfigurationServiceTests()
     {
         _logger = new Mock<ILogger<ILogWebSitesConfigurationService>>();
-        _configFilePath = Path.Combine(AppContext.BaseDirectory, WebSiteConstants.ConfigurationFileName);
-        _backupDir = Path.Combine(Path.GetTempPath(), $"asm_cfg_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_backupDir);
+        _tempDir = Path.Combine(Path.GetTempPath(), $"asm_cfg_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
+        _configFilePath = Path.Combine(_tempDir, WebSiteConstants.ConfigurationFileName);
     }
 
     WebSitesConfigurationService CreateService()
     {
-        return new WebSitesConfigurationService(_logger.Object);
+        return new WebSitesConfigurationService(_logger.Object, _tempDir);
     }
 
     void SetupEmptyConfig()
@@ -53,7 +53,7 @@ public class WebSitesConfigurationServiceTests : IDisposable
         {
             if (File.Exists(_configFilePath))
             {
-                var backupPath = Path.Combine(_backupDir, $"{Guid.NewGuid():N}.json");
+                var backupPath = Path.Combine(_tempDir, $"{Guid.NewGuid():N}.json");
                 File.Move(_configFilePath, backupPath);
             }
         }
@@ -79,9 +79,9 @@ public class WebSitesConfigurationServiceTests : IDisposable
 
         try
         {
-            if (Directory.Exists(_backupDir))
+            if (Directory.Exists(_tempDir))
             {
-                Directory.Delete(_backupDir, recursive: true);
+                Directory.Delete(_tempDir, recursive: true);
             }
         }
         catch
