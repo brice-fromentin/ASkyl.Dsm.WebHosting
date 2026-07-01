@@ -33,12 +33,12 @@ UI for managing .NET web applications on Synology NAS devices.
 dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
 dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
-dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build --blame-hang-timeout 30s
+dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build --blame-hang-timeout 10s
 ```
 
 **NEVER** use `dotnet run` or variants without exact flags and solution path.
 
-**Test command:** `--blame-hang-timeout 30s` is required — the xUnit VSTest adapter (v3.1.5) on .NET 10 does not exit after tests complete. This flag kills the hung process. Tests complete in ~4s.
+**Test command:** `--blame-hang-timeout 10s` is required — the xUnit VSTest adapter (v3.1.5) on .NET 10 does not exit after tests complete. This flag kills the hung process. Tests complete in ~4s, so 10s provides a 6s grace period before force-killing.
 
 ### Mandatory Sequence: Format → Build → Verify
 
@@ -405,6 +405,25 @@ CRITICAL: To prevent VRAM saturation (PCIe swap) on the local host:
 4. **Verify before responding** — Format → Build + manual checks
 
 **DO NOT rely on memory from previous tasks.** Always re-read AGENTS.md when in doubt.
+
+---
+
+## 15. COMMAND FIDELITY (CRITICAL)
+
+**ALWAYS use documented commands EXACTLY as specified — no substitutions, no "improvements".**
+
+When AGENTS.md specifies a command (e.g., `markdownlint <file-path>`), use it verbatim. Do not:
+
+- ❌ Substitute your own implementation of the command
+- ❌ Add "optimizations" or "improvements" to the command structure
+- ❌ Replace with an equivalent tool you think is "better"
+
+**Why:** Documented commands are tested and verified for your environment. Substituting commands breaks the build chain and introduces hard-to-debug failures.
+
+**Examples:**
+
+- ✅ `markdownlint /path/to/file.md` (documented command)
+- ❌ `npx markdownlint-cli2 --config ... /path/to/file.md` (substitution)
 
 ---
 

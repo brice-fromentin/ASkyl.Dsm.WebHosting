@@ -1,8 +1,13 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["superpowers@git+https://github.com/obra/superpowers.git"],
+  "plugin": [
+    "superpowers@git+https://github.com/obra/superpowers.git"
+  ],
   "lsp": true,
-  "instructions": ["AGENTS.md"],
+  "instructions": [
+    "AGENTS.md",
+    "AGENTS-WORKING-PREFERENCES.md"
+  ],
   "compaction": {
     "auto": true,
     "prune": true,
@@ -18,7 +23,11 @@
     "max_lines": 200
   },
   "watcher": {
-    "ignore": ["**/bin/**", "**/obj/**", "**/packages/**"]
+    "ignore": [
+      "**/bin/**",
+      "**/obj/**",
+      "**/packages/**"
+    ]
   },
   "formatter": true,
   "experimental": {
