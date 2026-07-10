@@ -7,8 +7,10 @@ using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Components;
+using Askyl.Dsm.WebHosting.Ui.Endpoints;
 using Askyl.Dsm.WebHosting.Ui.Extensions;
 using Askyl.Dsm.WebHosting.Ui.Infrastructure;
+using Askyl.Dsm.WebHosting.Ui.Middleware;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -126,6 +128,9 @@ app.UsePathBase(ApplicationConstants.ApplicationUrlSubPath);
 // Request localization must be early in the pipeline (after path base, before routing)
 app.UseGlobalizationRequestLocalization();
 
+// Request tracking must be early to capture ID for the full pipeline
+app.UseMiddleware<RequestTrackingMiddleware>();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -141,7 +146,7 @@ else
 // Rate limiter must be before status code pages to prevent 429 from being re-executed to /not-found
 app.UseRateLimiter();
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseStatusCodePagesWithReExecute("/not-found?status={0}", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
 // Security headers
@@ -161,6 +166,7 @@ app.UseSession();
 app.UseRouting();
 
 app.MapControllers();
+app.MapErrorEndpoints();
 
 app.UseAntiforgery();
 

@@ -10,6 +10,7 @@ using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -30,7 +31,7 @@ public class DsmSessionTests : IDisposable
     {
         _httpHandler = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_httpHandler.Object) { BaseAddress = new Uri("https://localhost:5001/") };
-        _settingsService = new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object, new SystemFileReader());
+        _settingsService = new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object, new SystemFileReader(), new ConfigurationBuilder().Build());
         _clientLogger = new Mock<ILogger<ILogDsmApiClient>>();
         _session = new FakeSession();
         _httpContextAccessor = new Mock<IHttpContextAccessor>();

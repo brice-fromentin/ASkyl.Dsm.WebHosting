@@ -25,7 +25,11 @@
             "program": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0/Askyl.Dsm.WebHosting.Ui.dll",
             "cwd": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0",
             "webRoot": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/wwwroot",
-            "timeout": 123456
+            "timeout": 123456,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "DsmSettings__ConfigPath": "./dev-mock/synoinfo.conf"
+            }
         },
         {
             "name": ".NET Launch Program",

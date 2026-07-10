@@ -113,4 +113,18 @@ public static class ApplicationConstants
     public const string WriteTestFileName = ".write_test";
 
     #endregion
+
+    #region Request Tracking
+
+    /// <summary>
+    /// HTTP header name for cross-cutting request identification.
+    /// </summary>
+    public const string XRequestIdHeaderName = "X-Request-ID";
+
+    /// <summary>
+    /// HttpContext.Items key for the request ID.
+    /// </summary>
+    public const string RequestIdItemKey = "RequestId";
+
+    #endregion
 }

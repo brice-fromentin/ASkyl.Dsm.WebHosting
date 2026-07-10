@@ -1,7 +1,7 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** June 26, 2026
+**Last Updated:** July 2, 2026
 
 ---
 
@@ -15,7 +15,13 @@
 6. [Data Models & API Integration](#data-models--api-integration)
 7. [UI Architecture](#ui-architecture)
 8. [Security Considerations](#security-considerations)
-9. [Performance Optimization](#performance-optimization)
+9. [Globalization & Localization](#globalization--localization)
+10. [Performance Optimization](#performance-optimization)
+11. [Request Tracing](#request-tracing)
+12. [Deployment & Packaging](#deployment--packaging)
+13. [Build and Release Pipeline](#build-and-release-pipeline)
+14. [Configuration Management](#configuration-management)
+15. [Appendix](#appendix)
 
 ---
 
@@ -77,7 +83,7 @@ Askyl.Dsm.WebHosting.slnx
 ├── Askyl.Dsm.WebHosting.Globalization      # Localization resources, validators, culture management
 ├── Askyl.Dsm.WebHosting.Logging            # Logging extensions (source-generated log methods)
 ├── Askyl.Dsm.WebHosting.Tools              # Utility tools & DSM API client
-├── Askyl.Dsm.WebHosting.Tests              # Unit tests (xUnit, Moq, FluentAssertions)
+├── Askyl.Dsm.WebHosting.Tests              # Unit tests (xUnit, Moq)
 ├── Askyl.Dsm.WebHosting.Ui                 # Main Blazor Server-WASM hybrid UI
 └── Askyl.Dsm.WebHosting.Ui.Client          # Blazor WebAssembly client library
 ```
@@ -90,6 +96,12 @@ Askyl.Dsm.WebHosting.slnx
 - **Hybrid rendering mode** (InteractiveServer + InteractiveWebAssembly)
 - **Background services** for long-running operations
 - **Centralized versioning** via Directory.Build.props
+
+### Test Strategy
+
+- **Frameworks:** xUnit, Moq, coverlet (code coverage)
+- **Controllers are thin routing wrappers** with no business logic — all behavior delegated to services which are tested directly
+- bunit is referenced for `BunitContext` usage in navigation guard tests; no Blazor component rendering tests currently exist
 
 ### Build Configuration
 
@@ -755,12 +767,190 @@ Culture is **DSM-controlled** — resolved once at login, locked for the session
 
 ## Performance Optimization
 
+### Response Time Targets
+
+- API endpoints targeting <200ms typical response time for local DSM operations
+- FileStation list operations may exceed target depending on directory size
+- Framework installation and runtime download are long-running operations with progress feedback via `IWorkingState`
+
+### Memory Usage Guidelines
+
+- Long-running hosting service (`WebSiteHostingService`) maintains per-site state in `ConcurrentDictionary<Guid, SiteEntry>`
+- Each site entry holds a `SiteLifecycleManager` instance with a Channel-based command queue
+- Memory footprint scales linearly with number of managed websites; typical deployment manages <10 sites
+
+### Connection Pool Sizing
+
+- Single named `HttpClient` instance for DSM API calls via `DsmApiClient` (Singleton)
+- Default connection pool sizing from .NET runtime defaults (2 connections per server)
+- No custom `SocketsHttpHandler` configuration — relies on framework defaults for local DSM communication
+
 ### Caching Strategy
 
 - **ApiInformations Cache:** Lazy-init with `SemaphoreLock` double-checked locking in `DsmApiClient`; fetched once, cached forever
 - **Session Validation Cache:** 1-minute TTL for DSM session validation
 - **Instance Cache:** In-memory `ConcurrentDictionary` for website instances
 - **Configuration Cache:** JSON file read on startup, in-memory during runtime
+
+---
+
+## Request Tracing
+
+### X-Request-ID Propagation
+
+Serilog's `WithActivity` enricher adds `ActivityId`, `ActivityTraceId`, and `ActivitySpanId` to log entries. These correlate with .NET's built-in `System.Diagnostics.Activity` infrastructure.
+
+**Current State:** Activity IDs are captured in server-side logs but not propagated to the client
+for support ticket correlation. The Blazor WebAssembly client does not include request ID headers
+on outgoing API calls, and the server does not expose trace identifiers in API responses.
+
+**Pipeline Flow (when Activities are active):**
+
+1. Incoming HTTP request creates `Activity` via ASP.NET Core hosting
+2. Serilog enricher attaches `ActivityId`, `ActivityTraceId`, `ActivitySpanId` to log context
+3. Outgoing DSM API calls inherit Activity scope via `HttpClient` diagnostics handler
+4. All logs within the request scope share the same trace identifiers
+
+**For Support Correlation:** Currently relies on timestamp + EventId correlation. Future enhancement could surface `X-Request-ID` in API response headers for client-side support ticket inclusion.
+
+---
+
+## Deployment & Packaging
+
+### Build Pipeline
+
+The SPK build pipeline (`src/scripts/build-spk.sh`) assembles the Synology package through four phases:
+
+1. **Pre-flight Checks:** Verifies availability of `curl`, `tar`, `dotnet`, `jq`, `awk`, `pigz`
+2. **.NET Runtime Download:** Reads `ChannelVersion` from `appsettings.json`, fetches Microsoft
+   releases metadata, downloads aspnetcore-runtime for `linux-arm`, `linux-arm64`, `linux-x64`
+   with SHA512 verification
+3. **Application Publish:** Framework-dependent publish (`--self-contained false`) to `spk-project/package/admin-ui/`
+4. **SPK Assembly:** Compresses via `pigz -2`, creates tar archive containing `INFO`, `package.tgz`, lifecycle scripts, configuration, and icons
+
+### Runtime Selection Strategy
+
+The SPK is a fat package containing runtimes for all three architectures. At install time,
+the `postinst` script detects the NAS architecture and extracts only the matching runtime,
+keeping the installed footprint minimal.
+
+### Nginx Reverse Proxy Integration
+
+`adwh-alias.conf` provides reverse proxy from `/adwh` to `localhost:7120`. The configuration
+is injected into DSM's built-in Nginx via the package's `web-config` resource declaration in `INFO`.
+All application traffic flows through this alias, enabling sub-path access without port conflicts.
+
+### Service Account and Permissions
+
+- Dedicated system user `AskylWebHosting` created during installation
+- Member of `http` group for web server compatibility
+- Defined in `conf/privilege` within the SPK structure
+- Process spawning and file operations execute under this account
+
+### Data Persistence
+
+All persistent data resides under `/var/packages/AskylWebHosting/var/`:
+
+- Website configurations (JSON)
+- Application logs (Serilog rolling files)
+- Downloaded .NET runtimes
+- User-specific state
+
+This path survives package upgrades per Synology's package data directory conventions.
+
+### Port Configuration
+
+`adwh.sc` defines the application listening ports:
+
+| Protocol | Port | Purpose |
+|----------|------|---------|
+| HTTP | 7120 | Primary application port (proxied via Nginx `/adwh`) |
+| HTTPS | 7121 | SSL-enabled alternative |
+
+Port `7120` is declared in the SPK `INFO` file for conflict detection during installation.
+
+### Lifecycle Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `preinst` | Environment setup, architecture detection |
+| `postinst` | .NET runtime installation for detected architecture |
+| `preupgrade` | Service stop, configuration backup |
+| `postupgrade` | Configuration restore, runtime reinstall, service start |
+| `preuninst` | Service stop, PID file cleanup |
+| `postuninst` | Final cleanup |
+| `start-stop-status` | Service lifecycle management with PID tracking |
+| `common-functions.sh` | Shared utilities: logging, process management, runtime install/verify |
+
+### Version Management
+
+Dual sources of truth require manual synchronization:
+
+- **`Directory.Build.props`:** Controls .NET assembly version and informational version
+- **`spk-project/INFO`:** Controls SPK package version displayed in Package Center
+
+Use `scripts/update-version.sh` to synchronize both simultaneously.
+
+---
+
+## Build and Release Pipeline
+
+### Current State
+
+Deployment is entirely manual: developer runs `build-spk.sh` locally, then copies the resulting `.spk` from `dist/` to the target NAS via Package Center.
+
+### Planned Workflow
+
+A GitHub Actions pipeline would operate with two job paths triggered by repository events:
+
+**Triggers:** Push to `main`, pull requests, and tag pushes (`v*.*.*`)
+
+| Job Path | Trigger | Steps |
+|----------|---------|-------|
+| **Verify** (lightweight) | Push to `main`, PRs | Format check, build, unit tests, markdown lint |
+| **Release** (full) | Tag push | Verify steps + SPK assembly + GitHub release with artifact attachment |
+
+### Artifact Strategy
+
+- Release artifacts: `.spk` package attached to GitHub release
+- Runtime binaries cached in Actions cache keyed by architecture and ChannelVersion to avoid redundant downloads
+- Artifact retention aligned with GitHub default policies (90 days for workflow artifacts, indefinite for releases)
+
+---
+
+## Configuration Management
+
+### Dual appsettings.json Structure
+
+| Location | Purpose |
+|----------|---------|
+| `Ui/appsettings.json` | Server-side: runtime download version, Serilog sinks, allowed hosts |
+| `Ui.Client/wwwroot/appsettings.json` | Client-side (WASM): BrowserConsole Serilog sink with Debug minimum level for `Askyl.Dsm` namespace |
+
+### Download.ChannelVersion Dual-Purpose Constraint
+
+`Download.ChannelVersion` in the server `appsettings.json` serves two roles:
+
+1. **Build-time:** `build-spk.sh` reads this value to determine which .NET runtime version to download and package
+2. **Runtime:** The application uses it for version detection and release fetching via `Microsoft.Deployment.DotNet.Releases`
+
+This coupling means the packaged SPK's bundled runtime version is determined by the same
+configuration value the running application consults for available releases. Changing this value
+requires a full rebuild to maintain consistency between bundled runtime and application expectations.
+
+### Direct Configuration Access Pattern
+
+The codebase does not use `IOptions<T>` or `IConfiguration` binding anywhere. All configuration
+values are accessed directly via `builder.Configuration["Section:Key"]` or through dedicated
+services like `DsmSettingsService`.
+
+**`DsmSettingsService`:** Reads `/etc/synoinfo.conf` for DSM-specific settings (server address, port, language). The file path is configurable to support local debugging against a remote DSM instance.
+
+### Layered Configuration Merge
+
+Standard .NET configuration layering applies: `appsettings.json` → `appsettings.{Environment}.json`
+→ environment variables → command-line arguments. Currently only the base `appsettings.json` files
+are used in production; no environment-specific overrides are packaged with the SPK.
 
 ---
 

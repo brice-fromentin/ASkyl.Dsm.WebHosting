@@ -24,3 +24,6 @@ temp/
 # PR descriptions (generated for reference)
 PULL_REQUEST.md
 
+# Local development mock files (only ignore the actual config, keep template visible)
+**/dev-mock/synoinfo.conf
+

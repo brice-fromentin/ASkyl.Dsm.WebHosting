@@ -2,6 +2,7 @@ using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -11,28 +12,26 @@ public class DsmSettingsServiceTests
 {
     readonly Mock<ILogger<ILogDsmSettingsService>> _logger;
     readonly Mock<IFileReader> _fileReader;
+    readonly IConfiguration _configuration;
 
     public DsmSettingsServiceTests()
     {
         _logger = new Mock<ILogger<ILogDsmSettingsService>>();
         _fileReader = new Mock<IFileReader>();
+        _configuration = new ConfigurationBuilder().Build();
     }
 
     #region Service Construction
 
     [Fact]
-    public void Constructor_ServiceInitializes_WithoutException()
+    public void Constructor_MissingConfigFile_ThrowsInvalidOperationException()
     {
-        // Arrange — config file doesn't exist, service should use defaults
+        // Arrange — config file doesn't exist
         _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(false);
 
-        // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
-
-        // Assert — defaults
-        Assert.Equal(NetworkConstants.Localhost, service.Server);
-        Assert.Equal(SystemDefaults.DefaultHttpsPort, service.Port);
-        Assert.Equal(SystemDefaults.DefaultLanguage, service.Language);
+        // Act & Assert
+        var ex = Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration));
+        Assert.Contains(SystemDefaults.SynoInfoConfPath, ex.Message);
     }
 
     #endregion
@@ -53,7 +52,7 @@ public class DsmSettingsServiceTests
                    ]);
 
         // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
 
         // Assert
         Assert.Equal("192.168.1.100", service.Server);
@@ -74,7 +73,7 @@ public class DsmSettingsServiceTests
                    ]);
 
         // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
 
         // Assert
         Assert.Equal("192.168.1.200", service.Server);
@@ -98,7 +97,7 @@ public class DsmSettingsServiceTests
                    ]);
 
         // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
 
         // Assert
         Assert.Equal("10.0.0.1", service.Server);
@@ -118,7 +117,7 @@ public class DsmSettingsServiceTests
                    ]);
 
         // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
 
         // Assert
         Assert.Equal(SystemDefaults.DefaultHttpsPort, service.Port);
@@ -139,7 +138,7 @@ public class DsmSettingsServiceTests
                    ]);
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object));
+        var ex = Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration));
         Assert.Contains(SystemDefaults.KeyExternalHostIp, ex.Message);
     }
 
@@ -155,7 +154,7 @@ public class DsmSettingsServiceTests
                    ]);
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object));
+        var ex = Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration));
         Assert.Contains(SystemDefaults.KeyExternalHostIp, ex.Message);
     }
 
@@ -164,20 +163,15 @@ public class DsmSettingsServiceTests
     #region Malformed Configuration
 
     [Fact]
-    public void Constructor_ConfigReadThrowsException_UsesDefaults()
+    public void Constructor_ConfigReadThrowsException_PropagatesException()
     {
         // Arrange
         _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
         _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
                    .Throws(new System.IO.IOException("Simulated read failure"));
 
-        // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
-
-        // Assert — falls back to defaults
-        Assert.Equal(NetworkConstants.Localhost, service.Server);
-        Assert.Equal(SystemDefaults.DefaultHttpsPort, service.Port);
-        Assert.Equal(SystemDefaults.DefaultLanguage, service.Language);
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration));
     }
 
     [Fact]
@@ -194,7 +188,7 @@ public class DsmSettingsServiceTests
                    ]);
 
         // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object);
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
 
         // Assert
         Assert.Equal("10.0.0.5", service.Server);

@@ -1,0 +1,86 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    if: "!startsWith(github.ref, 'refs/tags/v')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Cache .NET runtimes
+        uses: actions/cache@v4
+        with:
+          path: src/spk-project/package/runtimes/downloads
+          key: ${{ runner.os }}-runtimes-${{ hashFiles('src/Askyl.Dsm.WebHosting.Ui/appsettings.json') }}
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/Askyl.Dsm.WebHosting.slnx
+
+      - name: Check format
+        run: dotnet format --no-restore --verify-no-changes ./src/Askyl.Dsm.WebHosting.slnx
+
+      - name: Build
+        run: dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
+
+      - name: Test
+        run: dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build --blame-hang-timeout 10s
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y pigz jq
+
+      - name: Cache .NET runtimes
+        uses: actions/cache@v4
+        with:
+          path: src/spk-project/package/runtimes/downloads
+          key: ${{ runner.os }}-runtimes-${{ hashFiles('src/Askyl.Dsm.WebHosting.Ui/appsettings.json') }}
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/Askyl.Dsm.WebHosting.slnx
+
+      - name: Format check
+        run: dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verify-no-changes --verbosity quiet
+
+      - name: Build
+        run: dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
+
+      - name: Test
+        run: dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build --blame-hang-timeout 10s
+
+      - name: Build SPK package
+        run: bash src/scripts/build-spk.sh
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          SPK_FILE=$(ls dist/*.spk | head -1)
+          gh release create "$TAG" \
+            --title "Release ${TAG}" \
+            --generate-notes \
+            "$SPK_FILE"

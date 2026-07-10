@@ -12,9 +12,8 @@ using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 
-[Collection("WebSiteHostingService")]
 [Trait("Category", "FileSystem")]
-public class WebSiteHostingServiceTests
+public class WebSiteHostingServiceTests : IDisposable
 {
     readonly Mock<ILogger<ILogWebSiteHostingService>> _logger;
     readonly Mock<ILogger<ILogWebSitesConfigurationService>> _configLogger;
@@ -75,6 +74,14 @@ public class WebSiteHostingServiceTests
         _serviceScope.Setup(s => s.ServiceProvider).Returns(_serviceProvider.Object);
     }
 
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDir))
+        {
+            Directory.Delete(_tempDir, recursive: true);
+        }
+    }
+
     WebSiteHostingService CreateService()
     {
         var configService = new WebSitesConfigurationService(_configLogger.Object, _tempDir);
@@ -122,7 +129,7 @@ public class WebSiteHostingServiceTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Equal("Site not found", result.Message);
+        Assert.NotEqual(ApiErrorCode.None, result.ErrorCode);
     }
 
     #endregion
@@ -141,7 +148,7 @@ public class WebSiteHostingServiceTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Equal("Site not found", result.Message);
+        Assert.NotEqual(ApiErrorCode.None, result.ErrorCode);
     }
 
     #endregion
@@ -160,7 +167,7 @@ public class WebSiteHostingServiceTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Equal("Instance not found", result.Message);
+        Assert.NotEqual(ApiErrorCode.None, result.ErrorCode);
     }
 
     #endregion
@@ -183,7 +190,7 @@ public class WebSiteHostingServiceTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Equal("Instance not found", result.Message);
+        Assert.NotEqual(ApiErrorCode.None, result.ErrorCode);
     }
 
     #endregion

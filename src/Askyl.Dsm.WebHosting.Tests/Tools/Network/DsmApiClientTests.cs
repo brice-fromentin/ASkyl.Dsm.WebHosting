@@ -7,6 +7,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -25,7 +26,7 @@ public class DsmApiClientTests : IDisposable
     {
         _httpHandler = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_httpHandler.Object) { BaseAddress = new Uri("https://localhost:5001/") };
-        _settingsService = new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object, new SystemFileReader());
+        _settingsService = new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object, new SystemFileReader(), new ConfigurationBuilder().Build());
         _logger = new Mock<ILogger<ILogDsmApiClient>>();
     }
 

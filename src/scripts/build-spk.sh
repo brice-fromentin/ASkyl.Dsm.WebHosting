@@ -243,7 +243,12 @@ create_spk_package() {
     # Create package.tgz from package/ directory content
     echo "Creating package.tgz..."
     cd package
-    tar -cf - . | pigz -2 > ../package.tgz
+    # Use pigz if available, otherwise fall back to gzip
+    if command -v pigz &> /dev/null; then
+        tar -cf - . | pigz -2 > ../package.tgz
+    else
+        tar -cf - . | gzip -n > ../package.tgz
+    fi
     cd ..
 
     # Create SPK file
@@ -337,6 +342,11 @@ dotnet publish -c Release -o "$UI_PUBLISH_DIR" --self-contained false /nr:false
 # Remove debug files to reduce package size
 echo "🧹 Cleaning debug files..."
 find "$UI_PUBLISH_DIR" -name "*.pdb" -delete
+
+# Remove development-only files from publish output
+echo "🧹 Removing development artifacts..."
+find "$UI_PUBLISH_DIR" -name "*Development.json" -delete 2>/dev/null || true
+rm -rf "$UI_PUBLISH_DIR/dev-mock" 2>/dev/null || true
 
 # Clean package artifacts
 clean_package_artifacts "$SPK_DIR/package"
