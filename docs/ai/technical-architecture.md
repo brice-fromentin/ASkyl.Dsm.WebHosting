@@ -320,7 +320,9 @@ Globalization/
 │   ├── PlatformInfoService.cs              # Platform detection (no interface)
 │   ├── ProcessHandle.cs                    # IProcessHandle + SystemProcessHandle (co-located)
 │   ├── ProcessRunner.cs                    # IProcessRunner + SystemProcessRunner (co-located)
-│   └── ProcessTerminator.cs                # Cross-platform process termination (SIGTERM/CloseMainWindow)
+│   ├── ProcessTerminator.cs                # Cross-platform process termination (SIGTERM/CloseMainWindow)
+│   ├── FileReader.cs                       # IFileReader + SystemFileReader — abstracts file system for testability
+│   └── DsmSettingsService.cs              # IDsmSettingsService — reads /etc/synoinfo.conf via IFileReader
 ├── Network/                                # Network communication
 │   └── DsmApiClient.cs                     # Centralized DSM API client
 ├── Diagnostics/                            # Diagnostic utilities
@@ -344,6 +346,7 @@ Globalization/
 | **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | ILogger, ISemaphoreOwner |
 | **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes | ILogger, ILoggerFactory |
 | **SystemProcessHandle** | `IProcessHandle` | Transient | Wraps `Process` for testability | ILogger<ILogSystemProcessHandle> |
+| **DsmSettingsService** | `IDsmSettingsService` | Singleton | Reads /etc/synoinfo.conf via IFileReader | ILogger, IFileReader |
 
 **DsmApiClient Key Features:**
 
