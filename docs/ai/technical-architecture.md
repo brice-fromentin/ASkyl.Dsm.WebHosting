@@ -1,7 +1,6 @@
 # ASkyl.Dsm.WebHosting - Technical Architecture Document
 
 **Target Framework:** .NET 10 (net10.0)
-**Last Updated:** July 2, 2026
 
 ---
 
@@ -101,7 +100,7 @@ Askyl.Dsm.WebHosting.slnx
 
 **Purpose:** Unit tests for analyzers, domain models, globalization, tools, and UI services.
 
-**Frameworks:** xUnit (v2.9.3), Moq (v4.20.72), coverlet (code coverage), bunit (BunitContext). Analyzer testing via Microsoft.CodeAnalysis.Analyzer.Testing ecosystem (v1.1.x).
+**Frameworks:** xUnit, Moq, coverlet (code coverage), bunit (BunitContext). Analyzer testing via Microsoft.CodeAnalysis.Analyzer.Testing ecosystem.
 
 **Test organization by subsystem:**
 
@@ -209,7 +208,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | Interface | Key Methods | Implemented By |
 |-----------|-------------|----------------|
 | **IAuthenticationService** | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() | Ui + Ui.Client |
-| **ICultureManager** | InitializeFromLogin(string? culture, string? dateFormat, string? timeFormat), ResetToSystem(), CurrentCulture, CurrentUICulture | Ui.Client.CultureManager |
+| **ICultureManager** | InitializeFromLogin(), ResetToSystem(); properties: CurrentCulture, CurrentUICulture | Ui.Client.CultureManager |
 | **IDotnetVersionService** | GetInstalledVersionsAsync(), GetChannelsAsync(), IsChannelInstalledAsync(), IsVersionInstalledAsync(), GetReleasesWithStatusAsync(), RefreshCacheAsync(), IsValidVersionFormat() | Ui + Ui.Client |
 | **IFileSystemService** | GetSharedFoldersAsync(), GetDirectoryContentsAsync(), SetHttpGroupPermissionsAsync() | Ui + Ui.Client |
 | **IFrameworkManagementService** | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services |
@@ -217,15 +216,15 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | **ILogDownloadService** | CreateLogZipStreamAsync() | Ui.Services |
 | **IReverseProxyManagerService** | CreateAsync(), UpdateAsync(), DeleteAsync() | Ui.Services |
 | **IWebSiteHostingService** | GetAllWebsitesAsync(), AddWebsiteAsync() | Ui + Ui.Client |
-| **IFileManagerService** | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName(string directory, string file) | Tools.Infrastructure |
-| **IArchiveExtractorService** | Decompress(inputFile, exclude) | Tools.Infrastructure |
+| **IFileManagerService** | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName() | Tools.Infrastructure |
+| **IArchiveExtractorService** | Decompress() | Tools.Infrastructure |
 | **IDownloaderService** | DownloadVersionToAsync(), GetAspNetCoreReleasesAsync(), GetAspNetCoreChannelsAsync() | Tools.Runtime |
 | **IVersionsDetectorService** | GetInstalledVersionsAsync(), RefreshCacheAsync(), IsChannelInstalled(), IsVersionInstalled() | Tools.Runtime (Singleton) |
-| **IAssemblyRuntimeDetector** | Detect(string assemblyPath) | Tools.Runtime (Singleton) |
-| **IDsmSession** | ConnectAsync(LoginCredentials, CancellationToken), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), Disconnect(); properties: UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
+| **IAssemblyRuntimeDetector** | Detect() | Tools.Runtime (Singleton) |
+| **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), Disconnect(); properties: UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
 | **IDsmSettingsService** | Server, Port, Language | Tools.Infrastructure |
-| **ILicenseService** | GetLicensesAsync() → IReadOnlyList&lt;LicenseInfo&gt; | Ui.Client.Services |
-| **ITreeContentService** | LoadChildDirectoriesAsync(string path, Func&lt;string, Task&gt; errorHandler, Func&lt;string, Task&lt;List&lt;TreeViewItem&gt;&gt;&gt; loadChildrenAsync) | Ui.Client.Services |
+| **ILicenseService** | GetLicensesAsync() | Ui.Client.Services |
+| **ITreeContentService** | LoadChildDirectoriesAsync() | Ui.Client.Services |
 
 **Structure:**
 
@@ -389,13 +388,13 @@ server/client folder separation.
 
 - **Server/** — one extension file per service domain, organized by subsystem:
   - _Authentication/_ — AuthenticationService
-  - _DsmApi/_ — DsmApiClient + DsmSession (2 files)
-  - _FileManagement/_ — FileManagerService, FileSystemService, LogDownloadService (3 files)
-  - _Framework/_ — DotnetVersionService, FrameworkManagementService (2 files)
-  - _Infrastructure/_ — ArchiveExtractor, AssemblyRuntimeDetector, Downloader, DsmSettingsService, GlobalizationSettings, PlatformInfo, VersionsDetector (7 files)
-  - _ProcessLifecycle/_ — ProcessHandle, SiteLifecycleManager, ProcessRunner (3 files)
-  - _ReverseProxy/_ — ReverseProxyManagerService (1 file)
-  - _WebsiteHosting/_ — WebSitesConfigurationService, WebSiteHostingService (2 files)
+  - _DsmApi/_ — DsmApiClient + DsmSession
+  - _FileManagement/_ — FileManagerService, FileSystemService, LogDownloadService
+  - _Framework/_ — DotnetVersionService, FrameworkManagementService
+  - _Infrastructure/_ — ArchiveExtractor, AssemblyRuntimeDetector, Downloader, DsmSettingsService, GlobalizationSettings, PlatformInfo, VersionsDetector
+  - _ProcessLifecycle/_ — ProcessHandle, SiteLifecycleManager, ProcessRunner
+  - _ReverseProxy/_ — ReverseProxyManagerService
+  - _WebsiteHosting/_ — WebSitesConfigurationService, WebSiteHostingService
 - **Client/** — `ClientLoggingExtensions.cs`: WASM-side logging for Home page, dialogs, license service
 
 **Naming convention:** `{ServiceName}LoggingExtensions.cs`.
@@ -404,37 +403,9 @@ New service? Add a `[LoggerMessage]` extension method with XML doc comment; cons
 
 **EventId Management:**
 
-All `[LoggerMessage]` attributes use inline `int` literals. EventId ranges documented in `Constants/Logging/LogEventIds.cs`.  
-Each service owns a 100K range at 1M spacing:
-
-| Range | Service | Extension File |
-|-------|---------|----------------|
-| `1000001–1000007` | AuthenticationService | `AuthenticationLoggingExtensions.cs` |
-| `1100001–1100012` | FileSystemService | `FileSystemServiceLoggingExtensions.cs` |
-| `1200001–1200006` | FileManagerService | `FileManagerServiceLoggingExtensions.cs` |
-| `1300001–1300007` | LogDownloadService | `LogDownloadServiceLoggingExtensions.cs` |
-| `1400001–1400007` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` |
-| `1500001–1500007` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` |
-| `1600001–1600019` | SiteLifecycleManager | `ProcessLoggingExtensions.cs` |
-| `1700001–1700014` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` |
-| `1800001–1800031` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` |
-| `1900001–1900012` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` |
-| `2000001–2000013` | DsmApiClient | `DsmApiLoggingExtensions.cs` |
-| `2100001–2100006` | ArchiveExtractorService | `ArchiveExtractorLoggingExtensions.cs` |
-| `2200001–2200004` | VersionsDetectorService | `VersionsDetectorLoggingExtensions.cs` |
-| `2250001–2250005` | AssemblyRuntimeDetector | `AssemblyRuntimeDetectorLoggingExtensions.cs` |
-| `2300001–2300002` | PlatformInfoService | `PlatformInfoLoggingExtensions.cs` |
-| `2400001–2400004` | DownloaderService | `DownloaderLoggingExtensions.cs` |
-| `2500001` | SystemProcessRunner | `ProcessRunnerLoggingExtensions.cs` |
-| `2600001–2600005` | SystemProcessHandle | `ProcessHandleLoggingExtensions.cs` |
-| `2700001–2700004` | GlobalizationSettings | `GlobalizationSettingsLoggingExtensions.cs` |
-| `2800001–2800005` | DsmSettingsService | `DsmSettingsServiceLoggingExtensions.cs` |
-| `2900001–2900007` | DsmSession | `DsmSessionLoggingExtensions.cs` |
-| `7000001` | LicenseService (WASM) | `ClientLoggingExtensions.cs` |
-| `7100001` | Client utilities (JS interop) | `ClientLoggingExtensions.cs` |
-| `7600001–7600010` | CultureManager (client) | `ClientLoggingExtensions.cs` |
-
-**Total:** All services use `[LoggerMessage]` extensions — 24 EventId ranges across server and client. Zero CA2254 warnings.
+All `[LoggerMessage]` attributes use inline `int` literals. Each service owns a 100K range at 1M spacing.  
+See `Constants/Logging/LogEventIds.cs` for current ranges and next available IDs per service.  
+All services use `[LoggerMessage]` extensions — zero CA2254 warnings.
 
 **Serilog Configuration:**
 
