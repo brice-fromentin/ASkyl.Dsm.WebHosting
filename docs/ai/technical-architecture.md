@@ -326,7 +326,23 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
   per-site lifecycle manager (Channel-based command queue, SIGTERM graceful shutdown),  
   DSM session management (per-user, 1-min TTL cache).
 
-**Middleware pipeline:** `UsePathBase("/adwh")` → `UseSession()` → `UseRouting()` + `MapControllers()` → `UseAntiforgery()` → `MapRazorComponents` with InteractiveWebAssembly render mode.
+**Middleware pipeline (exact order from Program.cs):**
+
+1. `ApplyDsmSystemCulture()` — wire system culture from DSM settings (no auth needed)
+2. `UsePathBase("/adwh")` — apply URL sub-path prefix
+3. `UseGlobalizationRequestLocalization()` — culture handling after path base, before routing
+4. `UseMiddleware<RequestTrackingMiddleware>()` — X-Request-ID propagation via HttpContext.Items
+5. **Dev/Prod branching:** Development: `UseWebAssemblyDebugging()`. Production: `UseExceptionHandler("/Error")` + `UseHsts()`
+6. `UseRateLimiter()` — login brute-force protection (fixed window: 5 requests/min)
+7. `UseStatusCodePagesWithReExecute("/not-found?status={0}")` — error endpoint re-execution with scope creation
+8. `UseHttpsRedirection()` — redirect HTTP to HTTPS
+9. Security headers middleware — X-Content-Type-Options, X-Frame-Options, Referrer-Policy, CSP, X-XSS-Protection
+10. `UseSession()` — session middleware (before antiforgery and controllers)
+11. `UseRouting()` — endpoint routing
+12. `MapControllers()` + `MapErrorEndpoints()` — API controllers and /Error, /not-found endpoints
+13. `UseAntiforgery()` — antiforgery token validation
+14. `MapStaticAssets()` — static file serving
+15. `MapRazorComponents<App>().AddInteractiveWebAssemblyRenderMode().AddAdditionalAssemblies(...)` — Blazor WASM render mode
 
 ### 7. Askyl.Dsm.WebHosting.Ui.Client
 
