@@ -99,46 +99,25 @@ Askyl.Dsm.WebHosting.slnx
 
 ### Test Project (`Askyl.Dsm.WebHosting.Tests`)
 
-**Purpose:** Unit tests for analyzers, domain models, globalization, tools, and UI services
+**Purpose:** Unit tests for analyzers, domain models, globalization, tools, and UI services. 45 test files across 5 categories.
 
-**Frameworks:** xUnit (v2.9.3), Moq (v4.20.72), coverlet (code coverage), bunit (BunitContext)
-**Analyzer testing:** Microsoft.CodeAnalysis.Analyzer.Testing ecosystem (v1.1.x)
+**Frameworks:** xUnit (v2.9.3), Moq (v4.20.72), coverlet (code coverage), bunit (BunitContext). Analyzer testing via Microsoft.CodeAnalysis.Analyzer.Testing ecosystem (v1.1.x).
 
-**Structure (45 test files):**
+**Test organization by subsystem:**
 
-```text
-Tests/
-├── Analyzers/                              # 3 tests — BlankLine, LoggerDirectCall, StringStaticMember analyzers
-├── Data/
-│   ├── Domain/                             # 6 tests — LoginCredentials, AspNetCoreReleaseInfo, AspNetRelease, WebSiteConfiguration, WebSiteInstance
-│   └── Results/                            # 2 tests — Result types + serialization
-├── Globalization/                          # 8 tests — AcceptLanguageHandler, CultureInfoExtensions, CultureManager, DeferredMessageExtensions, GlobalizationServiceCollectionExtensions, GlobalizationSettings, Localizer, ResourceCompleteness
-├── Tools/
-│   ├── Converters/                         # 2 tests — DsmLanguageToCultureConverter, PhpFormatToDotNetConverter
-│   ├── Diagnostics/                        # 1 test — OperationTimer
-│   ├── Extensions/                         # 1 test — Extension methods
-│   ├── Infrastructure/                     # 3 tests — ArchiveExtractorService, DsmSettingsService, FileManagerService
-│   ├── Network/                            # 1 test — DsmApiClient
-│   ├── Runtime/                            # 2 tests — AssemblyRuntimeDetector, VersionsDetectorService
-│   └── Threading/                          # 1 test — SemaphoreLock
-└── Ui/Services/                            # 13 tests
-    ├── AuthenticationNavigationGuard       # Navigation guard tests
-    ├── AuthenticationService                 # Auth service tests
-    ├── DotnetVersionService                # Version detection tests
-    ├── DsmSession                          # Session management tests
-    ├── FileSystemService                   # File system operations tests
-    ├── FrameworkManagementService          # Framework install/uninstall tests
-    ├── LicenseService                      # License retrieval tests
-    ├── LogDownloadService                  # Log archive tests
-    ├── ReverseProxyManagerService          # Proxy CRUD tests
-    ├── SiteLifecycleManager                # Process lifecycle tests
-    ├── TreeContentService                  # Tree view lazy loading tests
-    ├── WebSiteHostingService               # Orchestrator tests
-    └── WebSitesConfigurationService        # Configuration persistence tests
-```
+- **Analyzers/** — 3 tests: BlankLineAnalyzer, LoggerDirectCallAnalyzer, StringStaticMemberAnalyzer
+- **Data/Domain/** — 5 tests: LoginCredentials, AspNetCoreReleaseInfo, AspNetRelease, WebSiteConfiguration, WebSiteInstance
+- **Data/Results/** — 2 tests: result types + serialization
+- **Globalization/** — 8 tests: AcceptLanguageHandler, CultureInfoExtensions, CultureManager,
+  DeferredMessageExtensions, GlobalizationServiceCollectionExtensions, GlobalizationSettings, Localizer, ResourceCompleteness
+- **Tools/** — 11 tests across Converters (language/date format), Diagnostics (OperationTimer),
+  Extensions, Infrastructure (ArchiveExtractor, DsmSettingsService, FileManagerService),
+  Network (DsmApiClient), Runtime (AssemblyRuntimeDetector, VersionsDetectorService), Threading (SemaphoreLock)
+- **Ui/Services/** — 13 tests: AuthenticationNavigationGuard, AuthenticationService, DotnetVersionService,
+  DsmSession, FileSystemService, FrameworkManagementService, LicenseService, LogDownloadService,
+  ReverseProxyManagerService, SiteLifecycleManager, TreeContentService, WebSiteHostingService, WebSitesConfigurationService
 
-**Controllers are thin routing wrappers** with no business logic — all behavior delegated to services which are tested directly.
-
+**Design:** controllers are thin routing wrappers with no business logic — all behavior delegated to services which are tested directly.  
 bunit is referenced for `BunitContext` usage in navigation guard tests; no Blazor component rendering tests currently exist.
 
 ### Build Configuration
@@ -203,56 +182,23 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 ### 2. Askyl.Dsm.WebHosting.Constants
 
-**Purpose:** Centralized constants, defaults, and enums for the entire solution
+**Purpose:** Centralized constants, defaults, and enums for the entire solution. Eliminates magic strings and numbers across all projects.
 
-**Complete Inventory:**
+**Organization by domain:**
 
-```text
-Constants/
-├── Application/
-│   ├── ApplicationConstants.cs             # App paths, URLs, HTTP client names, session (DsmSid, DsmUsername, TTL)
-│   ├── DotnetInfoParserConstants.cs        # dotnet --info section headers and framework identifiers
-│   ├── InfrastructureConstants.cs          # Directory names (Downloads)
-│   ├── LogConstants.cs                     # Log directory and file paths
-│   ├── SecurityHeaders.cs                  # HTTP security header values (CSP, X-Frame-Options, etc.)
-│   ├── ValidationConstants.cs              # Validation message constants
-│   └── WebSiteConstants.cs                 # Website config, process lifecycle, port validation
-├── Globalization/
-│   └── GlobalizationConstants.cs           # Default culture, text direction (LTR/RTL), env var names
-├── DSM/
-│   ├── API/
-│   │   ├── ApiConstants.cs                 # Merged API names, methods, version ranges
-│   │   ├── DsmConstants.cs                 # Shared DSM error codes
-│   │   ├── PhpDotNetFormatTokens.cs        # PHP → .NET format token mappings (ImmutableDictionary)
-│   │   ├── ReverseProxyConstants.cs        # Proxy error codes
-│   │   └── SerializationFormats.cs         # Enum: Form, Json
-│   ├── FileStation/
-│   │   ├── FileStationDefaults.cs          # Listing patterns, sorting, file types
-│   │   └── FileStationType.cs              # Enum: File/Directory for FileStation entry type serialization
-│   └── System/
-│       ├── DsmLanguageCodes.cs             # DSM 3-letter language code data
-│       └── SystemDefaults.cs               # Config paths, external ports
-├── JSON/
-│   └── JsonOptionsCache.cs                 # Static JsonSerializerOptions (camelCase, ignore nulls)
-├── Network/
-│   ├── NetworkConstants.cs                 # Cookie headers, localhost, MIME types
-│   └── ProtocolTypes.cs                    # Enum: HTTP (0), HTTPS (1)
-├── Runtime/
-│   ├── DotNetFrameworkTypes.cs             # Framework type strings
-│   └── RuntimeConstants.cs                 # Architecture (x64/arm/arm64), OS (linux/osx/windows)
-├── Logging/
-│   └── LogEventIds.cs                      # EventId range bases for [LoggerMessage] extensions
-├── UI/
-│   ├── DialogConstants.cs                  # Dialog widths
-│   └── FileSizeConstants.cs                # Byte calculations (KiB/MiB/GiB)
-└── WebApi/
-    ├── AuthenticationRoutes.cs             # /api/v1/authentication/*
-    ├── FileManagementRoutes.cs             # /api/v1/files/*
-    ├── FrameworkManagementRoutes.cs        # /api/v1/frameworks/*
-    ├── LogDownloadRoutes.cs                # /api/v1/logdownload/*
-    ├── RuntimeManagementRoutes.cs          # /api/v1/runtime/*
-    └── WebsiteHostingRoutes.cs             # /api/v1/websites/*
-```
+- **Application/** — app paths, URLs, HTTP client names, session keys (DsmSid, DsmUsername), security headers, validation messages, website lifecycle defaults
+- **DSM/API/** — DSM API names, methods, version ranges, error codes, PHP→.NET format token mappings, serialization formats (Form/Json enum)
+- **DSM/FileStation/** — FileStation listing defaults, sorting, file type enum (File/Directory)
+- **DSM/System/** — DSM 3-letter language code data, config paths, external ports
+- **Globalization/** — default culture, text direction (LTR/RTL), environment variable names
+- **JSON/** — static `JsonSerializerOptions` cache (camelCase, ignore nulls)
+- **Logging/** — EventId range bases for `[LoggerMessage]` extensions (100K ranges at 1M spacing)
+- **Network/** — cookie headers, localhost addresses, MIME types, protocol type enum (HTTP/HTTPS)
+- **Runtime/** — .NET framework type strings, architecture identifiers (x64/arm/arm64), OS identifiers (linux/osx/windows)
+- **UI/** — dialog dimensions, byte calculation constants (KiB/MiB/GiB)
+- **WebApi/** — route constants per controller (`/api/v1/authentication/*`, `/api/v1/websites/*`, etc.)
+
+**Rule:** Any hardcoded string or number used in more than one place belongs here. New domain? Add a subdirectory.
 
 ### 3. Askyl.Dsm.WebHosting.Data
 
@@ -281,174 +227,61 @@ Constants/
 
 **Structure:**
 
-```text
-Data/
-├── Contracts/                              # Service interfaces
-├── Domain/                                 # Domain models
-│   ├── Authentication/
-│   │   └── LoginCredentials.cs             # Login credentials model
-│   ├── FileSystem/
-│   │   └── FsEntry.cs                      # File system entry model
-│   ├── Licensing/
-│   │   └── LicenseInfo.cs                  # License information model
-│   ├── Runtime/
-│   │   ├── AspNetCoreReleaseInfo.cs        # ASP.NET Core release info
-│   │   ├── AssemblyRuntimeInfo.cs          # Assembly runtime detection info
-│   │   ├── AspNetRelease.cs                # Release DTO with version/status
-│   │   ├── FrameworkInfo.cs                # Framework information model
-│   │   └── InstallFramework.cs             # Framework installation model
-│   ├── System/
-│   │   └── DsmSystemPreferences.cs         # DSM system preferences (Server, Port, Language)
-│   └── WebSites/
-│       ├── ProcessInfo.cs                  # Immutable process snapshot
-│       ├── WebSiteConfiguration.cs         # Website configuration model
-│       ├── WebSiteInstance.cs              # Runtime website instance
-│       ├── WebSiteRuntimeState.cs          # Website runtime state
-│       └── WebSitesConfiguration.cs        # Multi-website configuration
-├── DsmApi/                                 # DSM API integration
-│   ├── Models/                             # API models (records with init setters)
-│   │   ├── Auth/
-│   │   │   └── AuthenticateLogin.cs        # Authentication login model
-│   │   ├── Core/
-│   │   │   ├── ApiInformation.cs           # API information model
-│   │   │   ├── ApiInformationCollection.cs # API info collection
-│   │   │   ├── ApiInformationQuery.cs      # API info query model
-│   │   │   ├── Acl/
-│   │   │   │   ├── CoreAclRule.cs          # ACL rule model
-│   │   │   │   ├── CoreAclPermission.cs    # ACL permission model
-│   │   │   │   ├── CoreAclSet.cs           # ACL set model
-│   │   │   │   └── CoreAclInherit.cs       # ACL inheritance model
-│   │   │   ├── User/
-│   │   │   │   └── CoreUserGetEntry.cs     # User get response entry
-│   │   │   └── UserSettings/
-│   │   │       └── CoreUserSettingsEntry.cs # User settings entry model
-│   │   ├── FileStation/
-│   │   │   ├── FileStationShare.cs         # Share model
-│   │   │   ├── FileStationListShare.cs     # List share model
-│   │   │   ├── FileStationPermission.cs    # Permission model
-│   │   │   ├── FileStationFileAdditional.cs # File additional info
-│   │   │   ├── FileStationAcl.cs           # File ACL model
-│   │   │   ├── FileStationList.cs          # File list model
-│   │   │   ├── FileStationTime.cs          # File time model
-│   │   │   ├── FileStationOwner.cs         # File owner model
-│   │   │   └── FileStationFile.cs          # File model
-│   │   └── ReverseProxy/
-│   │       ├── ReverseProxy.cs             # Proxy rule model
-│   │       ├── ReverseProxyFrontend.cs     # Frontend configuration
-│   │       ├── ReverseProxyBackend.cs      # Backend target
-│   │       ├── ReverseProxyHttps.cs        # HTTPS settings
-│   │       ├── ReverseProxyCustomHeader.cs # Custom headers
-│   │       └── ReverseProxyUuids.cs        # UUID collection
-│   ├── Parameters/                         # Request parameter classes
-│   │   ├── Auth/
-│   │   │   └── AuthLoginParameters.cs      # Login parameters
-│   │   ├── Core/
-│   │   │   ├── Acl/
-│   │   │   │   └── CoreAclSetParameters.cs  # ACL set parameters
-│   │   │   ├── AppPortal/ReverseProxy/
-│   │   │   │   ├── ReverseProxyCreateParameters.cs # Create proxy params
-│   │   │   │   ├── ReverseProxyUpdateParameters.cs # Update proxy params
-│   │   │   │   ├── ReverseProxyDeleteParameters.cs # Delete proxy params
-│   │   │   │   └── ReverseProxyListParameters.cs   # List proxy params
-│   │   │   ├── User/
-│   │   │   │   └── CoreUserGetParameters.cs # User get parameters
-│   │   │   └── UserSettings/
-│   │   │       └── CoreUserSettingsParameters.cs    # User settings params
-│   │   ├── FileStation/
-│   │   │   ├── FileStationListParameters.cs     # List files parameters
-│   │   │   └── FileStationListShareParameters.cs  # List shares parameters
-│   │   ├── Info/
-│   │   │   └── InformationsQueryParameters.cs    # API info query params
-│   │   ├── ApiParametersBase.cs            # Base parameter class
-│   │   ├── ApiParametersNone.cs            # No-parameters wrapper
-│   │   └── IApiParameters.cs               # Parameter interface
-│   └── Responses/                          # API response wrappers
-│       ├── ApiResponseBase.cs              # Generic response base with Error model
-│       ├── Auth/
-│       │   └── AuthLoginResponse.cs        # Login response
-│       ├── Core/
-│       │   ├── Acl/
-│       │   │   └── CoreAclSetResponse.cs    # ACL set response
-│       │   ├── AppPortal/ReverseProxy/
-│       │   │   └── ReverseProxyListResponse.cs # List proxy response
-│       │   ├── User/
-│       │   │   └── CoreUserGetResponse.cs   # User get response
-│       │   └── UserSettings/
-│       │       └── CoreUserSettingsResponse.cs  # User settings response
-│       ├── FileStation/
-│       │   ├── FileStationListResponse.cs     # List files response
-│       │   └── FileStationListShareResponse.cs  # List shares response
-│       └── ApiInformationResponse.cs         # API info response
-├── Results/                                # Result pattern implementations
-│   ├── ApiResult.cs, ApiResultBool.cs, ApiResultData<T>.cs, ApiResultItems<T>.cs, ApiResultValue<T>.cs
-│   ├── ApiErrorCode.cs, AuthenticationResult.cs, ChannelsResult.cs
-│   ├── DirectoryContentsResult.cs, InstallationResult.cs, InstalledVersionsResult.cs
-│   ├── ReleasesResult.cs, SharedFoldersResult.cs, WebSiteInstanceResult.cs, WebSiteInstancesResult.cs
-└── Exceptions/                             # Custom exception types
-    ├── FileStationApiException.cs          # FileStation API operation failures
-    ├── LastReleaseUninstallException.cs    # Attempted uninstall of last installed release
-    ├── MissingChannelConfigurationException.cs  # Channel version not configured
-    └── ReverseProxyNotFoundException.cs    # Reverse proxy rule not found by UUID
-```
+- **Contracts/** — service interfaces shared between server and WASM client. 16 interfaces defining the boundary
+  between Data (contracts) and Ui/Tools (implementations). See "Complete Service Contracts Inventory" table above for full method signatures.
+- **Domain/** — model classes organized by subsystem: Authentication (login credentials), FileSystem (FsEntry),
+  Licensing (license info), Runtime (.NET framework/release models), System (DSM preferences from synoinfo.conf),
+  WebSites (website configuration, instances, process state). New domain? Add a subdirectory.
+- **DsmApi/** — DSM API integration layer:
+  - **Models/** — immutable C# records with `init` setters for every DSM API type, organized by API namespace
+    (Auth, Core/Acl, Core/User, Core/UserSettings, FileStation, ReverseProxy)
+  - **Parameters/** — request parameter classes mirroring Models structure; inherit from `ApiParametersBase` or implement
+    `IApiParameters`; serialization format determined by `SerializationFormat` property (Form vs Json strategy pattern)
+  - **Responses/** — response wrappers per API endpoint inheriting from `ApiResponseBase<T>`  
+    with embedded error model.
+- **Results/** — strongly-typed success/failure types replacing exceptions for control flow.  
+  Generic variants (`ApiResultData<T>`, `ApiResultItems<T>`) and domain-specific results (InstallationResult, WebSiteInstanceResult, etc.).
+- **Exceptions/** — 4 custom exception types for unrecoverable failures: FileStationApiException, LastReleaseUninstallException, MissingChannelConfigurationException, ReverseProxyNotFoundException
 
 ### 4. Askyl.Dsm.WebHosting.Globalization
 
-**Purpose:** Localization resources, shared validators, culture management, C# 14 scoped extensions
+**Purpose:** Localization resources, shared validators, culture management, C# 14 scoped extensions.
 
-```text
-Globalization/
-├── Extensions/                             # C# 14 scoped extensions
-│   ├── CultureInfoExtensions.cs            # `extension(CultureInfo)` — GetTextDirection()
-│   └── GlobalizationServiceCollectionExtensions.cs # `extension(IServiceCollection)` — AddGlobalization()
-├── Resources/                              # Localization resources
-│   ├── SharedResource.cs + .resx           # English (default)
-│   └── SharedResource.fr-FR.resx           # French
-├── Validators/                             # FluentValidation shared validators
-│   ├── DeferredMessageExtensions.cs        # WithLocalizedMessage() — defers key resolution to validation time
-│   ├── LoginCredentialsValidator.cs        # Login rules
-│   └── WebSiteConfigurationValidator.cs    # Website config rules, separate port messages
-├── Localizer.cs                            # ILocalizer — wraps ResourceManager, reads CurrentUICulture at call time
-└── LocalizationKeys.cs                     # Strongly-typed keys (L.WebSiteConfiguration.*, L.LoginCredentials.*)
-```
+**Structure:**
 
-**Key Design Decisions:**
+- **Extensions/** — C# 14 scoped `extension` methods: `CultureInfo.GetTextDirection()` for RTL support,
+  `IServiceCollection.AddGlobalization()` for DI registration
+- **Resources/** — `SharedResource.resx` (English default) + culture-specific variants (`fr-FR`, etc.).  
+  Adding a new culture = dropping a `.resx` file;  
+  SDK auto-generates satellite assemblies; zero code changes needed.
+- **Validators/** — FluentValidation shared validators with deferred message resolution  
+  (`WithLocalizedMessage()` resolves keys at validation time, not construction).  
+  Covers login credentials and website configuration rules.
+- **Localizer.cs** — `ILocalizer` abstraction wrapping `ResourceManager`; returns `string` directly,  
+  reads `CurrentUICulture` at call time (not cached at construction like `IStringLocalizer<T>`).
+- **LocalizationKeys.cs** — strongly-typed resource keys (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`)
 
-- **Shared validators** — Single source of truth; server auto-validation uses same FluentValidation rules
-- **`ILocalizer` abstraction** — Returns `string` directly, hides `ResourceManager` from consumers
-- **`ResourceManager` over `IStringLocalizer<T>`** — `IStringLocalizer<T>` caches culture at construction in WASM; `ResourceManager` reads `CurrentUICulture` at call time
-- **No DataAnnotations** — All validation migrated to FluentValidation (cannot use runtime-localized messages)
+**Key design decisions:** shared validators are single source of truth (server auto-validation uses same FluentValidation rules); no DataAnnotations (cannot use runtime-localized messages).
 
 ### 5. Askyl.Dsm.WebHosting.Tools
 
-**Purpose:** Utility services, DSM API client, and runtime management tools
+**Purpose:** Utility services, DSM API client, and runtime management tools.
 
-```text
-├── Converters/                             # Format/language converters
-│   ├── DsmLanguageToCultureConverter.cs    # DSM 3-letter language code → .NET culture name
-│   └── PhpFormatToDotNetConverter.cs       # PHP date/time tokens → .NET format strings
-├── Extensions/                             # Extension methods
-│   ├── ApiResponseExtensions.cs            # Response mapping helpers
-│   └── HttpClientExtensions.cs             # HTTP client helpers (C# 14 scoped `extension(HttpClient)`)
-├── Infrastructure/                         # Infrastructure utilities
-│   ├── ArchiveExtractorService.cs          # gzip + tar extraction
-│   ├── FileManagerService.cs               # File system initialization
-│   ├── PlatformInfoService.cs              # Platform detection (no interface)
-│   ├── ProcessHandle.cs                    # IProcessHandle + SystemProcessHandle (co-located)
-│   ├── ProcessRunner.cs                    # IProcessRunner + SystemProcessRunner (co-located)
-│   ├── ProcessTerminator.cs                # Cross-platform process termination (SIGTERM/CloseMainWindow)
-│   ├── FileReader.cs                       # IFileReader + SystemFileReader — abstracts file system for testability
-│   └── DsmSettingsService.cs              # IDsmSettingsService — reads /etc/synoinfo.conf via IFileReader
-├── Network/                                # Network communication
-│   └── DsmApiClient.cs                     # Centralized DSM API client
-├── Diagnostics/                            # Diagnostic utilities
-│   └── OperationTimer.cs                   # Disposable scope timer (Stopwatch + callback on Dispose)
-├── Runtime/                                # .NET runtime management (DI-based)
-│   ├── DownloaderService.cs                # Binary download utility
-│   ├── VersionsDetectorService.cs          # Version detection with smart caching
-│   └── AssemblyRuntimeDetector.cs          # Runtime detection from *.runtimeconfig.json
-└── Threading/                              # Async coordination utilities
-    └── SemaphoreLock.cs                    # Semaphore-based async locking utility
-```
+**Structure:**
+
+- **Converters/** — format/language converters: DSM 3-letter language code → .NET culture name, PHP date/time tokens → .NET format strings.
+- **Extensions/** — C# 14 scoped `extension` methods on `ApiResponse` (mapping helpers) and `HttpClient` (HTTP client helpers).
+- **Infrastructure/** — core utilities: archive extraction (tar.gz), file management with configurable root path,  
+  platform detection, process lifecycle (`IProcessRunner`/`IProcessHandle` co-located with implementations for testability),  
+  cross-platform termination (SIGTERM on Unix, CloseMainWindow on Windows), file system abstraction (`IFileReader`/`SystemFileReader`),  
+  DSM settings service (reads `/etc/synoinfo.conf`).
+- **Network/** — `DsmApiClient`: centralized HTTP client for all DSM API calls;  
+  singleton with lazy-initialized `ApiInformations`,  
+  compile-time generic constraints, Form vs JSON serialization strategy.
+- **Diagnostics/** — `OperationTimer`: disposable scope timer (`struct`) that fires callback on Dispose (success or exception);  
+  used across ReverseProxyManagerService, FrameworkManagementService, WebSiteHostingService, SiteLifecycleManager, DownloaderService.
+- **Runtime/** — .NET runtime management: binary downloads with cancellation, version detection with smart caching (singleton), assembly runtime detection from `*.runtimeconfig.json`
+- **Threading/** — `SemaphoreLock`: semaphore-based async locking utility for thread-safe lazy initialization
 
 **Infrastructure Services:**
 
@@ -474,148 +307,86 @@ Globalization/
 
 ### 6. Askyl.Dsm.WebHosting.Ui
 
-**Purpose:** Main Blazor hybrid application (Server + WebAssembly rendering)
+**Purpose:** Main Blazor hybrid application (Server + WebAssembly rendering). Entry point, DI registration, middleware pipeline, API controllers, and server-side business logic services.
 
-```text
-Ui/
-├── Authorization/                          # Custom authorization
-│   └── AuthorizeSessionAttribute.cs        # Session-based authorization
-├── Endpoints/                              # Minimal API endpoints
-│   └── ErrorEndpoints.cs                  # MapErrorEndpoints() — /Error and /not-found with content negotiation
-├── Middleware/                             # HTTP middleware
-│   └── RequestTrackingMiddleware.cs        # X-Request-ID propagation through HttpContext.Items
-├── Controllers/                            # API controllers
-│   ├── AuthenticationController.cs
-│   ├── FileManagementController.cs
-│   ├── FrameworkManagementController.cs
-│   ├── LogDownloadController.cs
-│   ├── RuntimeManagementController.cs
-│   └── WebsiteHostingController.cs
-├── Infrastructure/                         # Server-side infrastructure
-│   └── GlobalizationSettings.cs            # IGlobalizationSettings — discovers cultures from satellite assemblies
-├── Extensions/                             # Server-side extensions
-│   └── GlobalizationExtensions.cs          # ApplyDsmSystemCulture(), UseGlobalizationRequestLocalization()
-├── Services/                               # Business logic services
-│   ├── AuthenticationService.cs            # Auth façade over DsmApiClient
-│   ├── DotnetVersionService.cs
-│   ├── FileSystemService.cs
-│   ├── FrameworkManagementService.cs
-│   ├── LogDownloadService.cs
-│   ├── ReverseProxyManagerService.cs
-│   ├── SiteLifecycleManager.cs             # Per-site process management (Channel-based command queue)
-│   ├── WebSiteHostingService.cs            # Orchestrator (BackgroundService, ConcurrentDictionary<Guid, SiteEntry>)
-│   ├── WebSitesConfigurationService.cs
-│   └── DsmSession.cs                       # IDsmSession — per-user DSM session, 1-min TTL cache, user preferences
-└── Program.cs                              # Entry point, DI registration, middleware pipeline
-```
+**Structure:**
 
-**Middleware Pipeline:**
+- **Authorization/** — `[AuthorizeSession]` attribute: session-based authorization for API controllers; validates against DSM server with 1-minute TTL cache.
+- **Controllers/** — thin routing wrappers (Authentication, FileManagement, FrameworkManagement, LogDownload,  
+  RuntimeManagement, WebsiteHosting). No business logic — all delegated to services.  
+  Protected by `[AuthorizeSession]` except AuthenticationController.
+- **Endpoints/** — minimal API endpoints: `MapErrorEndpoints()` maps `/Error` and `/not-found` with JSON vs HTML content negotiation.
+- **Extensions/** — server-side globalization extensions: `ApplyDsmSystemCulture()`, `UseGlobalizationRequestLocalization()`.
+- **Infrastructure/** — `GlobalizationSettings`: discovers supported cultures from satellite assemblies at construction (server-only; avoids WASM file system API crashes).
+- **Middleware/** — `RequestTrackingMiddleware`: propagates `X-Request-ID` through HTTP pipeline via `HttpContext.Items` for support ticket correlation.
+- **Services/** — business logic implementations of Data.Contracts interfaces: authentication façade, file system operations,  
+  framework management, reverse proxy CRUD, website hosting orchestrator (BackgroundService with ConcurrentDictionary),  
+  per-site lifecycle manager (Channel-based command queue, SIGTERM graceful shutdown),  
+  DSM session management (per-user, 1-min TTL cache).
 
-1. `UsePathBase("/adwh")` — Sub-path support
-2. `UseSession()` — Session before antiforgery
-3. `UseRouting()` + `MapControllers()` — API endpoints
-4. `UseAntiforgery()` — CSRF protection
-5. `MapRazorComponents` with InteractiveWebAssembly render mode
+**Middleware pipeline:** `UsePathBase("/adwh")` → `UseSession()` → `UseRouting()` + `MapControllers()` → `UseAntiforgery()` → `MapRazorComponents` with InteractiveWebAssembly render mode.
 
 ### 7. Askyl.Dsm.WebHosting.Ui.Client
 
-**Purpose:** Blazor WebAssembly client library (shared components and HTTP service proxies)
+**Purpose:** Blazor WebAssembly client library (shared components and HTTP service proxies).
 
-```text
-Ui.Client/
-├── Components/
-│   ├── Controls/                           # Custom UI controls
-│   │   ├── AutoDataGrid.razor              # Generic data grid with sorting, reload, row click/double-click
-│   │   ├── LoadingOverlay.razor            # Full-screen overlay for WorkingState disposable pattern
-│   │   ├── RealTimeNumberField.razor       # Numeric input with real-time validation
-│   │   └── RealTimeTextField.razor         # Text/password input with real-time validation
-│   ├── Dialogs/                            # FluentUI dialog wrappers
-│   │   ├── AspNetReleasesDialog.razor      # Channel selection, version grid, install/uninstall
-│   │   ├── DotnetVersionsDialog.razor      # Installed .NET frameworks display
-│   │   ├── FileSelectionDialog.razor       # Dual-pane file browser (tree + grid) with lazy loading
-│   │   ├── LicensesDialog.razor            # Tabbed license viewer (parallel HTTP fetches)
-│   │   └── WebSiteConfigurationDialog.razor # Add/edit website form
-│   ├── Layout/
-│   │   └── MainLayout.razor                # FluentMainLayout with global providers (Toast, Dialog, Tooltip)
-│   ├── Pages/                              # Blazor pages
-│   │   ├── Home.razor                      # Dashboard with website grid
-│   │   ├── Login.razor                     # Authentication form
-│   │   └── NotFound.razor                  # 404 handler
-│   └── Patterns/WorkingState/              # WorkingStateBase (abstract), WorkingState (disposable), WorkingStateExtensions (CreateWorkingState)
-├── Contracts/
-│   └── INavigationGuard.cs                 # Router navigation guard interface
-├── Interfaces/                             # Client-side service interfaces
-│   ├── ILicenseService.cs                  # GetLicensesAsync() → IReadOnlyList<LicenseInfo>
-│   └── ITreeContentService.cs              # LoadChildDirectoriesAsync() for FluentTreeView lazy loading
-├── Extensions/                             # C# 14 scoped extensions
-│   └── FsEntryExtensions.cs               # List<FsEntry>/FsEntry → TreeViewItem conversion with lazy loading
-├── Services/                               # HTTP client wrappers + culture management
-│   ├── AcceptLanguageHandler.cs            # DelegatingHandler — attaches Accept-Language from ICultureManager
-│   ├── AuthenticationService.cs            # Singleton — POST /api/authentication/*
-│   ├── AuthenticationNavigationGuard.cs    # Singleton — Router OnNavigateAsync guard
-│   ├── CultureManager.cs                   # ICultureManager — resolves culture at login, clones with date/time formats
-│   ├── DotnetVersionService.cs             # GET /api/runtime-management/*
-│   ├── FileSystemService.cs                # GET /api/file-management/*
-│   ├── FrameworkManagementService.cs       # POST /api/framework-management/*
-│   ├── LicenseService.cs                   # Parallel HTTP fetches from server licenses/
-│   ├── TreeContentService.cs               # FsEntry → TreeViewItem with lazy loading
-│   └── WebSiteHostingService.cs            # GET/POST/DELETE /api/website-hosting/*
-├── Routes.razor                            # Router with OnNavigateAsync auth guard
-└── Program.cs                              # WASM entry point, service registration
-```
+**Structure:**
 
-**JavaScript Interop:** Single usage in FileSelectionDialog — `selectChildItem` for tree navigation after folder double-click.
+- **Components/Controls/** — custom UI controls: `AutoDataGrid` (generic data grid with sorting, reload, row click/double-click),  
+  `LoadingOverlay` (full-screen overlay for WorkingState disposable pattern),  
+  `RealTimeNumberField` and `RealTimeTextField` (numeric/text input with real-time validation).
+- **Components/Dialogs/** — FluentUI dialog wrappers: AspNetReleases (channel selection, version grid, install/uninstall),  
+  DotnetVersions (installed frameworks display), FileSelection (dual-pane file browser with lazy loading),  
+  Licenses (tabbed viewer with parallel HTTP fetches), WebSiteConfiguration (add/edit website form).
+- **Components/Layout/** — `MainLayout`: FluentMainLayout with global providers (Toast, Dialog, Tooltip).
+- **Components/Pages/** — Home (dashboard with website grid), Login (authentication form), NotFound (404 handler).
+- **Components/Patterns/WorkingState/** — 3-class system: `WorkingStateBase` (abstract base),  
+  `WorkingState` (disposable wrapper for start/stop transitions),  
+  `WorkingStateExtensions` (`CreateWorkingState()` extension method). No interface.
+- **Contracts/** — `INavigationGuard`: router navigation guard interface for async auth checks before component render.
+- **Interfaces/** — client-side service interfaces: `ILicenseService` (GetLicensesAsync),  
+  `ITreeContentService` (LoadChildDirectoriesAsync for FluentTreeView lazy loading).
+- **Extensions/** — C# 14 scoped extensions on `List<FsEntry>`/`FsEntry` → TreeViewItem conversion with lazy loading.
+- **Services/** — HTTP client wrappers that call server API endpoints: authentication, file system, framework management,  
+  runtime versions, website hosting. Plus `AcceptLanguageHandler` (DelegatingHandler attaches Accept-Language from ICultureManager),  
+  `AuthenticationNavigationGuard` (Router OnNavigateAsync guard),  
+  `CultureManager` (resolves culture at login, clones with date/time formats).
+- **Routes.razor** — Router with OnNavigateAsync auth guard
+- **Program.cs** — WASM entry point, service registration
+
+**JavaScript interop:** single usage in FileSelectionDialog — `selectChildItem` for tree navigation after folder double-click.
 
 ### 8. Askyl.Dsm.WebHosting.Logging
 
-**Purpose:** Logging extensions with source-generated logger methods
+**Purpose:** Logging extensions with source-generated `[LoggerMessage]` logger methods.
 
-**Key Features:**
+Enforced by `LoggerDirectCallAnalyzer` (ADWH03001) — no direct `ILogger.LogXxx()` calls allowed.
 
-- **Source-generated log methods** for compile-time message validation
-- **Zero-allocation logging** for performance-critical paths
-- **Namespace-level category interfaces** — empty marker interfaces (e.g., `ILogAuthenticationService`) for `ILogger<T>` categorization
-- **Server/Client folder separation**
+**Key features:** compile-time message validation, zero-allocation logging for performance-critical paths,  
+namespace-level category interfaces (`ILogAuthenticationService`, etc.) for `ILogger<T>` categorization,  
+server/client folder separation.
 
-```text
-Logging/
-├── Server/                                 # Server-side logging extensions
-│   ├── Authentication/
-│   │   └── AuthenticationLoggingExtensions.cs
-│   ├── DsmApi/
-│   │   ├── DsmApiLoggingExtensions.cs      # DsmApiClient logging
-│   │   └── DsmSessionLoggingExtensions.cs  # DsmSession logging
-│   ├── FileManagement/
-│   │   ├── FileManagerServiceLoggingExtensions.cs
-│   │   ├── FileSystemServiceLoggingExtensions.cs
-│   │   └── LogDownloadServiceLoggingExtensions.cs
-│   ├── Framework/
-│   │   ├── DotnetVersionServiceLoggingExtensions.cs
-│   │   └── FrameworkManagementLoggingExtensions.cs
-│   ├── Infrastructure/
-│   │   ├── ArchiveExtractorLoggingExtensions.cs
-│   │   ├── AssemblyRuntimeDetectorLoggingExtensions.cs
-│   │   ├── DownloaderLoggingExtensions.cs
-│   │   ├── DsmSettingsServiceLoggingExtensions.cs
-│   │   ├── GlobalizationSettingsLoggingExtensions.cs
-│   │   ├── PlatformInfoLoggingExtensions.cs
-│   │   └── VersionsDetectorLoggingExtensions.cs
-│   ├── ProcessLifecycle/
-│   │   ├── ProcessHandleLoggingExtensions.cs
-│   │   ├── ProcessLoggingExtensions.cs     # SiteLifecycleManager logging
-│   │   └── ProcessRunnerLoggingExtensions.cs
-│   ├── ReverseProxy/
-│   │   └── ReverseProxyLoggingExtensions.cs
-│   └── WebsiteHosting/
-│       ├── ConfigurationLoggingExtensions.cs  # WebSitesConfigurationService
-│       └── WebsiteLoggingExtensions.cs        # WebSiteHostingService
-└── Client/                                 # Client-side (WASM) logging extensions
-    └── ClientLoggingExtensions.cs          # Home, dialogs, license service
-```
+**Structure:**
+
+- **Server/** — one extension file per service domain, organized by subsystem:
+  - _Authentication/_ — AuthenticationService
+  - _DsmApi/_ — DsmApiClient + DsmSession (2 files)
+  - _FileManagement/_ — FileManagerService, FileSystemService, LogDownloadService (3 files)
+  - _Framework/_ — DotnetVersionService, FrameworkManagementService (2 files)
+  - _Infrastructure/_ — ArchiveExtractor, AssemblyRuntimeDetector, Downloader, DsmSettingsService, GlobalizationSettings, PlatformInfo, VersionsDetector (7 files)
+  - _ProcessLifecycle/_ — ProcessHandle, SiteLifecycleManager, ProcessRunner (3 files)
+  - _ReverseProxy/_ — ReverseProxyManagerService (1 file)
+  - _WebsiteHosting/_ — WebSitesConfigurationService, WebSiteHostingService (2 files)
+- **Client/** — `ClientLoggingExtensions.cs`: WASM-side logging for Home page, dialogs, license service
+
+**Naming convention:** `{ServiceName}LoggingExtensions.cs`.
+
+New service? Add a `[LoggerMessage]` extension method with XML doc comment; consult `Constants/Logging/LogEventIds.cs` for next available EventId in the service's range.
 
 **EventId Management:**
 
-All `[LoggerMessage]` attributes use inline `int` literals. EventId ranges documented in `Constants/Logging/LogEventIds.cs`. Each service owns a 100K range at 1M spacing:
+All `[LoggerMessage]` attributes use inline `int` literals. EventId ranges documented in `Constants/Logging/LogEventIds.cs`.  
+Each service owns a 100K range at 1M spacing:
 
 | Range | Service | Extension File |
 |-------|---------|----------------|
