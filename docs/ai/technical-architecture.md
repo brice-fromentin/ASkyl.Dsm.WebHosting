@@ -159,7 +159,9 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | `StringStaticMemberAnalyzer` | ADWH02001 | Error | `String.` for static, `string` for types | ✅ |
 | `LoggerDirectCallAnalyzer` | ADWH03001 | Error | No direct `ILogger.LogXxx()` calls | ❌ |
 
-**Files:** `AnalyzerConstants.cs`, `BlankLineAnalyzer.cs`, `BlankLineCodeFixProvider.cs`, `StringStaticMemberAnalyzer.cs`, `StringStaticMemberCodeFixProvider.cs`, `LoggerDirectCallAnalyzer.cs`
+**Files:** `AnalyzerConstants.cs`, `BlankLineAnalyzer.cs`, `BlankLineCodeFixProvider.cs`,
+`StringStaticMemberAnalyzer.cs`, `StringStaticMemberCodeFixProvider.cs`, `LoggerDirectCallAnalyzer.cs`,
+`Askyl.Dsm.WebHosting.Analyzers.cs` (assembly definition), `Resources.resx` + `Resources.Designer.cs`
 
 ### 2. Askyl.Dsm.WebHosting.Constants
 
