@@ -265,13 +265,24 @@ Data/
 │   │   ├── FileStation/FileStationTime.cs, FileStationOwner.cs, FileStationFile.cs
 │   │   └── ReverseProxy/                   # Proxy configuration models
 │   ├── Parameters/                         # Request parameter classes
-│   │   ├── Auth/, Core/, FileStation/, Info/
+│   │   ├── Auth/AuthLoginParameters.cs
+│   │   ├── Core/Acl/CoreAclSetParameters.cs
+│   │   ├── Core/AppPortal/ReverseProxy/ (4 files: Create, Update, Delete, List parameters)
+│   │   ├── Core/User/CoreUserGetParameters.cs
+│   │   ├── Core/UserSettings/CoreUserSettingsParameters.cs
+│   │   ├── FileStation/FileStationListParameters.cs, FileStationListShareParameters.cs
+│   │   ├── Info/InformationsQueryParameters.cs
 │   │   ├── ApiParametersBase.cs            # Base parameter class
 │   │   ├── ApiParametersNone.cs            # No-parameters wrapper
 │   │   └── IApiParameters.cs               # Parameter interface
 │   └── Responses/                          # API response wrappers
 │       ├── ApiResponseBase.cs              # Generic response base with Error model
-│       ├── Auth/, Core/, FileStation/
+│       ├── Auth/AuthLoginResponse.cs
+│       ├── Core/Acl/CoreAclSetResponse.cs
+│       ├── Core/AppPortal/ReverseProxy/ReverseProxyListResponse.cs
+│       ├── Core/User/CoreUserGetResponse.cs
+│       ├── Core/UserSettings/CoreUserSettingsResponse.cs
+│       ├── FileStation/FileStationListResponse.cs, FileStationListShareResponse.cs
 │       └── ApiInformationResponse.cs
 ├── Exceptions/                             # Custom exception types
 └── Results/                                # Result pattern implementations
