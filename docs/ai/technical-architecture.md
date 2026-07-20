@@ -238,9 +238,10 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
   - **Models/** — immutable C# records with `init` setters for every DSM API type, organized by API namespace
     (Auth, Core/Acl, Core/User, Core/UserSettings, FileStation, ReverseProxy)
   - **Parameters/** — request parameter classes mirroring Models structure; inherit from `ApiParametersBase` or implement
-    `IApiParameters`; serialization format determined by `SerializationFormat` property (Form vs Json strategy pattern)
-  - **Responses/** — response wrappers per API endpoint inheriting from `ApiResponseBase<T>`  
-    with embedded error model.
+    `IApiParameters`; includes `Info/` (SYNO.API.Info queries), `Core/AppPortal/ReverseProxy/` (proxy CRUD params);
+    serialization format determined by `SerializationFormat` property (Form vs Json strategy pattern)
+  - **Responses/** — response wrappers per API endpoint inheriting from `ApiResponseBase<T>` with embedded error model;
+    includes `Core/AppPortal/ReverseProxy/` (proxy list response), `Info/` (API info response).
 - **Results/** — strongly-typed success/failure types replacing exceptions for control flow.  
   Generic variants (`ApiResultData<T>`, `ApiResultItems<T>`) and domain-specific results (InstallationResult, WebSiteInstanceResult, etc.).
 - **Exceptions/** — 4 custom exception types for unrecoverable failures: FileStationApiException, LastReleaseUninstallException, MissingChannelConfigurationException, ReverseProxyNotFoundException
