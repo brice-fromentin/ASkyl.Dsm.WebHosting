@@ -880,9 +880,9 @@ Culture is **DSM-controlled** — resolved once at login, locked for the session
 
 Serilog's `WithActivity` enricher adds `ActivityId`, `ActivityTraceId`, and `ActivitySpanId` to log entries. These correlate with .NET's built-in `System.Diagnostics.Activity` infrastructure.
 
-**Current State:** Activity IDs are captured in server-side logs but not propagated to the client
-for support ticket correlation. The Blazor WebAssembly client does not include request ID headers
-on outgoing API calls, and the server does not expose trace identifiers in API responses.
+**Current State:** `RequestTrackingMiddleware` propagates `X-Request-ID` through the HTTP pipeline via `HttpContext.Items`.
+Serilog's `WithActivity` enricher captures `ActivityId`, `ActivityTraceId`, and `ActivitySpanId` in server-side logs.
+The Blazor WebAssembly client does not include request ID headers on outgoing API calls, and the server does not expose trace identifiers in API responses for support ticket correlation.
 
 **Pipeline Flow (when Activities are active):**
 
