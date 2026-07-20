@@ -256,8 +256,13 @@ Data/
 ├── DsmApi/                                 # DSM API integration
 │   ├── Models/                             # API models (records with init setters)
 │   │   ├── Auth/                           # AuthenticateLogin
-│   │   ├── Core/                           # ApiInformation, ACL models, User models, UserSettings models
-│   │   ├── FileStation/                    # File operation models
+│   │   ├── Core/ApiInformation.cs, ApiInformationCollection.cs, ApiInformationQuery.cs
+│   │   ├── Core/Acl/CoreAclRule.cs, CoreAclPermission.cs, CoreAclSet.cs, CoreAclInherit.cs
+│   │   ├── Core/User/CoreUserGetEntry.cs
+│   │   ├── Core/UserSettings/CoreUserSettingsEntry.cs
+│   │   ├── FileStation/FileStationShare.cs, FileStationListShare.cs, FileStationPermission.cs
+│   │   ├── FileStation/FileStationFileAdditional.cs, FileStationAcl.cs, FileStationList.cs
+│   │   ├── FileStation/FileStationTime.cs, FileStationOwner.cs, FileStationFile.cs
 │   │   └── ReverseProxy/                   # Proxy configuration models
 │   ├── Parameters/                         # Request parameter classes
 │   │   ├── Auth/, Core/, FileStation/, Info/
