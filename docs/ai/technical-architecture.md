@@ -99,7 +99,7 @@ Askyl.Dsm.WebHosting.slnx
 
 ### Test Project (`Askyl.Dsm.WebHosting.Tests`)
 
-**Purpose:** Unit tests for analyzers, domain models, globalization, tools, and UI services. 45 test files across 5 categories.
+**Purpose:** Unit tests for analyzers, domain models, globalization, tools, and UI services. 42 test files across 5 categories.
 
 **Frameworks:** xUnit (v2.9.3), Moq (v4.20.72), coverlet (code coverage), bunit (BunitContext). Analyzer testing via Microsoft.CodeAnalysis.Analyzer.Testing ecosystem (v1.1.x).
 
