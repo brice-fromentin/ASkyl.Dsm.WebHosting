@@ -285,43 +285,100 @@ Constants/
 Data/
 ├── Contracts/                              # Service interfaces
 ├── Domain/                                 # Domain models
-│   ├── Authentication/                     # LoginCredentials
-│   ├── FileSystem/                         # FsEntry
-│   ├── Licensing/                          # LicenseInfo
-│   ├── Runtime/                            # AspNetCoreReleaseInfo, AssemblyRuntimeInfo, AspNetRelease, FrameworkInfo, InstallFramework
-│   ├── System/                             # DsmSystemPreferences (Server, Port, Language from synoinfo.conf)
-│   └── WebSites/                           # ProcessInfo, WebSiteConfiguration, WebSiteInstance, WebSiteRuntimeState, WebSitesConfiguration
+│   ├── Authentication/
+│   │   └── LoginCredentials.cs             # Login credentials model
+│   ├── FileSystem/
+│   │   └── FsEntry.cs                      # File system entry model
+│   ├── Licensing/
+│   │   └── LicenseInfo.cs                  # License information model
+│   ├── Runtime/
+│   │   ├── AspNetCoreReleaseInfo.cs        # ASP.NET Core release info
+│   │   ├── AssemblyRuntimeInfo.cs          # Assembly runtime detection info
+│   │   ├── AspNetRelease.cs                # Release DTO with version/status
+│   │   ├── FrameworkInfo.cs                # Framework information model
+│   │   └── InstallFramework.cs             # Framework installation model
+│   ├── System/
+│   │   └── DsmSystemPreferences.cs         # DSM system preferences (Server, Port, Language)
+│   └── WebSites/
+│       ├── ProcessInfo.cs                  # Immutable process snapshot
+│       ├── WebSiteConfiguration.cs         # Website configuration model
+│       ├── WebSiteInstance.cs              # Runtime website instance
+│       ├── WebSiteRuntimeState.cs          # Website runtime state
+│       └── WebSitesConfiguration.cs        # Multi-website configuration
 ├── DsmApi/                                 # DSM API integration
 │   ├── Models/                             # API models (records with init setters)
-│   │   ├── Auth/                           # AuthenticateLogin
-│   │   ├── Core/ApiInformation.cs, ApiInformationCollection.cs, ApiInformationQuery.cs
-│   │   ├── Core/Acl/CoreAclRule.cs, CoreAclPermission.cs, CoreAclSet.cs, CoreAclInherit.cs
-│   │   ├── Core/User/CoreUserGetEntry.cs
-│   │   ├── Core/UserSettings/CoreUserSettingsEntry.cs
-│   │   ├── FileStation/FileStationShare.cs, FileStationListShare.cs, FileStationPermission.cs
-│   │   ├── FileStation/FileStationFileAdditional.cs, FileStationAcl.cs, FileStationList.cs
-│   │   ├── FileStation/FileStationTime.cs, FileStationOwner.cs, FileStationFile.cs
-│   │   └── ReverseProxy/                   # Proxy configuration models
+│   │   ├── Auth/
+│   │   │   └── AuthenticateLogin.cs        # Authentication login model
+│   │   ├── Core/
+│   │   │   ├── ApiInformation.cs           # API information model
+│   │   │   ├── ApiInformationCollection.cs # API info collection
+│   │   │   ├── ApiInformationQuery.cs      # API info query model
+│   │   │   ├── Acl/
+│   │   │   │   ├── CoreAclRule.cs          # ACL rule model
+│   │   │   │   ├── CoreAclPermission.cs    # ACL permission model
+│   │   │   │   ├── CoreAclSet.cs           # ACL set model
+│   │   │   │   └── CoreAclInherit.cs       # ACL inheritance model
+│   │   │   ├── User/
+│   │   │   │   └── CoreUserGetEntry.cs     # User get response entry
+│   │   │   └── UserSettings/
+│   │   │       └── CoreUserSettingsEntry.cs # User settings entry model
+│   │   ├── FileStation/
+│   │   │   ├── FileStationShare.cs         # Share model
+│   │   │   ├── FileStationListShare.cs     # List share model
+│   │   │   ├── FileStationPermission.cs    # Permission model
+│   │   │   ├── FileStationFileAdditional.cs # File additional info
+│   │   │   ├── FileStationAcl.cs           # File ACL model
+│   │   │   ├── FileStationList.cs          # File list model
+│   │   │   ├── FileStationTime.cs          # File time model
+│   │   │   ├── FileStationOwner.cs         # File owner model
+│   │   │   └── FileStationFile.cs          # File model
+│   │   └── ReverseProxy/
+│   │       ├── ReverseProxy.cs             # Proxy rule model
+│   │       ├── ReverseProxyFrontend.cs     # Frontend configuration
+│   │       ├── ReverseProxyBackend.cs      # Backend target
+│   │       ├── ReverseProxyHttps.cs        # HTTPS settings
+│   │       ├── ReverseProxyCustomHeader.cs # Custom headers
+│   │       └── ReverseProxyUuids.cs        # UUID collection
 │   ├── Parameters/                         # Request parameter classes
-│   │   ├── Auth/AuthLoginParameters.cs
-│   │   ├── Core/Acl/CoreAclSetParameters.cs
-│   │   ├── Core/AppPortal/ReverseProxy/ReverseProxyCreateParameters.cs, ReverseProxyUpdateParameters.cs, ReverseProxyDeleteParameters.cs, ReverseProxyListParameters.cs
-│   │   ├── Core/User/CoreUserGetParameters.cs
-│   │   ├── Core/UserSettings/CoreUserSettingsParameters.cs
-│   │   ├── FileStation/FileStationListParameters.cs, FileStationListShareParameters.cs
-│   │   ├── Info/InformationsQueryParameters.cs
+│   │   ├── Auth/
+│   │   │   └── AuthLoginParameters.cs      # Login parameters
+│   │   ├── Core/
+│   │   │   ├── Acl/
+│   │   │   │   └── CoreAclSetParameters.cs  # ACL set parameters
+│   │   │   ├── AppPortal/ReverseProxy/
+│   │   │   │   ├── ReverseProxyCreateParameters.cs # Create proxy params
+│   │   │   │   ├── ReverseProxyUpdateParameters.cs # Update proxy params
+│   │   │   │   ├── ReverseProxyDeleteParameters.cs # Delete proxy params
+│   │   │   │   └── ReverseProxyListParameters.cs   # List proxy params
+│   │   │   ├── User/
+│   │   │   │   └── CoreUserGetParameters.cs # User get parameters
+│   │   │   └── UserSettings/
+│   │   │       └── CoreUserSettingsParameters.cs    # User settings params
+│   │   ├── FileStation/
+│   │   │   ├── FileStationListParameters.cs     # List files parameters
+│   │   │   └── FileStationListShareParameters.cs  # List shares parameters
+│   │   ├── Info/
+│   │   │   └── InformationsQueryParameters.cs    # API info query params
 │   │   ├── ApiParametersBase.cs            # Base parameter class
 │   │   ├── ApiParametersNone.cs            # No-parameters wrapper
 │   │   └── IApiParameters.cs               # Parameter interface
 │   └── Responses/                          # API response wrappers
 │       ├── ApiResponseBase.cs              # Generic response base with Error model
-│       ├── Auth/AuthLoginResponse.cs
-│       ├── Core/Acl/CoreAclSetResponse.cs
-│       ├── Core/AppPortal/ReverseProxy/ReverseProxyListResponse.cs
-│       ├── Core/User/CoreUserGetResponse.cs
-│       ├── Core/UserSettings/CoreUserSettingsResponse.cs
-│       ├── FileStation/FileStationListResponse.cs, FileStationListShareResponse.cs
-│       └── ApiInformationResponse.cs
+│       ├── Auth/
+│       │   └── AuthLoginResponse.cs        # Login response
+│       ├── Core/
+│       │   ├── Acl/
+│       │   │   └── CoreAclSetResponse.cs    # ACL set response
+│       │   ├── AppPortal/ReverseProxy/
+│       │   │   └── ReverseProxyListResponse.cs # List proxy response
+│       │   ├── User/
+│       │   │   └── CoreUserGetResponse.cs   # User get response
+│       │   └── UserSettings/
+│       │       └── CoreUserSettingsResponse.cs  # User settings response
+│       ├── FileStation/
+│       │   ├── FileStationListResponse.cs     # List files response
+│       │   └── FileStationListShareResponse.cs  # List shares response
+│       └── ApiInformationResponse.cs         # API info response
 ├── Results/                                # Result pattern implementations
 │   ├── ApiResult.cs, ApiResultBool.cs, ApiResultData<T>.cs, ApiResultItems<T>.cs, ApiResultValue<T>.cs
 │   ├── ApiErrorCode.cs, AuthenticationResult.cs, ChannelsResult.cs
@@ -523,14 +580,35 @@ Ui.Client/
 ```text
 Logging/
 ├── Server/                                 # Server-side logging extensions
-│   ├── Authentication/                     # AuthenticationService
-│   ├── DsmApi/                             # DsmApiClient + DsmSession
-│   ├── FileManagement/                     # FileManagerService, FileSystemService, LogDownloadService
-│   ├── Framework/                          # DotnetVersionService, FrameworkManagementService
-│   ├── Infrastructure/                     # ArchiveExtractor, AssemblyRuntimeDetector, Downloader, DsmSettingsService, GlobalizationSettings, PlatformInfo, VersionsDetector
-│   ├── ProcessLifecycle/                   # ProcessHandle, ProcessLoggingExtensions, ProcessRunner
-│   ├── ReverseProxy/                       # ReverseProxyManagerService
-│   └── WebsiteHosting/                     # ConfigurationLoggingExtensions, WebsiteLoggingExtensions
+│   ├── Authentication/
+│   │   └── AuthenticationLoggingExtensions.cs
+│   ├── DsmApi/
+│   │   ├── DsmApiLoggingExtensions.cs      # DsmApiClient logging
+│   │   └── DsmSessionLoggingExtensions.cs  # DsmSession logging
+│   ├── FileManagement/
+│   │   ├── FileManagerServiceLoggingExtensions.cs
+│   │   ├── FileSystemServiceLoggingExtensions.cs
+│   │   └── LogDownloadServiceLoggingExtensions.cs
+│   ├── Framework/
+│   │   ├── DotnetVersionServiceLoggingExtensions.cs
+│   │   └── FrameworkManagementLoggingExtensions.cs
+│   ├── Infrastructure/
+│   │   ├── ArchiveExtractorLoggingExtensions.cs
+│   │   ├── AssemblyRuntimeDetectorLoggingExtensions.cs
+│   │   ├── DownloaderLoggingExtensions.cs
+│   │   ├── DsmSettingsServiceLoggingExtensions.cs
+│   │   ├── GlobalizationSettingsLoggingExtensions.cs
+│   │   ├── PlatformInfoLoggingExtensions.cs
+│   │   └── VersionsDetectorLoggingExtensions.cs
+│   ├── ProcessLifecycle/
+│   │   ├── ProcessHandleLoggingExtensions.cs
+│   │   ├── ProcessLoggingExtensions.cs     # SiteLifecycleManager logging
+│   │   └── ProcessRunnerLoggingExtensions.cs
+│   ├── ReverseProxy/
+│   │   └── ReverseProxyLoggingExtensions.cs
+│   └── WebsiteHosting/
+│       ├── ConfigurationLoggingExtensions.cs  # WebSitesConfigurationService
+│       └── WebsiteLoggingExtensions.cs        # WebSiteHostingService
 └── Client/                                 # Client-side (WASM) logging extensions
     └── ClientLoggingExtensions.cs          # Home, dialogs, license service
 ```
