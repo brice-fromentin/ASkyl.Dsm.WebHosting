@@ -426,9 +426,14 @@ Ui.Client/
 │   │   ├── Home.razor                      # Dashboard with website grid
 │   │   ├── Login.razor                     # Authentication form
 │   │   └── NotFound.razor                  # 404 handler
-│   └── Patterns/WorkingState/              # IWorkingState interface + CreateWorkingState extension
+│   └── Patterns/WorkingState/              # WorkingStateBase (abstract), WorkingState (disposable), WorkingStateExtensions (CreateWorkingState)
 ├── Contracts/
 │   └── INavigationGuard.cs                 # Router navigation guard interface
+├── Interfaces/                             # Client-side service interfaces
+│   ├── ILicenseService.cs                  # GetLicensesAsync() → IReadOnlyList<LicenseInfo>
+│   └── ITreeContentService.cs              # LoadChildDirectoriesAsync() for FluentTreeView lazy loading
+├── Extensions/                             # C# 14 scoped extensions
+│   └── FsEntryExtensions.cs               # List<FsEntry>/FsEntry → TreeViewItem conversion with lazy loading
 ├── Services/                               # HTTP client wrappers + culture management
 │   ├── AcceptLanguageHandler.cs            # DelegatingHandler — attaches Accept-Language from ICultureManager
 │   ├── AuthenticationService.cs            # Singleton — POST /api/authentication/*
