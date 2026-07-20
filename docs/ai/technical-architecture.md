@@ -469,7 +469,7 @@ Ui.Client/
 ├── Components/
 │   ├── Controls/                           # Custom UI controls
 │   │   ├── AutoDataGrid.razor              # Generic data grid with sorting, reload, row click/double-click
-│   │   ├── LoadingOverlay.razor            # Full-screen overlay for IWorkingState
+│   │   ├── LoadingOverlay.razor            # Full-screen overlay for WorkingState disposable pattern
 │   │   ├── RealTimeNumberField.razor       # Numeric input with real-time validation
 │   │   └── RealTimeTextField.razor         # Text/password input with real-time validation
 │   ├── Dialogs/                            # FluentUI dialog wrappers
@@ -762,7 +762,7 @@ Dialogs (Overlay)
 ### State Management
 
 - **Server:** ASP.NET Core Session (DSM SID), `WebSiteHostingService` singleton, `WebSitesConfigurationService`
-- **Client:** HTTP client wrappers, local component state, FluentUI Dialog state, `IWorkingState` pattern
+- **Client:** HTTP client wrappers, local component state, FluentUI Dialog state, WorkingStateBase/WorkingState disposable pattern (no interface — abstract base class + disposable wrapper)
 
 ---
 
@@ -851,7 +851,7 @@ Culture is **DSM-controlled** — resolved once at login, locked for the session
 
 - API endpoints targeting <200ms typical response time for local DSM operations
 - FileStation list operations may exceed target depending on directory size
-- Framework installation and runtime download are long-running operations with progress feedback via `IWorkingState`
+- Framework installation and runtime download are long-running operations with progress feedback via WorkingState disposable pattern
 
 ### Memory Usage Guidelines
 
