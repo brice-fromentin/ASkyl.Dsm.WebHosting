@@ -104,17 +104,10 @@ Askyl.Dsm.WebHosting.slnx
 
 **Test organization by subsystem:**
 
-- **Analyzers/** — 3 tests: BlankLineAnalyzer, LoggerDirectCallAnalyzer, StringStaticMemberAnalyzer
-- **Data/Domain/** — 5 tests: LoginCredentials, AspNetCoreReleaseInfo, AspNetRelease, WebSiteConfiguration, WebSiteInstance
-- **Data/Results/** — 2 tests: result types + serialization
-- **Globalization/** — 8 tests: AcceptLanguageHandler, CultureInfoExtensions, CultureManager,
-  DeferredMessageExtensions, GlobalizationServiceCollectionExtensions, GlobalizationSettings, Localizer, ResourceCompleteness
-- **Tools/** — 11 tests across Converters (language/date format), Diagnostics (OperationTimer),
-  Extensions, Infrastructure (ArchiveExtractor, DsmSettingsService, FileManagerService),
-  Network (DsmApiClient), Runtime (AssemblyRuntimeDetector, VersionsDetectorService), Threading (SemaphoreLock)
-- **Ui/Services/** — 13 tests: AuthenticationNavigationGuard, AuthenticationService, DotnetVersionService,
-  DsmSession, FileSystemService, FrameworkManagementService, LicenseService, LogDownloadService,
-  ReverseProxyManagerService, SiteLifecycleManager, TreeContentService, WebSiteHostingService, WebSitesConfigurationService
+Tests mirror source structure: Analyzers (blank lines, logger calls, string/static pattern), Data/Domain (model classes),
+Data/Results (result types + serialization), Globalization (culture management, localization, validators),
+Tools (converters, diagnostics, infrastructure services, network client, runtime detection, threading),
+Ui/Services (authentication, file system, framework management, website hosting, reverse proxy).
 
 **Design:** controllers are thin routing wrappers with no business logic — all behavior delegated to services which are tested directly.  
 bunit is referenced for `BunitContext` usage in navigation guard tests; no Blazor component rendering tests currently exist.
@@ -326,23 +319,9 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
   per-site lifecycle manager (Channel-based command queue, SIGTERM graceful shutdown),  
   DSM session management (per-user, 1-min TTL cache).
 
-**Middleware pipeline (exact order from Program.cs):**
-
-1. `ApplyDsmSystemCulture()` — wire system culture from DSM settings (no auth needed)
-2. `UsePathBase("/adwh")` — apply URL sub-path prefix
-3. `UseGlobalizationRequestLocalization()` — culture handling after path base, before routing
-4. `UseMiddleware<RequestTrackingMiddleware>()` — X-Request-ID propagation via HttpContext.Items
-5. **Dev/Prod branching:** Development: `UseWebAssemblyDebugging()`. Production: `UseExceptionHandler("/Error")` + `UseHsts()`
-6. `UseRateLimiter()` — login brute-force protection (fixed window: 5 requests/min)
-7. `UseStatusCodePagesWithReExecute("/not-found?status={0}")` — error endpoint re-execution with scope creation
-8. `UseHttpsRedirection()` — redirect HTTP to HTTPS
-9. Security headers middleware — X-Content-Type-Options, X-Frame-Options, Referrer-Policy, CSP, X-XSS-Protection
-10. `UseSession()` — session middleware (before antiforgery and controllers)
-11. `UseRouting()` — endpoint routing
-12. `MapControllers()` + `MapErrorEndpoints()` — API controllers and /Error, /not-found endpoints
-13. `UseAntiforgery()` — antiforgery token validation
-14. `MapStaticAssets()` — static file serving
-15. `MapRazorComponents<App>().AddInteractiveWebAssemblyRenderMode().AddAdditionalAssemblies(...)` — Blazor WASM render mode
+**Middleware pipeline:** Culture setup → path base `/adwh` → request localization → X-Request-ID tracking →  
+error handling/HSTS (dev: WASM debugging) → rate limiting → status code pages → HTTPS redirection →  
+security headers → session → routing → controllers + error endpoints → antiforgery → static assets → Blazor WASM render mode.
 
 ### 7. Askyl.Dsm.WebHosting.Ui.Client
 
@@ -877,29 +856,10 @@ are used in production; no environment-specific overrides are packaged with the 
 
 ## Appendix
 
-### A. API Route Summary
+### A. API Routes
 
-| Controller | Route | Method | Purpose |
-|------------|-------|--------|---------|
-| AuthenticationController | `/api/v1/authentication/status` | GET | Check auth state |
-| AuthenticationController | `/api/v1/authentication/login` | POST | Authenticate user |
-| AuthenticationController | `/api/v1/authentication/logout` | POST | Clear session |
-| WebsiteHostingController | `/api/v1/websites/all` | GET | List all websites |
-| WebsiteHostingController | `/api/v1/websites/add` | POST | Create website |
-| WebsiteHostingController | `/api/v1/websites/update` | POST | Update website |
-| WebsiteHostingController | `/api/v1/websites/remove/{id}` | DELETE | Remove website |
-| WebsiteHostingController | `/api/v1/websites/start/{id}` | POST | Start website |
-| WebsiteHostingController | `/api/v1/websites/stop/{id}` | POST | Stop website |
-| FileManagementController | `/api/v1/files/shared-folders` | GET | List shared folders via FileStation API |
-| FileManagementController | `/api/v1/files/directory?path={path}&directoryOnly={bool}` | GET | List directory contents; `path` is a query parameter, not a route segment |
-| FrameworkManagementController | `/api/v1/frameworks/install` | POST | Install .NET framework/runtime |
-| FrameworkManagementController | `/api/v1/frameworks/uninstall/{version}` | POST | Uninstall specific framework version |
-| RuntimeManagementController | `/api/v1/runtime/versions` | GET | List installed .NET versions |
-| RuntimeManagementController | `/api/v1/runtime/channels/installed/{productVersion}` | GET | Check if channel is installed |
-| RuntimeManagementController | `/api/v1/runtime/versions/installed/{version}` | GET | Check if specific version is installed |
-| RuntimeManagementController | `/api/v1/runtime/channels` | GET | List available .NET channels |
-| RuntimeManagementController | `/api/v1/runtime/releases/status/{productVersion}` | GET | List releases with installation status |
-| LogDownloadController | `/api/v1/logdownload/logs` | GET | Download log files as ZIP archive |
+All routes prefixed `/api/v1/`. Controllers: `Authentication`, `WebsiteHosting`, `FileManagement`,
+`FrameworkManagement`, `RuntimeManagement`, `LogDownload`. See controller source for exact endpoints and HTTP methods.
 
 ### B. DSM API Reference
 
