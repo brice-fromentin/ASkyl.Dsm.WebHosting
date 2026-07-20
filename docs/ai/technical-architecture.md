@@ -463,6 +463,8 @@ Each service owns a 100K range at 1M spacing:
 
 **Mitigation:** `SetSid()` updates `_sid` + cookie header. Session validation cache: 1-minute TTL.
 
+Note: `DsmApiClient` is consumed by the Scoped `IDsmSession`, which manages per-request SID state. Controllers interact with `IDsmSession`, not `DsmApiClient` directly.
+
 **Service Lifetime Hierarchy:**
 
 ```text
