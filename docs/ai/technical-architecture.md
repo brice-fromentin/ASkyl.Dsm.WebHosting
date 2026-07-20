@@ -365,6 +365,10 @@ Globalization/
 Ui/
 ├── Authorization/                          # Custom authorization
 │   └── AuthorizeSessionAttribute.cs        # Session-based authorization
+├── Endpoints/                              # Minimal API endpoints
+│   └── ErrorEndpoints.cs                  # MapErrorEndpoints() — /Error and /not-found with content negotiation
+├── Middleware/                             # HTTP middleware
+│   └── RequestTrackingMiddleware.cs        # X-Request-ID propagation through HttpContext.Items
 ├── Controllers/                            # API controllers
 │   ├── AuthenticationController.cs
 │   ├── FileManagementController.cs
@@ -385,7 +389,8 @@ Ui/
 │   ├── ReverseProxyManagerService.cs
 │   ├── SiteLifecycleManager.cs             # Per-site process management (Channel-based command queue)
 │   ├── WebSiteHostingService.cs            # Orchestrator (BackgroundService, ConcurrentDictionary<Guid, SiteEntry>)
-│   └── WebSitesConfigurationService.cs
+│   ├── WebSitesConfigurationService.cs
+│   └── DsmSession.cs                       # IDsmSession — per-user DSM session, 1-min TTL cache, user preferences
 └── Program.cs                              # Entry point, DI registration, middleware pipeline
 ```
 
