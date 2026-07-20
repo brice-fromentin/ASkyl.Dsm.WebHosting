@@ -221,9 +221,11 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | **IArchiveExtractorService** | Decompress(inputFile, exclude) | Tools.Infrastructure |
 | **IDownloaderService** | DownloadVersionToAsync(), GetAspNetCoreReleasesAsync(), GetAspNetCoreChannelsAsync() | Tools.Runtime |
 | **IVersionsDetectorService** | GetInstalledVersionsAsync(), RefreshCacheAsync(), IsChannelInstalled(), IsVersionInstalled() | Tools.Runtime (Singleton) |
-| **IAssemblyRuntimeDetector** | Detect() | Tools.Runtime (Singleton) |
-| **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), Disconnect(); properties: UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
+| **IAssemblyRuntimeDetector** | Detect(string assemblyPath) | Tools.Runtime (Singleton) |
+| **IDsmSession** | ConnectAsync(LoginCredentials, CancellationToken), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), Disconnect(); properties: UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
 | **IDsmSettingsService** | Server, Port, Language | Tools.Infrastructure |
+| **ILicenseService** | GetLicensesAsync() → IReadOnlyList&lt;LicenseInfo&gt; | Ui.Client.Services |
+| **ITreeContentService** | LoadChildDirectoriesAsync(string path, Func&lt;string, Task&gt; errorHandler, Func&lt;string, Task&lt;List&lt;TreeViewItem&gt;&gt;&gt; loadChildrenAsync) | Ui.Client.Services |
 
 **Structure:**
 
