@@ -284,12 +284,16 @@ Data/
 │       ├── Core/UserSettings/CoreUserSettingsResponse.cs
 │       ├── FileStation/FileStationListResponse.cs, FileStationListShareResponse.cs
 │       └── ApiInformationResponse.cs
-├── Exceptions/                             # Custom exception types
-└── Results/                                # Result pattern implementations
-    ├── ApiResult.cs, ApiResultBool.cs, ApiResultData<T>.cs, ApiResultItems<T>.cs, ApiResultValue<T>.cs
-    ├── ApiErrorCode.cs, AuthenticationResult.cs, ChannelsResult.cs
-    ├── DirectoryContentsResult.cs, InstallationResult.cs, InstalledVersionsResult.cs
-    ├── ReleasesResult.cs, SharedFoldersResult.cs, WebSiteInstanceResult.cs, WebSiteInstancesResult.cs
+├── Results/                                # Result pattern implementations
+│   ├── ApiResult.cs, ApiResultBool.cs, ApiResultData<T>.cs, ApiResultItems<T>.cs, ApiResultValue<T>.cs
+│   ├── ApiErrorCode.cs, AuthenticationResult.cs, ChannelsResult.cs
+│   ├── DirectoryContentsResult.cs, InstallationResult.cs, InstalledVersionsResult.cs
+│   ├── ReleasesResult.cs, SharedFoldersResult.cs, WebSiteInstanceResult.cs, WebSiteInstancesResult.cs
+└── Exceptions/                             # Custom exception types
+    ├── FileStationApiException.cs          # FileStation API operation failures
+    ├── LastReleaseUninstallException.cs    # Attempted uninstall of last installed release
+    ├── MissingChannelConfigurationException.cs  # Channel version not configured
+    └── ReverseProxyNotFoundException.cs    # Reverse proxy rule not found by UUID
 ```
 
 ### 4. Askyl.Dsm.WebHosting.Globalization
