@@ -187,7 +187,8 @@ Constants/
 │   │   ├── ReverseProxyConstants.cs        # Proxy error codes
 │   │   └── SerializationFormats.cs         # Enum: Form, Json
 │   ├── FileStation/
-│   │   └── FileStationDefaults.cs          # Listing patterns, sorting, file types
+│   │   ├── FileStationDefaults.cs          # Listing patterns, sorting, file types
+│   │   └── FileStationType.cs              # Enum: File/Directory for FileStation entry type serialization
 │   └── System/
 │       ├── DsmLanguageCodes.cs             # DSM 3-letter language code data
 │       └── SystemDefaults.cs               # Config paths, external ports
