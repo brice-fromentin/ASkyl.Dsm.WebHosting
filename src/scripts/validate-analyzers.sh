@@ -15,7 +15,7 @@ echo "[1/4] Building analyzer project..."
 dotnet build "$ANALYZER_DIR/Askyl.Dsm.WebHosting.Analyzers.csproj" -c Debug -v quiet
 
 # Step 2: Find the built DLL
-ANALYZER_DLL="$ANALYZER_DIR/bin/Debug/netstandard2.0/Askyl.Dsm.WebHosting.Analyzers.dll"
+ANALYZER_DLL="$ANALYZER_DIR/bin/Debug/net10.0/Askyl.Dsm.WebHosting.Analyzers.dll"
 
 if [ ! -f "$ANALYZER_DLL" ]; then
     echo "ERROR: Analyzer DLL not found at $ANALYZER_DLL"
@@ -44,9 +44,9 @@ cat > "$TEMP_DIR/TempValidation.csproj" <<PROJEOF
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="4.11.0" />
-    <PackageReference Include="System.Composition" Version="8.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.6.0" />
+    <PackageReference Include="System.Composition" Version="10.0.10" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="$ANALYZER_DLL" LoadAnalysisPaths="false" />
