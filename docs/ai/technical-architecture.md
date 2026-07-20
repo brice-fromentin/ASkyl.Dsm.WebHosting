@@ -1011,10 +1011,16 @@ are used in production; no environment-specific overrides are packaged with the 
 | WebsiteHostingController | `/api/websites/remove/{id}` | DELETE | Remove website |
 | WebsiteHostingController | `/api/websites/start/{id}` | POST | Start website |
 | WebsiteHostingController | `/api/websites/stop/{id}` | POST | Stop website |
-| FileManagementController | `/api/filemanagement/*` | * | File operations |
-| FrameworkManagementController | `/api/frameworkmanagement/*` | * | .NET installation |
-| RuntimeManagementController | `/api/runtime/*` | * | Version detection |
-| LogDownloadController | `/api/logdownload/*` | * | Log retrieval |
+| FileManagementController | `/api/file-management/shared-folders` | GET | List shared folders via FileStation API |
+| FileManagementController | `/api/file-management/directory-contents/{path}` | GET | List directory contents with pagination |
+| FrameworkManagementController | `/api/framework-management/install` | POST | Install .NET framework/runtime |
+| FrameworkManagementController | `/api/framework-management/uninstall/{version}` | POST | Uninstall specific framework version |
+| RuntimeManagementController | `/api/runtime/versions` | GET | List installed .NET versions |
+| RuntimeManagementController | `/api/runtime/channel-installed/{productVersion}` | GET | Check if channel is installed |
+| RuntimeManagementController | `/api/runtime/version-installed/{version}` | GET | Check if specific version is installed |
+| RuntimeManagementController | `/api/runtime/channels` | GET | List available .NET channels |
+| RuntimeManagementController | `/api/runtime/releases-with-status/{productVersion}` | GET | List releases with installation status |
+| LogDownloadController | `/api/log-download/logs` | GET | Download log files as ZIP archive |
 
 ### B. DSM API Reference
 
