@@ -305,8 +305,7 @@ Data/
 │   ├── Parameters/                         # Request parameter classes
 │   │   ├── Auth/AuthLoginParameters.cs
 │   │   ├── Core/Acl/CoreAclSetParameters.cs
-│   │   ├── Core/AppPortal/ReverseProxy/ReverseProxyCreateParameters.cs, ReverseProxyUpdateParameters.cs
-│   │   ├── Core/AppPortal/ReverseProxy/ReverseProxyDeleteParameters.cs, ReverseProxyListParameters.cs
+│   │   ├── Core/AppPortal/ReverseProxy/ReverseProxyCreateParameters.cs, ReverseProxyUpdateParameters.cs, ReverseProxyDeleteParameters.cs, ReverseProxyListParameters.cs
 │   │   ├── Core/User/CoreUserGetParameters.cs
 │   │   ├── Core/UserSettings/CoreUserSettingsParameters.cs
 │   │   ├── FileStation/FileStationListParameters.cs, FileStationListShareParameters.cs
