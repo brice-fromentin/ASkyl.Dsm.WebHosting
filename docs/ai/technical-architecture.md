@@ -477,7 +477,7 @@ All `[LoggerMessage]` attributes use inline `int` literals. EventId ranges docum
 | `1400001–1400007` | FrameworkManagementService | `FrameworkManagementLoggingExtensions.cs` |
 | `1500001–1500007` | DotnetVersionService | `DotnetVersionServiceLoggingExtensions.cs` |
 | `1600001–1600019` | SiteLifecycleManager | `ProcessLoggingExtensions.cs` |
-| `1700001–1700013` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` |
+| `1700001–1700014` | ReverseProxyManagerService | `ReverseProxyLoggingExtensions.cs` |
 | `1800001–1800031` | WebSiteHostingService | `WebsiteLoggingExtensions.cs` |
 | `1900001–1900012` | WebSitesConfigurationService | `ConfigurationLoggingExtensions.cs` |
 | `2000001–2000013` | DsmApiClient | `DsmApiLoggingExtensions.cs` |
@@ -488,9 +488,14 @@ All `[LoggerMessage]` attributes use inline `int` literals. EventId ranges docum
 | `2400001–2400004` | DownloaderService | `DownloaderLoggingExtensions.cs` |
 | `2500001` | SystemProcessRunner | `ProcessRunnerLoggingExtensions.cs` |
 | `2600001–2600005` | SystemProcessHandle | `ProcessHandleLoggingExtensions.cs` |
+| `2700001–2700004` | GlobalizationSettings | `GlobalizationSettingsLoggingExtensions.cs` |
+| `2800001–2800005` | DsmSettingsService | `DsmSettingsServiceLoggingExtensions.cs` |
+| `2900001–2900007` | DsmSession | `DsmSessionLoggingExtensions.cs` |
 | `7000001` | LicenseService (WASM) | `ClientLoggingExtensions.cs` |
+| `7100001` | Client utilities (JS interop) | `ClientLoggingExtensions.cs` |
+| `7600001–7600010` | CultureManager (client) | `ClientLoggingExtensions.cs` |
 
-**Total:** All services use `[LoggerMessage]` extensions, zero CA2254 warnings.
+**Total:** All services use `[LoggerMessage]` extensions — 24 EventId ranges across server and client. Zero CA2254 warnings.
 
 **Serilog Configuration:**
 
