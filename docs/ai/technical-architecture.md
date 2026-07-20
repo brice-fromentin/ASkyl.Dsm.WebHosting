@@ -225,20 +225,20 @@ Constants/
 | Interface | Key Methods | Implemented By |
 |-----------|-------------|----------------|
 | **IAuthenticationService** | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() | Ui + Ui.Client |
-| **ICultureManager** | InitializeFromLogin(), ResetToSystem(), CurrentCulture | Ui.Client.CultureManager |
-| **IDotnetVersionService** | GetInstalledVersionsAsync(), GetChannelsAsync() | Ui + Ui.Client |
-| **IFileSystemService** | GetSharedFoldersAsync(), GetDirectoryContentsAsync() | Ui + Ui.Client |
+| **ICultureManager** | InitializeFromLogin(string? culture, string? dateFormat, string? timeFormat), ResetToSystem(), CurrentCulture, CurrentUICulture | Ui.Client.CultureManager |
+| **IDotnetVersionService** | GetInstalledVersionsAsync(), GetChannelsAsync(), IsChannelInstalledAsync(), IsVersionInstalledAsync(), GetReleasesWithStatusAsync(), RefreshCacheAsync(), IsValidVersionFormat() | Ui + Ui.Client |
+| **IFileSystemService** | GetSharedFoldersAsync(), GetDirectoryContentsAsync(), SetHttpGroupPermissionsAsync() | Ui + Ui.Client |
 | **IFrameworkManagementService** | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services |
 | **IGlobalizationSettings** | SupportedCultures, SupportedCultureNamesJson, SystemCulture | Ui.Infrastructure.GlobalizationSettings |
 | **ILogDownloadService** | CreateLogZipStreamAsync() | Ui.Services |
 | **IReverseProxyManagerService** | CreateAsync(), UpdateAsync(), DeleteAsync() | Ui.Services |
 | **IWebSiteHostingService** | GetAllWebsitesAsync(), AddWebsiteAsync() | Ui + Ui.Client |
-| **IFileManagerService** | Initialize(), GetDirectory(), DeleteDirectory() | Tools.Infrastructure |
+| **IFileManagerService** | Initialize(), GetDirectory(), DeleteDirectory(), GetFullName(string directory, string file) | Tools.Infrastructure |
 | **IArchiveExtractorService** | Decompress(inputFile, exclude) | Tools.Infrastructure |
-| **IDownloaderService** | DownloadToAsync(), DownloadVersionToAsync() | Tools.Runtime |
-| **IVersionsDetectorService** | GetInstalledVersionsAsync(), RefreshCacheAsync() | Tools.Runtime (Singleton) |
+| **IDownloaderService** | DownloadVersionToAsync(), GetAspNetCoreReleasesAsync(), GetAspNetCoreChannelsAsync() | Tools.Runtime |
+| **IVersionsDetectorService** | GetInstalledVersionsAsync(), RefreshCacheAsync(), IsChannelInstalled(), IsVersionInstalled() | Tools.Runtime (Singleton) |
 | **IAssemblyRuntimeDetector** | Detect() | Tools.Runtime (Singleton) |
-| **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync() | Ui.Services.DsmSession |
+| **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), Disconnect(); properties: UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
 | **IDsmSettingsService** | Server, Port, Language | Tools.Infrastructure |
 
 **Structure:**
