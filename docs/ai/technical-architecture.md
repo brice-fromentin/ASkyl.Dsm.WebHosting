@@ -250,7 +250,8 @@ Data/
 │   ├── Authentication/                     # LoginCredentials
 │   ├── FileSystem/                         # FsEntry
 │   ├── Licensing/                          # LicenseInfo
-│   ├── Runtime/                            # AspNetCoreReleaseInfo, AssemblyRuntimeInfo, FrameworkInfo, InstallFramework
+│   ├── Runtime/                            # AspNetCoreReleaseInfo, AssemblyRuntimeInfo, AspNetRelease, FrameworkInfo, InstallFramework
+│   ├── System/                             # DsmSystemPreferences (Server, Port, Language from synoinfo.conf)
 │   └── WebSites/                           # ProcessInfo, WebSiteConfiguration, WebSiteInstance, WebSiteRuntimeState, WebSitesConfiguration
 ├── DsmApi/                                 # DSM API integration
 │   ├── Models/                             # API models (records with init setters)
