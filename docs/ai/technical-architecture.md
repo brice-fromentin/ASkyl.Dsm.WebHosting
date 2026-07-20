@@ -97,11 +97,49 @@ Askyl.Dsm.WebHosting.slnx
 - **Background services** for long-running operations
 - **Centralized versioning** via Directory.Build.props
 
-### Test Strategy
+### Test Project (`Askyl.Dsm.WebHosting.Tests`)
 
-- **Frameworks:** xUnit, Moq, coverlet (code coverage)
-- **Controllers are thin routing wrappers** with no business logic — all behavior delegated to services which are tested directly
-- bunit is referenced for `BunitContext` usage in navigation guard tests; no Blazor component rendering tests currently exist
+**Purpose:** Unit tests for analyzers, domain models, globalization, tools, and UI services
+
+**Frameworks:** xUnit (v2.9.3), Moq (v4.20.72), coverlet (code coverage), bunit (BunitContext)
+**Analyzer testing:** Microsoft.CodeAnalysis.Analyzer.Testing ecosystem (v1.1.x)
+
+**Structure (45 test files):**
+
+```text
+Tests/
+├── Analyzers/                              # 3 tests — BlankLine, LoggerDirectCall, StringStaticMember analyzers
+├── Data/
+│   ├── Domain/                             # 6 tests — LoginCredentials, AspNetCoreReleaseInfo, AspNetRelease, WebSiteConfiguration, WebSiteInstance
+│   └── Results/                            # 2 tests — Result types + serialization
+├── Globalization/                          # 8 tests — AcceptLanguageHandler, CultureInfoExtensions, CultureManager, DeferredMessageExtensions, GlobalizationServiceCollectionExtensions, GlobalizationSettings, Localizer, ResourceCompleteness
+├── Tools/
+│   ├── Converters/                         # 2 tests — DsmLanguageToCultureConverter, PhpFormatToDotNetConverter
+│   ├── Diagnostics/                        # 1 test — OperationTimer
+│   ├── Extensions/                         # 1 test — Extension methods
+│   ├── Infrastructure/                     # 3 tests — ArchiveExtractorService, DsmSettingsService, FileManagerService
+│   ├── Network/                            # 1 test — DsmApiClient
+│   ├── Runtime/                            # 2 tests — AssemblyRuntimeDetector, VersionsDetectorService
+│   └── Threading/                          # 1 test — SemaphoreLock
+└── Ui/Services/                            # 13 tests
+    ├── AuthenticationNavigationGuard       # Navigation guard tests
+    ├── AuthenticationService                 # Auth service tests
+    ├── DotnetVersionService                # Version detection tests
+    ├── DsmSession                          # Session management tests
+    ├── FileSystemService                   # File system operations tests
+    ├── FrameworkManagementService          # Framework install/uninstall tests
+    ├── LicenseService                      # License retrieval tests
+    ├── LogDownloadService                  # Log archive tests
+    ├── ReverseProxyManagerService          # Proxy CRUD tests
+    ├── SiteLifecycleManager                # Process lifecycle tests
+    ├── TreeContentService                  # Tree view lazy loading tests
+    ├── WebSiteHostingService               # Orchestrator tests
+    └── WebSitesConfigurationService        # Configuration persistence tests
+```
+
+**Controllers are thin routing wrappers** with no business logic — all behavior delegated to services which are tested directly.
+
+bunit is referenced for `BunitContext` usage in navigation guard tests; no Blazor component rendering tests currently exist.
 
 ### Build Configuration
 
