@@ -889,25 +889,25 @@ are used in production; no environment-specific overrides are packaged with the 
 
 | Controller | Route | Method | Purpose |
 |------------|-------|--------|---------|
-| AuthenticationController | `/api/authentication/status` | GET | Check auth state |
-| AuthenticationController | `/api/authentication/login` | POST | Authenticate user |
-| AuthenticationController | `/api/authentication/logout` | POST | Clear session |
-| WebsiteHostingController | `/api/websites/all` | GET | List all websites |
-| WebsiteHostingController | `/api/websites/add` | POST | Create website |
-| WebsiteHostingController | `/api/websites/update` | POST | Update website |
-| WebsiteHostingController | `/api/websites/remove/{id}` | DELETE | Remove website |
-| WebsiteHostingController | `/api/websites/start/{id}` | POST | Start website |
-| WebsiteHostingController | `/api/websites/stop/{id}` | POST | Stop website |
-| FileManagementController | `/api/file-management/shared-folders` | GET | List shared folders via FileStation API |
-| FileManagementController | `/api/file-management/directory-contents/{path}` | GET | List directory contents with pagination |
-| FrameworkManagementController | `/api/framework-management/install` | POST | Install .NET framework/runtime |
-| FrameworkManagementController | `/api/framework-management/uninstall/{version}` | POST | Uninstall specific framework version |
-| RuntimeManagementController | `/api/runtime/versions` | GET | List installed .NET versions |
-| RuntimeManagementController | `/api/runtime/channel-installed/{productVersion}` | GET | Check if channel is installed |
-| RuntimeManagementController | `/api/runtime/version-installed/{version}` | GET | Check if specific version is installed |
-| RuntimeManagementController | `/api/runtime/channels` | GET | List available .NET channels |
-| RuntimeManagementController | `/api/runtime/releases-with-status/{productVersion}` | GET | List releases with installation status |
-| LogDownloadController | `/api/log-download/logs` | GET | Download log files as ZIP archive |
+| AuthenticationController | `/api/v1/authentication/status` | GET | Check auth state |
+| AuthenticationController | `/api/v1/authentication/login` | POST | Authenticate user |
+| AuthenticationController | `/api/v1/authentication/logout` | POST | Clear session |
+| WebsiteHostingController | `/api/v1/websites/all` | GET | List all websites |
+| WebsiteHostingController | `/api/v1/websites/add` | POST | Create website |
+| WebsiteHostingController | `/api/v1/websites/update` | POST | Update website |
+| WebsiteHostingController | `/api/v1/websites/remove/{id}` | DELETE | Remove website |
+| WebsiteHostingController | `/api/v1/websites/start/{id}` | POST | Start website |
+| WebsiteHostingController | `/api/v1/websites/stop/{id}` | POST | Stop website |
+| FileManagementController | `/api/v1/files/shared-folders` | GET | List shared folders via FileStation API |
+| FileManagementController | `/api/v1/files/directory?path={path}&directoryOnly={bool}` | GET | List directory contents; `path` is a query parameter, not a route segment |
+| FrameworkManagementController | `/api/v1/frameworks/install` | POST | Install .NET framework/runtime |
+| FrameworkManagementController | `/api/v1/frameworks/uninstall/{version}` | POST | Uninstall specific framework version |
+| RuntimeManagementController | `/api/v1/runtime/versions` | GET | List installed .NET versions |
+| RuntimeManagementController | `/api/v1/runtime/channels/installed/{productVersion}` | GET | Check if channel is installed |
+| RuntimeManagementController | `/api/v1/runtime/versions/installed/{version}` | GET | Check if specific version is installed |
+| RuntimeManagementController | `/api/v1/runtime/channels` | GET | List available .NET channels |
+| RuntimeManagementController | `/api/v1/runtime/releases/status/{productVersion}` | GET | List releases with installation status |
+| LogDownloadController | `/api/v1/logdownload/logs` | GET | Download log files as ZIP archive |
 
 ### B. DSM API Reference
 
