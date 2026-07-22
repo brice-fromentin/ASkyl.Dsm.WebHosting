@@ -409,6 +409,10 @@ public class WebSiteHostingService(
             logger.InstanceRemoved(siteName);
             return ApiResult.CreateSuccess();
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FailedToRemoveSite(ex, siteName);
@@ -491,6 +495,10 @@ public class WebSiteHostingService(
             logger.ReverseProxyRuleCreated(configuration.Name);
             return ApiResult.CreateSuccess();
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FailedToCreateReverseProxyRule(ex, configuration.Name);
@@ -511,6 +519,10 @@ public class WebSiteHostingService(
             logger.ReverseProxyRuleUpdated(configuration.Name);
             return ApiResult.CreateSuccess();
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FailedToUpdateReverseProxyRule(ex, configuration.Name);
@@ -530,6 +542,10 @@ public class WebSiteHostingService(
             await reverseProxyManager.DeleteAsync(configuration, cancellationToken);
             logger.ReverseProxyRuleDeleted(configuration.Name);
             return ApiResult.CreateSuccess();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

@@ -122,6 +122,10 @@ public partial class ReverseProxyManagerService(
         {
             await DeleteByUuidAsync((Guid)proxy.UUID, site.Name, cancellationToken);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FailedToDeleteReverseProxy(ex, proxy.UUID, site.Name);

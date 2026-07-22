@@ -28,6 +28,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
             var versions = await versionsDetector.GetInstalledVersionsAsync();
             return InstalledVersionsResult.CreateSuccess(versions);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FailedToGetInstalledVersions(ex);
@@ -42,6 +46,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
             var isInstalled = versionsDetector.IsChannelInstalled(channel, frameworkType);
             return ApiResultBool.CreateSuccess(isInstalled);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FailedToCheckChannelInstalled(ex, channel);
@@ -55,6 +63,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
         {
             var isInstalled = versionsDetector.IsVersionInstalled(version, frameworkType);
             return ApiResultBool.CreateSuccess(isInstalled);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -85,6 +97,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
             var channelList = channels.ToList();
             return ChannelsResult.CreateSuccess(channelList);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FailedToGetChannels(ex);
@@ -110,6 +126,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
             }
 
             return ReleasesResult.CreateSuccess(releaseList);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

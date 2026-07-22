@@ -39,6 +39,10 @@ public class FrameworkManagementService(
             logger.FrameworkInstalled(version);
             return InstallationResult.CreateSuccess(localizer[LK.Success.InstallationCompleted]);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FrameworkInstallError(ex, version);
@@ -85,6 +89,10 @@ public class FrameworkManagementService(
         {
             logger.UninstallFailed(ex);
             return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {

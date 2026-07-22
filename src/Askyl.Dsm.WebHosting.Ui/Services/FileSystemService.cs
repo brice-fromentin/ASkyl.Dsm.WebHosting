@@ -34,6 +34,10 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
 
             return SharedFoldersResult.CreateSuccess([.. sharedFolders.Select(CreateFsEntry)]);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.ErrorRetrievingSharedFolders(ex);
@@ -77,6 +81,10 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
             logger.RetrievedDirectoriesAndFiles(directories.Count, files.Count, path);
 
             return DirectoryContentsResult.CreateSuccess(allContents);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
