@@ -1,4 +1,5 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Ui.Services;
@@ -268,6 +269,38 @@ public class WebSitesConfigurationServiceTests : IDisposable
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.UpdateSiteAsync(site));
         Assert.Contains("not found", exception.Message);
+    }
+
+    #endregion
+
+    #region AtomicWrite
+
+    [Fact]
+    public async Task SaveConfiguration_UsesAtomicWrite_AndProducesValidJson()
+    {
+        // Arrange
+        SetupEmptyConfig();
+        var service = CreateService();
+        string tempFilePath = _configFilePath + WebSiteConstants.ConfigurationTempExtension;
+
+        // Act
+        var newSite = new WebSiteConfiguration
+        {
+            Name = "AtomicTest",
+            ApplicationPath = "/volume1/web/atomic"
+        };
+        await service.AddSiteAsync(newSite);
+
+        // Assert - config file exists and is valid JSON
+        Assert.True(File.Exists(_configFilePath));
+        var jsonContent = File.ReadAllText(_configFilePath);
+        var loadedConfig = System.Text.Json.JsonSerializer.Deserialize<WebSitesConfiguration>(jsonContent, JsonOptionsCache.WriteIndented);
+        Assert.NotNull(loadedConfig);
+        Assert.Single(loadedConfig!.Sites);
+        Assert.Equal("AtomicTest", loadedConfig.Sites[0].Name);
+
+        // Assert - temp file was cleaned up
+        Assert.False(File.Exists(tempFilePath), "Temp file should be cleaned up after atomic write");
     }
 
     #endregion

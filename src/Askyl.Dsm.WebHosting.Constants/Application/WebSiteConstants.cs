@@ -108,5 +108,10 @@ public static class WebSiteConstants
     /// </summary>
     public const string DllFileExtension = ".dll";
 
+    /// <summary>
+    /// File extension for temporary configuration file during atomic write.
+    /// </summary>
+    public const string ConfigurationTempExtension = ".tmp";
+
     #endregion
 }

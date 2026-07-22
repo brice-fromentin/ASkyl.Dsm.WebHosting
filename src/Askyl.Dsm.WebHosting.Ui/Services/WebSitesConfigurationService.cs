@@ -123,12 +123,15 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
 
     private async Task SaveConfigurationAsync(WebSitesConfiguration collection, CancellationToken cancellationToken)
     {
+        string tempPath = _configurationFilePath + WebSiteConstants.ConfigurationTempExtension;
+
         try
         {
             collection.LastModified = DateTime.UtcNow;
             var jsonContent = JsonSerializer.Serialize(collection, JsonOptionsCache.WriteIndented);
 
-            await File.WriteAllTextAsync(_configurationFilePath, jsonContent, cancellationToken);
+            await File.WriteAllTextAsync(tempPath, jsonContent, cancellationToken);
+            File.Move(tempPath, _configurationFilePath, true);
 
             logger.ConfigurationSaved(_configurationFilePath);
         }
@@ -137,6 +140,13 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
             logger.FailedToSaveConfiguration(ex, _configurationFilePath);
 
             throw;
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 
