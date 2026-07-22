@@ -16,13 +16,19 @@ using Microsoft.Extensions.Logging;
 namespace Askyl.Dsm.WebHosting.Tools.Network;
 
 public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsService settingsService, ILogger<ILogDsmApiClient> logger)
-    : ISemaphoreOwner
+    : ISemaphoreOwner, IAsyncDisposable
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     public ApiInformationCollection ApiInformations { get; } = new();
 
     public SemaphoreSlim Semaphore { get; } = new(1, 1);
+
+    public ValueTask DisposeAsync()
+    {
+        Semaphore.Dispose();
+        return default;
+    }
 
     #region HTTP Request calls
 
