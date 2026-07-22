@@ -13,7 +13,8 @@ public sealed class WebSiteConfigurationValidator : AbstractValidator<WebSiteCon
             .Length(1, 100).WithLocalizedMessage(LK.WebSiteConfiguration.NameLength);
 
         RuleFor(x => x.ApplicationPath)
-            .NotEmpty().WithLocalizedMessage(LK.WebSiteConfiguration.ApplicationPathRequired);
+            .NotEmpty().WithLocalizedMessage(LK.WebSiteConfiguration.ApplicationPathRequired)
+            .Must(path => path != null && path.StartsWith("/")).WithLocalizedMessage(LK.WebSiteConfiguration.InvalidPath);
 
         RuleFor(x => x.InternalPort)
             .GreaterThan(0).WithLocalizedMessage(LK.WebSiteConfiguration.InternalPortRequired)
@@ -28,7 +29,8 @@ public sealed class WebSiteConfigurationValidator : AbstractValidator<WebSiteCon
             .WithLocalizedMessage(LK.WebSiteConfiguration.ProcessTimeoutRange);
 
         RuleFor(x => x.HostName)
-            .NotEmpty().WithLocalizedMessage(LK.WebSiteConfiguration.HostNameRequired);
+            .NotEmpty().WithLocalizedMessage(LK.WebSiteConfiguration.HostNameRequired)
+            .Matches(WebSiteConstants.HostNamePattern).WithLocalizedMessage(LK.WebSiteConfiguration.InvalidHostName);
 
         RuleFor(x => x.PublicPort)
             .GreaterThan(0).WithLocalizedMessage(LK.WebSiteConfiguration.PublicPortRequired)

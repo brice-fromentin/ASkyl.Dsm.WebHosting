@@ -101,6 +101,15 @@ public static class WebSiteConstants
 
     #endregion
 
+    #region Validation Patterns
+
+    /// <summary>
+    /// Regular expression pattern for valid DNS hostname. Allows alphanumeric characters, hyphens (not at start/end of labels), and dots separating labels.
+    /// </summary>
+    public const string HostNamePattern = @"^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$";
+
+    #endregion
+
     #region File Extensions
 
     /// <summary>

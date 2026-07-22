@@ -562,6 +562,12 @@
   <data name="WebSiteConfiguration_HostNameRequired" xml:space="preserve">
     <value>Host name is required</value>
   </data>
+  <data name="WebSiteConfiguration_InvalidHostName" xml:space="preserve">
+    <value>Invalid host name format. Use alphanumeric characters, hyphens, and dots (e.g., example.com)</value>
+  </data>
+  <data name="WebSiteConfiguration_InvalidPath" xml:space="preserve">
+    <value>Application path must be an absolute path starting with /</value>
+  </data>
 
   <!-- LoginCredentials Validation -->
   <data name="LoginCredentials_LoginRequired" xml:space="preserve">

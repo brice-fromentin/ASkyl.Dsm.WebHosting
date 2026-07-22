@@ -254,6 +254,8 @@ public static class LK
         public const string EnvironmentRequired = "WebSiteConfiguration_EnvironmentRequired";
         public const string ProcessTimeoutRange = "WebSiteConfiguration_ProcessTimeoutRange";
         public const string HostNameRequired = "WebSiteConfiguration_HostNameRequired";
+        public const string InvalidHostName = "WebSiteConfiguration_InvalidHostName";
+        public const string InvalidPath = "WebSiteConfiguration_InvalidPath";
     }
 
     /// <summary>Validation messages for LoginCredentials model.</summary>
