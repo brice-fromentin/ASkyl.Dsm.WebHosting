@@ -214,6 +214,34 @@ public class FileSystemServiceTests
         Assert.Empty(_dsmSession.ExecuteCalls);
     }
 
+    [Fact]
+    public async Task GetDirectoryContentsAsync_DoubleEncodedPathTraversal_ReturnsFailure()
+    {
+        // Arrange
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetDirectoryContentsAsync("/volume1/%252e%252e/etc/passwd", directoryOnly: true);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Empty(_dsmSession.ExecuteCalls);
+    }
+
+    [Fact]
+    public async Task GetDirectoryContentsAsync_MixedEncodingPathTraversal_ReturnsFailure()
+    {
+        // Arrange
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetDirectoryContentsAsync("/volume1/%2e%2e%252f..%252fetc", directoryOnly: true);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Empty(_dsmSession.ExecuteCalls);
+    }
+
     #endregion
 
     #region SetHttpGroupPermissionsAsync
@@ -247,6 +275,20 @@ public class FileSystemServiceTests
 
         // Act
         var result = await service.SetHttpGroupPermissionsAsync("/volume1/../../etc/passwd", isDirectory: false);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Empty(_dsmSession.ExecuteCalls);
+    }
+
+    [Fact]
+    public async Task SetHttpGroupPermissionsAsync_DoubleEncodedPathTraversal_ReturnsFailure()
+    {
+        // Arrange
+        var service = CreateService();
+
+        // Act
+        var result = await service.SetHttpGroupPermissionsAsync("/volume1/%252e%252e/etc/passwd", isDirectory: false);
 
         // Assert
         Assert.False(result.Success);

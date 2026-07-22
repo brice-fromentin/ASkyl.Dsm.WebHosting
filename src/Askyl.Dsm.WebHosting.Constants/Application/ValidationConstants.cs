@@ -33,5 +33,15 @@ public static class ValidationConstants
     /// </summary>
     public const string PathTraversalEncodedSlash = "%2f";
 
+    /// <summary>
+    /// Double-encoded dot sequence (%252e) that decodes to %2e then '.' after ASP.NET Core URL decoding.
+    /// </summary>
+    public const string PathTraversalDoubleEncodedDot = "%252e";
+
+    /// <summary>
+    /// Double-encoded forward slash (%252f) that decodes to %2f then '/' after ASP.NET Core URL decoding.
+    /// </summary>
+    public const string PathTraversalDoubleEncodedSlash = "%252f";
+
     #endregion
 }

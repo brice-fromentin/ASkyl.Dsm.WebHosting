@@ -233,6 +233,18 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
 
         // Check for URL-encoded path traversal (%2e = '.', %2f = '/')
         var lowerPath = path.ToLowerInvariant();
-        return !lowerPath.Contains(ValidationConstants.PathTraversalEncodedDot) && !lowerPath.Contains(ValidationConstants.PathTraversalEncodedSlash);
+
+        if (lowerPath.Contains(ValidationConstants.PathTraversalEncodedDot) || lowerPath.Contains(ValidationConstants.PathTraversalEncodedSlash))
+        {
+            return false;
+        }
+
+        // Check for double-encoded path traversal (%252e decodes to %2e -> '.', %252f decodes to %2f -> '/')
+        if (lowerPath.Contains(ValidationConstants.PathTraversalDoubleEncodedDot) || lowerPath.Contains(ValidationConstants.PathTraversalDoubleEncodedSlash))
+        {
+            return false;
+        }
+
+        return true;
     }
 }
