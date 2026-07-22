@@ -39,7 +39,7 @@ static class LogEventIds
 
     #region Process Lifecycle — 1600000–1600999
 
-    /// <summary>SiteLifecycleManager — IDs 1600001–1600019.</summary>
+    /// <summary>SiteLifecycleManager — IDs 1600001–1600020.</summary>
     public const int ProcessLifecycleBase = 1600000;
 
     #endregion

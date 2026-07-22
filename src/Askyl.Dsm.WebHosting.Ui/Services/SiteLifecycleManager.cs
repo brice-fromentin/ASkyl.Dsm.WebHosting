@@ -171,6 +171,8 @@ public sealed class SiteLifecycleManager(
         // Dispose stale process handle from a previously exited process
         DisposeStaleProcess();
 
+        ValidateApplicationPath();
+
         if (!File.Exists(configuration.ApplicationRealPath))
         {
             logger.ApplicationBinaryNotFound(configuration.ApplicationRealPath);
@@ -269,6 +271,31 @@ public sealed class SiteLifecycleManager(
     #endregion
 
     #region Process Management
+
+    /// <summary>
+    /// Validates that the application path is within allowed Synology directory boundaries.
+    /// Throws <see cref="UnauthorizedAccessException"/> if the path escapes /volume*/shared/ or /volume*/web/.
+    /// </summary>
+    private void ValidateApplicationPath()
+    {
+        string path = configuration.ApplicationRealPath;
+
+        if (!path.StartsWith("/volume", StringComparison.Ordinal))
+        {
+            logger.ApplicationPathBlocked(path, configuration.Name);
+            throw new UnauthorizedAccessException(
+                $"Application path '{path}' is outside allowed directories (must start with /volume*)");
+        }
+
+        string? parentDir = Path.GetDirectoryName(path);
+
+        if (parentDir is null || (!parentDir.Contains("/shared/") && !parentDir.Contains("/web/")))
+        {
+            logger.ApplicationPathBlocked(path, configuration.Name);
+            throw new UnauthorizedAccessException(
+                $"Application directory '{parentDir}' is not within a shared folder or web directory");
+        }
+    }
 
     /// <summary>
     /// Stops the process with graceful shutdown and timeout-based force kill.

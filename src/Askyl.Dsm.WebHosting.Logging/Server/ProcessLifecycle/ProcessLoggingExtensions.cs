@@ -123,4 +123,10 @@ public static partial class ProcessLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1600019, Level = LogLevel.Warning, Message = "Site '{SiteName}' process {ProcessId} did not exit within {TimeoutMs}ms")]
     public static partial void ProcessWaitTimeout(this ILogger<ILogSiteLifecycleManager> logger, string siteName, int processId, long timeoutMs);
+
+    /// <summary>
+    /// Logs that the application path failed directory boundary validation.
+    /// </summary>
+    [LoggerMessage(EventId = 1600020, Level = LogLevel.Warning, Message = "Application path '{ApplicationPath}' blocked: outside allowed directories for site '{SiteName}'")]
+    public static partial void ApplicationPathBlocked(this ILogger<ILogSiteLifecycleManager> logger, string applicationPath, string siteName);
 }
