@@ -5,6 +5,8 @@ using Microsoft.CodeAnalysis.Testing;
 
 namespace Askyl.Dsm.WebHosting.Tests.Analyzers;
 
+// Net90: Analyzer.Testing (1.1.x) has no Net10 reference assemblies, and Net80 fails to resolve
+// System.Collections.Generic types (e.g. List<T>) used in test cases.
 public class BlankLineAnalyzerTests
 {
     [Fact]
@@ -12,7 +14,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             MarkupOptions = MarkupOptions.UseFirstDescriptor,
             TestCode = """
                 class C
@@ -34,7 +36,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -54,7 +56,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -76,7 +78,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -98,7 +100,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -124,7 +126,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -146,7 +148,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             MarkupOptions = MarkupOptions.UseFirstDescriptor,
             TestCode = """
                 using System.Collections.Generic;
@@ -170,7 +172,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -199,7 +201,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -222,7 +224,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             MarkupOptions = MarkupOptions.UseFirstDescriptor,
             TestCode = """
                 class C
@@ -245,7 +247,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             MarkupOptions = MarkupOptions.UseFirstDescriptor,
             TestCode = """
                 class C
@@ -267,7 +269,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             MarkupOptions = MarkupOptions.UseFirstDescriptor,
             TestCode = """
                 class C
@@ -289,7 +291,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             MarkupOptions = MarkupOptions.UseFirstDescriptor,
             TestCode = """
                 class C
@@ -312,7 +314,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -340,7 +342,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -363,7 +365,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -391,7 +393,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -414,7 +416,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -445,7 +447,7 @@ public class BlankLineAnalyzerTests
     {
         await new CSharpAnalyzerTest<BlankLineAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -479,7 +481,7 @@ public class BlankLineCodeFixTests
     {
         await new CSharpCodeFixTest<BlankLineAnalyzer, BlankLineCodeFixProvider, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             MarkupOptions = MarkupOptions.UseFirstDescriptor,
             TestCode = """
                 class C
@@ -514,7 +516,7 @@ public class BlankLineCodeFixTests
     {
         await new CSharpCodeFixTest<BlankLineAnalyzer, BlankLineCodeFixProvider, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -553,7 +555,7 @@ public class BlankLineCodeFixTests
     {
         await new CSharpCodeFixTest<BlankLineAnalyzer, BlankLineCodeFixProvider, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -595,7 +597,7 @@ public class BlankLineCodeFixTests
     {
         await new CSharpCodeFixTest<BlankLineAnalyzer, BlankLineCodeFixProvider, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {

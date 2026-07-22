@@ -4,6 +4,8 @@ using Microsoft.CodeAnalysis.Testing;
 
 namespace Askyl.Dsm.WebHosting.Tests.Analyzers;
 
+// Net90: Analyzer.Testing (1.1.x) has no Net10 reference assemblies, and Net80 fails to resolve
+// System.Collections.Generic types used in test cases.
 public class LoggerDirectCallAnalyzerTests
 {
     const string ILoggerStub = """
@@ -199,6 +201,6 @@ public class LoggerDirectCallAnalyzerTest
 {
     public LoggerDirectCallAnalyzerTest()
     {
-        ReferenceAssemblies = ReferenceAssemblies.Net.Net80;
+        ReferenceAssemblies = ReferenceAssemblies.Net.Net90;
     }
 }

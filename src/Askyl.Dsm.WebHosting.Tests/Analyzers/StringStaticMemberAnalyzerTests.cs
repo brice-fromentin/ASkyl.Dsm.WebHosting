@@ -4,6 +4,8 @@ using Microsoft.CodeAnalysis.Testing;
 
 namespace Askyl.Dsm.WebHosting.Tests.Analyzers;
 
+// Net90: Analyzer.Testing (1.1.x) has no Net10 reference assemblies, and Net80 fails to resolve
+// System.Collections.Generic types used in test cases.
 public class StringStaticMemberAnalyzerTests
 {
     [Fact]
@@ -11,7 +13,7 @@ public class StringStaticMemberAnalyzerTests
     {
         await new CSharpAnalyzerTest<StringStaticMemberAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -29,7 +31,7 @@ public class StringStaticMemberAnalyzerTests
     {
         await new CSharpAnalyzerTest<StringStaticMemberAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -47,7 +49,7 @@ public class StringStaticMemberAnalyzerTests
     {
         await new CSharpAnalyzerTest<StringStaticMemberAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -65,7 +67,7 @@ public class StringStaticMemberAnalyzerTests
     {
         await new CSharpAnalyzerTest<StringStaticMemberAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -83,7 +85,7 @@ public class StringStaticMemberAnalyzerTests
     {
         await new CSharpAnalyzerTest<StringStaticMemberAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -98,7 +100,7 @@ public class StringStaticMemberAnalyzerTests
     {
         await new CSharpAnalyzerTest<StringStaticMemberAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -113,7 +115,7 @@ public class StringStaticMemberAnalyzerTests
     {
         await new CSharpAnalyzerTest<StringStaticMemberAnalyzer, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                 class C
                 {
@@ -131,7 +133,7 @@ public class StringStaticMemberCodeFixTests
     {
         await new CSharpCodeFixTest<StringStaticMemberAnalyzer, StringStaticMemberCodeFixProvider, DefaultVerifier>
         {
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
             TestCode = """
                  using System;
 
