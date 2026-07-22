@@ -21,10 +21,11 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Per-user scoped session wrapper over DsmApiClient.
 /// Manages SID persistence in ISession, owns per-user TTL cache and preferences.
 /// </summary>
-public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpContextAccessor, ILogger<ILogDsmSession> logger) : IDsmSession
+public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpContextAccessor, ILogger<ILogDsmSession> logger) : IDsmSession, IAsyncDisposable
 {
     private readonly ISession _session = httpContextAccessor.HttpContext!.Session;
     private readonly DsmApiClient _client = client;
+    private readonly SemaphoreSlim _validationLock = new(1, 1);
     private bool _sessionValid;
     private DateTime _lastSessionValidation = DateTime.MinValue;
 
@@ -81,6 +82,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     /// <summary>
     /// Validates whether the current DSM session is still active on the server.
     /// Uses per-user TTL cache to avoid per-request API overhead.
+    /// Serialized via semaphore to prevent concurrent duplicate API calls.
     /// </summary>
     public async Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default)
     {
@@ -89,25 +91,42 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
             return false;
         }
 
-        if (Volatile.Read(ref _sessionValid) && (DateTime.UtcNow - _lastSessionValidation).TotalMinutes < ApplicationConstants.SessionValidationTtlMinutes)
+        if (Volatile.Read(ref _sessionValid) && IsWithinTtl())
         {
             return true;
         }
 
-        var parameters = new CoreUserGetParameters(new CoreUserGetEntry(Username));
-        var response = await _client.ExecuteAsync<CoreUserGetResponse>(Sid, parameters, cancellationToken);
+        await _validationLock.WaitAsync(cancellationToken);
 
-        if (response is null || response.Error?.Code == DsmConstants.ErrorCodeAuthenticationFailed)
+        try
         {
-            Volatile.Write(ref _sessionValid, false);
-            _lastSessionValidation = DateTime.UtcNow;
-            return false;
-        }
+            if (Volatile.Read(ref _sessionValid) && IsWithinTtl())
+            {
+                return true;
+            }
 
-        Volatile.Write(ref _sessionValid, true);
-        _lastSessionValidation = DateTime.UtcNow;
-        return true;
+            var parameters = new CoreUserGetParameters(new CoreUserGetEntry(Username));
+            var response = await _client.ExecuteAsync<CoreUserGetResponse>(Sid, parameters, cancellationToken);
+
+            if (response is null || response.Error?.Code == DsmConstants.ErrorCodeAuthenticationFailed)
+            {
+                Volatile.Write(ref _sessionValid, false);
+                _lastSessionValidation = DateTime.UtcNow;
+                return false;
+            }
+
+            Volatile.Write(ref _sessionValid, true);
+            _lastSessionValidation = DateTime.UtcNow;
+            return true;
+        }
+        finally
+        {
+            _validationLock.Release();
+        }
     }
+
+    private bool IsWithinTtl()
+        => (DateTime.UtcNow - _lastSessionValidation).TotalMinutes < ApplicationConstants.SessionValidationTtlMinutes;
 
     /// <summary>
     /// Clears session state and local cache.
@@ -194,5 +213,11 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         {
             logger.FetchUserPreferencesFailed(ex);
         }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _validationLock.Dispose();
+        return default;
     }
 }
