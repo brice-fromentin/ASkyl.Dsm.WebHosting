@@ -16,7 +16,7 @@ public class AuthorizeSessionAttribute : Attribute, IAsyncAuthorizationFilter
     {
         // Validate session against DSM server (with caching)
         var authService = context.HttpContext.RequestServices.GetRequiredService<IAuthenticationService>();
-        var result = await authService.IsAuthenticatedAsync();
+        var result = await authService.IsAuthenticatedAsync(context.HttpContext.RequestAborted);
 
         if (result.Value != true)
         {
