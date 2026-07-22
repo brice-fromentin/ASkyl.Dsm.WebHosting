@@ -17,9 +17,10 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="localizer">Localizer for user-facing strings.</param>
 /// <param name="versionsDetector">Service for detecting installed .NET versions.</param>
 /// <param name="downloader">Service for downloading .NET runtimes.</param>
-public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILocalizer localizer, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
+public partial class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILocalizer localizer, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
 {
-    private static readonly Regex VersionPattern = new(@"^\d+\.\d+(\.\d+)?$", RegexOptions.Compiled);
+    [GeneratedRegex(@"^\d+\.\d+(\.\d+)?$")]
+    private static partial Regex VersionPattern();
 
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
     {
@@ -139,5 +140,5 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
     }
 
     public bool IsValidVersionFormat(string version)
-        => !String.IsNullOrWhiteSpace(version) && VersionPattern.IsMatch(version);
+        => !String.IsNullOrWhiteSpace(version) && VersionPattern().IsMatch(version);
 }
