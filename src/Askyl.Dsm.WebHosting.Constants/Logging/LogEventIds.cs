@@ -77,7 +77,7 @@ static class LogEventIds
     /// <summary>ArchiveExtractorService — IDs 2100001–2100006.</summary>
     public const int ArchiveExtractorBase = 2100000;
 
-    /// <summary>VersionsDetectorService — IDs 2200001–2200004.</summary>
+    /// <summary>VersionsDetectorService — IDs 2200001–2200005.</summary>
     public const int VersionsDetectorBase = 2200000;
 
     /// <summary>AssemblyRuntimeDetector — IDs 2250001–2250005.</summary>

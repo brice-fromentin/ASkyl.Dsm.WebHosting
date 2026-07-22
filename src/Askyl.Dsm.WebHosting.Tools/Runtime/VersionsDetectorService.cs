@@ -143,7 +143,11 @@ public sealed partial class VersionsDetectorService(ILogger<ILogVersionsDetector
 
         process.Start();
         var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+        string? stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
         await process.WaitForExitAsync(cancellationToken);
+
+        if (!String.IsNullOrWhiteSpace(stderr))
+            logger.DotnetInfoStderrWarning(stderr!.Trim());
 
         return process.ExitCode == 0 ? output : String.Empty;
     }

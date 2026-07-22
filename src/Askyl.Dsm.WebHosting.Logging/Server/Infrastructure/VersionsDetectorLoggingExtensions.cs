@@ -33,4 +33,10 @@ public static partial class VersionsDetectorLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2200004, Level = LogLevel.Error, Message = "Failed to refresh framework cache. Keeping existing cached data.")]
     public static partial void FailedToRefreshFrameworkCache(this ILogger<ILogVersionsDetectorService> logger, Exception ex);
+
+    /// <summary>
+    /// Logs non-empty stderr output from dotnet --info command.
+    /// </summary>
+    [LoggerMessage(EventId = 2200005, Level = LogLevel.Warning, Message = "dotnet --info produced stderr output: {StderrOutput}")]
+    public static partial void DotnetInfoStderrWarning(this ILogger<ILogVersionsDetectorService> logger, string stderrOutput);
 }
