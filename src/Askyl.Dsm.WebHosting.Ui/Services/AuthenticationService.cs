@@ -20,11 +20,17 @@ public class AuthenticationService(IDsmSession dsmSession, ILogger<ILogAuthentic
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode, CancellationToken cancellationToken = default)
     {
         var model = new LoginCredentials(login, password, otpCode);
+        var connection = await dsmSession.ConnectAsync(model, cancellationToken);
 
-        if (!await dsmSession.ConnectAsync(model, cancellationToken))
+        if (!connection.Success)
         {
             logger.LoginFailed(login);
-            return AuthenticationResult.CreateNotAuthenticated(localizer[LK.Error.AuthenticationFailed]);
+
+            var reason = connection.ErrorCode == ApiErrorCode.Forbidden
+                ? LK.Error.AdministratorRequired
+                : LK.Error.AuthenticationFailed;
+
+            return AuthenticationResult.CreateNotAuthenticated(localizer[reason]);
         }
 
         var culture = DsmLanguageToCultureConverter.Convert(dsmSession.UserLanguage);

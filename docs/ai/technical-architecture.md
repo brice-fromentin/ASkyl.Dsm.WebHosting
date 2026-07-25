@@ -531,7 +531,11 @@ DotnetVersionService, WebSitesConfigurationService.
 4. DsmSession.AuthenticateAsync() → auth.login API call
 5. Response: SID stored per-request via HttpRequestMessage cookie header
 6. Session persisted in ASP.NET Core session (DsmSid + DsmUsername)
+7. Administrator check (see Session Validation) → non-administrators are disconnected and refused here
 ```
+
+`ConnectAsync` returns an `ApiResult` rather than a bool so the caller can distinguish invalid credentials
+(`ApiErrorCode.Unauthorized`) from a valid non-administrator (`ApiErrorCode.Forbidden`) and localize each.
 
 #### Session Validation
 
@@ -540,10 +544,15 @@ DotnetVersionService, WebSitesConfigurationService.
 1. Check local session keys (DsmSid + DsmUsername) exist
 2. Check 1-minute TTL validation cache
 3. If expired: call `SYNO.Core.User.get` with cached username
-4. Error `-4` = invalid/expired SID → clear session keys, return false
+4. Anything other than an explicit success → clear session keys, return false
 5. Cache result for 1 minute
 
 **API Choice:** `SYNO.API.Auth` only has `login`/`logout`. `SYNO.Core.User.get` is the lightest API that validates session state.
+
+**Why it fails closed:** `SYNO.Core.User.get` is admin-only, so this check is also the application's
+administrator gate — a non-administrator receives a permission error and is rejected. An earlier version
+accepted every outcome except error `-4`, which admitted exactly those users. `ConnectAsync` runs the same
+check at login so non-administrators are refused there rather than on their next request.
 
 #### FileStation Operations
 
@@ -601,7 +610,9 @@ Dialogs (Overlay)
 1. **Authorization Coverage** — `[AuthorizeSession]` on all API controllers; `AuthenticationController` intentionally public
 2. **Input Validation** — Path traversal prevention (`IsPathValid()` rejects `..`), version format validation, environment variable limits (256 key, 4096 value)
 3. **Rate Limiting** — Login: 5 attempts/minute/IP
-4. **Error Handling** — Generic messages to clients; full details server-side via `[LoggerMessage]`
+4. **Error Handling** — Generic messages to clients; full details server-side via `[LoggerMessage]`.
+   Deliberate exception: a login refused for lack of administrator rights returns a distinct localized
+   message, since the user must be told the application is admin-only rather than retry valid credentials.
 5. **No Client-Side Secrets** — All DSM API calls through server controllers
 
 ### File System Security

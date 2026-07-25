@@ -1,6 +1,7 @@
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
+using Askyl.Dsm.WebHosting.Data.Results;
 
 namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
@@ -26,11 +27,16 @@ public interface IDsmSession
 
     /// <summary>
     /// Authenticates against DSM, persists SID to session, and fetches user preferences.
+    /// Rejects users without administrator rights.
     /// </summary>
     /// <param name="model">The login credentials.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>True if authentication succeeded.</returns>
-    Task<bool> ConnectAsync(LoginCredentials model, CancellationToken cancellationToken = default);
+    /// <returns>
+    /// A success result, or a failure carrying <see cref="ApiErrorCode.Unauthorized"/> for invalid
+    /// credentials and <see cref="ApiErrorCode.Forbidden"/> for a non-administrator. Messages are
+    /// localized by the caller, so no message is set here.
+    /// </returns>
+    Task<ApiResult> ConnectAsync(LoginCredentials model, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validates whether the current DSM session is still active on the server.

@@ -1,5 +1,4 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Auth;
@@ -12,6 +11,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Auth;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.User;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.UserSettings;
+using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Network;
 
@@ -58,14 +58,15 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
 
     /// <summary>
     /// Authenticates against DSM, persists SID to session, and fetches user preferences.
+    /// Rejects users without administrator rights.
     /// </summary>
-    public async Task<bool> ConnectAsync(LoginCredentials model, CancellationToken cancellationToken = default)
+    public async Task<ApiResult> ConnectAsync(LoginCredentials model, CancellationToken cancellationToken = default)
     {
         var sid = await AuthenticateAsync(model, cancellationToken);
 
         if (sid is null)
         {
-            return false;
+            return new(false, null, ApiErrorCode.Unauthorized);
         }
 
         Sid = sid;
@@ -74,13 +75,24 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         Volatile.Write(ref _sessionValid, false);
         _lastSessionValidation = DateTime.MinValue;
 
+        // DSM authenticates any user, including non-administrators. Validating here rejects them at
+        // login rather than on the next request, and primes the TTL cache so this costs no extra call.
+        if (!await ValidateSessionAsync(cancellationToken))
+        {
+            logger.NotAnAdministrator(model.Login);
+            Disconnect();
+            return new(false, null, ApiErrorCode.Forbidden);
+        }
+
         await FetchUserPreferencesAsync(sid, cancellationToken);
 
-        return true;
+        return ApiResult.CreateSuccess();
     }
 
     /// <summary>
-    /// Validates whether the current DSM session is still active on the server.
+    /// Validates whether the current DSM session is still active on the server, and doubles as the
+    /// administrator check: SYNO.Core.User.get is admin-only, so a non-administrator gets a permission
+    /// error and is rejected. Fails closed — anything other than an explicit success invalidates.
     /// Uses per-user TTL cache to avoid per-request API overhead.
     /// Serialized via semaphore to prevent concurrent duplicate API calls.
     /// </summary>
@@ -108,7 +120,10 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
             var parameters = new CoreUserGetParameters(new CoreUserGetEntry(Username));
             var response = await _client.ExecuteAsync<CoreUserGetResponse>(Sid, parameters, cancellationToken);
 
-            if (response is null || response.Error?.Code == DsmConstants.ErrorCodeAuthenticationFailed)
+            // Fail closed: only an explicit success keeps the session alive. Treating every
+            // non-`-4` outcome as valid admitted permission errors — precisely the non-administrator
+            // sessions that should be rejected.
+            if (response?.Success != true)
             {
                 Volatile.Write(ref _sessionValid, false);
                 _lastSessionValidation = DateTime.UtcNow;

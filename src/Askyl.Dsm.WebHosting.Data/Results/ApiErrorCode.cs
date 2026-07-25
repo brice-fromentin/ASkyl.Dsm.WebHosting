@@ -33,5 +33,10 @@ public enum ApiErrorCode
     /// <summary>
     /// Request was invalid (bad parameters).
     /// </summary>
-    BadRequest = 400
+    BadRequest = 400,
+
+    /// <summary>
+    /// The caller was authenticated but lacks the required privilege.
+    /// </summary>
+    Forbidden = 403
 }

@@ -2,16 +2,17 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
+using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
+using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -50,6 +51,8 @@ public class DsmSessionTests : IDisposable
         client.ApiInformations.Replace(new Dictionary<string, ApiInformation>
         {
             { ApiConstants.Auth, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
+            { ApiConstants.CoreUser, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
+            { ApiConstants.CoreUserSettings, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
             { "test", new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } }
         });
 
@@ -94,6 +97,123 @@ public class DsmSessionTests : IDisposable
 
         // Assert
         Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ValidateSessionAsync_SuccessfulResponse_ReturnsTrue()
+    {
+        // Arrange
+        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
+        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+
+        SetupHttpResponse("{\"success\":true,\"data\":{\"users\":[{\"name\":\"admin\",\"uid\":1024}]}}");
+
+        var session = CreateSession();
+
+        // Act
+        var result = await session.ValidateSessionAsync();
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task ValidateSessionAsync_PermissionError_ReturnsFalse()
+    {
+        // Arrange — 105 is "insufficient user privilege", the code a non-administrator gets
+        // from SYNO.Core.User.get. Every code other than -4 used to be read as a valid session.
+        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
+        _session.Set(ApplicationConstants.DsmUsernameKey, "guest");
+
+        SetupHttpResponse($"{{\"success\":false,\"error\":{{\"code\":{DsmConstants.ErrorCodePermissionDenied}}}}}");
+
+        var session = CreateSession();
+
+        // Act
+        var result = await session.ValidateSessionAsync();
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ValidateSessionAsync_NonOkStatusCode_ReturnsFalse()
+    {
+        // Arrange
+        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
+        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+
+        SetupHttpResponse(String.Empty, HttpStatusCode.InternalServerError);
+
+        var session = CreateSession();
+
+        // Act
+        var result = await session.ValidateSessionAsync();
+
+        // Assert
+        Assert.False(result);
+    }
+
+    #endregion
+
+    #region ConnectAsync
+
+    [Fact]
+    public async Task ConnectAsync_NonAdministrator_ReturnsForbiddenAndClearsSession()
+    {
+        // Arrange — login succeeds for any DSM user, then the admin-only SYNO.Core.User.get
+        // returns a permission error, which must reject the login outright.
+        SetupHttpResponses(
+            "{\"success\":true,\"data\":{\"sid\":\"test-sid\"}}",
+            $"{{\"success\":false,\"error\":{{\"code\":{DsmConstants.ErrorCodePermissionDenied}}}}}");
+
+        var session = CreateSession();
+
+        // Act
+        var result = await session.ConnectAsync(new LoginCredentials("guest", "password", null));
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(ApiErrorCode.Forbidden, result.ErrorCode);
+        Assert.Null(_session.Get(ApplicationConstants.DsmSessionKey));
+        Assert.Null(_session.Get(ApplicationConstants.DsmUsernameKey));
+    }
+
+    [Fact]
+    public async Task ConnectAsync_InvalidCredentials_ReturnsUnauthorized()
+    {
+        // Arrange — DSM rejects the login itself, which must stay distinct from the
+        // non-administrator case so the UI can show a different message.
+        SetupHttpResponse($"{{\"success\":false,\"error\":{{\"code\":{DsmConstants.ErrorCodeAuthenticationFailed}}}}}");
+
+        var session = CreateSession();
+
+        // Act
+        var result = await session.ConnectAsync(new LoginCredentials("admin", "wrong", null));
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(ApiErrorCode.Unauthorized, result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task ConnectAsync_Administrator_ReturnsSuccessAndPersistsSession()
+    {
+        // Arrange
+        SetupHttpResponses(
+            "{\"success\":true,\"data\":{\"sid\":\"test-sid\"}}",
+            "{\"success\":true,\"data\":{\"users\":[{\"name\":\"admin\",\"uid\":1024}]}}",
+            "{\"success\":true,\"data\":{\"personal\":{}}}");
+
+        var session = CreateSession();
+
+        // Act
+        var result = await session.ConnectAsync(new LoginCredentials("admin", "password", null));
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal("test-sid", _session.Get(ApplicationConstants.DsmSessionKey));
+        Assert.Equal("admin", _session.Get(ApplicationConstants.DsmUsernameKey));
     }
 
     #endregion
@@ -155,6 +275,39 @@ public class DsmSessionTests : IDisposable
     TestParameters CreateTestParameters()
     {
         return new TestParameters();
+    }
+
+    void SetupHttpResponse(string json, HttpStatusCode statusCode = HttpStatusCode.OK)
+    {
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(json)
+            });
+    }
+
+    /// <summary>
+    /// Queues one JSON body per successive HTTP call, in order.
+    /// </summary>
+    void SetupHttpResponses(params string[] jsonBodies)
+    {
+        var sequence = _httpHandler.Protected()
+            .SetupSequence<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>());
+
+        foreach (var json in jsonBodies)
+        {
+            sequence = sequence.ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json)
+            });
+        }
     }
 
     sealed class TestParameters : IApiParameters

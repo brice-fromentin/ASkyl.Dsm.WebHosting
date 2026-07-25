@@ -367,6 +367,9 @@
   <data name="Error_AuthenticationFailed" xml:space="preserve">
     <value>Authentication failed</value>
   </data>
+  <data name="Error_AdministratorRequired" xml:space="preserve">
+    <value>This application is restricted to DSM administrators.</value>
+  </data>
   <data name="Error_OperationFailed" xml:space="preserve">
     <value>The operation failed. Check the logs for details.</value>
   </data>
