@@ -61,4 +61,5 @@ MD028/no-blanks-blockquote: true
 
 MD031/blanks-around-fences: true
 
-MD041/first-line-heading: false
+# Note: use the plain rule key — markdownlint silently ignores the "MD041/first-line-heading" form.
+MD041: false
