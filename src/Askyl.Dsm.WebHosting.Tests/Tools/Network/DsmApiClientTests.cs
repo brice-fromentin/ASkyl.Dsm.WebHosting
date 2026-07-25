@@ -8,7 +8,6 @@ using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
