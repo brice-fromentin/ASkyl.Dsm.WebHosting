@@ -8,11 +8,24 @@ public interface ILogLicenseService { }
 /// <summary>Category marker for ILogger&lt;T&gt; — no implementation required.</summary>
 public interface ILogCultureManager { }
 
+/// <summary>Category marker for ILogger&lt;T&gt; — no implementation required.</summary>
+public interface ILogClient { }
+
 /// <summary>
 /// Structured logging extension methods for client-side (WASM) events.
 /// </summary>
 public static partial class ClientLoggingExtensions
 {
+    #region Client Utilities — 7100001–7100010
+
+    /// <summary>
+    /// Logs a failed JS interop call.
+    /// </summary>
+    [LoggerMessage(EventId = 7100001, Level = LogLevel.Warning, Message = "JS interop call failed")]
+    public static partial void JsInteropFailed(this ILogger<ILogClient> logger, Exception exception);
+
+    #endregion
+
     #region LicenseService — 7000001
 
     /// <summary>

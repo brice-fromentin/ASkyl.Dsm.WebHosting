@@ -7,7 +7,7 @@ using Askyl.Dsm.WebHosting.Tools.Threading;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
-public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationService> logger) : ISemaphoreOwner
+public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationService> logger, string? configurationDirectory = null) : ISemaphoreOwner
 {
     #region ISemaphoreOwner Implementation
 
@@ -17,11 +17,11 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
 
     #region Fields
 
-    private readonly string _configurationFilePath = Path.Combine(AppContext.BaseDirectory, WebSiteConstants.ConfigurationFileName);
+    private readonly string _configurationFilePath = Path.Combine(configurationDirectory ?? AppContext.BaseDirectory, WebSiteConstants.ConfigurationFileName);
 
     private WebSitesConfiguration? _cachedConfiguration;
 
-    private bool _initialized = false;
+    private volatile bool _initialized = false;
 
     #endregion
 
@@ -61,7 +61,7 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
         // Test write access to base directory (needed for configuration file)
         try
         {
-            var testPath = Path.Combine(baseDirectory, ".write_test");
+            var testPath = Path.Combine(baseDirectory, ApplicationConstants.WriteTestFileName);
             File.WriteAllText(testPath, "");
             File.Delete(testPath);
         }
@@ -123,12 +123,15 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
 
     private async Task SaveConfigurationAsync(WebSitesConfiguration collection, CancellationToken cancellationToken)
     {
+        string tempPath = _configurationFilePath + WebSiteConstants.ConfigurationTempExtension;
+
         try
         {
             collection.LastModified = DateTime.UtcNow;
             var jsonContent = JsonSerializer.Serialize(collection, JsonOptionsCache.WriteIndented);
 
-            await File.WriteAllTextAsync(_configurationFilePath, jsonContent, cancellationToken);
+            await File.WriteAllTextAsync(tempPath, jsonContent, cancellationToken);
+            File.Move(tempPath, _configurationFilePath, true);
 
             logger.ConfigurationSaved(_configurationFilePath);
         }
@@ -137,6 +140,13 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
             logger.FailedToSaveConfiguration(ex, _configurationFilePath);
 
             throw;
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
         }
     }
 

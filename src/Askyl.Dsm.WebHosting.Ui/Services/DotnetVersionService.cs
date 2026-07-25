@@ -17,9 +17,10 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="localizer">Localizer for user-facing strings.</param>
 /// <param name="versionsDetector">Service for detecting installed .NET versions.</param>
 /// <param name="downloader">Service for downloading .NET runtimes.</param>
-public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILocalizer localizer, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
+public partial class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILocalizer localizer, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
 {
-    private static readonly Regex VersionPattern = new(@"^\d+\.\d+(\.\d+)?$", RegexOptions.Compiled);
+    [GeneratedRegex(@"^\d+\.\d+(\.\d+)?$")]
+    private static partial Regex VersionPattern();
 
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
     {
@@ -27,6 +28,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
         {
             var versions = await versionsDetector.GetInstalledVersionsAsync();
             return InstalledVersionsResult.CreateSuccess(versions);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -42,6 +47,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
             var isInstalled = versionsDetector.IsChannelInstalled(channel, frameworkType);
             return ApiResultBool.CreateSuccess(isInstalled);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FailedToCheckChannelInstalled(ex, channel);
@@ -56,6 +65,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
             var isInstalled = versionsDetector.IsVersionInstalled(version, frameworkType);
             return ApiResultBool.CreateSuccess(isInstalled);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FailedToCheckVersionInstalled(ex, version);
@@ -67,9 +80,9 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
     /// Forces a cache refresh by re-executing dotnet --info.
     /// Call this after install/uninstall operations.
     /// </summary>
-    public async Task RefreshCacheAsync()
+    public async Task RefreshCacheAsync(CancellationToken cancellationToken = default)
     {
-        await versionsDetector.RefreshCacheAsync();
+        await versionsDetector.RefreshCacheAsync(cancellationToken);
     }
 
     public async Task<ChannelsResult> GetChannelsAsync(CancellationToken cancellationToken = default)
@@ -84,6 +97,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
 
             var channelList = channels.ToList();
             return ChannelsResult.CreateSuccess(channelList);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -111,6 +128,10 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
 
             return ReleasesResult.CreateSuccess(releaseList);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.FailedToGetReleases(ex, channel);
@@ -119,5 +140,5 @@ public class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILoc
     }
 
     public bool IsValidVersionFormat(string version)
-        => !String.IsNullOrWhiteSpace(version) && VersionPattern.IsMatch(version);
+        => !String.IsNullOrWhiteSpace(version) && VersionPattern().IsMatch(version);
 }

@@ -1,5 +1,7 @@
 .dialog-grid-container {
-    width: 580px;
+    width: 100%;
+    max-width: 580px;
     height: 364px;
+    max-height: 60vh;
     overflow: hidden;
 }

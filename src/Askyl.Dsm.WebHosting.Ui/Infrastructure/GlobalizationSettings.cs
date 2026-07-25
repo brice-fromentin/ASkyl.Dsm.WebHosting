@@ -10,26 +10,29 @@ namespace Askyl.Dsm.WebHosting.Ui.Infrastructure;
 /// <summary>
 /// Server-only globalization settings — discovers supported cultures from satellite resources at construction time.
 /// </summary>
-public class GlobalizationSettings : IGlobalizationSettings
+public class GlobalizationSettings(ILogger<ILogGlobalizationSettings> logger) : IGlobalizationSettings
 {
-    public GlobalizationSettings(ILogger<ILogGlobalizationSettings> logger)
-    {
-        SupportedCultures = DiscoverSupportedCultures(logger);
-        SupportedCultureNamesJson = JsonSerializer.Serialize(SupportedCultures.Select(c => c.Name).ToArray());
-    }
+    private readonly (CultureInfo[] Cultures, string Json) _data = DiscoverSupportedCulturesWithJson(logger);
 
-    public CultureInfo[] SupportedCultures { get; }
+    public CultureInfo[] SupportedCultures => _data.Cultures;
 
-    public string SupportedCultureNamesJson { get; }
+    public string SupportedCultureNamesJson => _data.Json;
 
     public string? SystemCulture { get; set; }
 
-    private static CultureInfo[] DiscoverSupportedCultures(ILogger<ILogGlobalizationSettings> logger)
+    private static (CultureInfo[] Cultures, string Json) DiscoverSupportedCulturesWithJson(ILogger<ILogGlobalizationSettings> log)
+    {
+        var cultures = DiscoverSupportedCultures(log);
+        var json = JsonSerializer.Serialize(cultures.Select(c => c.Name).ToArray());
+        return (cultures, json);
+    }
+
+    private static CultureInfo[] DiscoverSupportedCultures(ILogger<ILogGlobalizationSettings> log)
     {
         var assembly = typeof(SharedResource).Assembly;
         var assemblyName = assembly.GetName().Name!;
 
-        logger.DiscoveringCultures(assemblyName);
+        log.DiscoveringCultures(assemblyName);
 
         var assemblyPath = assembly.Location;
 
@@ -42,8 +45,8 @@ public class GlobalizationSettings : IGlobalizationSettings
         var satelliteAssemblyName = $"{assemblyName}.resources.dll";
 
         var validCultures = CultureInfo.GetCultures(CultureTypes.AllCultures)
-                                       .Select(c => c.Name)
-                                       .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                                        .Select(c => c.Name)
+                                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var cultureNames = Directory.GetDirectories(assemblyDirectory)
                                     .Select(dir => Path.GetFileName(dir)!)
@@ -64,11 +67,11 @@ public class GlobalizationSettings : IGlobalizationSettings
             }
             catch (CultureNotFoundException)
             {
-                logger.CultureSkippedNotSupported(name);
+                log.CultureSkippedNotSupported(name);
             }
         }
 
-        logger.CulturesDiscovered(cultures.Count);
+        log.CulturesDiscovered(cultures.Count);
 
         return [.. cultures];
     }

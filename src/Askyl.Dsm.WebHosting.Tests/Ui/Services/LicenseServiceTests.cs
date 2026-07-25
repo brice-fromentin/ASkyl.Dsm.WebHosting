@@ -10,6 +10,8 @@ public class LicenseServiceTests
 {
     private readonly Mock<ILogger<ILogLicenseService>> _logger;
 
+    static readonly string[] ExpectedLicenses = ["Application.txt", "FluentUI Blazor.txt", "NET.txt", "Serilog.txt"];
+
     public LicenseServiceTests()
     {
         _logger = new Mock<ILogger<ILogLicenseService>>();
@@ -41,7 +43,7 @@ public class LicenseServiceTests
         var licenses = await service.GetLicensesAsync();
 
         // Assert
-        Assert.Equal(4, licenses.Count);
+        Assert.Equal(ExpectedLicenses.Length, licenses.Count);
         Assert.Contains(licenses, l => l.Name == "Application");
         Assert.Contains(licenses, l => l.Name == "NET");
     }
@@ -69,7 +71,7 @@ public class LicenseServiceTests
         await service.GetLicensesAsync();
 
         // Assert
-        Assert.Equal(4, handler.RequestCount);
+        Assert.Equal(ExpectedLicenses.Length, handler.RequestCount);
     }
 
     #endregion

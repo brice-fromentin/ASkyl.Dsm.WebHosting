@@ -15,12 +15,27 @@ public static class ReverseProxyConstants
     /// </summary>
     public const int DefaultProxyTimeoutSeconds = 60;
 
+    /// <summary>
+    /// Default proxy HTTP version for reverse proxy connections (HTTP/1.1).
+    /// </summary>
+    public const int DefaultProxyHttpVersion = 1;
+
     #region ACL
 
     /// <summary>
     /// ACL permission type for allowing access.
     /// </summary>
     public const string AclPermissionTypeAllow = "allow";
+
+    /// <summary>
+    /// ACL owner type value for group-based access control entries.
+    /// </summary>
+    public const string AclOwnerTypeGroup = "group";
+
+    /// <summary>
+    /// ACL owner name for the HTTP web server group.
+    /// </summary>
+    public const string AclOwnerNameHttp = "http";
 
     #endregion
 

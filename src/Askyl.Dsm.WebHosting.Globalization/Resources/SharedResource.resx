@@ -136,6 +136,12 @@
   <data name="Home_EditButton" xml:space="preserve">
     <value>Edit</value>
   </data>
+  <data name="Home_StartButton" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="Home_StopButton" xml:space="preserve">
+    <value>Stop</value>
+  </data>
   <data name="Home_DotnetVersionButton" xml:space="preserve">
     <value>.NET Version</value>
   </data>
@@ -165,6 +171,12 @@
   </data>
   <data name="Home_GridColumnState" xml:space="preserve">
     <value>State</value>
+  </data>
+  <data name="Home_StateRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="Home_StateStopped" xml:space="preserve">
+    <value>Stopped</value>
   </data>
   <data name="Home_DeleteConfirmation" xml:space="preserve">
     <value>Are you sure you want to delete the website '{0}'? This action cannot be undone.</value>
@@ -451,6 +463,12 @@
   <data name="Error_IncompatibleFramework" xml:space="preserve">
     <value>Incompatible framework</value>
   </data>
+  <data name="Error_RuntimeNotInstalled" xml:space="preserve">
+    <value>Requires .NET {0}, but this runtime is not installed</value>
+  </data>
+  <data name="Error_RuntimeDetectionFailed" xml:space="preserve">
+    <value>Could not detect .NET runtime version from assembly</value>
+  </data>
   <data name="Error_InstanceNotFound" xml:space="preserve">
     <value>Instance not found</value>
   </data>
@@ -543,6 +561,12 @@
   </data>
   <data name="WebSiteConfiguration_HostNameRequired" xml:space="preserve">
     <value>Host name is required</value>
+  </data>
+  <data name="WebSiteConfiguration_InvalidHostName" xml:space="preserve">
+    <value>Invalid host name format. Use alphanumeric characters, hyphens, and dots (e.g., example.com)</value>
+  </data>
+  <data name="WebSiteConfiguration_InvalidPath" xml:space="preserve">
+    <value>Application path must be an absolute path starting with /</value>
   </data>
 
   <!-- LoginCredentials Validation -->

@@ -1,13 +1,15 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Licensing
 @using Askyl.Dsm.WebHosting.Globalization
 
+@inherits WorkingStateBase
 @implements IDialogContentComponent
-@implements IWorkingState
 
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @inject ILicenseService LicenseService
 @inject ILocalizer localizer
 
-<LoadingOverlay WorkingStateComponent="@this" />
+<LoadingOverlay WorkingState="@this" />
+
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">@localizer[LK.Licenses.DialogTitle]</FluentLabel>
@@ -38,18 +40,10 @@
     }
 </FluentDialogBody>
 
+
+
 @code
 {
-    #region IWorkingState Implementation
-
-    public bool IsWorking { get; set; }
-
-    public string Message { get; set; } = String.Empty;
-
-    public void NotifyStateChanged() => StateHasChanged();
-
-    #endregion
-
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 

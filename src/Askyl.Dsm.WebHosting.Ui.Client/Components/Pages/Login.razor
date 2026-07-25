@@ -1,7 +1,8 @@
 @page "/login"
 
-@implements IWorkingState
+@inherits WorkingStateBase
 
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @using System.Runtime.InteropServices
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Data.Domain.Authentication
@@ -15,11 +16,12 @@
 @inject ILocalizer localizer
 @inject ICultureManager cultureManager
 
-<LoadingOverlay WorkingStateComponent="@this" />
-
 <PageTitle>@localizer[LK.Login.PageTitle]</PageTitle>
 
-<FluentDialog Modal="true" TrapFocus="true" PreventScroll="true">
+<LoadingOverlay WorkingState="@this" />
+
+
+    <FluentDialog Modal="true" TrapFocus="true" PreventScroll="true" Open="true">
     <EditForm Model="@Model" OnValidSubmit="Authenticate">
         <FluentValidator />
 
@@ -36,23 +38,14 @@
         </FluentStack>
 
         <FluentDialogFooter>
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="flex-grow: 1;">@localizer[LK.Common.OK]</FluentButton>
+            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Fill="Fill.Horizontal">@localizer[LK.Common.OK]</FluentButton>
         </FluentDialogFooter>
     </EditForm>
 </FluentDialog>
 
+
 @code
 {
-    #region IWorkingState Implementation
-
-    public bool IsWorking { get; set; }
-
-    public string Message { get; set; } = String.Empty;
-
-    public void NotifyStateChanged() => StateHasChanged();
-
-    #endregion
-
     private LoginCredentials Model = new();
 
     protected override async Task OnInitializedAsync()

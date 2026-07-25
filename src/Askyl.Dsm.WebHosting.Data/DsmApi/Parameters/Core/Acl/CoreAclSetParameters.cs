@@ -10,7 +10,7 @@ public class CoreAclSetParameters(CoreAclSet? entry = null)
 
     public override int Version => 1;
 
-    public override string Method => "set";
+    public override string Method => ApiConstants.MethodSet;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }

@@ -2,16 +2,18 @@
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
 
+@inherits WorkingStateBase
 @implements IDialogContentComponent
-@implements IWorkingState
 
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @inject IDialogService DialogService
 @inject IDotnetVersionService DotnetVersionService
 @inject IFrameworkManagementService ManagementService
 @inject IToastService ToastService
 @inject ILocalizer localizer
 
-<LoadingOverlay WorkingStateComponent="@this" />
+<LoadingOverlay WorkingState="@this" />
+
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">@localizer[LK.AspNetReleases.DialogTitle]</FluentLabel>
@@ -57,18 +59,10 @@
     </div>
 </FluentDialogBody>
 
+
+
 @code
 {
-    #region IWorkingState Implementation
-
-    public bool IsWorking { get; set; }
-
-    public string Message { get; set; } = String.Empty;
-
-    public void NotifyStateChanged() => StateHasChanged();
-
-    #endregion
-
     [CascadingParameter]
     public FluentDialog Dialog { get; set; } = default!;
 
@@ -200,7 +194,7 @@
         }
         finally
         {
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 

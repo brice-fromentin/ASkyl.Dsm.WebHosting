@@ -44,6 +44,8 @@ public static class LK
         public const string PageTitle = "Home_PageTitle";
         public const string AddButton = "Home_AddButton";
         public const string EditButton = "Home_EditButton";
+        public const string StartButton = "Home_StartButton";
+        public const string StopButton = "Home_StopButton";
         public const string DotnetVersionButton = "Home_DotnetVersionButton";
         public const string AspNetOnlineButton = "Home_AspNetOnlineButton";
         public const string LicensesButton = "Home_LicensesButton";
@@ -54,6 +56,8 @@ public static class LK
         public const string GridColumnFramework = "Home_GridColumnFramework";
         public const string GridColumnInternalPort = "Home_GridColumnInternalPort";
         public const string GridColumnState = "Home_GridColumnState";
+        public const string StateRunning = "Home_StateRunning";
+        public const string StateStopped = "Home_StateStopped";
         public const string LoadingWebsites = "Home_LoadingWebsites";
         public const string DeleteConfirmation = "Home_DeleteConfirmation";
         public const string ErrorDeleting = "Home_ErrorDeleting";
@@ -204,6 +208,8 @@ public static class LK
         public const string SiteAlreadyRunning = "Error_SiteAlreadyRunning";
         public const string ApplicationBinaryNotFound = "Error_ApplicationBinaryNotFound";
         public const string IncompatibleFramework = "Error_IncompatibleFramework";
+        public const string RuntimeNotInstalled = "Error_RuntimeNotInstalled";
+        public const string RuntimeDetectionFailed = "Error_RuntimeDetectionFailed";
         public const string InstanceNotFound = "Error_InstanceNotFound";
         public const string NoApplicationPath = "Error_NoApplicationPath";
         public const string SiteNotFound = "Error_SiteNotFound";
@@ -248,6 +254,8 @@ public static class LK
         public const string EnvironmentRequired = "WebSiteConfiguration_EnvironmentRequired";
         public const string ProcessTimeoutRange = "WebSiteConfiguration_ProcessTimeoutRange";
         public const string HostNameRequired = "WebSiteConfiguration_HostNameRequired";
+        public const string InvalidHostName = "WebSiteConfiguration_InvalidHostName";
+        public const string InvalidPath = "WebSiteConfiguration_InvalidPath";
     }
 
     /// <summary>Validation messages for LoginCredentials model.</summary>

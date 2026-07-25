@@ -1,7 +1,8 @@
 ﻿@page "/"
 
-@implements IWorkingState
+@inherits WorkingStateBase
 
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Constants.WebApi
@@ -19,9 +20,10 @@
 
 <PageTitle>@localizer[LK.Home.PageTitle]</PageTitle>
 
-<LoadingOverlay WorkingStateComponent="@this" />
+<LoadingOverlay WorkingState="@this" />
 
-<FluentToolbar Class="full-width">
+
+    <FluentToolbar Class="full-width">
     <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral" OnClick="AddWebSite">
         @localizer[LK.Home.AddButton]
     </FluentButton>
@@ -32,10 +34,10 @@
         @localizer[LK.Common.Delete]
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
-    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance">
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance" AriaLabel="@localizer[LK.Home.StartButton]">
         <FluentIcon Value="@(new IconsRegular20.Play())" Color="Color.Success" />
     </FluentButton>
-    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="StopSelectedInstance">
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="StopSelectedInstance" AriaLabel="@localizer[LK.Home.StopButton]">
         <FluentIcon Value="@(new IconsRegular20.Stop())" Color="Color.Error" />
     </FluentButton>
     <FluentSpacer />
@@ -57,7 +59,7 @@
     </FluentButton>
 </FluentToolbar>
 
-<AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="@LoadInstancesAsync" OnRowClick="@HandleInstanceSelected" OnRowDoubleClick="@HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr 1fr">
+<AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="LoadInstancesAsync" OnRowClick="HandleInstanceSelected" OnRowDoubleClick="HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr 1fr">
     <ChildContent>
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnName]" Property="@(i => i.Configuration.Name)" Sortable="true" />
         <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnPath]" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
@@ -65,21 +67,15 @@
             @(GetFrameworkDisplay(context))
         </TemplateColumn>
         <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="@localizer[LK.Home.GridColumnInternalPort]" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnState]" Property="@(i => i.State)" Sortable="true" />
+        <TemplateColumn TGridItem="WebSiteInstance" Title="@localizer[LK.Home.GridColumnState]">
+            @(context.IsRunning ? localizer[LK.Home.StateRunning] : localizer[LK.Home.StateStopped])
+        </TemplateColumn>
     </ChildContent>
 </AutoDataGrid>
 
+
 @code
 {
-    #region IWorkingState Implementation
-
-    public bool IsWorking { get; set; }
-    public string Message { get; set; } = String.Empty;
-
-    public void NotifyStateChanged() => StateHasChanged();
-
-    #endregion
-
     private List<WebSiteInstance> Instances { get; set; } = [];
 
     private WebSiteInstance? SelectedInstance { get; set; }
@@ -116,8 +112,6 @@
         }
     }
 
-    private async Task EditWebSiteInstance(WebSiteInstance instance) => await EditWebSite(instance);
-
     private void HandleInstanceDoubleClicked(WebSiteInstance instance)
     {
         SelectedInstance = instance;
@@ -127,8 +121,6 @@
     private async Task AddWebSite() => await ShowWebSiteConfigurationDialogAsync(new WebSiteInstance());
 
     private async Task EditWebSite() => await ShowWebSiteConfigurationDialogAsync(SelectedInstance);
-
-    private async Task EditWebSite(WebSiteInstance instance) => await EditWebSite();
 
     private void HandleInstanceSelected(WebSiteInstance instance) => SelectedInstance = instance;
 
@@ -295,7 +287,6 @@
             ShowSafeErrorToast(localizer[LK.Home.ErrorLoggingOut, ex.Message]);
         }
     }
-
 
     #region Security Helpers
 

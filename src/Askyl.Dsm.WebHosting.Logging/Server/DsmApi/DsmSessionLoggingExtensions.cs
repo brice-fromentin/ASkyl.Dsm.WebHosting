@@ -37,8 +37,8 @@ public static partial class DsmSessionLoggingExtensions
     /// <summary>
     /// Logs that fetching user preferences failed.
     /// </summary>
-    [LoggerMessage(EventId = 2900005, Level = LogLevel.Debug, Message = "Failed to fetch user preferences: {Error}")]
-    public static partial void FetchUserPreferencesFailed(this ILogger<ILogDsmSession> logger, string error);
+    [LoggerMessage(EventId = 2900005, Level = LogLevel.Debug, Message = "Failed to fetch user preferences")]
+    public static partial void FetchUserPreferencesFailed(this ILogger<ILogDsmSession> logger, Exception exception);
 
     /// <summary>
     /// Logs that the session is being disconnected.

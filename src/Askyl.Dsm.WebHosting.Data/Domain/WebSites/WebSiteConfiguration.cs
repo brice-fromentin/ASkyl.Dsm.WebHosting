@@ -36,7 +36,7 @@ public sealed class WebSiteConfiguration
     /// </summary>
     public int ProcessTimeoutSeconds { get; set; } = WebSiteConstants.DefaultProcessTimeoutSeconds;
 
-    public Dictionary<string, string> AdditionalEnvironmentVariables { get; set; } = [];
+    public Dictionary<string, string> AdditionalEnvironmentVariables { get; init; } = [];
 
     #endregion
 

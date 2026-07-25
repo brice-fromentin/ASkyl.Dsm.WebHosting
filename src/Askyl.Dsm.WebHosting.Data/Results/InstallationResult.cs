@@ -14,12 +14,12 @@ public sealed class InstallationResult(bool success, string? message, string? ve
     /// <summary>
     /// The installed version if the operation was successful. Null if failed.
     /// </summary>
-    public string? Version { get; set; } = version;
+    public string? Version { get; init; } = version;
 
     /// <summary>
     /// Timestamp when installation was completed. Null if failed.
     /// </summary>
-    public DateTime? InstalledAt { get; set; } = installedAt;
+    public DateTime? InstalledAt { get; init; } = installedAt;
 
     /// <summary>
     /// Creates a successful installation result with the installed version and timestamp.

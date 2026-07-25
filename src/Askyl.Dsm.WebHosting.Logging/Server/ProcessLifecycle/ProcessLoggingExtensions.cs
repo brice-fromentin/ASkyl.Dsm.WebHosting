@@ -123,4 +123,10 @@ public static partial class ProcessLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1600019, Level = LogLevel.Warning, Message = "Site '{SiteName}' process {ProcessId} did not exit within {TimeoutMs}ms")]
     public static partial void ProcessWaitTimeout(this ILogger<ILogSiteLifecycleManager> logger, string siteName, int processId, long timeoutMs);
+
+    /// <summary>
+    /// Logs an unexpected failure while executing a queued lifecycle command. The command loop keeps running.
+    /// </summary>
+    [LoggerMessage(EventId = 1600020, Level = LogLevel.Error, Message = "Lifecycle command '{CommandName}' failed unexpectedly for site '{SiteName}'")]
+    public static partial void LifecycleCommandFailed(this ILogger<ILogSiteLifecycleManager> logger, Exception ex, string commandName, string siteName);
 }

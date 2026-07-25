@@ -1,18 +1,24 @@
+@using System.Collections.Immutable
 @using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Logging
+@using Microsoft.JSInterop
 
+@inherits WorkingStateBase
 @implements IDialogContentComponent
-@implements IWorkingState
 
+@using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @inject IDialogService DialogService
 @inject IFileSystemService FileSystemService
 @inject ITreeContentService TreeContentService
 @inject IJSRuntime JSRuntime
+@inject ILogger<ILogClient> logger
 @inject ILocalizer localizer
 
-<LoadingOverlay WorkingStateComponent="@this" />
+<LoadingOverlay WorkingState="@this" />
+
 
 <FluentDialogHeader ShowDismiss="true">
     <FluentLabel Typo="Typography.H2">@localizer[LK.FileSelection.DialogTitle]</FluentLabel>
@@ -73,6 +79,8 @@
     </FluentStack>
 </FluentDialogFooter>
 
+
+
 @code
 {
     #region Parameters
@@ -92,15 +100,6 @@
     private string? _selectedPath;
     private FsEntry? _selectedFile;
     private ITreeViewItem? SelectedTreeItem { get; set; }
-
-    #endregion
-
-    #region IWorkingState Implementation
-
-    public bool IsWorking { get; set; }
-    public string Message { get; set; } = String.Empty;
-
-    public void NotifyStateChanged() => StateHasChanged();
 
     #endregion
 
@@ -210,7 +209,15 @@
     {
         if (file.IsDirectory)
         {
-            await JSRuntime.InvokeVoidAsync("selectChildItem", file.Path, Path.GetDirectoryName(file.Path));
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("selectChildItem", file.Path, Path.GetDirectoryName(file.Path));
+            }
+            catch (JSException ex)
+            {
+                logger.JsInteropFailed(ex);
+            }
+
             return;
         }
 
@@ -256,6 +263,63 @@
 
     #region Display Helpers
 
+    private static readonly ImmutableDictionary<string, Icon> s_fileIcons = new Dictionary<string, Icon>(StringComparer.Ordinal)
+    {
+        { ".css", new IconsRegular16.Code() },
+        { ".htm", new IconsRegular16.Code() },
+        { ".html", new IconsRegular16.Code() },
+        { ".js", new IconsRegular16.Code() },
+        { ".json", new IconsRegular16.Code() },
+        { ".ts", new IconsRegular16.Code() },
+        { ".c", new IconsRegular16.CodeBlock() },
+        { ".cpp", new IconsRegular16.CodeBlock() },
+        { ".cs", new IconsRegular16.CodeBlock() },
+        { ".h", new IconsRegular16.CodeBlock() },
+        { ".java", new IconsRegular16.CodeBlock() },
+        { ".php", new IconsRegular16.CodeBlock() },
+        { ".py", new IconsRegular16.CodeBlock() },
+        { ".vb", new IconsRegular16.CodeBlock() },
+        { ".log", new IconsRegular16.Document() },
+        { ".md", new IconsRegular16.Document() },
+        { ".txt", new IconsRegular16.Document() },
+        { ".pdf", new IconsRegular16.DocumentPdf() },
+        { ".cfg", new IconsRegular16.DocumentSettings() },
+        { ".config", new IconsRegular16.DocumentSettings() },
+        { ".ini", new IconsRegular16.DocumentSettings() },
+        { ".xml", new IconsRegular16.DocumentSettings() },
+        { ".doc", new IconsRegular16.DocumentText() },
+        { ".docx", new IconsRegular16.DocumentText() },
+        { ".xls", new IconsRegular16.DocumentTable() },
+        { ".xlsx", new IconsRegular16.DocumentTable() },
+        { ".bmp", new IconsRegular16.Image() },
+        { ".gif", new IconsRegular16.Image() },
+        { ".jpeg", new IconsRegular16.Image() },
+        { ".jpg", new IconsRegular16.Image() },
+        { ".png", new IconsRegular16.Image() },
+        { ".webp", new IconsRegular16.Image() },
+        { ".aac", new IconsRegular16.MusicNote2() },
+        { ".flac", new IconsRegular16.MusicNote2() },
+        { ".mp3", new IconsRegular16.MusicNote2() },
+        { ".ogg", new IconsRegular16.MusicNote2() },
+        { ".wav", new IconsRegular16.MusicNote2() },
+        { ".ppt", new IconsRegular16.SlideText() },
+        { ".pptx", new IconsRegular16.SlideText() },
+        { ".avi", new IconsRegular16.Video() },
+        { ".flv", new IconsRegular16.Video() },
+        { ".mkv", new IconsRegular16.Video() },
+        { ".mov", new IconsRegular16.Video() },
+        { ".mp4", new IconsRegular16.Video() },
+        { ".wmv", new IconsRegular16.Video() },
+        { ".7z", new IconsRegular16.FolderZip() },
+        { ".gz", new IconsRegular16.FolderZip() },
+        { ".rar", new IconsRegular16.FolderZip() },
+        { ".tar", new IconsRegular16.FolderZip() },
+        { ".zip", new IconsRegular16.FolderZip() }
+    }.ToImmutableDictionary();
+
+    private static readonly Icon s_folderIcon = new IconsRegular16.Folder();
+    private static readonly Icon s_defaultIcon = new IconsRegular16.Document();
+
     private static string GetFileSize(FsEntry file, ILocalizer localizer)
     {
         if (file.IsDirectory || file.Size is null)
@@ -289,27 +353,11 @@
     {
         if (file.IsDirectory)
         {
-            return new IconsRegular16.Folder();
+            return s_folderIcon;
         }
 
         var extension = Path.GetExtension(file.Name).ToLowerInvariant();
-
-        return extension switch
-        {
-            ".txt" or ".md" or ".log" => new IconsRegular16.Document(),
-            ".pdf" => new IconsRegular16.DocumentPdf(),
-            ".doc" or ".docx" => new IconsRegular16.DocumentText(),
-            ".xls" or ".xlsx" => new IconsRegular16.DocumentTable(),
-            ".ppt" or ".pptx" => new IconsRegular16.SlideText(),
-            ".zip" or ".rar" or ".7z" or ".tar" or ".gz" => new IconsRegular16.FolderZip(),
-            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" => new IconsRegular16.Image(),
-            ".mp4" or ".avi" or ".mov" or ".wmv" or ".flv" or ".mkv" => new IconsRegular16.Video(),
-            ".mp3" or ".wav" or ".flac" or ".aac" or ".ogg" => new IconsRegular16.MusicNote2(),
-            ".html" or ".htm" or ".css" or ".js" or ".ts" or ".json" => new IconsRegular16.Code(),
-            ".cs" or ".vb" or ".cpp" or ".c" or ".h" or ".java" or ".py" or ".php" => new IconsRegular16.CodeBlock(),
-            ".xml" or ".config" or ".ini" or ".cfg" => new IconsRegular16.DocumentSettings(),
-            _ => new IconsRegular16.Document()
-        };
+        return s_fileIcons.GetValueOrDefault(extension, s_defaultIcon);
     }
 
     #endregion

@@ -43,8 +43,8 @@ public static partial class FrameworkManagementLoggingExtensions
     /// <summary>
     /// Logs an uninstall failure with specific error message.
     /// </summary>
-    [LoggerMessage(EventId = 1400006, Level = LogLevel.Warning, Message = "Uninstall failed - {Message}")]
-    public static partial void UninstallFailed(this ILogger<ILogFrameworkManagementService> logger, string message);
+    [LoggerMessage(EventId = 1400006, Level = LogLevel.Warning, Message = "Uninstall failed")]
+    public static partial void UninstallFailed(this ILogger<ILogFrameworkManagementService> logger, Exception exception);
 
     /// <summary>
     /// Logs an error during ASP.NET Core uninstallation.

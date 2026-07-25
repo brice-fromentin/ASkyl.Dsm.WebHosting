@@ -10,7 +10,7 @@ public static class SystemDefaults
     /// <summary>
     /// Path to Synology system configuration file.
     /// </summary>
-    public const string ConfigurationFileName = "/etc/synoinfo.conf";
+    public const string SynoInfoConfPath = "/etc/synoinfo.conf";
 
     #endregion
 

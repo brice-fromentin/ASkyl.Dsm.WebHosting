@@ -10,7 +10,7 @@ public class AuthLoginParameters(AuthenticateLogin? entry = null)
 
     public override int Version => 6;
 
-    public override string Method => "login";
+    public override string Method => ApiConstants.MethodLogin;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }

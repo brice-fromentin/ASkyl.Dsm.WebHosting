@@ -4,9 +4,9 @@ namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 public interface IReverseProxyManagerService
 {
-    Task CreateAsync(WebSiteConfiguration site);
+    Task CreateAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default);
 
-    Task UpdateAsync(WebSiteConfiguration site);
+    Task UpdateAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default);
 
-    Task DeleteAsync(WebSiteConfiguration site);
+    Task DeleteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default);
 }

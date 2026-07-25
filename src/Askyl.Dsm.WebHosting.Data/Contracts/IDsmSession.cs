@@ -27,12 +27,17 @@ public interface IDsmSession
     /// <summary>
     /// Authenticates against DSM, persists SID to session, and fetches user preferences.
     /// </summary>
-    Task<bool> ConnectAsync(LoginCredentials model);
+    /// <param name="model">The login credentials.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if authentication succeeded.</returns>
+    Task<bool> ConnectAsync(LoginCredentials model, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validates whether the current DSM session is still active on the server.
     /// </summary>
-    Task<bool> ValidateSessionAsync();
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the session is valid.</returns>
+    Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Clears session state and local cache.
@@ -42,10 +47,17 @@ public interface IDsmSession
     /// <summary>
     /// Executes an API call with the session's SID attached.
     /// </summary>
-    Task<R?> ExecuteAsync<R>(IApiParameters parameters) where R : IApiResponse;
+    /// <param name="parameters">The API parameters.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <typeparam name="R">The response type.</typeparam>
+    /// <returns>The API response or null.</returns>
+    Task<R?> ExecuteAsync<R>(IApiParameters parameters, CancellationToken cancellationToken = default) where R : IApiResponse;
 
     /// <summary>
     /// Executes a simple API call with the session's SID attached.
     /// </summary>
-    Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters);
+    /// <param name="parameters">The API parameters.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The API response or null.</returns>
+    Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters, CancellationToken cancellationToken = default);
 }

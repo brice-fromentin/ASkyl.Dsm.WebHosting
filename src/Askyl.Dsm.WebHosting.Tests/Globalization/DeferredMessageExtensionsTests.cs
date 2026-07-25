@@ -13,6 +13,7 @@ public class DeferredMessageExtensionsTests
     public void WithLocalizedMessage_ResolvesMessageInCurrentCulture()
     {
         var originalCulture = CultureInfo.CurrentUICulture;
+
         try
         {
             // Arrange
@@ -39,6 +40,7 @@ public class DeferredMessageExtensionsTests
     public void WithLocalizedMessage_RespectsCultureSwitchAtValidationTime()
     {
         var originalCulture = CultureInfo.CurrentUICulture;
+
         try
         {
             // Arrange - validator constructed under en-US
@@ -82,6 +84,7 @@ public class DeferredMessageExtensionsTests
     public void WithLocalizedMessage_ResolvesExistingResourceCorrectly()
     {
         var originalCulture = CultureInfo.CurrentUICulture;
+
         try
         {
             // Arrange

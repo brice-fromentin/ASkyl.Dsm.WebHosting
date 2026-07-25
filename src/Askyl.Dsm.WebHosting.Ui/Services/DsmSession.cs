@@ -21,10 +21,11 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Per-user scoped session wrapper over DsmApiClient.
 /// Manages SID persistence in ISession, owns per-user TTL cache and preferences.
 /// </summary>
-public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpContextAccessor, ILogger<ILogDsmSession> logger) : IDsmSession
+public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpContextAccessor, ILogger<ILogDsmSession> logger) : IDsmSession, IAsyncDisposable
 {
     private readonly ISession _session = httpContextAccessor.HttpContext!.Session;
     private readonly DsmApiClient _client = client;
+    private readonly SemaphoreSlim _validationLock = new(1, 1);
     private bool _sessionValid;
     private DateTime _lastSessionValidation = DateTime.MinValue;
 
@@ -58,9 +59,9 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     /// <summary>
     /// Authenticates against DSM, persists SID to session, and fetches user preferences.
     /// </summary>
-    public async Task<bool> ConnectAsync(LoginCredentials model)
+    public async Task<bool> ConnectAsync(LoginCredentials model, CancellationToken cancellationToken = default)
     {
-        var sid = await AuthenticateAsync(model);
+        var sid = await AuthenticateAsync(model, cancellationToken);
 
         if (sid is null)
         {
@@ -70,10 +71,10 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         Sid = sid;
         Username = model.Login;
 
-        _sessionValid = false;
+        Volatile.Write(ref _sessionValid, false);
         _lastSessionValidation = DateTime.MinValue;
 
-        await FetchUserPreferencesAsync(sid);
+        await FetchUserPreferencesAsync(sid, cancellationToken);
 
         return true;
     }
@@ -81,33 +82,51 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     /// <summary>
     /// Validates whether the current DSM session is still active on the server.
     /// Uses per-user TTL cache to avoid per-request API overhead.
+    /// Serialized via semaphore to prevent concurrent duplicate API calls.
     /// </summary>
-    public async Task<bool> ValidateSessionAsync()
+    public async Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default)
     {
         if (String.IsNullOrEmpty(Sid) || String.IsNullOrEmpty(Username))
         {
             return false;
         }
 
-        if (_sessionValid && (DateTime.UtcNow - _lastSessionValidation).TotalMinutes < ApplicationConstants.SessionValidationTtlMinutes)
+        if (Volatile.Read(ref _sessionValid) && IsWithinTtl())
         {
             return true;
         }
 
-        var parameters = new CoreUserGetParameters(new CoreUserGetEntry(Username));
-        var response = await _client.ExecuteAsync<CoreUserGetResponse>(Sid, parameters);
+        await _validationLock.WaitAsync(cancellationToken);
 
-        if (response is null || response.Error?.Code == DsmConstants.ErrorCodeAuthenticationFailed)
+        try
         {
-            _sessionValid = false;
-            _lastSessionValidation = DateTime.UtcNow;
-            return false;
-        }
+            if (Volatile.Read(ref _sessionValid) && IsWithinTtl())
+            {
+                return true;
+            }
 
-        _sessionValid = true;
-        _lastSessionValidation = DateTime.UtcNow;
-        return true;
+            var parameters = new CoreUserGetParameters(new CoreUserGetEntry(Username));
+            var response = await _client.ExecuteAsync<CoreUserGetResponse>(Sid, parameters, cancellationToken);
+
+            if (response is null || response.Error?.Code == DsmConstants.ErrorCodeAuthenticationFailed)
+            {
+                Volatile.Write(ref _sessionValid, false);
+                _lastSessionValidation = DateTime.UtcNow;
+                return false;
+            }
+
+            Volatile.Write(ref _sessionValid, true);
+            _lastSessionValidation = DateTime.UtcNow;
+            return true;
+        }
+        finally
+        {
+            _validationLock.Release();
+        }
     }
+
+    private bool IsWithinTtl()
+        => (DateTime.UtcNow - _lastSessionValidation).TotalMinutes < ApplicationConstants.SessionValidationTtlMinutes;
 
     /// <summary>
     /// Clears session state and local cache.
@@ -117,7 +136,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         Sid = null;
         Username = null;
 
-        _sessionValid = false;
+        Volatile.Write(ref _sessionValid, false);
         _lastSessionValidation = DateTime.MinValue;
 
         UserLanguage = null;
@@ -128,14 +147,14 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     /// <summary>
     /// Executes an API call with the session's SID attached.
     /// </summary>
-    public Task<R?> ExecuteAsync<R>(IApiParameters parameters) where R : IApiResponse
-        => _client.ExecuteAsync<R>(Sid, parameters);
+    public Task<R?> ExecuteAsync<R>(IApiParameters parameters, CancellationToken cancellationToken = default) where R : IApiResponse
+        => _client.ExecuteAsync<R>(Sid, parameters, cancellationToken);
 
     /// <summary>
     /// Executes a simple API call with the session's SID attached.
     /// </summary>
-    public Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters)
-        => _client.ExecuteAsync<ApiResponseBase<object>>(Sid, parameters);
+    public Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters, CancellationToken cancellationToken = default)
+        => _client.ExecuteAsync<ApiResponseBase<object>>(Sid, parameters, cancellationToken);
 
     private void UpdateSessionValue(string key, string? value)
     {
@@ -149,11 +168,11 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         }
     }
 
-    private async Task<string?> AuthenticateAsync(LoginCredentials model)
+    private async Task<string?> AuthenticateAsync(LoginCredentials model, CancellationToken cancellationToken)
     {
         var login = new AuthenticateLogin(model.Login, model.Password, model.OtpCode);
         var parameters = new AuthLoginParameters(login);
-        var response = await _client.ExecuteAsync<AuthLoginResponse>(null, parameters);
+        var response = await _client.ExecuteAsync<AuthLoginResponse>(null, parameters, cancellationToken);
 
         if (response?.Success != true || response.Data is null)
         {
@@ -166,12 +185,12 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         return response.Data.Sid;
     }
 
-    private async Task FetchUserPreferencesAsync(string sid)
+    private async Task FetchUserPreferencesAsync(string sid, CancellationToken cancellationToken)
     {
         try
         {
             var parameters = new CoreUserSettingsParameters();
-            var response = await _client.ExecuteAsync<CoreUserSettingsResponse>(sid, parameters);
+            var response = await _client.ExecuteAsync<CoreUserSettingsResponse>(sid, parameters, cancellationToken);
 
             var personal = response?.Data?.Personal;
 
@@ -192,7 +211,13 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         }
         catch (Exception ex)
         {
-            logger.FetchUserPreferencesFailed(ex.Message);
+            logger.FetchUserPreferencesFailed(ex);
         }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _validationLock.Dispose();
+        return default;
     }
 }

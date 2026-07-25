@@ -15,4 +15,33 @@ public static class ValidationConstants
     /// Maximum allowed length for an environment variable value.
     /// </summary>
     public const int EnvVarValueMaxLength = 4096;
+
+    #region Path Validation
+
+    /// <summary>
+    /// Literal path traversal segment used to detect directory escape attempts.
+    /// </summary>
+    public const string PathTraversalLiteral = "..";
+
+    /// <summary>
+    /// URL-encoded dot sequence used to detect obfuscated path traversal.
+    /// </summary>
+    public const string PathTraversalEncodedDot = "%2e";
+
+    /// <summary>
+    /// URL-encoded forward slash used to detect obfuscated path traversal.
+    /// </summary>
+    public const string PathTraversalEncodedSlash = "%2f";
+
+    /// <summary>
+    /// Double-encoded dot sequence (%252e) that decodes to %2e then '.' after ASP.NET Core URL decoding.
+    /// </summary>
+    public const string PathTraversalDoubleEncodedDot = "%252e";
+
+    /// <summary>
+    /// Double-encoded forward slash (%252f) that decodes to %2f then '/' after ASP.NET Core URL decoding.
+    /// </summary>
+    public const string PathTraversalDoubleEncodedSlash = "%252f";
+
+    #endregion
 }

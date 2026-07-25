@@ -17,11 +17,11 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 public class AuthenticationService(IDsmSession dsmSession, ILogger<ILogAuthenticationService> logger, ILocalizer localizer) : IAuthenticationService
 {
     /// <inheritdoc/>
-    public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode)
+    public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode, CancellationToken cancellationToken = default)
     {
         var model = new LoginCredentials(login, password, otpCode);
 
-        if (!await dsmSession.ConnectAsync(model))
+        if (!await dsmSession.ConnectAsync(model, cancellationToken))
         {
             logger.LoginFailed(login);
             return AuthenticationResult.CreateNotAuthenticated(localizer[LK.Error.AuthenticationFailed]);
@@ -36,7 +36,7 @@ public class AuthenticationService(IDsmSession dsmSession, ILogger<ILogAuthentic
     }
 
     /// <inheritdoc/>
-    public Task<ApiResult> LogoutAsync()
+    public Task<ApiResult> LogoutAsync(CancellationToken cancellationToken = default)
     {
         dsmSession.Disconnect();
         logger.UserLoggedOut();
@@ -44,9 +44,9 @@ public class AuthenticationService(IDsmSession dsmSession, ILogger<ILogAuthentic
     }
 
     /// <inheritdoc/>
-    public async Task<ApiResultBool> IsAuthenticatedAsync()
+    public async Task<ApiResultBool> IsAuthenticatedAsync(CancellationToken cancellationToken = default)
     {
-        if (!await dsmSession.ValidateSessionAsync())
+        if (!await dsmSession.ValidateSessionAsync(cancellationToken))
         {
             logger.SessionValidationFailed();
             dsmSession.Disconnect();

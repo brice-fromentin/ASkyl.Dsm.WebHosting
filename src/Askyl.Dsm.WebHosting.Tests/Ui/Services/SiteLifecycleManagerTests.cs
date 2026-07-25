@@ -16,6 +16,7 @@ namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 /// Tests for SiteLifecycleManager using fake IProcessRunner/IProcessHandle.
 /// Validates the IProcessRunner abstraction enables testable process lifecycle management.
 /// </summary>
+[Trait("Category", "FileSystem")]
 public class SiteLifecycleManagerTests : IDisposable
 {
     private readonly Mock<ILogger<ILogSiteLifecycleManager>> _logger;
@@ -39,23 +40,39 @@ public class SiteLifecycleManagerTests : IDisposable
         _tempDir = Path.Combine(Path.GetTempPath(), $"asl_wh_{Guid.NewGuid():N}");
         _tempDll = Path.Combine(_tempDir, "MyApp.dll");
 
-        Directory.CreateDirectory(_tempDir);
-        File.WriteAllText(_tempDll, "");
-
-        _configuration = new WebSiteConfiguration
+        try
         {
-            Id = Guid.NewGuid(),
-            Name = "TestSite",
-            ApplicationPath = _tempDir,
-            ApplicationRealPath = _tempDll,
-            InternalPort = 5001,
-            HostName = "test.local",
-            Environment = "Production",
-            ProcessTimeoutSeconds = 1,
-            AdditionalEnvironmentVariables = new Dictionary<string, string> { ["CUSTOM_VAR"] = "test" }
-        };
+            Directory.CreateDirectory(_tempDir);
+            File.WriteAllText(_tempDll, "");
 
-        _processRunner.HandleToReturn = _processHandle;
+            _configuration = new WebSiteConfiguration
+            {
+                Id = Guid.NewGuid(),
+                Name = "TestSite",
+                ApplicationPath = _tempDir,
+                ApplicationRealPath = _tempDll,
+                InternalPort = 5001,
+                HostName = "test.local",
+                Environment = "Production",
+                ProcessTimeoutSeconds = 1,
+                AdditionalEnvironmentVariables = new Dictionary<string, string> { ["CUSTOM_VAR"] = "test" }
+            };
+
+            _processRunner.HandleToReturn = _processHandle;
+        }
+        catch
+        {
+            try
+            {
+                Directory.Delete(_tempDir, recursive: true);
+            }
+            catch
+            {
+                // Best-effort cleanup
+            }
+
+            throw;
+        }
     }
 
     private SiteLifecycleManager CreateManager()
@@ -456,8 +473,9 @@ public class SiteLifecycleManagerTests : IDisposable
     {
         // Arrange
         _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath))
-            .Returns(new AssemblyRuntimeInfo(
-                "9.0", false, "Requires .NET 9.0, but this runtime is not installed"));
+            .Returns(new AssemblyRuntimeInfo("9.0", false));
+        _localizer.Setup(l => l[LK.Error.RuntimeNotInstalled, "9.0"])
+            .Returns("Requires .NET 9.0, but this runtime is not installed");
         var manager = CreateManager();
 
         // Act
@@ -476,7 +494,7 @@ public class SiteLifecycleManagerTests : IDisposable
     {
         // Arrange
         _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath))
-            .Returns(new AssemblyRuntimeInfo("8.0", true, null));
+            .Returns(new AssemblyRuntimeInfo("8.0", true));
         var manager = CreateManager();
 
         // Act

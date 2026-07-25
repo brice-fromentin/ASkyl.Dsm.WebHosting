@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Constants.WebApi;
@@ -13,8 +14,11 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// </summary>
 /// <param name="httpClientFactory">HttpClientFactory to create the named client.</param>
 /// <param name="localizer">Localizer for user-facing strings.</param>
-public class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocalizer localizer) : IDotnetVersionService
+public partial class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocalizer localizer) : IDotnetVersionService
 {
+    [GeneratedRegex(@"^\d+\.\d+(\.\d+)?$")]
+    private static partial Regex VersionPattern();
+
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
 
     /// <inheritdoc/>
@@ -47,14 +51,12 @@ public class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocaliz
     }
 
     /// <inheritdoc/>
-    public async Task RefreshCacheAsync()
+    public async Task RefreshCacheAsync(CancellationToken cancellationToken = default)
     {
         // Client-side: Just reload versions which will get fresh data from server
-        await GetInstalledVersionsAsync(CancellationToken.None);
+        await GetInstalledVersionsAsync(cancellationToken);
     }
 
     public bool IsValidVersionFormat(string version)
-    {
-        throw new NotImplementedException();
-    }
+        => !String.IsNullOrWhiteSpace(version) && VersionPattern().IsMatch(version);
 }

@@ -1,0 +1,88 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Runs on pushes, PRs and tags. Tags are included on purpose: `release` gates on this job,
+  # so skipping it on tags would skip the release along with it.
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/Askyl.Dsm.WebHosting.slnx
+
+      - name: Check format
+        run: dotnet format --no-restore --verify-no-changes ./src/Askyl.Dsm.WebHosting.slnx
+
+      - name: Build
+        run: dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
+
+      - name: Test
+        run: dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build
+
+      # `dotnet list package --vulnerable` always exits 0, so its JSON output is inspected
+      # instead. JSON also keeps this locale-independent, unlike grepping the table text.
+      - name: Check for vulnerable packages
+        working-directory: src
+        run: |
+          dotnet list package --vulnerable --include-transitive --format json > vulnerable.json
+          count=$(jq '[.projects[].frameworks?[]? | (.topLevelPackages?[]?, .transitivePackages?[]?)] | length' vulnerable.json)
+
+          if [ "$count" -gt 0 ]; then
+            jq -r '.projects[] | .path as $p | .frameworks?[]? | (.topLevelPackages?[]?, .transitivePackages?[]?) | "\($p): \(.id) \(.resolvedVersion) [\([.vulnerabilities[].severity] | join(", "))]"' vulnerable.json
+            echo "::error::$count vulnerable package(s) detected"
+            exit 1
+          fi
+
+          echo "No vulnerable packages."
+
+  # Format, build and test are not repeated here: `needs: verify` already ran them on this SHA.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y pigz jq
+
+      - name: Cache .NET runtimes
+        uses: actions/cache@v4
+        with:
+          path: src/spk-project/package/runtimes/downloads
+          key: ${{ runner.os }}-runtimes-${{ hashFiles('src/Askyl.Dsm.WebHosting.Ui/appsettings.json') }}
+
+      - name: Build SPK package
+        run: bash src/scripts/build-spk.sh
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          SPK_FILE=$(ls dist/*.spk | head -1)
+          gh release create "$TAG" \
+            --title "Release ${TAG}" \
+            --generate-notes \
+            "$SPK_FILE"

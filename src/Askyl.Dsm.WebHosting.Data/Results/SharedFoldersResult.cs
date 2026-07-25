@@ -27,4 +27,3 @@ public sealed class SharedFoldersResult(bool success, string? message, List<FsEn
     public static SharedFoldersResult CreateFailure(string message)
         => new(false, message, null, ApiErrorCode.Failure);
 }
-

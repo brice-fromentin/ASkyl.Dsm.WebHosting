@@ -1,5 +1,4 @@
 using Askyl.Dsm.WebHosting.Data.Contracts;
-using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
@@ -215,6 +214,34 @@ public class FileSystemServiceTests
         Assert.Empty(_dsmSession.ExecuteCalls);
     }
 
+    [Fact]
+    public async Task GetDirectoryContentsAsync_DoubleEncodedPathTraversal_ReturnsFailure()
+    {
+        // Arrange
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetDirectoryContentsAsync("/volume1/%252e%252e/etc/passwd", directoryOnly: true);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Empty(_dsmSession.ExecuteCalls);
+    }
+
+    [Fact]
+    public async Task GetDirectoryContentsAsync_MixedEncodingPathTraversal_ReturnsFailure()
+    {
+        // Arrange
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetDirectoryContentsAsync("/volume1/%2e%2e%252f..%252fetc", directoryOnly: true);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Empty(_dsmSession.ExecuteCalls);
+    }
+
     #endregion
 
     #region SetHttpGroupPermissionsAsync
@@ -254,6 +281,20 @@ public class FileSystemServiceTests
         Assert.Empty(_dsmSession.ExecuteCalls);
     }
 
+    [Fact]
+    public async Task SetHttpGroupPermissionsAsync_DoubleEncodedPathTraversal_ReturnsFailure()
+    {
+        // Arrange
+        var service = CreateService();
+
+        // Act
+        var result = await service.SetHttpGroupPermissionsAsync("/volume1/%252e%252e/etc/passwd", isDirectory: false);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Empty(_dsmSession.ExecuteCalls);
+    }
+
     #endregion
 
     #region FakeDsmSession
@@ -283,14 +324,21 @@ public class FileSystemServiceTests
             _sequences[typeof(T).Name] = new Queue<object?>(responses.Cast<object?>());
         }
 
-        public Task<bool> ConnectAsync(Askyl.Dsm.WebHosting.Data.Domain.Authentication.LoginCredentials model) => Task.FromResult(true);
-        public Task<bool> ValidateSessionAsync() => Task.FromResult(true);
+        public Task<bool> ConnectAsync(Askyl.Dsm.WebHosting.Data.Domain.Authentication.LoginCredentials model, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default) => Task.FromResult(true);
         public void Disconnect() { }
 
-        public Task<R?> ExecuteAsync<R>(IApiParameters parameters) where R : IApiResponse
+        public Task<R?> ExecuteAsync<R>(IApiParameters parameters, CancellationToken cancellationToken = default) where R : IApiResponse
         {
+            var allowedNames = new[] { "SYNO.FileStation.List", "SYNO.Core.ACL" };
+
+            if (!allowedNames.Contains(parameters.Name))
+            {
+                throw new ArgumentException($"Unexpected API name: {parameters.Name}", nameof(parameters));
+            }
+
             var key = typeof(R).Name;
-            ExecuteCalls.Add(key);
+            ExecuteCalls.Add($"{parameters.Name}/{parameters.Method}");
 
             if (_sequences.TryGetValue(key, out var queue) && queue!.Count > 0)
             {
@@ -305,7 +353,7 @@ public class FileSystemServiceTests
             return Task.FromResult<R?>(default!);
         }
 
-        public Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters)
+        public Task<ApiResponseBase<object>?> ExecuteSimpleAsync(IApiParameters parameters, CancellationToken cancellationToken = default)
         {
             ExecuteCalls.Add("ApiResponseBase<object>");
             return Task.FromResult<ApiResponseBase<object>?>(null);

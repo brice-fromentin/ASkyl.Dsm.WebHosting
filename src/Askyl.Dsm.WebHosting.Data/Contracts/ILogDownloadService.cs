@@ -8,6 +8,7 @@ public interface ILogDownloadService
     /// <summary>
     /// Creates a ZIP archive stream containing application logs, package logs, and debug logs.
     /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A task representing the asynchronous operation, with a MemoryStream containing the ZIP archive.</returns>
-    Task<Stream> CreateLogZipStreamAsync();
+    Task<Stream> CreateLogZipStreamAsync(CancellationToken cancellationToken = default);
 }

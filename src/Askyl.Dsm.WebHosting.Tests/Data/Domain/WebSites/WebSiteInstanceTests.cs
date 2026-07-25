@@ -38,30 +38,6 @@ public class WebSiteInstanceTests
 
     #endregion
 
-    #region State Property
-
-    [Fact]
-    public void State_WhenRunning_ReturnsRunning()
-    {
-        // Arrange
-        var instance = new WebSiteInstance { IsRunning = true };
-
-        // Act & Assert
-        Assert.Equal("Running", instance.State);
-    }
-
-    [Fact]
-    public void State_WhenStopped_ReturnsStopped()
-    {
-        // Arrange
-        var instance = new WebSiteInstance { IsRunning = false };
-
-        // Act & Assert
-        Assert.Equal("Stopped", instance.State);
-    }
-
-    #endregion
-
     #region Id Property
 
     [Fact]

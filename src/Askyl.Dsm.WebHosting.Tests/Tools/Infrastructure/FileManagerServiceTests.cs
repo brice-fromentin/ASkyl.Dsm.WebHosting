@@ -6,6 +6,7 @@ using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
 
+[Trait("Category", "FileSystem")]
 public class FileManagerServiceTests : IDisposable
 {
     private readonly string _tempBase;

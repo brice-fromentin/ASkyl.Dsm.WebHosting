@@ -10,7 +10,7 @@ public class FileStationListParameters(FileStationList? entry = null)
 
     public override int Version => 2;
 
-    public override string Method => "list";
+    public override string Method => ApiConstants.MethodList;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }

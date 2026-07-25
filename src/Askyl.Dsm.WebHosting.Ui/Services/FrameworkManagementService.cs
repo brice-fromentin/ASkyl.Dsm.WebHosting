@@ -34,10 +34,14 @@ public class FrameworkManagementService(
             archiveExtractor.Decompress(fileName);
 
             // Force cache refresh to detect the new installation
-            await dotnetVersionService.RefreshCacheAsync();
+            await dotnetVersionService.RefreshCacheAsync(cancellationToken);
 
             logger.FrameworkInstalled(version);
             return InstallationResult.CreateSuccess(localizer[LK.Success.InstallationCompleted]);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -71,20 +75,24 @@ public class FrameworkManagementService(
             fileManager.DeleteDirectory($"shared/Microsoft.NETCore.App/{version}");
 
             // Force cache refresh to detect the removal
-            await dotnetVersionService.RefreshCacheAsync();
+            await dotnetVersionService.RefreshCacheAsync(cancellationToken);
 
             logger.FrameworkUninstalled(version);
             return InstallationResult.CreateSuccess(localizer[LK.Success.UninstallationCompleted]);
         }
         catch (LastReleaseUninstallException ex)
         {
-            logger.UninstallFailed(ex.Message);
+            logger.UninstallFailed(ex);
             return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
         catch (MissingChannelConfigurationException ex)
         {
-            logger.UninstallFailed(ex.Message);
+            logger.UninstallFailed(ex);
             return InstallationResult.CreateFailure(localizer[LK.Error.OperationFailed]);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -105,12 +113,12 @@ public class FrameworkManagementService(
         var installedResult = await dotnetVersionService.GetInstalledVersionsAsync(cancellationToken);
         var installed = installedResult.Value ?? [];
 
-        var channelPrefix = configuredChannel + ".";
+        var channelPrefix = $"{configuredChannel}.";
 
         var releasesInChannel = installed.Where(f => f.Type == DotNetFrameworkTypes.AspNetCore && f.Version.StartsWith(channelPrefix, StringComparison.OrdinalIgnoreCase))
-                                         .Select(f => f.Version)
-                                         .Distinct(StringComparer.OrdinalIgnoreCase)
-                                         .ToList();
+                                      .Select(f => f.Version)
+                                      .Distinct(StringComparer.OrdinalIgnoreCase)
+                                      .ToList();
 
         if (releasesInChannel.Count <= 1 && releasesInChannel.Contains(version, StringComparer.OrdinalIgnoreCase))
         {

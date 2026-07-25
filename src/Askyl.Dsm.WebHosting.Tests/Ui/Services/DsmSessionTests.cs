@@ -6,10 +6,12 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -30,7 +32,7 @@ public class DsmSessionTests : IDisposable
     {
         _httpHandler = new Mock<HttpMessageHandler>();
         _httpClient = new HttpClient(_httpHandler.Object) { BaseAddress = new Uri("https://localhost:5001/") };
-        _settingsService = new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object);
+        _settingsService = FakeDsmSettings.Create();
         _clientLogger = new Mock<ILogger<ILogDsmApiClient>>();
         _session = new FakeSession();
         _httpContextAccessor = new Mock<IHttpContextAccessor>();
@@ -62,6 +64,7 @@ public class DsmSessionTests : IDisposable
     public void Dispose()
     {
         _httpClient.Dispose();
+        _httpHandler.Object.Dispose();
     }
 
     #region ValidateSessionAsync

@@ -89,6 +89,11 @@ public static class ApplicationConstants
     /// </summary>
     public const int SessionValidationTtlMinutes = 1;
 
+    /// <summary>
+    /// Rate limiting policy name for login endpoint throttling.
+    /// </summary>
+    public const string RateLimitPolicyLogin = "login-throttle";
+
     #endregion
 
     #region UI Interaction
@@ -97,6 +102,29 @@ public static class ApplicationConstants
     /// Double-click detection timeout in milliseconds for UI components.
     /// </summary>
     public const int DoubleClickTimeoutMilliseconds = 400;
+
+    #endregion
+
+    #region File Operations
+
+    /// <summary>
+    /// Filename used to test write permissions on a directory.
+    /// </summary>
+    public const string WriteTestFileName = ".write_test";
+
+    #endregion
+
+    #region Request Tracking
+
+    /// <summary>
+    /// HTTP header name for cross-cutting request identification.
+    /// </summary>
+    public const string XRequestIdHeaderName = "X-Request-ID";
+
+    /// <summary>
+    /// HttpContext.Items key for the request ID.
+    /// </summary>
+    public const string RequestIdItemKey = "RequestId";
 
     #endregion
 }

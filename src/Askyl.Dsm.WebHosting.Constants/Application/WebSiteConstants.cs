@@ -38,6 +38,15 @@ public static class WebSiteConstants
 
     #endregion
 
+    #region Channel
+
+    /// <summary>
+    /// Maximum concurrent lifecycle commands per site.
+    /// </summary>
+    public const int CommandChannelCapacity = 16;
+
+    #endregion
+
     #region Process Lifecycle
 
     /// <summary>
@@ -59,6 +68,11 @@ public static class WebSiteConstants
     /// Delay in milliseconds to wait after process kill for OS cleanup.
     /// </summary>
     public const int ProcessKillCleanupDelayMs = 500;
+
+    /// <summary>
+    /// Milliseconds per second conversion factor.
+    /// </summary>
+    public const int MillisecondsPerSecond = 1000;
 
     #endregion
 
@@ -87,12 +101,26 @@ public static class WebSiteConstants
 
     #endregion
 
+    #region Validation Patterns
+
+    /// <summary>
+    /// Regular expression pattern for valid DNS hostname. Allows alphanumeric characters, hyphens (not at start/end of labels), and dots separating labels.
+    /// </summary>
+    public const string HostNamePattern = @"^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$";
+
+    #endregion
+
     #region File Extensions
 
     /// <summary>
     /// File extension for DLL files.
     /// </summary>
     public const string DllFileExtension = ".dll";
+
+    /// <summary>
+    /// File extension for temporary configuration file during atomic write.
+    /// </summary>
+    public const string ConfigurationTempExtension = ".tmp";
 
     #endregion
 }

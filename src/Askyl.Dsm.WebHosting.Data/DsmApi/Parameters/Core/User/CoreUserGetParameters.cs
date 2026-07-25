@@ -14,7 +14,7 @@ public class CoreUserGetParameters(CoreUserGetEntry? entry = null)
 
     public override int Version => 1;
 
-    public override string Method => "get";
+    public override string Method => ApiConstants.MethodGet;
 
     public override SerializationFormats SerializationFormat => SerializationFormats.Form;
 }

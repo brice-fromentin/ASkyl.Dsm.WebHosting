@@ -30,6 +30,7 @@ public class GlobalizationServiceCollectionExtensionsTests
     {
         // Arrange
         var original = CultureInfo.CurrentUICulture;
+
         try
         {
             CultureInfo.CurrentUICulture = new CultureInfo("en-US");

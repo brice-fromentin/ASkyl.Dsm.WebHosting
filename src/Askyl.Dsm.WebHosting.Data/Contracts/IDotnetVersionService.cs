@@ -52,7 +52,8 @@ public interface IDotnetVersionService
     /// Forces a cache refresh by re-executing dotnet --info.
     /// Call this after install/uninstall operations to update cached data.
     /// </summary>
-    Task RefreshCacheAsync();
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task RefreshCacheAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validates that a version string matches a valid .NET version format (e.g., "8.0", "8.0.1").

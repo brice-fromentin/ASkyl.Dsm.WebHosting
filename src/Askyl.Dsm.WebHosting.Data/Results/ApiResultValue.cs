@@ -16,23 +16,23 @@ public abstract class ApiResultValue<T>(bool success, string? message, T? value,
     /// <summary>
     /// Indicates whether the operation succeeded (true) or failed (false).
     /// </summary>
-    public bool Success { get; set; } = success;
+    public bool Success { get; init; } = success;
 
     /// <summary>
     /// Message describing the result. Can be null or contain informational text in both
     /// successful and failed operations.
     /// </summary>
-    public string? Message { get; set; } = message;
+    public string? Message { get; init; } = message;
 
     /// <summary>
     /// Error code providing programmatic access to the type of error.
     /// Use ApiErrorCode.None for success.
     /// </summary>
-    public ApiErrorCode ErrorCode { get; set; } = errorCode != default ? errorCode : (success ? ApiErrorCode.None : ApiErrorCode.Failure);
+    public ApiErrorCode ErrorCode { get; init; } = errorCode != default ? errorCode : (success ? ApiErrorCode.None : ApiErrorCode.Failure);
 
     /// <summary>
     /// The value returned by the operation. Null if operation failed.
     /// Only access this property when Success is true.
     /// </summary>
-    public T? Value { get; set; } = value;
+    public T? Value { get; init; } = value;
 }

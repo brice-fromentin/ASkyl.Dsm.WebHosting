@@ -13,7 +13,7 @@ using Serilog;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 // Add JSON configuration file (must be in wwwroot/)
-builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+builder.Configuration.AddJsonFile(ApplicationConstants.SettingsFileName, optional: false, reloadOnChange: true);
 
 // Configure Serilog using configuration from appsettings.json
 Log.Logger = new LoggerConfiguration().ReadFrom.Configuration(builder.Configuration).CreateLogger();

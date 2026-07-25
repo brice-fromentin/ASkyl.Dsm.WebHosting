@@ -26,4 +26,3 @@ public sealed class ApiResultBool(bool success, string? message, bool value, Api
     public static ApiResultBool CreateFailure(string message)
         => new(false, message, false, ApiErrorCode.Failure);
 }
-

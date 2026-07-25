@@ -7,6 +7,8 @@
     <IsPackable>false</IsPackable>
     <!-- Disabled until test compatibility with the new runner is verified (xUnit 2.9 + VSTest 3.1) -->
     <UseMicrosoftTestingPlatformRunner>false</UseMicrosoftTestingPlatformRunner>
+    <!-- NU1608: CodeFix.Testing.XUnit (1.1.2) depends on core packages 1.1.2, but we use 1.1.4 — compatible at runtime -->
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,13 +16,21 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="bunit" Version="2.7.2" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzer.Testing" Version="1.1.4" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" Version="1.1.4" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing" Version="1.1.4" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" Version="1.1.2" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.6.0" />
+    <PackageReference Include="System.Composition.AttributedModel" Version="10.0.10" />
+    <PackageReference Include="AngleSharp" Version="1.5.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,10 +40,15 @@
     <ProjectReference Include="..\Askyl.Dsm.WebHosting.Tools\Askyl.Dsm.WebHosting.Tools.csproj" />
     <ProjectReference Include="..\Askyl.Dsm.WebHosting.Ui\Askyl.Dsm.WebHosting.Ui.csproj" />
     <ProjectReference Include="..\Askyl.Dsm.WebHosting.Ui.Client\Askyl.Dsm.WebHosting.Ui.Client.csproj" />
+    <ProjectReference Include="..\Askyl.Dsm.WebHosting.Analyzers\Askyl.Dsm.WebHosting.Analyzers.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

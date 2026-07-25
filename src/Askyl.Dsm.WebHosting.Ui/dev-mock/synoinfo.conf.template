@@ -1,0 +1,4 @@
+# Mock DSM system configuration for local development
+external_host_ip="127.0.0.1"
+external_port_dsm_https="5001"
+language="enu"

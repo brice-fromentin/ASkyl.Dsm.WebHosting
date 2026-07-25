@@ -39,14 +39,14 @@ static class LogEventIds
 
     #region Process Lifecycle — 1600000–1600999
 
-    /// <summary>SiteLifecycleManager — IDs 1600001–1600019.</summary>
+    /// <summary>SiteLifecycleManager — IDs 1600001–1600020.</summary>
     public const int ProcessLifecycleBase = 1600000;
 
     #endregion
 
     #region Reverse Proxy — 1700000–1700999
 
-    /// <summary>ReverseProxyManagerService — IDs 1700001–1700013.</summary>
+    /// <summary>ReverseProxyManagerService — IDs 1700001–1700014.</summary>
     public const int ReverseProxyBase = 1700000;
 
     #endregion
@@ -77,7 +77,7 @@ static class LogEventIds
     /// <summary>ArchiveExtractorService — IDs 2100001–2100006.</summary>
     public const int ArchiveExtractorBase = 2100000;
 
-    /// <summary>VersionsDetectorService — IDs 2200001–2200004.</summary>
+    /// <summary>VersionsDetectorService — IDs 2200001–2200005.</summary>
     public const int VersionsDetectorBase = 2200000;
 
     /// <summary>AssemblyRuntimeDetector — IDs 2250001–2250005.</summary>
@@ -113,6 +113,9 @@ static class LogEventIds
 
     /// <summary>CultureManager (client) — IDs 7600001–7600010.</summary>
     public const int CultureManagerBase = 7600000;
+
+    /// <summary>Client utilities (JS interop) — ID 7100001.</summary>
+    public const int ClientUtilitiesBase = 7100000;
 
     #endregion
 }

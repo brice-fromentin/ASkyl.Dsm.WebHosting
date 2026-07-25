@@ -29,4 +29,11 @@
     <!-- Enable C# 14 preview features (scoped extension keyword) -->
     <EnablePreviewFeatures>true</EnablePreviewFeatures>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'Askyl.Dsm.WebHosting.Analyzers'">
+    <ProjectReference Include="../Askyl.Dsm.WebHosting.Analyzers/Askyl.Dsm.WebHosting.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      SetConfigurations="Configuration=Debug" />
+  </ItemGroup>
 </Project>

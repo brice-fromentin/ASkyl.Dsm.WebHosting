@@ -7,8 +7,10 @@ using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
 using Askyl.Dsm.WebHosting.Ui.Components;
+using Askyl.Dsm.WebHosting.Ui.Endpoints;
 using Askyl.Dsm.WebHosting.Ui.Extensions;
 using Askyl.Dsm.WebHosting.Ui.Infrastructure;
+using Askyl.Dsm.WebHosting.Ui.Middleware;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -54,6 +56,9 @@ builder.Services.AddFluentValidationAutoValidation();
 // Add services to the container.
 builder.Services.AddRazorComponents()
                 .AddInteractiveWebAssemblyComponents();
+
+// Register file reader abstraction (singleton - stateless file system wrapper)
+builder.Services.AddSingleton<IFileReader, SystemFileReader>();
 
 // Register DSM settings service (singleton - reads /etc/synoinfo.conf once at startup)
 builder.Services.AddSingleton<IDsmSettingsService, DsmSettingsService>();
@@ -105,7 +110,7 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter("login-throttle", options =>
+    options.AddFixedWindowLimiter(ApplicationConstants.RateLimitPolicyLogin, options =>
     {
         options.PermitLimit = 5;
         options.Window = TimeSpan.FromMinutes(1);
@@ -123,6 +128,9 @@ app.UsePathBase(ApplicationConstants.ApplicationUrlSubPath);
 // Request localization must be early in the pipeline (after path base, before routing)
 app.UseGlobalizationRequestLocalization();
 
+// Request tracking must be early to capture ID for the full pipeline
+app.UseMiddleware<RequestTrackingMiddleware>();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -138,7 +146,7 @@ else
 // Rate limiter must be before status code pages to prevent 429 from being re-executed to /not-found
 app.UseRateLimiter();
 
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseStatusCodePagesWithReExecute("/not-found?status={0}", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
 // Security headers
@@ -158,6 +166,7 @@ app.UseSession();
 app.UseRouting();
 
 app.MapControllers();
+app.MapErrorEndpoints();
 
 app.UseAntiforgery();
 

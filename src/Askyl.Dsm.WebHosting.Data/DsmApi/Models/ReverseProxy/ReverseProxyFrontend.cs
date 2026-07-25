@@ -1,23 +1,17 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Askyl.Dsm.WebHosting.Data.DsmApi.Models.ReverseProxy;
 
-public record ReverseProxyFrontend(string? Fqdn, int Port, int Protocol, ReverseProxyHttps Https)
+public record ReverseProxyFrontend(
+    [property: JsonPropertyName("fqdn")] string? Fqdn,
+    [property: JsonPropertyName("port")] int Port,
+    [property: JsonPropertyName("protocol")] int Protocol,
+    [property: JsonPropertyName("https")] ReverseProxyHttps Https)
 {
+    [SetsRequiredMembers]
     public ReverseProxyFrontend() : this(null, 0, 0, new()) { }
 
     [JsonPropertyName("acl")]
     public object Acl { get; init; } = default!;
-
-    [JsonPropertyName("fqdn")]
-    public string? Fqdn { get; init; } = Fqdn;
-
-    [JsonPropertyName("https")]
-    public ReverseProxyHttps Https { get; init; } = Https;
-
-    [JsonPropertyName("port")]
-    public int Port { get; init; } = Port;
-
-    [JsonPropertyName("protocol")]
-    public int Protocol { get; init; } = Protocol;
 }

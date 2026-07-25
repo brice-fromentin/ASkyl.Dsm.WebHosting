@@ -100,7 +100,7 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
         // Apply user-specific date/time format overrides
         if (!String.IsNullOrWhiteSpace(dateFormat) || !String.IsNullOrWhiteSpace(timeFormat))
         {
-            targetCulture = CloneCultureWithFormats(targetCulture, dateFormat, timeFormat, logger);
+            targetCulture = CloneCultureWithFormats(targetCulture, dateFormat, timeFormat);
         }
 
         ApplyCulture(targetCulture);
@@ -291,7 +291,7 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
     /// <summary>
     /// Creates a clone of the given culture with custom date/time format patterns applied.
     /// </summary>
-    private static CultureInfo CloneCultureWithFormats(CultureInfo culture, string? dateFormat, string? timeFormat, ILogger<ILogCultureManager> logger)
+    private CultureInfo CloneCultureWithFormats(CultureInfo culture, string? dateFormat, string? timeFormat)
     {
         // Clone the culture to avoid modifying the shared static CultureInfo
         var cloned = (CultureInfo)culture.Clone();

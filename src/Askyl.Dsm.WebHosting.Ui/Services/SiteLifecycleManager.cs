@@ -16,37 +16,23 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Uses a channel-based command queue to serialize all operations — no semaphore needed.
 /// Disposal waits for pending commands to drain before cleaning up resources.
 /// </summary>
-public sealed class SiteLifecycleManager : IDisposable
+public sealed class SiteLifecycleManager(
+    ILogger<ILogSiteLifecycleManager> logger,
+    ILocalizer localizer,
+    IProcessRunner processRunner,
+    IAssemblyRuntimeDetector assemblyRuntimeDetector,
+    WebSiteConfiguration configuration) : IDisposable
 {
-    private readonly ILogger<ILogSiteLifecycleManager> _logger;
-    private readonly ILocalizer _localizer;
-    private readonly IProcessRunner _processRunner;
-    private readonly IAssemblyRuntimeDetector _assemblyRuntimeDetector;
-    private readonly WebSiteConfiguration _configuration;
-    private readonly Channel<LifecycleCommand> _channel = Channel.CreateBounded<LifecycleCommand>(new BoundedChannelOptions(16)
+    private readonly Channel<LifecycleCommand> _channel = Channel.CreateBounded<LifecycleCommand>(new BoundedChannelOptions(WebSiteConstants.CommandChannelCapacity)
     {
         FullMode = BoundedChannelFullMode.Wait,
         SingleReader = true,
         SingleWriter = false
     });
-    private readonly Task _loopTask;
+    private readonly Lock _commandLoopLock = new();
+    private volatile Task? _commandLoop;
     private IProcessHandle? _process;
     private volatile bool _isDisposing;
-
-    public SiteLifecycleManager(
-        ILogger<ILogSiteLifecycleManager> logger,
-        ILocalizer localizer,
-        IProcessRunner processRunner,
-        IAssemblyRuntimeDetector assemblyRuntimeDetector,
-        WebSiteConfiguration configuration)
-    {
-        _logger = logger;
-        _localizer = localizer;
-        _processRunner = processRunner;
-        _assemblyRuntimeDetector = assemblyRuntimeDetector;
-        _configuration = configuration;
-        _loopTask = ProcessSiteCommandsAsync();
-    }
 
     /// <summary>
     /// Starts the website process with configured environment variables.
@@ -56,14 +42,16 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (_isDisposing)
         {
-            _logger.CannotStartSiteDisposing(_configuration.Name);
-            return ApiResult.CreateFailure(_localizer[LK.Error.SiteConfigUpdating]);
+            logger.CannotStartSiteDisposing(configuration.Name);
+            return ApiResult.CreateFailure(localizer[LK.Error.SiteConfigUpdating]);
         }
 
-        var tcs = new TaskCompletionSource<ApiResult>();
+        EnsureLoopStarted();
+        var tcs = new TaskCompletionSource<ApiResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         if (!_channel.Writer.TryWrite(new StartCommand(tcs)))
         {
-            return ApiResult.CreateFailure(_localizer[LK.Error.FailedToQueueStart]);
+            return ApiResult.CreateFailure(localizer[LK.Error.FailedToQueueStart]);
         }
 
         return await tcs.Task;
@@ -77,14 +65,16 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (_isDisposing)
         {
-            _logger.CannotStopSiteDisposing(_configuration.Name);
-            return ApiResult.CreateFailure(_localizer[LK.Error.SiteConfigUpdating]);
+            logger.CannotStopSiteDisposing(configuration.Name);
+            return ApiResult.CreateFailure(localizer[LK.Error.SiteConfigUpdating]);
         }
 
-        var tcs = new TaskCompletionSource<ApiResult>();
+        EnsureLoopStarted();
+        var tcs = new TaskCompletionSource<ApiResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         if (!_channel.Writer.TryWrite(new StopCommand(tcs, cancellationToken)))
         {
-            return ApiResult.CreateFailure(_localizer[LK.Error.FailedToQueueStop]);
+            return ApiResult.CreateFailure(localizer[LK.Error.FailedToQueueStop]);
         }
 
         return await tcs.Task;
@@ -100,7 +90,9 @@ public sealed class SiteLifecycleManager : IDisposable
             return new WebSiteRuntimeState(false, null);
         }
 
-        var tcs = new TaskCompletionSource<WebSiteRuntimeState>();
+        EnsureLoopStarted();
+        var tcs = new TaskCompletionSource<WebSiteRuntimeState>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         if (!_channel.Writer.TryWrite(new GetStateCommand(tcs)))
         {
             return new WebSiteRuntimeState(false, null);
@@ -131,6 +123,23 @@ public sealed class SiteLifecycleManager : IDisposable
     #region Command Loop
 
     /// <summary>
+    /// Starts the single consumer loop on first use. Double-checked locking preserves the
+    /// channel's SingleReader contract when concurrent callers reach this at the same time.
+    /// </summary>
+    private void EnsureLoopStarted()
+    {
+        if (_commandLoop is not null)
+        {
+            return;
+        }
+
+        lock (_commandLoopLock)
+        {
+            _commandLoop ??= ProcessSiteCommandsAsync();
+        }
+    }
+
+    /// <summary>
     /// Single consumer loop — all state mutation happens here.
     /// Commands execute sequentially, eliminating TOCTOU races.
     /// Uses ConfigureAwait(false) to avoid capturing synchronization context
@@ -142,68 +151,95 @@ public sealed class SiteLifecycleManager : IDisposable
         {
             while (_channel.Reader.TryRead(out var command))
             {
-                switch (command)
+                try
                 {
-                    case StartCommand start:
-                        start.Result.SetResult(ProcessStartCommand());
-                        break;
-
-                    case StopCommand stop:
-                        stop.Result.SetResult(await ProcessStopCommand(stop.CancellationToken).ConfigureAwait(false));
-                        break;
-
-                    case GetStateCommand state:
-                        state.Result.SetResult(BuildRuntimeState());
-                        break;
-
-                    case DisposeCommand:
-                        await ProcessDisposeCommand().ConfigureAwait(false);
+                    if (await ExecuteCommandAsync(command).ConfigureAwait(false))
+                    {
                         return;
-
-                    default:
-                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // A handler fault must never escape: it would kill this loop and leave every
+                    // pending caller awaiting a TaskCompletionSource nobody will ever complete.
+                    // Release the caller before logging so a failing logger cannot strand it.
+                    command.Fail(localizer[LK.Error.OperationFailed]);
+                    logger.LifecycleCommandFailed(ex, command.GetType().Name, configuration.Name);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Executes a single command and completes its caller.
+    /// Returns true when the loop must terminate (disposal).
+    /// </summary>
+    private async Task<bool> ExecuteCommandAsync(LifecycleCommand command)
+    {
+        switch (command)
+        {
+            case StartCommand start:
+                start.Result.SetResult(ProcessStartCommand());
+                break;
+
+            case StopCommand stop:
+                stop.Result.SetResult(await ProcessStopCommand(stop.CancellationToken).ConfigureAwait(false));
+                break;
+
+            case GetStateCommand state:
+                state.Result.SetResult(BuildRuntimeState());
+                break;
+
+            case DisposeCommand:
+                await ProcessDisposeCommand().ConfigureAwait(false);
+                return true;
+
+            default:
+                break;
+        }
+
+        return false;
     }
 
     private ApiResult ProcessStartCommand()
     {
         if (_process?.HasExited == false)
         {
-            _logger.SiteAlreadyRunning(_configuration.Name);
-            return ApiResult.CreateFailure(_localizer[LK.Error.SiteAlreadyRunning, _configuration.Name]);
+            logger.SiteAlreadyRunning(configuration.Name);
+            return ApiResult.CreateFailure(localizer[LK.Error.SiteAlreadyRunning, configuration.Name]);
         }
 
         // Dispose stale process handle from a previously exited process
         DisposeStaleProcess();
 
-        if (!File.Exists(_configuration.ApplicationRealPath))
+        if (!File.Exists(configuration.ApplicationRealPath))
         {
-            _logger.ApplicationBinaryNotFound(_configuration.ApplicationRealPath);
-            return ApiResult.CreateFailure(_localizer[LK.Error.ApplicationBinaryNotFound, _configuration.ApplicationRealPath]);
+            logger.ApplicationBinaryNotFound(configuration.ApplicationRealPath);
+            return ApiResult.CreateFailure(localizer[LK.Error.ApplicationBinaryNotFound, configuration.ApplicationRealPath]);
         }
 
         // Detect and validate framework compatibility
-        var runtimeInfo = _assemblyRuntimeDetector.Detect(_configuration.ApplicationRealPath);
+        var runtimeInfo = assemblyRuntimeDetector.Detect(configuration.ApplicationRealPath);
+
         if (runtimeInfo is { IsCompatible: false })
         {
-            _logger.SiteStartBlockedIncompatible(runtimeInfo.MissingMessage ?? _localizer[LK.Error.IncompatibleFramework]);
-            return ApiResult.CreateFailure(runtimeInfo.MissingMessage ?? _localizer[LK.Error.IncompatibleFramework]);
+            var incompatibleMessage = localizer[LK.Error.RuntimeNotInstalled, runtimeInfo.Channel];
+            logger.SiteStartBlockedIncompatible(incompatibleMessage);
+            return ApiResult.CreateFailure(incompatibleMessage);
         }
 
         try
         {
             var startInfo = CreateProcessStartInfo();
-            _process = _processRunner.Start(startInfo);
+            _process = processRunner.Start(startInfo);
 
-            _logger.SiteStarted(_configuration.Name, _process.Id);
+            logger.SiteStarted(configuration.Name, _process.Id);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex)
         {
-            _logger.FailedToStartSite(ex, _configuration.Name);
-            return ApiResult.CreateFailure(_localizer[LK.Error.OperationFailed]);
+            logger.FailedToStartSite(ex, configuration.Name);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -211,7 +247,7 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (_process?.HasExited != false)
         {
-            _logger.SiteAlreadyStopped(_configuration.Name);
+            logger.SiteAlreadyStopped(configuration.Name);
             DisposeStaleProcess();
             return ApiResult.CreateSuccess();
         }
@@ -222,18 +258,18 @@ public sealed class SiteLifecycleManager : IDisposable
         try
         {
             await StopProcessAsync(processToStop, cancellationToken);
-            _logger.SiteStopped(_configuration.Name);
+            logger.SiteStopped(configuration.Name);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or Win32Exception)
         {
-            _logger.SiteProcessNotFound(ex, _configuration.Name);
+            logger.SiteProcessNotFound(ex, configuration.Name);
             return ApiResult.CreateSuccess();
         }
         catch (Exception ex)
         {
-            _logger.FailedToStopSite(ex, _configuration.Name);
-            return ApiResult.CreateFailure(_localizer[LK.Error.OperationFailed]);
+            logger.FailedToStopSite(ex, configuration.Name);
+            return ApiResult.CreateFailure(localizer[LK.Error.OperationFailed]);
         }
     }
 
@@ -251,11 +287,12 @@ public sealed class SiteLifecycleManager : IDisposable
 
     private async Task ProcessDisposeCommand()
     {
-        _logger.DisposingLifecycleManager(_configuration.Name);
+        logger.DisposingLifecycleManager(configuration.Name);
 
         if (_process?.HasExited == false)
         {
-            _logger.ForceKillingProcessOnDispose(_configuration.Name);
+            logger.ForceKillingProcessOnDispose(configuration.Name);
+
             try
             {
                 _process.Kill();
@@ -263,7 +300,7 @@ public sealed class SiteLifecycleManager : IDisposable
             }
             catch (Exception ex)
             {
-                _logger.FailedToKillProcessOnDispose(ex, _configuration.Name);
+                logger.FailedToKillProcessOnDispose(ex, configuration.Name);
             }
         }
 
@@ -281,17 +318,17 @@ public sealed class SiteLifecycleManager : IDisposable
     {
         if (process?.HasExited != false)
         {
-            _logger.ProcessAlreadyDead(_configuration.Name);
+            logger.ProcessAlreadyDead(configuration.Name);
             return;
         }
 
         process.SendGracefulShutdownSignal();
 
-        int timeoutSeconds = _configuration.ProcessTimeoutSeconds;
-        _logger.SentSigTerm(_configuration.Name, timeoutSeconds);
+        int timeoutSeconds = configuration.ProcessTimeoutSeconds;
+        logger.SentSigTerm(configuration.Name, timeoutSeconds);
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(timeoutSeconds * 1000);
+        timeoutCts.CancelAfter(timeoutSeconds * WebSiteConstants.MillisecondsPerSecond);
 
         try
         {
@@ -301,7 +338,7 @@ public sealed class SiteLifecycleManager : IDisposable
         {
             if (!process.HasExited)
             {
-                _logger.ProcessWaitTimeout(_configuration.Name, process.Id, timeoutSeconds * 1000L);
+                logger.ProcessWaitTimeout(configuration.Name, process.Id, timeoutSeconds * WebSiteConstants.MillisecondsPerSecond);
                 await ForceKillProcessAsync(process, cancellationToken);
             }
         }
@@ -312,7 +349,7 @@ public sealed class SiteLifecycleManager : IDisposable
     /// </summary>
     private async Task ForceKillProcessAsync(IProcessHandle process, CancellationToken cancellationToken)
     {
-        _logger.DidNotStopGracefully(_configuration.Name);
+        logger.DidNotStopGracefully(configuration.Name);
 
         try
         {
@@ -321,7 +358,7 @@ public sealed class SiteLifecycleManager : IDisposable
         }
         catch (Exception killEx)
         {
-            _logger.FailedToForceKill(killEx, _configuration.Name);
+            logger.FailedToForceKill(killEx, configuration.Name);
         }
     }
 
@@ -333,18 +370,18 @@ public sealed class SiteLifecycleManager : IDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = WebSiteConstants.DotnetExecutable,
-            Arguments = _configuration.ApplicationRealPath,
-            WorkingDirectory = Path.GetDirectoryName(_configuration.ApplicationRealPath)!,
+            Arguments = configuration.ApplicationRealPath,
+            WorkingDirectory = Path.GetDirectoryName(configuration.ApplicationRealPath)!,
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true
         };
 
-        startInfo.Environment[WebSiteConstants.AspNetCoreUrlsEnvironmentVariable] = $"http://localhost:{_configuration.InternalPort}";
-        startInfo.Environment[WebSiteConstants.AspNetCoreEnvironmentVariable] = _configuration.Environment;
+        startInfo.Environment[WebSiteConstants.AspNetCoreUrlsEnvironmentVariable] = $"http://localhost:{configuration.InternalPort}";
+        startInfo.Environment[WebSiteConstants.AspNetCoreEnvironmentVariable] = configuration.Environment;
 
-        foreach (var envVar in _configuration.AdditionalEnvironmentVariables)
+        foreach (var envVar in configuration.AdditionalEnvironmentVariables)
         {
             startInfo.Environment[envVar.Key] = envVar.Value;
         }
@@ -365,11 +402,36 @@ public sealed class SiteLifecycleManager : IDisposable
 
     #region Command Types
 
-    private abstract record LifecycleCommand;
-    private sealed record StartCommand(TaskCompletionSource<ApiResult> Result) : LifecycleCommand;
-    private sealed record StopCommand(TaskCompletionSource<ApiResult> Result, CancellationToken CancellationToken) : LifecycleCommand;
-    private sealed record GetStateCommand(TaskCompletionSource<WebSiteRuntimeState> Result) : LifecycleCommand;
-    private sealed record DisposeCommand : LifecycleCommand;
+    private abstract record LifecycleCommand
+    {
+        /// <summary>
+        /// Completes the waiting caller with a failure result when the handler throws.
+        /// </summary>
+        public abstract void Fail(string message);
+    }
+
+    private sealed record StartCommand(TaskCompletionSource<ApiResult> Result) : LifecycleCommand
+    {
+        public override void Fail(string message) => Result.TrySetResult(ApiResult.CreateFailure(message));
+    }
+
+    private sealed record StopCommand(TaskCompletionSource<ApiResult> Result, CancellationToken CancellationToken) : LifecycleCommand
+    {
+        public override void Fail(string message) => Result.TrySetResult(ApiResult.CreateFailure(message));
+    }
+
+    private sealed record GetStateCommand(TaskCompletionSource<WebSiteRuntimeState> Result) : LifecycleCommand
+    {
+        public override void Fail(string message) => Result.TrySetResult(new WebSiteRuntimeState(false, null));
+    }
+
+    private sealed record DisposeCommand : LifecycleCommand
+    {
+        public override void Fail(string message)
+        {
+            // Nothing awaits disposal.
+        }
+    }
 
     #endregion
 }
