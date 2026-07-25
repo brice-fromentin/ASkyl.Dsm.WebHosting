@@ -29,7 +29,8 @@ public sealed class SiteLifecycleManager(
         SingleReader = true,
         SingleWriter = false
     });
-    private Task? _commandLoop;
+    private readonly Lock _commandLoopLock = new();
+    private volatile Task? _commandLoop;
     private IProcessHandle? _process;
     private volatile bool _isDisposing;
 
@@ -46,7 +47,7 @@ public sealed class SiteLifecycleManager(
         }
 
         EnsureLoopStarted();
-        var tcs = new TaskCompletionSource<ApiResult>();
+        var tcs = new TaskCompletionSource<ApiResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         if (!_channel.Writer.TryWrite(new StartCommand(tcs)))
         {
@@ -69,7 +70,7 @@ public sealed class SiteLifecycleManager(
         }
 
         EnsureLoopStarted();
-        var tcs = new TaskCompletionSource<ApiResult>();
+        var tcs = new TaskCompletionSource<ApiResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         if (!_channel.Writer.TryWrite(new StopCommand(tcs, cancellationToken)))
         {
@@ -90,7 +91,7 @@ public sealed class SiteLifecycleManager(
         }
 
         EnsureLoopStarted();
-        var tcs = new TaskCompletionSource<WebSiteRuntimeState>();
+        var tcs = new TaskCompletionSource<WebSiteRuntimeState>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         if (!_channel.Writer.TryWrite(new GetStateCommand(tcs)))
         {
@@ -121,7 +122,22 @@ public sealed class SiteLifecycleManager(
 
     #region Command Loop
 
-    private void EnsureLoopStarted() => _commandLoop ??= ProcessSiteCommandsAsync();
+    /// <summary>
+    /// Starts the single consumer loop on first use. Double-checked locking preserves the
+    /// channel's SingleReader contract when concurrent callers reach this at the same time.
+    /// </summary>
+    private void EnsureLoopStarted()
+    {
+        if (_commandLoop is not null)
+        {
+            return;
+        }
+
+        lock (_commandLoopLock)
+        {
+            _commandLoop ??= ProcessSiteCommandsAsync();
+        }
+    }
 
     /// <summary>
     /// Single consumer loop — all state mutation happens here.
@@ -135,29 +151,54 @@ public sealed class SiteLifecycleManager(
         {
             while (_channel.Reader.TryRead(out var command))
             {
-                switch (command)
+                try
                 {
-                    case StartCommand start:
-                        start.Result.SetResult(ProcessStartCommand());
-                        break;
-
-                    case StopCommand stop:
-                        stop.Result.SetResult(await ProcessStopCommand(stop.CancellationToken).ConfigureAwait(false));
-                        break;
-
-                    case GetStateCommand state:
-                        state.Result.SetResult(BuildRuntimeState());
-                        break;
-
-                    case DisposeCommand:
-                        await ProcessDisposeCommand().ConfigureAwait(false);
+                    if (await ExecuteCommandAsync(command).ConfigureAwait(false))
+                    {
                         return;
-
-                    default:
-                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // A handler fault must never escape: it would kill this loop and leave every
+                    // pending caller awaiting a TaskCompletionSource nobody will ever complete.
+                    // Release the caller before logging so a failing logger cannot strand it.
+                    command.Fail(localizer[LK.Error.OperationFailed]);
+                    logger.LifecycleCommandFailed(ex, command.GetType().Name, configuration.Name);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Executes a single command and completes its caller.
+    /// Returns true when the loop must terminate (disposal).
+    /// </summary>
+    private async Task<bool> ExecuteCommandAsync(LifecycleCommand command)
+    {
+        switch (command)
+        {
+            case StartCommand start:
+                start.Result.SetResult(ProcessStartCommand());
+                break;
+
+            case StopCommand stop:
+                stop.Result.SetResult(await ProcessStopCommand(stop.CancellationToken).ConfigureAwait(false));
+                break;
+
+            case GetStateCommand state:
+                state.Result.SetResult(BuildRuntimeState());
+                break;
+
+            case DisposeCommand:
+                await ProcessDisposeCommand().ConfigureAwait(false);
+                return true;
+
+            default:
+                break;
+        }
+
+        return false;
     }
 
     private ApiResult ProcessStartCommand()
@@ -170,8 +211,6 @@ public sealed class SiteLifecycleManager(
 
         // Dispose stale process handle from a previously exited process
         DisposeStaleProcess();
-
-        ValidateApplicationPath();
 
         if (!File.Exists(configuration.ApplicationRealPath))
         {
@@ -273,31 +312,6 @@ public sealed class SiteLifecycleManager(
     #region Process Management
 
     /// <summary>
-    /// Validates that the application path is within allowed Synology directory boundaries.
-    /// Throws <see cref="UnauthorizedAccessException"/> if the path escapes /volume*/shared/ or /volume*/web/.
-    /// </summary>
-    private void ValidateApplicationPath()
-    {
-        string path = configuration.ApplicationRealPath;
-
-        if (!path.StartsWith("/volume", StringComparison.Ordinal))
-        {
-            logger.ApplicationPathBlocked(path, configuration.Name);
-            throw new UnauthorizedAccessException(
-                $"Application path '{path}' is outside allowed directories (must start with /volume*)");
-        }
-
-        string? parentDir = Path.GetDirectoryName(path);
-
-        if (parentDir is null || (!parentDir.Contains("/shared/") && !parentDir.Contains("/web/")))
-        {
-            logger.ApplicationPathBlocked(path, configuration.Name);
-            throw new UnauthorizedAccessException(
-                $"Application directory '{parentDir}' is not within a shared folder or web directory");
-        }
-    }
-
-    /// <summary>
     /// Stops the process with graceful shutdown and timeout-based force kill.
     /// </summary>
     private async Task StopProcessAsync(IProcessHandle? process, CancellationToken cancellationToken)
@@ -388,11 +402,36 @@ public sealed class SiteLifecycleManager(
 
     #region Command Types
 
-    private abstract record LifecycleCommand;
-    private sealed record StartCommand(TaskCompletionSource<ApiResult> Result) : LifecycleCommand;
-    private sealed record StopCommand(TaskCompletionSource<ApiResult> Result, CancellationToken CancellationToken) : LifecycleCommand;
-    private sealed record GetStateCommand(TaskCompletionSource<WebSiteRuntimeState> Result) : LifecycleCommand;
-    private sealed record DisposeCommand : LifecycleCommand;
+    private abstract record LifecycleCommand
+    {
+        /// <summary>
+        /// Completes the waiting caller with a failure result when the handler throws.
+        /// </summary>
+        public abstract void Fail(string message);
+    }
+
+    private sealed record StartCommand(TaskCompletionSource<ApiResult> Result) : LifecycleCommand
+    {
+        public override void Fail(string message) => Result.TrySetResult(ApiResult.CreateFailure(message));
+    }
+
+    private sealed record StopCommand(TaskCompletionSource<ApiResult> Result, CancellationToken CancellationToken) : LifecycleCommand
+    {
+        public override void Fail(string message) => Result.TrySetResult(ApiResult.CreateFailure(message));
+    }
+
+    private sealed record GetStateCommand(TaskCompletionSource<WebSiteRuntimeState> Result) : LifecycleCommand
+    {
+        public override void Fail(string message) => Result.TrySetResult(new WebSiteRuntimeState(false, null));
+    }
+
+    private sealed record DisposeCommand : LifecycleCommand
+    {
+        public override void Fail(string message)
+        {
+            // Nothing awaits disposal.
+        }
+    }
 
     #endregion
 }

@@ -46,6 +46,10 @@ public class WebSiteHostingServiceTests : IDisposable
         _fileSystemService = new Mock<IFileSystemService>();
         _reverseProxyManager = new Mock<IReverseProxyManagerService>();
 
+        // CreateLogger<T>() wraps factory.CreateLogger(name); an unmocked factory produces a null-backed
+        // logger whose first log call throws, so hand back a real no-op logger.
+        _loggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(Mock.Of<ILogger>());
+
         _localizer.Setup(l => l[LK.Error.OperationFailed]).Returns("Operation failed");
         _localizer.Setup(l => l[LK.Error.InstanceNotFound]).Returns("Instance not found");
         _localizer.Setup(l => l[LK.Error.SiteNotFound, It.IsAny<object>()]).Returns("Site not found");

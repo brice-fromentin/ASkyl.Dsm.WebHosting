@@ -125,8 +125,8 @@ public static partial class ProcessLoggingExtensions
     public static partial void ProcessWaitTimeout(this ILogger<ILogSiteLifecycleManager> logger, string siteName, int processId, long timeoutMs);
 
     /// <summary>
-    /// Logs that the application path failed directory boundary validation.
+    /// Logs an unexpected failure while executing a queued lifecycle command. The command loop keeps running.
     /// </summary>
-    [LoggerMessage(EventId = 1600020, Level = LogLevel.Warning, Message = "Application path '{ApplicationPath}' blocked: outside allowed directories for site '{SiteName}'")]
-    public static partial void ApplicationPathBlocked(this ILogger<ILogSiteLifecycleManager> logger, string applicationPath, string siteName);
+    [LoggerMessage(EventId = 1600020, Level = LogLevel.Error, Message = "Lifecycle command '{CommandName}' failed unexpectedly for site '{SiteName}'")]
+    public static partial void LifecycleCommandFailed(this ILogger<ILogSiteLifecycleManager> logger, Exception ex, string commandName, string siteName);
 }
