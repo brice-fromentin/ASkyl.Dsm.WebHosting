@@ -25,9 +25,11 @@ public class CultureManagerTests
 
     #region InitializeFromLogin
 
+    // Only cultures present in SupportedCultures can be applied — FindMatchingCulture rejects the rest and
+    // falls back to system resolution. Without the injected environment variable that list is just en-US,
+    // so asserting any other culture here would only pass on a host whose ambient culture happens to match.
     [Theory]
     [InlineData("en-US")]
-    [InlineData("fr-FR")]
     public void InitializeFromLogin_ValidCulture_AppliesAndSyncsCulture(string cultureName)
     {
         // Arrange
@@ -42,6 +44,21 @@ public class CultureManagerTests
         Assert.Equal(cultureName, cultureManager.CurrentCulture.Name);
         Assert.Equal(cultureName, cultureManager.CurrentUICulture.Name);
         Assert.Same(cultureManager.CurrentCulture, cultureManager.CurrentUICulture);
+    }
+
+    [Fact]
+    public void InitializeFromLogin_ValidButUnsupportedCulture_FallsBackToSystemResolution()
+    {
+        // Arrange — a freshly constructed manager already reflects system resolution, so it supplies a
+        // host-independent expectation: both sides are computed the same way whatever the ambient culture is.
+        var expected = new CultureManager(CreateJsRuntimeMock().Object, CreateLoggerMock().Object).CurrentCulture.Name;
+        var cultureManager = new CultureManager(CreateJsRuntimeMock().Object, CreateLoggerMock().Object);
+
+        // Act — fr-FR is a real culture but is absent from SupportedCultures
+        cultureManager.InitializeFromLogin("fr-FR", null, null);
+
+        // Assert
+        Assert.Equal(expected, cultureManager.CurrentCulture.Name);
     }
 
     [Theory]
@@ -258,9 +275,10 @@ public class CultureManagerTests
         Assert.Single(CultureManager.SupportedCultures);
         Assert.Equal("en-US", CultureManager.SupportedCultures[0].Name);
 
-        // Assert — browser is not InvariantCulture, system is null (no environment variable)
-        Assert.NotEqual(CultureInfo.InvariantCulture.Name, CultureManager.BrowserCulture.Name);
-        Assert.NotEqual("Invariant-Language", CultureManager.BrowserCulture.Name);
+        // Assert — a browser culture is always resolved, system is null (no environment variable).
+        // Its value is deliberately not asserted: it derives from the host's ambient culture, which is
+        // invariant on a CI runner and the developer's locale on a workstation.
+        Assert.NotNull(CultureManager.BrowserCulture);
         Assert.Null(CultureManager.SystemCulture);
         Assert.NotEmpty(CultureManager.SupportedCultures);
     }
