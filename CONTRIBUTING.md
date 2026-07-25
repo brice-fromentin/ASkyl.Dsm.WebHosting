@@ -6,7 +6,8 @@ Thank you for your interest in improving this project! To optimize development, 
 
 At this stage of development, **external contributions are strictly limited to translations and localization**.
 
-* **Code & Features:** Pull Requests containing code modifications, core feature developments, or bug fixes will not be accepted and will be closed. If you find a bug or have a feature request, please open an **Issue** instead.
+* **Code & Features:** Pull Requests containing code modifications, core feature developments, or bug fixes will not
+  be accepted and will be closed. If you find a bug or have a feature request, please open an **Issue** instead.
 * **Translations:** Pull Requests targeting new languages or improving existing localization files are highly welcome.
 
 ## 🌐 How to Contribute a Translation
