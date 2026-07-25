@@ -21,6 +21,9 @@ temp/
 *_old.*
 *-old.*
 
+# Vulnerability scan output (CI writes this in src/)
+vulnerable.json
+
 # PR descriptions (generated for reference)
 PULL_REQUEST.md
 
