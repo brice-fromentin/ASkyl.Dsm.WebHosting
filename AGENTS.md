@@ -33,20 +33,22 @@ UI for managing .NET web applications on Synology NAS devices.
 dotnet format ./src/Askyl.Dsm.WebHosting.slnx --verbosity quiet
 dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
-dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build --blame-hang-timeout 10s
+dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build
 ```
 
 **NEVER** use `dotnet run` or variants without exact flags and solution path.
 
-**Test command:** `--blame-hang-timeout 10s` is required — the xUnit VSTest adapter (v3.1.5) on .NET 10 does not exit after tests complete. This flag kills the hung process. Tests complete in ~4s, so 10s provides a 6s grace period before force-killing.
+**Test command:** a healthy run completes in ~5s and exits 0. If the test host ever hangs or aborts, that is a deadlock in the
+code — never normalise it with a timeout flag. Reproduce with `--blame-hang-timeout 10s` to capture a dump, then fix the cause.
 
-### Mandatory Sequence: Format → Build → Verify
+### Mandatory Sequence: Format → Build → Test → Verify
 
 1. **Format** — run format command above
 2. **Build** — run build command above
-3. **Verify** — ensure no errors or warnings
+3. **Test** — run test command above
+4. **Verify** — zero errors, zero warnings, **and** `dotnet test` exits 0
 
-**NEVER skip the format step.**
+**NEVER skip the format step.** A build that compiles is not a passing build — "Verify" also requires the test run to exit 0.
 
 ### What `dotnet format` Enforces Automatically
 
@@ -310,7 +312,7 @@ After EVERY code modification:
 
 ## 11. PROJECT-SPECIFIC NOTES
 
-- UI uses Interactive Server render mode with antiforgery protection
+- UI uses Interactive WebAssembly render mode with antiforgery protection
 - Logs structured using Serilog with configuration‑based setup
 - Solution supports multiple CPU architectures (Any CPU/x64/x86)
 - SPK packaging includes .NET multi‑architecture packages
@@ -402,13 +404,13 @@ CRITICAL: To prevent VRAM saturation (PCIe swap) on the local host:
 1. **Re-read AGENTS.md immediately** — extract current standards dynamically
 2. **Acknowledge ALL critical rules explicitly**
 3. **Apply enforcement language strictly**
-4. **Verify before responding** — Format → Build + manual checks
+4. **Verify before responding** — Format → Build → Test + manual checks
 
 **DO NOT rely on memory from previous tasks.** Always re-read AGENTS.md when in doubt.
 
 ---
 
-## 15. COMMAND FIDELITY (CRITICAL)
+## 16. COMMAND FIDELITY (CRITICAL)
 
 **ALWAYS use documented commands EXACTLY as specified — no substitutions, no "improvements".**
 
@@ -427,6 +429,6 @@ When AGENTS.md specifies a command (e.g., `markdownlint <file-path>`), use it ve
 
 ---
 
-## 16. NON-COMPLIANCE CONSEQUENCES
+## 17. NON-COMPLIANCE CONSEQUENCES
 
 Failure to follow these instructions systematically is a critical error and must be corrected immediately.
