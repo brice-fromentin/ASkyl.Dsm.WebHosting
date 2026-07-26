@@ -1,4 +1,5 @@
 using System.Net.Mime;
+using System.Text.Encodings.Web;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Microsoft.AspNetCore.Diagnostics;
 
@@ -40,7 +41,7 @@ public static class ErrorEndpoints
         return TypedResults.Text(html, statusCode: StatusCodes.Status500InternalServerError, contentType: MediaTypeNames.Text.Html);
     }
 
-    static IResult HandleStatusCode(HttpContext context)
+    internal static IResult HandleStatusCode(HttpContext context)
     {
         var statusCode = int.TryParse(context.Request.Query["status"], out var code) ? code : StatusCodes.Status404NotFound;
         var originalPath = context.Features.Get<IStatusCodeReExecuteFeature>()?.OriginalPath ?? context.Request.Path;
@@ -50,11 +51,15 @@ public static class ErrorEndpoints
             return TypedResults.Json(new ApiResult(false, $"Resource not found: {originalPath}"), statusCode: statusCode);
         }
 
+        // The path is caller-controlled and arrives URL-decoded, so it must be encoded before it
+        // reaches an HTML response body.
+        var encodedPath = HtmlEncoder.Default.Encode(originalPath);
+
         var html = $"""
             <!DOCTYPE html>
             <html>
             <head><meta charset="utf-8"/><title>{statusCode} Not Found</title></head>
-            <body><h1>{statusCode}</h1><p>The requested resource was not found: {originalPath}</p></body>
+            <body><h1>{statusCode}</h1><p>The requested resource was not found: {encodedPath}</p></body>
             </html>
             """;
 
