@@ -36,7 +36,7 @@ log_info ".NET runtime installation step completed."
 # -----------------------------------------------------------------------------
 update_progress 0.8 "Verifying .NET runtime"
 if ! verify_dotnet_runtime; then
-    log_fatal_with_temp "Failed to verify .NET runtime installation after upgrade."
+    log_fatal_with_temp "Failed to verify .NET runtime installation after upgrade." \
                        "The .NET runtime could not be installed or is corrupted."
     exit 1
 fi
