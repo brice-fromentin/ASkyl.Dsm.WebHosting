@@ -42,9 +42,13 @@ public static class SecurityHeaders
 
     /// <summary>
     /// Restricts resource loading to same-origin with inline allowances for Blazor/FluentUI.
-    /// Note: 'unsafe-eval' is required by Mono WASM to compile WebAssembly modules.
+    /// 'wasm-unsafe-eval' is the narrow grant Mono WASM needs to compile WebAssembly modules; it
+    /// replaces the far broader 'unsafe-eval', which also permitted eval() on arbitrary strings.
+    /// Both 'unsafe-inline' grants are load-bearing and cannot be dropped without a refactor:
+    /// App.razor hosts an inline Blazor.start() bootstrap that injects the DSM culture, and
+    /// FluentUI renders inline style attributes.
     /// </summary>
-    public const string ContentSecurityPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;";
+    public const string ContentSecurityPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;";
 
     /// <summary>
     /// Header name for legacy XSS filter (Chrome/Edge legacy, Safari pre-16.4).
