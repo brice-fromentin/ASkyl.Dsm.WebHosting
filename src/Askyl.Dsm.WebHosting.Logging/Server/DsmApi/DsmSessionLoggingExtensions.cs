@@ -51,4 +51,10 @@ public static partial class DsmSessionLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2900007, Level = LogLevel.Information, Message = "Disconnected from DSM")]
     public static partial void Disconnected(this ILogger<ILogDsmSession> logger);
+
+    /// <summary>
+    /// Logs that a user authenticated against DSM but lacks administrator rights.
+    /// </summary>
+    [LoggerMessage(EventId = 2900008, Level = LogLevel.Warning, Message = "Login rejected, not a DSM administrator: {Login}")]
+    public static partial void NotAnAdministrator(this ILogger<ILogDsmSession> logger, string login);
 }

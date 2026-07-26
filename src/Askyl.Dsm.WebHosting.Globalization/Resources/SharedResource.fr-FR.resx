@@ -367,6 +367,9 @@
   <data name="Error_AuthenticationFailed" xml:space="preserve">
     <value>Échec de l'authentification</value>
   </data>
+  <data name="Error_AdministratorRequired" xml:space="preserve">
+    <value>Cette application est réservée aux administrateurs DSM.</value>
+  </data>
   <data name="Error_OperationFailed" xml:space="preserve">
     <value>L'opération a échoué. Consultez les journaux pour plus de détails.</value>
   </data>

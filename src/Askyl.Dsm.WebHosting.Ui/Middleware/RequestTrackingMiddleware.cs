@@ -1,5 +1,4 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
-using Microsoft.AspNetCore.Http;
 
 namespace Askyl.Dsm.WebHosting.Ui.Middleware;
 

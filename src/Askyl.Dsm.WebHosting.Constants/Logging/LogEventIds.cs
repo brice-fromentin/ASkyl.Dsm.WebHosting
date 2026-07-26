@@ -101,7 +101,7 @@ static class LogEventIds
     /// <summary>DsmSettingsService — IDs 2800001–2800005.</summary>
     public const int DsmSettingsBase = 2800000;
 
-    /// <summary>DsmSession — IDs 2900001–2900007.</summary>
+    /// <summary>DsmSession — IDs 2900001–2900008.</summary>
     public const int DsmSessionBase = 2900000;
 
     #endregion

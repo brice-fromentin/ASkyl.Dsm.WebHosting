@@ -1,5 +1,4 @@
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
-using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Microsoft.Extensions.Configuration;

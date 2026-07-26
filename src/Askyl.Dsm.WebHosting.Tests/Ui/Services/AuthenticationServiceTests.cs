@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
+using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Ui.Services;
@@ -20,6 +21,7 @@ public class AuthenticationServiceTests
         _logger = new Mock<ILogger<ILogAuthenticationService>>();
         _localizer = new Mock<ILocalizer>();
         _localizer.Setup(l => l[LK.Error.AuthenticationFailed]).Returns("Authentication failed");
+        _localizer.Setup(l => l[LK.Error.AdministratorRequired]).Returns("Administrators only");
         _localizer.Setup(l => l[LK.Success.LogoutSuccessful]).Returns("Logout successful");
         _localizer.Setup(l => l[LK.Error.SessionExpired]).Returns("Session expired");
     }
@@ -36,7 +38,7 @@ public class AuthenticationServiceTests
     {
         // Arrange
         _dsmSession.Setup(s => s.ConnectAsync(It.IsAny<LoginCredentials>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .ReturnsAsync(ApiResult.CreateSuccess());
         _dsmSession.SetupGet(s => s.UserLanguage).Returns("enu");
         _dsmSession.SetupGet(s => s.UserDateFormat).Returns(null as string);
         _dsmSession.SetupGet(s => s.UserTimeFormat).Returns(null as string);
@@ -57,7 +59,7 @@ public class AuthenticationServiceTests
     {
         // Arrange
         _dsmSession.Setup(s => s.ConnectAsync(It.IsAny<LoginCredentials>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            .ReturnsAsync(new ApiResult(false, null, ApiErrorCode.Unauthorized));
 
         var service = CreateService();
 
@@ -71,6 +73,25 @@ public class AuthenticationServiceTests
     }
 
     [Fact]
+    public async Task LoginAsync_ReturnsAdministratorMessage_WhenUserIsNotAdministrator()
+    {
+        // Arrange — credentials are valid but the user lacks administrator rights, which must
+        // surface a distinct message rather than the generic authentication failure.
+        _dsmSession.Setup(s => s.ConnectAsync(It.IsAny<LoginCredentials>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ApiResult(false, null, ApiErrorCode.Forbidden));
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.LoginAsync("guest", "password123", null);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.False(result.IsAuthenticated);
+        Assert.Equal("Administrators only", result.Message);
+    }
+
+    [Fact]
     public async Task LoginAsync_PassesOtpCode_WhenProvided()
     {
         // Arrange
@@ -79,7 +100,7 @@ public class AuthenticationServiceTests
             .Returns((LoginCredentials credentials, CancellationToken ct) =>
             {
                 capturedCredentials = credentials;
-                return Task.FromResult(true);
+                return Task.FromResult(ApiResult.CreateSuccess());
             });
         _dsmSession.SetupGet(s => s.UserLanguage).Returns(null as string);
 

@@ -176,6 +176,7 @@ public static class LK
     {
         public const string PlatformNotSupported = "Error_PlatformNotSupported";
         public const string AuthenticationFailed = "Error_AuthenticationFailed";
+        public const string AdministratorRequired = "Error_AdministratorRequired";
         public const string OperationFailed = "Error_OperationFailed";
         public const string RateLimitExceeded = "Error_RateLimitExceeded";
         public const string FailedToLoadWebsites = "Error_FailedToLoadWebsites";

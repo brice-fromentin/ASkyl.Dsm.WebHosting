@@ -40,7 +40,8 @@ Key structural facts that span multiple projects:
 - **Dual service implementations**: interfaces live in `Data/Contracts/` and are implemented twice — server-side in `Ui/Services/` (real logic) and client-side in
   `Ui.Client/Services/` (HTTP proxy calling `/api/v1/...` controllers). When adding a service capability, you usually touch both plus the thin controller in
   `Ui/Controllers/` (`[AuthorizeSession]` on everything except authentication).
-- **DSM communication chain**: Client service → Controller → `Ui/Services` → `IDsmSession` (Scoped; SID/username in ASP.NET session, TTL-cached validation serialized by a `SemaphoreSlim`) →
+- **DSM communication chain**: Client service → Controller → `Ui/Services` → `IDsmSession` (Scoped; SID/username in ASP.NET session, TTL-cached validation serialized by a `SemaphoreSlim`;
+  validation calls the admin-only `SYNO.Core.User.get` and **fails closed**, which is also the app's only administrator check — do not relax it) →
   `DsmApiClient` (Singleton in `Tools/Network/`; stateless — SID passed per call; lazy `SYNO.API.Info` handshake guarded by `SemaphoreLock`).
   URL building and serialization format (Form vs Json) are driven by the `IApiParameters` implementation.
 - **Website hosting subsystem**: `WebSiteHostingService` (Singleton + BackgroundService) owns a `ConcurrentDictionary` of sites; each site's `SiteLifecycleManager`

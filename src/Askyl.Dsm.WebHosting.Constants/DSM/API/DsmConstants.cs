@@ -15,4 +15,10 @@ public static class DsmConstants
     /// Returned by any API when the session is not authenticated.
     /// </summary>
     public const int ErrorCodeAuthenticationFailed = -4;
+
+    /// <summary>
+    /// DSM API error code indicating insufficient user privilege.
+    /// Returned by administrator-only APIs such as SYNO.Core.User when the caller is not an administrator.
+    /// </summary>
+    public const int ErrorCodePermissionDenied = 105;
 }

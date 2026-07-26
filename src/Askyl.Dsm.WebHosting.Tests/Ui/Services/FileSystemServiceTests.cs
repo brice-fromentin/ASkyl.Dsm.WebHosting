@@ -4,6 +4,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.FileStation;
+using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Ui.Services;
@@ -324,7 +325,7 @@ public class FileSystemServiceTests
             _sequences[typeof(T).Name] = new Queue<object?>(responses.Cast<object?>());
         }
 
-        public Task<bool> ConnectAsync(Askyl.Dsm.WebHosting.Data.Domain.Authentication.LoginCredentials model, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<ApiResult> ConnectAsync(Askyl.Dsm.WebHosting.Data.Domain.Authentication.LoginCredentials model, CancellationToken cancellationToken = default) => Task.FromResult(ApiResult.CreateSuccess());
         public Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default) => Task.FromResult(true);
         public void Disconnect() { }
 
