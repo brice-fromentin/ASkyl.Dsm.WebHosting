@@ -31,6 +31,56 @@ public sealed class SystemProcessRunner(ILogger<ILogSystemProcessRunner> logger,
 
         logger.ProcessSpawned(startInfo.FileName, startInfo.Arguments ?? String.Empty, workingDirectory);
 
+        DrainRedirectedStreams(process);
+
         return new SystemProcessHandle(loggerFactory.CreateLogger<ILogSystemProcessHandle>(), process);
+    }
+
+    /// <summary>
+    /// Forwards a child's redirected output to the log. A redirected pipe that nobody reads fills the
+    /// operating system buffer (64 KB on Linux) and blocks the child on its next write, so every stream
+    /// enabled in <see cref="ProcessStartInfo"/> must be consumed for the lifetime of the process.
+    /// </summary>
+    /// <param name="process">The freshly started process.</param>
+    private void DrainRedirectedStreams(Process process)
+    {
+        // Captured up front: the handlers outlive SystemProcessHandle.Dispose, which disposes the
+        // Process, and reading Id from a disposed Process throws.
+        var processId = process.Id;
+
+        if (process.StartInfo.RedirectStandardOutput)
+        {
+            process.OutputDataReceived += (_, args) => LogLine(processId, args.Data, isError: false);
+            process.BeginOutputReadLine();
+        }
+
+        if (process.StartInfo.RedirectStandardError)
+        {
+            process.ErrorDataReceived += (_, args) => LogLine(processId, args.Data, isError: true);
+            process.BeginErrorReadLine();
+        }
+    }
+
+    /// <summary>
+    /// Logs a single output line, ignoring the null line that signals end of stream.
+    /// </summary>
+    /// <param name="processId">The process identifier.</param>
+    /// <param name="line">The line received, or null at end of stream.</param>
+    /// <param name="isError">Whether the line came from standard error.</param>
+    private void LogLine(int processId, string? line, bool isError)
+    {
+        if (line is null)
+        {
+            return;
+        }
+
+        if (isError)
+        {
+            logger.ProcessErrorReceived(processId, line);
+        }
+        else
+        {
+            logger.ProcessOutputReceived(processId, line);
+        }
     }
 }

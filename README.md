@@ -55,7 +55,7 @@ The application will be available from the **DSM Menu**.
 
 * [ ] **Certificate Management:** Automated and manual SSL/TLS certificate handling for reverse proxy configurations.
 * [ ] **Web Station Integration:** Native hook support with Synology Web Station.
-* [ ] **Advanced Logging:** Route applications `stdout` and `stderr` to accessible and downloadable real-time logs.
+* [ ] **Advanced Logging:** Hosted application `stdout` and `stderr` are now captured into the package logs, tagged with the process id. Still to do: per-site separation and real-time viewing.
 * [ ] **Deployment Pipelines:** Support direct application deployment from compressed packages (.zip/.tar.gz).
 * [ ] **Auto-Restart on Assembly Change:** Detect overwritten assemblies and automatically restart the affected website.
 * [ ] **Submit to Synology Package Center:** Get the package reviewed and listed in the official Synology repository.

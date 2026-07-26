@@ -89,7 +89,7 @@ static class LogEventIds
     /// <summary>DownloaderService — IDs 2400001–2400004.</summary>
     public const int DownloaderBase = 2400000;
 
-    /// <summary>SystemProcessRunner — ID 2500001.</summary>
+    /// <summary>SystemProcessRunner — IDs 2500001–2500003.</summary>
     public const int ProcessRunnerBase = 2500000;
 
     /// <summary>SystemProcessHandle (incl. ProcessTerminator) — IDs 2600001–2600005.</summary>

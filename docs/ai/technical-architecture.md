@@ -287,7 +287,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz extraction | IFileManagerService |
 | **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | PlatformInfoService, IFileManagerService |
 | **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | ILogger, ISemaphoreOwner |
-| **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes | ILogger, ILoggerFactory |
+| **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes, drains their redirected output | ILogger, ILoggerFactory |
 | **SystemProcessHandle** | `IProcessHandle` | Transient | Wraps `Process` for testability | ILogger<ILogSystemProcessHandle> |
 | **DsmSettingsService** | `IDsmSettingsService` | Singleton | Reads /etc/synoinfo.conf via IFileReader | ILogger, IFileReader |
 
@@ -299,6 +299,13 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 - Structured logging: request timing, auth failures, API errors via `[LoggerMessage]` extensions
 
 **Process Lifecycle:** `SystemProcessRunner` requires `ILoggerFactory` to create correctly-typed child loggers for `SystemProcessHandle` instances (distinct closed generic types cannot be cast).
+
+**Output draining (do not remove):** `SystemProcessRunner.Start` calls `BeginOutputReadLine`/`BeginErrorReadLine` for
+whichever streams `ProcessStartInfo` redirects, forwarding each line to the log with the child's PID. This is not a
+logging nicety: a redirected pipe that nobody reads fills the OS buffer (64 KB on Linux) and blocks the child on its
+next write, permanently — while `HasExited` stays false, so the dashboard still reports the site healthy. Since every
+ASP.NET Core application logs to console by default, this affects the primary use case. `SiteLifecycleManager` enables
+both redirects, so the drain must run for every hosted site.
 
 ### 6. Askyl.Dsm.WebHosting.Ui
 
