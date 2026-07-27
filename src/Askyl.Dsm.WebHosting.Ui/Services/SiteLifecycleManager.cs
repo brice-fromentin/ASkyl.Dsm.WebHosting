@@ -14,7 +14,9 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <summary>
 /// Manages the complete lifecycle of a single website instance.
 /// Uses a channel-based command queue to serialize all operations — no semaphore needed.
-/// Disposal waits for pending commands to drain before cleaning up resources.
+/// Disposal is fire-and-forget: it queues a dispose command and returns, and the loop drains the
+/// remaining commands in the background. Callers needing the process actually stopped must await
+/// StopAsync first, as WebSiteHostingService.StopAllSitesAsync does.
 /// </summary>
 public sealed class SiteLifecycleManager(
     ILogger<ILogSiteLifecycleManager> logger,
