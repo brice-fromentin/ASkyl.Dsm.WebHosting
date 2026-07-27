@@ -331,21 +331,30 @@ public class WebSiteHostingService(
 
         var wasRunning = existingInstance.IsRunning;
         var oldConfiguration = existingInstance.Configuration;
+        var requiresRestart = ConfigurationRequiresRestart(oldConfiguration, newConfiguration);
 
-        if (wasRunning && (!newConfiguration.IsEnabled || ConfigurationRequiresRestart(oldConfiguration, newConfiguration)))
+        if (wasRunning && (!newConfiguration.IsEnabled || requiresRestart))
         {
             logger.StoppingSiteDisabledOrRestart(newConfiguration.Name);
             await StopWebsiteAsync(existingInstance.Id);
         }
 
-        // Recreate lifecycle manager with new configuration to avoid stale config
-        entry.LifecycleManager.Dispose();
         existingInstance.Configuration = newConfiguration;
-        entry.LifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), localizer, processRunner, assemblyRuntimeDetector, newConfiguration);
+
+        // Recreating the manager disposes it, and disposal force-kills a live process. Only the fields
+        // covered by ConfigurationRequiresRestart are captured by the manager, so for any other change
+        // the existing one is still current — recreating unconditionally hard-killed a running site on
+        // an update deliberately classified as needing no restart, and raced the replacement process
+        // onto the same port because disposal completes asynchronously.
+        if (requiresRestart)
+        {
+            entry.LifecycleManager.Dispose();
+            entry.LifecycleManager = new SiteLifecycleManager(loggerFactory.CreateLogger<ILogSiteLifecycleManager>(), localizer, processRunner, assemblyRuntimeDetector, newConfiguration);
+        }
 
         logger.InstanceUpdated(newConfiguration.Name);
 
-        if (newConfiguration.IsEnabled && (wasRunning || newConfiguration.AutoStart))
+        if (newConfiguration.IsEnabled && !existingInstance.IsRunning && (wasRunning || newConfiguration.AutoStart))
         {
             await StartWebsiteAsync(existingInstance.Id);
         }

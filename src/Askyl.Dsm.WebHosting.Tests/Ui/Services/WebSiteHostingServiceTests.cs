@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
@@ -100,6 +101,66 @@ public class WebSiteHostingServiceTests : IDisposable
             _localizer.Object);
     }
 
+    /// <summary>
+    /// Configuration pointing at a real file so the lifecycle manager's existence check passes.
+    /// </summary>
+    WebSiteConfiguration CreateRunnableConfiguration()
+    {
+        return new WebSiteConfiguration
+        {
+            Name = "TestSite",
+            ApplicationPath = _tempDir,
+            ApplicationRealPath = Path.Combine(_tempDir, "MyApp.dll"),
+            InternalPort = 5001,
+            HostName = "test.local"
+        };
+    }
+
+    /// <summary>
+    /// Makes the runner hand back a live process handle and stubs the update side effects.
+    /// The handle reports itself exited once signalled, mirroring a real process — a handle stuck
+    /// at HasExited=false would leave the instance permanently "running" and hide restart bugs.
+    /// </summary>
+    Mock<IProcessHandle> SetupRunningProcess()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "MyApp.dll"), String.Empty);
+
+        var exited = false;
+        var handle = new Mock<IProcessHandle>();
+
+        handle.SetupGet(h => h.Id).Returns(4242);
+        handle.SetupGet(h => h.HasExited).Returns(() => exited);
+        handle.Setup(h => h.SendGracefulShutdownSignal()).Callback(() => exited = true);
+        handle.Setup(h => h.Kill()).Callback(() => exited = true);
+
+        _processRunner.Setup(r => r.Start(It.IsAny<ProcessStartInfo>())).Returns(handle.Object);
+
+        _fileSystemService.Setup(f => f.SetHttpGroupPermissionsAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ApiResult.CreateSuccess());
+        _reverseProxyManager.Setup(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _reverseProxyManager.Setup(r => r.UpdateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _assemblyRuntimeDetector.Setup(d => d.Detect(It.IsAny<string>())).Returns((AssemblyRuntimeInfo?)null);
+
+        return handle;
+    }
+
+    /// <summary>
+    /// Adds a site and returns its id. No explicit start is needed — AddWebsiteAsync starts the site
+    /// itself when IsEnabled and AutoStart are set, and both default to true.
+    /// </summary>
+    async Task<Guid> AddRunningSiteAsync(WebSiteHostingService service)
+    {
+        var added = await service.AddWebsiteAsync(CreateRunnableConfiguration());
+
+        Assert.True(added.Success);
+        Assert.NotNull(added.Value);
+        Assert.True(added.Value.IsRunning);
+
+        return added.Value.Id;
+    }
+
     #region GetAllWebsitesAsync
 
     [Fact]
@@ -195,6 +256,51 @@ public class WebSiteHostingServiceTests : IDisposable
         // Assert
         Assert.False(result.Success);
         Assert.NotEqual(ApiErrorCode.None, result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task UpdateWebsiteAsync_LeavesProcessRunning_WhenChangeRequiresNoRestart()
+    {
+        // Arrange — a rename is deliberately excluded from ConfigurationRequiresRestart, so the
+        // running process must survive it untouched: no kill, no replacement process.
+        var handle = SetupRunningProcess();
+        var service = CreateService();
+        var id = await AddRunningSiteAsync(service);
+
+        // Act
+        var renamed = CreateRunnableConfiguration();
+        renamed.Id = id;
+        renamed.Name = "RenamedSite";
+
+        var result = await service.UpdateWebsiteAsync(renamed);
+
+        // Assert
+        Assert.True(result.Success);
+        _processRunner.Verify(r => r.Start(It.IsAny<ProcessStartInfo>()), Times.Once);
+        handle.Verify(h => h.Kill(), Times.Never);
+        handle.Verify(h => h.SendGracefulShutdownSignal(), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateWebsiteAsync_RestartsProcess_WhenPortChanges()
+    {
+        // Arrange — the opposite guard: a port change IS in ConfigurationRequiresRestart, so the
+        // site must be stopped and started again rather than left on the stale port.
+        var handle = SetupRunningProcess();
+        var service = CreateService();
+        var id = await AddRunningSiteAsync(service);
+
+        // Act
+        var moved = CreateRunnableConfiguration();
+        moved.Id = id;
+        moved.InternalPort += 1;
+
+        var result = await service.UpdateWebsiteAsync(moved);
+
+        // Assert
+        Assert.True(result.Success);
+        _processRunner.Verify(r => r.Start(It.IsAny<ProcessStartInfo>()), Times.Exactly(2));
+        handle.Verify(h => h.SendGracefulShutdownSignal(), Times.Once);
     }
 
     #endregion
