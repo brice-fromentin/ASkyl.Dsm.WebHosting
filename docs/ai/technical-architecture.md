@@ -335,9 +335,17 @@ both redirects, so the drain must run for every hosted site.
   per-site lifecycle manager (Channel-based command queue, SIGTERM graceful shutdown),  
   DSM session management (per-user, 1-min TTL cache).
 
-**Middleware pipeline:** Culture setup → path base `/adwh` → request localization → X-Request-ID tracking →  
-error handling/HSTS (dev: WASM debugging) → rate limiting → status code pages → HTTPS redirection →  
-security headers → session → routing → controllers + error endpoints → antiforgery → static assets → Blazor WASM render mode.
+**Middleware pipeline:** Culture setup → path base `/adwh` → forwarded headers → request localization →
+X-Request-ID tracking → error handling/HSTS (dev: WASM debugging) → rate limiting → status code pages →
+HTTPS redirection → security headers → session → routing → controllers + error endpoints → antiforgery →
+static assets → Blazor WASM render mode.
+
+**Forwarded headers are load-bearing, not cosmetic.** DSM's nginx proxies `/adwh` over loopback, so every
+request otherwise reports `127.0.0.1` — which would collapse the per-client login throttle into a single
+shared bucket. Only `XForwardedFor` is processed, and `ForwardLimit` stays at its default of 1: nginx uses
+`$proxy_add_x_forwarded_for`, which appends the real peer _after_ anything the client sent, so reading
+only the last entry is what makes a forged header harmless. Raising `ForwardLimit` would reintroduce
+spoofing.
 
 ### 7. Askyl.Dsm.WebHosting.Ui.Client
 
