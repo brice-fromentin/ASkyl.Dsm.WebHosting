@@ -35,11 +35,11 @@
 - Centralized logging with Serilog
 - Immutable C# record types for DSM API models with `init` setters
 
-The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid architecture (Interactive WebAssembly), FluentUI components, and a clean layered architecture pattern.
+The solution follows modern .NET 10 best practices, using a Blazor Web App with the Interactive WebAssembly render mode, FluentUI components, and a clean layered architecture pattern.
 
 **Key Architectural Decisions:**
 
-- **Hybrid Rendering Mode:** Server-side authentication with WebAssembly interactive components
+- **Interactive WebAssembly Rendering:** statically server-rendered shell, all interactivity in WebAssembly; authentication and API work stay server-side behind controllers
 - **Result Pattern:** Strongly-typed success/failure results instead of exceptions for control flow
 - **C# Records (init setters):** DSM API model classes converted from source-generated clone methods to immutable records
 - **Centralized Constants:** All magic strings/numbers extracted to dedicated Constants project
@@ -48,7 +48,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 
 **Current Status:**
 
-- ✅ Blazor Server + Interactive WebAssembly hybrid rendering
+- ✅ Interactive WebAssembly rendering (prerendering disabled)
 - ✅ DSM API integration (Authentication, FileStation, ReverseProxy)
 - ✅ Website lifecycle management with process control
 - ✅ JSON-based configuration persistence
@@ -66,7 +66,7 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 - ⏳ Certificate management for reverse proxy
 - ⏳ Multi-language end-to-end testing
 
-**Status:** Production-ready
+**Status:** Beta — `src/spk-project/INFO` declares `beta="yes"`, which is the authoritative label.
 
 ---
 
@@ -76,14 +76,14 @@ The solution follows modern .NET 10 best practices, utilizing Blazor Hybrid arch
 
 ```text
 Askyl.Dsm.WebHosting.slnx
-├── Askyl.Dsm.WebHosting.Analyzers          # Custom Roslyn analyzers (ADWH01001-03001)
+├── Askyl.Dsm.WebHosting.Analyzers          # Custom Roslyn analyzers (ADWH01001-01004, 02001, 03001)
 ├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
 ├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
 ├── Askyl.Dsm.WebHosting.Globalization      # Localization resources, validators, culture management
 ├── Askyl.Dsm.WebHosting.Logging            # Logging extensions (source-generated log methods)
 ├── Askyl.Dsm.WebHosting.Tools              # Utility tools & DSM API client
 ├── Askyl.Dsm.WebHosting.Tests              # Unit tests (xUnit, Moq)
-├── Askyl.Dsm.WebHosting.Ui                 # Main Blazor Server-WASM hybrid UI
+├── Askyl.Dsm.WebHosting.Ui                 # Blazor host: shell, controllers, server services
 └── Askyl.Dsm.WebHosting.Ui.Client          # Blazor WebAssembly client library
 ```
 
@@ -92,7 +92,7 @@ Askyl.Dsm.WebHosting.slnx
 - **Multi-project solution** with clear separation of concerns
 - **Custom Roslyn analyzers** for enforcing project-specific code standards (String/String pattern, Logger calls, blank lines)
 - **Source generators** for reducing boilerplate code (Serilog logging methods)
-- **Hybrid rendering mode** (InteractiveServer + InteractiveWebAssembly)
+- **Interactive WebAssembly render mode** — there is no `AddInteractiveServerComponents` registration
 - **Background services** for long-running operations
 - **Centralized versioning** via Directory.Build.props
 
@@ -128,7 +128,7 @@ All projects share common build settings from `Directory.Build.props`:
 
 - **Roslynator.Analyzers** - Enhanced code style enforcement
 - **Roslynator.Formatting.Analyzers** - Formatting rules
-- **Askyl.Dsm.WebHosting.Analyzers** - Custom analyzers (ADWH01001-03001)
+- **Askyl.Dsm.WebHosting.Analyzers** - Custom analyzers (ADWH01001-01004, 02001, 03001)
 
 **.editorconfig Rule Severities:**
 
@@ -164,7 +164,8 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 | Analyzer | ID | Severity | Purpose | Code Fix |
 |----------|-----|----------|---------|----------|
-| `BlankLineAnalyzer` | ADWH01001/01002 | Error | Blank lines before/after control flow | ✅ |
+| `BlankLineAnalyzer` | ADWH01001/01002 | Error | Missing blank line before/after control flow | ✅ |
+| `BlankLineAnalyzer` | ADWH01003/01004 | Error | Extra blank line before `else` / `catch` | ✅ |
 | `StringStaticMemberAnalyzer` | ADWH02001 | Error | `String.` for static, `string` for types | ✅ |
 | `LoggerDirectCallAnalyzer` | ADWH03001 | Error | No direct `ILogger.LogXxx()` calls | ❌ |
 
@@ -318,7 +319,7 @@ both redirects, so the drain must run for every hosted site.
 
 ### 6. Askyl.Dsm.WebHosting.Ui
 
-**Purpose:** Main Blazor hybrid application (Server + WebAssembly rendering). Entry point, DI registration, middleware pipeline, API controllers, and server-side business logic services.
+**Purpose:** Blazor host application. Entry point, DI registration, middleware pipeline, API controllers, and server-side business logic services.
 
 **Structure:**
 
@@ -526,7 +527,7 @@ DotnetVersionService, WebSitesConfigurationService.
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | **Runtime** | .NET 10 | Application framework |
-| **UI Framework** | Blazor Hybrid (Interactive WebAssembly) | Server + client rendering |
+| **UI Framework** | Blazor Web App (Interactive WebAssembly) | Server-rendered shell, WebAssembly interactivity |
 | **UI Components** | FluentUI Blazor | Modern UI component library |
 | **Logging** | Serilog | Structured logging |
 | **HTTP Client** | Microsoft.Extensions.Http | HttpClient factory |
@@ -590,7 +591,9 @@ check at login so non-administrators are refused there rather than on their next
 
 ### Rendering Strategy
 
-**Hybrid Mode:** `AddRazorComponents().AddInteractiveWebAssemblyComponents()` — Server-side authentication + client-side interactivity.
+**Render mode:** `AddRazorComponents().AddInteractiveWebAssemblyComponents()` — WebAssembly only.
+`App.razor` uses `new InteractiveWebAssemblyRenderMode(false)`, so prerendering is off and no component
+can bind to a server-side service implementation.
 
 ### Component Hierarchy
 

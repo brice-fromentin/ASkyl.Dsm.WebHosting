@@ -132,10 +132,11 @@ public async Task<Result> CreateWebsiteAsync(  // ✅ 6 params, multi-line
 **Method Calls:**
 Single-line for short calls. Multi-line for complex expressions with multiple parameters.
 
-**Blank Line Rules (enforced by ADWH01001/01002):**
+**Blank Line Rules (enforced by ADWH01001-01004):**
 
 - Blank lines BEFORE/AFTER complete control structures (not first/last in scope)
 - NO blank lines BETWEEN statements inside blocks
+- NO blank line before `else` or `catch` — they continue the structure above (ADWH01003/01004)
 - Comments stay with their code — no blank line between comment and its statement
 
 ```csharp
@@ -223,7 +224,7 @@ logger.LogWarning("Login failed");   // ❌ direct ILogger call
 - **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()` (when inferable)
 - **String/String Pattern** (ADWH02001): `StringStaticMemberAnalyzer` with auto-fix
 - **Logger Call Compliance** (ADWH03001): `LoggerDirectCallAnalyzer`
-- **Control Flow Blank Lines** (ADWH01001/01002): `BlankLineAnalyzer` with auto-fix
+- **Control Flow Blank Lines** (ADWH01001-01004): `BlankLineAnalyzer` with auto-fix
 
 ### Manual Checks Required
 

@@ -34,6 +34,13 @@ jobs:
       - name: Test
         run: dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build
 
+      # Only tracked files: .opencode/node_modules ships hundreds of third-party .md files that
+      # do not meet this repository's rules and are not ours to reformat.
+      - name: Lint markdown
+        run: |
+          npm install -g markdownlint-cli
+          markdownlint $(git ls-files '*.md')
+
       # `dotnet list package --vulnerable` always exits 0, so its JSON output is inspected
       # instead. JSON also keeps this locale-independent, unlike grepping the table text.
       - name: Check for vulnerable packages
