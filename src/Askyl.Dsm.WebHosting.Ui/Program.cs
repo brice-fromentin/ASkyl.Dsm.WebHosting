@@ -13,7 +13,6 @@ using Askyl.Dsm.WebHosting.Ui.Infrastructure;
 using Askyl.Dsm.WebHosting.Ui.Middleware;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using FluentValidation;
-using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
@@ -47,11 +46,14 @@ builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 // Add controllers WITHOUT API versioning (simpler routes)
 builder.Services.AddControllers();
 
-// Register FluentValidation validators from Globalization assembly
-builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
-
-// Enable automatic FluentValidation integration with ASP.NET Core model binding
-builder.Services.AddFluentValidationAutoValidation();
+// Register FluentValidation validators from the Globalization assembly. Singleton because the
+// validators are stateless — rules are built in their constructors and messages resolve the culture
+// at validation time — and the Singleton WebSiteHostingService injects one, which a Scoped
+// registration would make a captive dependency.
+// Services call IValidator<T> explicitly rather than using FluentValidation.AspNetCore's model-binding
+// integration, which its author deprecated; explicit validation also keeps failures inside the
+// Result pattern instead of short-circuiting to a ProblemDetails response.
+builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>(lifetime: ServiceLifetime.Singleton);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

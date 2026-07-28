@@ -4,6 +4,7 @@ using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Validators;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Ui.Services;
@@ -98,6 +99,7 @@ public class WebSiteHostingServiceTests : IDisposable
             _scopeFactory.Object,
             _assemblyRuntimeDetector.Object,
             _versionsDetector.Object,
+            new WebSiteConfigurationValidator(),
             _localizer.Object);
     }
 
@@ -308,6 +310,30 @@ public class WebSiteHostingServiceTests : IDisposable
     #region AddWebsiteAsync - Validation
 
     [Fact]
+    public async Task AddWebsiteAsync_RejectsInvalidConfiguration_WithoutSideEffects()
+    {
+        // Arrange — validation moved out of the model-binding filter into the service, so the
+        // service must refuse invalid input itself, before touching permissions or the proxy.
+        var service = CreateService();
+        var config = CreateRunnableConfiguration();
+        config.Name = String.Empty;
+        config.HostName = "not a valid host name";
+
+        // Act
+        var result = await service.AddWebsiteAsync(config);
+
+        // Assert — compared against the validator's own output rather than a literal, so the
+        // assertion holds under any culture and proves the message came from the validator.
+        var expected = new WebSiteConfigurationValidator().Validate(config).ToMessage();
+
+        Assert.False(result.Success);
+        Assert.Equal(expected, result.Message);
+        _fileSystemService.Verify(f => f.SetHttpGroupPermissionsAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+        _reverseProxyManager.Verify(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+
+    [Fact]
     public async Task AddWebsiteAsync_ReturnsFailure_WhenEnvVarKeyTooLong()
     {
         // Arrange
@@ -316,7 +342,10 @@ public class WebSiteHostingServiceTests : IDisposable
         var config = new WebSiteConfiguration
         {
             Name = "TestSite",
+            ApplicationPath = "/volume1/web",
             ApplicationRealPath = "/volume1/web/app.dll",
+            InternalPort = 5001,
+            HostName = "test.local",
             AdditionalEnvironmentVariables = new Dictionary<string, string> { [longKey] = "value" }
         };
 
@@ -337,7 +366,10 @@ public class WebSiteHostingServiceTests : IDisposable
         var config = new WebSiteConfiguration
         {
             Name = "TestSite",
+            ApplicationPath = "/volume1/web",
             ApplicationRealPath = "/volume1/web/app.dll",
+            InternalPort = 5001,
+            HostName = "test.local",
             AdditionalEnvironmentVariables = new Dictionary<string, string> { ["KEY"] = longValue }
         };
 
@@ -357,7 +389,10 @@ public class WebSiteHostingServiceTests : IDisposable
         var config = new WebSiteConfiguration
         {
             Name = "TestSite",
+            ApplicationPath = "/volume1/web",
             ApplicationRealPath = "/volume1/web/app.dll",
+            InternalPort = 5001,
+            HostName = "test.local",
             AdditionalEnvironmentVariables = new Dictionary<string, string> { [""] = "value" }
         };
 

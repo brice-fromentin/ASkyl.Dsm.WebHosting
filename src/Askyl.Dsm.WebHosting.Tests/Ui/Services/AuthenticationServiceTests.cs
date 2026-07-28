@@ -2,6 +2,7 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Validators;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using Microsoft.Extensions.Logging;
@@ -28,7 +29,7 @@ public class AuthenticationServiceTests
 
     AuthenticationService CreateService()
     {
-        return new AuthenticationService(_dsmSession.Object, _logger.Object, _localizer.Object);
+        return new AuthenticationService(_dsmSession.Object, new LoginCredentialsValidator(), _logger.Object, _localizer.Object);
     }
 
     #region LoginAsync
@@ -52,6 +53,22 @@ public class AuthenticationServiceTests
         Assert.True(result.Success);
         Assert.True(result.IsAuthenticated);
         _dsmSession.Verify(s => s.ConnectAsync(It.IsAny<LoginCredentials>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LoginAsync_RejectsEmptyCredentials_WithoutContactingDsm()
+    {
+        // Arrange — validation replaced the model-binding filter, so the service itself must refuse
+        // input the shared validator rejects, before any DSM call is made.
+        var service = CreateService();
+
+        // Act
+        var result = await service.LoginAsync(String.Empty, String.Empty, null);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.False(String.IsNullOrWhiteSpace(result.Message));
+        _dsmSession.Verify(s => s.ConnectAsync(It.IsAny<LoginCredentials>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

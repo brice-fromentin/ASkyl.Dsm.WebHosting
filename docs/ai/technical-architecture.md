@@ -256,7 +256,16 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
   reads `CurrentUICulture` at call time (not cached at construction like `IStringLocalizer<T>`).
 - **LocalizationKeys.cs** — strongly-typed resource keys (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`)
 
-**Key design decisions:** shared validators are single source of truth (server auto-validation uses same FluentValidation rules); no DataAnnotations (cannot use runtime-localized messages).
+**Key design decisions:** shared validators are the single source of truth — the client binds them to its
+forms and the server runs the same rules; no DataAnnotations (cannot use runtime-localized messages).
+
+**Validation is explicit, not model-bound.** Services resolve `IValidator<T>` and call `ValidateAsync`
+themselves; `FluentValidation.AspNetCore`'s auto-validation is deliberately not used. Its author
+deprecated it, and it short-circuited to a ProblemDetails 400 that bypassed the Result pattern, so a
+rejection never carried a localized message the client could show. Validators are registered as
+Singleton: they are stateless, and the Singleton `WebSiteHostingService` injects one, which a Scoped
+registration would make a captive dependency. `[ApiController]` still returns 400 for genuine model
+_binding_ failures — malformed JSON, wrong types — which is separate from these rules.
 
 ### 5. Askyl.Dsm.WebHosting.Tools
 
