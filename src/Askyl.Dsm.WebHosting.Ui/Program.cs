@@ -1,3 +1,4 @@
+using System.Net;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Globalization.Extensions;
@@ -13,7 +14,7 @@ using Askyl.Dsm.WebHosting.Ui.Infrastructure;
 using Askyl.Dsm.WebHosting.Ui.Middleware;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using FluentValidation;
-using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
@@ -107,16 +108,23 @@ builder.Services.AddSingleton<WebSitesConfigurationService>();
 builder.Services.AddSingleton<IWebSiteHostingService, WebSiteHostingService>();
 builder.Services.AddSingleton(sp => (IHostedService)sp.GetRequiredService<IWebSiteHostingService>());
 
-// Rate limiting for login endpoint (brute-force protection)
+// DSM's nginx proxies /adwh to this process over loopback, so without this every request reports
+// 127.0.0.1 and the login throttle below would partition everyone into one bucket. nginx appends the
+// peer to X-Forwarded-For, placing the real address last; ForwardLimit stays at its default of 1 so
+// only that last entry is read and a client-supplied prefix cannot spoof the address.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+    options.KnownProxies.Add(IPAddress.Loopback);
+    options.KnownProxies.Add(IPAddress.IPv6Loopback);
+});
+
+// Rate limiting for login endpoint (brute-force protection), partitioned per client address
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter(ApplicationConstants.RateLimitPolicyLogin, options =>
-    {
-        options.PermitLimit = 5;
-        options.Window = TimeSpan.FromMinutes(1);
-    });
+    options.AddPolicy(ApplicationConstants.RateLimitPolicyLogin, LoginRateLimitPolicy.Partition);
 });
 
 var app = builder.Build();
@@ -126,6 +134,9 @@ app.ApplyDsmSystemCulture();
 
 // Apply path base FIRST - before any middleware that needs to know about the prefix
 app.UsePathBase(ApplicationConstants.ApplicationUrlSubPath);
+
+// Must precede any middleware reading the client address — notably the login rate limiter
+app.UseForwardedHeaders();
 
 // Request localization must be early in the pipeline (after path base, before routing)
 app.UseGlobalizationRequestLocalization();

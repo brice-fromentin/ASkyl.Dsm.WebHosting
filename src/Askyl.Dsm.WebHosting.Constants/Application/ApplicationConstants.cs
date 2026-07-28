@@ -94,6 +94,22 @@ public static class ApplicationConstants
     /// </summary>
     public const string RateLimitPolicyLogin = "login-throttle";
 
+    /// <summary>
+    /// Login attempts allowed per client within <see cref="LoginRateLimitWindowMinutes"/>.
+    /// </summary>
+    public const int LoginRateLimitPermitLimit = 5;
+
+    /// <summary>
+    /// Length of the login rate limiting window, in minutes.
+    /// </summary>
+    public const int LoginRateLimitWindowMinutes = 1;
+
+    /// <summary>
+    /// Partition key used when the client address cannot be determined. Such requests share a single
+    /// bucket, which throttles them collectively rather than leaving them unlimited.
+    /// </summary>
+    public const string RateLimitUnknownPartitionKey = "unknown-client";
+
     #endregion
 
     #region UI Interaction
