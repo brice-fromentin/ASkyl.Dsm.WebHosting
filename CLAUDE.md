@@ -48,7 +48,7 @@ Key structural facts that span multiple projects:
   serializes start/stop/state/dispose through a bounded `Channel<LifecycleCommand>` with `TaskCompletionSource`-carrying command records (avoids TOCTOU races).
   Processes are abstracted behind `IProcessRunner`/`IProcessHandle`; config persisted atomically to `websites.json`.
 - **Custom Roslyn analyzers** (`Askyl.Dsm.WebHosting.Analyzers`, injected into every project via `src/Directory.Build.props`, severity Error):
-  ADWH01001/01002 blank-line rules, ADWH02001 `String.`/`string` pattern, ADWH03001 no direct `ILogger` calls.
+  ADWH01001/01002 missing blank lines and ADWH01003/01004 extra blank lines before `else`/`catch`, ADWH02001 `String.`/`string` pattern, ADWH03001 no direct `ILogger` calls.
 - **Result pattern over exceptions**: `Data/Results/` (`ApiResult`, `ApiResultData<T>`, …). `IOptions<T>`/config binding are deliberately not used — configuration is read directly.
 - **DSM settings** come from `/etc/synoinfo.conf` via `IFileReader`; `src/Askyl.Dsm.WebHosting.Ui/dev-mock/` provides a mock for local dev.
 - Server pipeline runs under path base `/adwh`; login is rate-limited (5/min); session cookie `ADWH.Session` is Strict/HttpOnly/Secure.

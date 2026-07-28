@@ -16,7 +16,7 @@ Askyl DSM Web Hosting is a .NET web hosting management system designed to run on
 
 ## Package Structure
 
-```
+```text
 spk-project/
 ├── INFO                            # Package metadata and configuration
 ├── package.tgz                     # Application files archive (auto-generated)
@@ -43,16 +43,19 @@ spk-project/
 ## Key Features
 
 ### DSM Integration
+
 - **Admin Link**: Direct access via DSM menu using official `adminport`, `adminurl`, and `adminprotocol` fields
 - **Port Management**: Automatic port conflict checking with `checkport="7121,7120"`
 - **Service Control**: Integrated start/stop/status management through DSM
 
 ### Network Configuration
+
 - **Port 7121**: HTTPS nginx reverse proxy (user-facing)
 - **Port 7120**: .NET application backend (internal)
 - **SSL/TLS**: Uses Synology's default certificates with modern TLS protocols
 
 ### Security Features
+
 - HTTPS-only access with strict security headers
 - Modern TLS 1.2/1.3 protocols and secure cipher suites
 - HSTS, X-Frame-Options, and other security headers
@@ -86,12 +89,15 @@ The generated `.spk` file will be available in the `dist/` directory.
 ## Configuration Files
 
 ### INFO
+
 Contains package metadata, port configuration, and DSM integration settings.
 
 ### conf/resource
+
 Defines nginx configuration and port allocation for the Synology resource manager.
 
 ### package/etc/adwh.sc
+
 Port service configuration file following official Synology documentation for firewall and port forwarding integration.
 
 ## Environment Variables
@@ -154,10 +160,12 @@ log_info "Custom message" "/path/to/custom.log"
 ### Beta Mode Behavior
 
 When `beta="yes"` in the INFO file:
+
 - Debug logs go to `/tmp/adwh-debug.log`
 - More verbose logging for troubleshooting
 
 When `beta="no"` (release mode):
+
 - Debug logs go to standard log files
 - Production-level logging
 

@@ -39,7 +39,7 @@ The application will be available from the **DSM Menu**.
 ### Key Architecture Features
 
 * **Framework:** Powered by **.NET 10** (`net10.0`).
-* **UI Stack:** Built with **Blazor Hybrid (Interactive WebAssembly)** utilizing Microsoft **FluentUI** components.
+* **UI Stack:** Built as a **Blazor Web App using the Interactive WebAssembly render mode**, utilizing Microsoft **FluentUI** components.
 * **Performance & Security:** Server-side authentication with Interactive WebAssembly ensures security and optimal cold start performance.
 * **Multi-Arch Support:** Actively tested on `x64` architectures; built and packaged to support `armv7` and `armv8` systems.
 
