@@ -4,8 +4,10 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
+using Askyl.Dsm.WebHosting.Globalization.Validators;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
+using FluentValidation;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -21,6 +23,7 @@ public class WebSiteHostingService(
     IServiceScopeFactory scopeFactory,
     IAssemblyRuntimeDetector assemblyRuntimeDetector,
     IVersionsDetectorService versionsDetector,
+    IValidator<WebSiteConfiguration> configurationValidator,
     ILocalizer localizer) : BackgroundService, IWebSiteHostingService
 {
     #region Fields
@@ -67,7 +70,14 @@ public class WebSiteHostingService(
     /// </summary>
     public async Task<WebSiteInstanceResult> AddWebsiteAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken = default)
     {
-        // Validate environment variables before any side effects
+        // Validate the whole configuration before any side effects
+        var validationResult = await ValidateConfigurationAsync(configuration, cancellationToken);
+
+        if (validationResult is not null)
+        {
+            return validationResult;
+        }
+
         var envVarResult = ValidateEnvironmentVariables(configuration.AdditionalEnvironmentVariables);
 
         if (envVarResult is not null)
@@ -130,7 +140,14 @@ public class WebSiteHostingService(
 
         var existingInstance = entry.Instance;
 
-        // Validate environment variables before any side effects
+        // Validate the whole configuration before any side effects
+        var validationResult = await ValidateConfigurationAsync(configuration, cancellationToken);
+
+        if (validationResult is not null)
+        {
+            return validationResult;
+        }
+
         var envVarResult = ValidateEnvironmentVariables(configuration.AdditionalEnvironmentVariables);
 
         if (envVarResult is not null)
@@ -587,6 +604,17 @@ public class WebSiteHostingService(
         }
 
         return WebSiteInstanceResult.CreateSuccess(instance);
+    }
+
+    /// <summary>
+    /// Runs the shared FluentValidation rules over the configuration.
+    /// Returns a failure result carrying the localized messages, or null if the input is valid.
+    /// </summary>
+    private async Task<WebSiteInstanceResult?> ValidateConfigurationAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken)
+    {
+        var validation = await configurationValidator.ValidateAsync(configuration, cancellationToken);
+
+        return validation.IsValid ? null : WebSiteInstanceResult.CreateFailure(validation.ToMessage());
     }
 
     /// <summary>

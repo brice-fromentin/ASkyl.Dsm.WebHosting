@@ -16,6 +16,11 @@ public static class ValidationConstants
     /// </summary>
     public const int EnvVarValueMaxLength = 4096;
 
+    /// <summary>
+    /// Separator used when several validation failures are combined into one message.
+    /// </summary>
+    public const string MessageSeparator = "; ";
+
     #region Path Validation
 
     /// <summary>
