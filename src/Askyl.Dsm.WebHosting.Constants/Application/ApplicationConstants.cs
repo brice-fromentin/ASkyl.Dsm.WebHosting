@@ -90,6 +90,12 @@ public static class ApplicationConstants
     public const int SessionValidationTtlMinutes = 1;
 
     /// <summary>
+    /// Prefix for session validation cache entries. The DSM SID is appended, which keys each entry to
+    /// one user — a shared cache must never let one session's validity answer for another's.
+    /// </summary>
+    public const string SessionValidationCacheKeyPrefix = "dsm-session-valid:";
+
+    /// <summary>
     /// Rate limiting policy name for login endpoint throttling.
     /// </summary>
     public const string RateLimitPolicyLogin = "login-throttle";

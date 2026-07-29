@@ -327,6 +327,7 @@ public class FileSystemServiceTests
 
         public Task<ApiResult> ConnectAsync(Askyl.Dsm.WebHosting.Data.Domain.Authentication.LoginCredentials model, CancellationToken cancellationToken = default) => Task.FromResult(ApiResult.CreateSuccess());
         public Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public bool HasSession => true;
         public void Disconnect() { }
         public Task DisconnectAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 

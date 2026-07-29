@@ -73,11 +73,19 @@ public class AuthenticationService(
     /// <inheritdoc/>
     public async Task<ApiResultBool> IsAuthenticatedAsync(CancellationToken cancellationToken = default)
     {
+        // Captured before validating: a caller who never signed in is not a failure, and warning that
+        // their session "expired or is invalid on server" would be false as well as noisy.
+        var hadSession = dsmSession.HasSession;
+
         if (!await dsmSession.ValidateSessionAsync(cancellationToken))
         {
-            logger.SessionValidationFailed();
-            dsmSession.Disconnect();
-            logger.SessionInvalidated();
+            if (hadSession)
+            {
+                logger.SessionValidationFailed();
+                dsmSession.Disconnect();
+                logger.SessionInvalidated();
+            }
+
             return ApiResultBool.CreateSuccess(false, localizer[LK.Error.SessionExpired]);
         }
 

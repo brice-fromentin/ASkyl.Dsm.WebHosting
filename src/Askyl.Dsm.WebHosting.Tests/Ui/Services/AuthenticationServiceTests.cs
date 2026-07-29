@@ -158,6 +158,43 @@ public class AuthenticationServiceTests
     #region IsAuthenticatedAsync
 
     [Fact]
+    public async Task IsAuthenticatedAsync_DoesNotClearAnything_WhenNoSessionWasEverEstablished()
+    {
+        // Arrange — an anonymous visitor reaching the login page. Nothing expired and nothing is
+        // invalid, so the service must not report a validation failure or clear a session.
+        _dsmSession.SetupGet(s => s.HasSession).Returns(false);
+        _dsmSession.Setup(s => s.ValidateSessionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.IsAuthenticatedAsync();
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.False(result.Value);
+        _dsmSession.Verify(s => s.Disconnect(), Times.Never);
+    }
+
+    [Fact]
+    public async Task IsAuthenticatedAsync_ClearsTheSession_WhenAnEstablishedOneIsRejected()
+    {
+        // Arrange — the genuine case: a session existed and DSM no longer accepts it.
+        _dsmSession.SetupGet(s => s.HasSession).Returns(true);
+        _dsmSession.Setup(s => s.ValidateSessionAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.IsAuthenticatedAsync();
+
+        // Assert
+        Assert.False(result.Value);
+        _dsmSession.Verify(s => s.Disconnect(), Times.Once);
+    }
+
+
+    [Fact]
     public async Task IsAuthenticatedAsync_ReturnsTrue_WhenSessionValid()
     {
         // Arrange
@@ -178,7 +215,9 @@ public class AuthenticationServiceTests
     [Fact]
     public async Task IsAuthenticatedAsync_ReturnsFalse_WhenSessionInvalid()
     {
-        // Arrange
+        // Arrange — "invalid session" presupposes a session existed; without HasSession the fixture
+        // was really describing an anonymous caller, which must not be cleared or warned about.
+        _dsmSession.SetupGet(s => s.HasSession).Returns(true);
         _dsmSession.Setup(s => s.ValidateSessionAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
