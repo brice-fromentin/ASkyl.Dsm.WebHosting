@@ -46,7 +46,15 @@ public interface IDsmSession
     Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Clears session state and local cache.
+    /// Revokes the session on the NAS, then clears local state.
+    /// Use whenever a live SID is abandoned, so it cannot be replayed if it was captured.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task DisconnectAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Clears session state and local cache without contacting the NAS.
+    /// Only appropriate when the SID is already known to be dead.
     /// </summary>
     void Disconnect();
 

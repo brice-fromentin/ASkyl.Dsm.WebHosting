@@ -79,8 +79,10 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         // login rather than on the next request, and primes the TTL cache so this costs no extra call.
         if (!await ValidateSessionAsync(cancellationToken))
         {
+            // The SID is live — DSM authenticated the user, we are refusing them — so revoke it rather
+            // than abandoning a usable session on the NAS.
             logger.NotAnAdministrator(model.Login);
-            Disconnect();
+            await DisconnectAsync(cancellationToken);
             return new(false, null, ApiErrorCode.Forbidden);
         }
 
@@ -144,7 +146,50 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         => (DateTime.UtcNow - _lastSessionValidation).TotalMinutes < ApplicationConstants.SessionValidationTtlMinutes;
 
     /// <summary>
-    /// Clears session state and local cache.
+    /// Revokes the session on the NAS, then clears local state. Use this whenever a SID is abandoned
+    /// while it is still live; <see cref="Disconnect"/> alone leaves it usable until DSM expires it.
+    /// </summary>
+    public async Task DisconnectAsync(CancellationToken cancellationToken = default)
+    {
+        await RevokeSessionAsync(cancellationToken);
+
+        Disconnect();
+    }
+
+    /// <summary>
+    /// Calls SYNO.API.Auth.logout for the current SID. Failures are logged and swallowed: clearing the
+    /// local session must succeed even when the NAS is unreachable, so logout can never leave the user
+    /// stuck signed in. The log states which of the two happened.
+    /// </summary>
+    private async Task RevokeSessionAsync(CancellationToken cancellationToken)
+    {
+        if (String.IsNullOrEmpty(Sid))
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await _client.ExecuteAsync<ApiResponseBase<object>>(Sid, new AuthLogoutParameters(), cancellationToken);
+
+            if (response?.Success == true)
+            {
+                logger.SessionRevoked();
+            }
+            else
+            {
+                logger.SessionRevocationRefused(response?.Error?.Code ?? 0);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.SessionRevocationFailed(ex);
+        }
+    }
+
+    /// <summary>
+    /// Clears session state and local cache without contacting the NAS. Only appropriate when the SID
+    /// is already known to be dead; otherwise prefer <see cref="DisconnectAsync"/>.
     /// </summary>
     public void Disconnect()
     {

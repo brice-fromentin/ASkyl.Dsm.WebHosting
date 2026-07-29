@@ -41,6 +41,7 @@ public static class ApiConstants
     public const string MethodList = "list";
     public const string MethodListShare = "list_share";
     public const string MethodLogin = "login";
+    public const string MethodLogout = "logout";
     public const string MethodQuery = "query";
     public const string MethodSet = "set";
     public const string MethodUpdate = "update";

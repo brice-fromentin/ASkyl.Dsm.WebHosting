@@ -215,7 +215,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | **IDownloaderService** | DownloadVersionToAsync(), GetAspNetCoreReleasesAsync(), GetAspNetCoreChannelsAsync() | Tools.Runtime |
 | **IVersionsDetectorService** | GetInstalledVersionsAsync(), RefreshCacheAsync(), IsChannelInstalled(), IsVersionInstalled() | Tools.Runtime (Singleton) |
 | **IAssemblyRuntimeDetector** | Detect() | Tools.Runtime (Singleton) |
-| **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), Disconnect(); properties: UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
+| **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), DisconnectAsync(), Disconnect(); properties: UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
 | **IDsmSettingsService** | Server, Port, Language | Tools.Infrastructure |
 | **ILicenseService** | GetLicensesAsync() | Ui.Client.Services |
 | **ITreeContentService** | LoadChildDirectoriesAsync() | Ui.Client.Services |
@@ -556,7 +556,8 @@ DotnetVersionService, WebSitesConfigurationService.
 4. DsmSession.AuthenticateAsync() → auth.login API call
 5. Response: SID stored per-request via HttpRequestMessage cookie header
 6. Session persisted in ASP.NET Core session (DsmSid + DsmUsername)
-7. Administrator check (see Session Validation) → non-administrators are disconnected and refused here
+7. Administrator check (see Session Validation) → non-administrators are refused, and the SID DSM just
+   issued them is revoked rather than abandoned
 ```
 
 `ConnectAsync` returns an `ApiResult` rather than a bool so the caller can distinguish invalid credentials
@@ -573,6 +574,16 @@ DotnetVersionService, WebSitesConfigurationService.
 5. Cache result for 1 minute
 
 **API Choice:** `SYNO.API.Auth` only has `login`/`logout`. `SYNO.Core.User.get` is the lightest API that validates session state.
+
+#### Session Revocation
+
+`DisconnectAsync` calls `SYNO.API.Auth.logout` for the current SID before clearing local state, so a
+captured cookie cannot be replayed against the NAS after signing out. `Disconnect` is the local-only
+variant, correct only where the SID is already known to be dead — session validation failing, for
+instance. Revocation failures are logged and swallowed: clearing the local session must succeed even
+when the NAS is unreachable, or an outage would leave users unable to log out. EventIds 2900009-2900011
+distinguish revoked, refused and unreachable, which is how the call is confirmed against a real NAS —
+the DSM Core APIs are undocumented, so the log is the evidence.
 
 **Why it fails closed:** `SYNO.Core.User.get` is admin-only, so this check is also the application's
 administrator gate — a non-administrator receives a permission error and is rejected. An earlier version
