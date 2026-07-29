@@ -57,4 +57,22 @@ public static partial class DsmSessionLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2900008, Level = LogLevel.Warning, Message = "Login rejected, not a DSM administrator: {Login}")]
     public static partial void NotAnAdministrator(this ILogger<ILogDsmSession> logger, string login);
+
+    /// <summary>
+    /// Logs that the DSM session was revoked server-side, so the SID is no longer usable on the NAS.
+    /// </summary>
+    [LoggerMessage(EventId = 2900009, Level = LogLevel.Information, Message = "DSM session revoked")]
+    public static partial void SessionRevoked(this ILogger<ILogDsmSession> logger);
+
+    /// <summary>
+    /// Logs that DSM refused the logout call, leaving the SID valid on the NAS until it expires.
+    /// </summary>
+    [LoggerMessage(EventId = 2900010, Level = LogLevel.Warning, Message = "DSM refused the session revocation (error {ErrorCode}); the SID stays valid on the NAS until it expires")]
+    public static partial void SessionRevocationRefused(this ILogger<ILogDsmSession> logger, int errorCode);
+
+    /// <summary>
+    /// Logs that the logout call could not be made at all, for example because the NAS was unreachable.
+    /// </summary>
+    [LoggerMessage(EventId = 2900011, Level = LogLevel.Warning, Message = "DSM session revocation call failed; the SID stays valid on the NAS until it expires")]
+    public static partial void SessionRevocationFailed(this ILogger<ILogDsmSession> logger, Exception exception);
 }

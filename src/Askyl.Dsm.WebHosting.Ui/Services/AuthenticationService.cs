@@ -59,11 +59,15 @@ public class AuthenticationService(
     }
 
     /// <inheritdoc/>
-    public Task<ApiResult> LogoutAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResult> LogoutAsync(CancellationToken cancellationToken = default)
     {
-        dsmSession.Disconnect();
+        // Revokes the SID on the NAS as well as clearing it locally: a captured SID would otherwise
+        // stay usable until DSM expired it, which is the whole point of logging out.
+        await dsmSession.DisconnectAsync(cancellationToken);
+
         logger.UserLoggedOut();
-        return Task.FromResult(ApiResult.CreateSuccess(localizer[LK.Success.LogoutSuccessful]));
+
+        return ApiResult.CreateSuccess(localizer[LK.Success.LogoutSuccessful]);
     }
 
     /// <inheritdoc/>

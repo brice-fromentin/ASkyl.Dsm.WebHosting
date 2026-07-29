@@ -146,9 +146,11 @@ public class AuthenticationServiceTests
         // Act
         var result = await service.LogoutAsync();
 
-        // Assert
+        // Assert — must use the revoking variant, so the SID is invalidated on the NAS rather than
+        // only forgotten locally.
         Assert.True(result.Success);
-        _dsmSession.Verify(s => s.Disconnect(), Times.Once);
+        _dsmSession.Verify(s => s.DisconnectAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _dsmSession.Verify(s => s.Disconnect(), Times.Never);
     }
 
     #endregion

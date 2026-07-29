@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Runtime.CompilerServices;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
@@ -218,6 +219,64 @@ public class DsmSessionTests : IDisposable
 
     #endregion
 
+    #region DisconnectAsync
+
+    [Fact]
+    public async Task DisconnectAsync_CallsDsmLogout_AndClearsSessionState()
+    {
+        // Arrange
+        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
+        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+
+        var requestBody = CaptureRequestBody("{\"success\":true}");
+        var session = CreateSession();
+
+        // Act
+        await session.DisconnectAsync();
+
+        // Assert — the SID must actually be revoked on the NAS, not merely forgotten here.
+        Assert.NotNull(requestBody.Value);
+        Assert.Contains($"method={ApiConstants.MethodLogout}", requestBody.Value);
+        Assert.Contains($"api={ApiConstants.Auth}", requestBody.Value);
+        Assert.Null(_session.Get(ApplicationConstants.DsmSessionKey));
+        Assert.Null(_session.Get(ApplicationConstants.DsmUsernameKey));
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_StillClearsSessionState_WhenDsmRefusesTheLogout()
+    {
+        // Arrange — an unreachable or unhappy NAS must never leave the user stuck signed in.
+        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
+        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+
+        SetupHttpResponse(String.Empty, HttpStatusCode.InternalServerError);
+
+        var session = CreateSession();
+
+        // Act
+        await session.DisconnectAsync();
+
+        // Assert
+        Assert.Null(_session.Get(ApplicationConstants.DsmSessionKey));
+        Assert.Null(_session.Get(ApplicationConstants.DsmUsernameKey));
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_SkipsTheLogoutCall_WhenNoSessionExists()
+    {
+        // Arrange — nothing to revoke, so no pointless round trip to the NAS.
+        var requestBody = CaptureRequestBody("{\"success\":true}");
+        var session = CreateSession();
+
+        // Act
+        await session.DisconnectAsync();
+
+        // Assert
+        Assert.Null(requestBody.Value);
+    }
+
+    #endregion
+
     #region Disconnect
 
     [Fact]
@@ -288,6 +347,31 @@ public class DsmSessionTests : IDisposable
             {
                 Content = new StringContent(json)
             });
+    }
+
+    /// <summary>
+    /// Records the body of the next outgoing request so a test can assert what was actually sent.
+    /// Read inside the callback because the request is disposed once the call returns.
+    /// </summary>
+    /// <param name="json">Body to reply with.</param>
+    /// <returns>A holder whose Value is null until a request is made.</returns>
+    StrongBox<string?> CaptureRequestBody(string json)
+    {
+        var captured = new StrongBox<string?>(null);
+
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>(
+                (request, _) => captured.Value = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult())
+            .ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json)
+            });
+
+        return captured;
     }
 
     /// <summary>
