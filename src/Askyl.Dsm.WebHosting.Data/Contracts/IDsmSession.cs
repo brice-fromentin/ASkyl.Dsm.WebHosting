@@ -11,6 +11,12 @@ namespace Askyl.Dsm.WebHosting.Data.Contracts;
 public interface IDsmSession
 {
     /// <summary>
+    /// Whether a DSM session is currently established locally. Distinguishes a caller who never signed
+    /// in from one whose session was rejected, which otherwise look identical to the caller.
+    /// </summary>
+    bool HasSession { get; }
+
+    /// <summary>
     /// User's language in DSM format (e.g. "enu", "fra").
     /// </summary>
     string? UserLanguage { get; }

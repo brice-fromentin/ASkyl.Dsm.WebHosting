@@ -14,6 +14,7 @@ using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.UserSettings;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Network;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -21,13 +22,11 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Per-user scoped session wrapper over DsmApiClient.
 /// Manages SID persistence in ISession, owns per-user TTL cache and preferences.
 /// </summary>
-public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpContextAccessor, ILogger<ILogDsmSession> logger) : IDsmSession, IAsyncDisposable
+public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpContextAccessor, IMemoryCache validationCache, ILogger<ILogDsmSession> logger) : IDsmSession, IAsyncDisposable
 {
     private readonly ISession _session = httpContextAccessor.HttpContext!.Session;
     private readonly DsmApiClient _client = client;
     private readonly SemaphoreSlim _validationLock = new(1, 1);
-    private bool _sessionValid;
-    private DateTime _lastSessionValidation = DateTime.MinValue;
 
     private string? Sid
     {
@@ -40,6 +39,11 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         get => _session.GetString(ApplicationConstants.DsmUsernameKey);
         set => UpdateSessionValue(ApplicationConstants.DsmUsernameKey, value);
     }
+
+    /// <summary>
+    /// Whether a DSM session is currently established locally.
+    /// </summary>
+    public bool HasSession => !String.IsNullOrEmpty(Sid);
 
     /// <summary>
     /// User's language in DSM format (e.g. "enu", "fra").
@@ -72,8 +76,9 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         Sid = sid;
         Username = model.Login;
 
-        Volatile.Write(ref _sessionValid, false);
-        _lastSessionValidation = DateTime.MinValue;
+        // Force a fresh check at login: a cached entry for a recycled SID must never skip the
+        // administrator gate below.
+        validationCache.Remove(BuildValidationCacheKey(sid));
 
         // DSM authenticates any user, including non-administrators. Validating here rejects them at
         // login rather than on the next request, and primes the TTL cache so this costs no extra call.
@@ -95,8 +100,9 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     /// Validates whether the current DSM session is still active on the server, and doubles as the
     /// administrator check: SYNO.Core.User.get is admin-only, so a non-administrator gets a permission
     /// error and is rejected. Fails closed — anything other than an explicit success invalidates.
-    /// Uses per-user TTL cache to avoid per-request API overhead.
-    /// Serialized via semaphore to prevent concurrent duplicate API calls.
+    /// Results are cached per SID in a shared memory cache, so validity outlives the request that
+    /// established it. Instance state cannot do this: IDsmSession is Scoped, so fields reset every
+    /// request and every request would pay a DSM round trip.
     /// </summary>
     public async Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default)
     {
@@ -105,7 +111,9 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
             return false;
         }
 
-        if (Volatile.Read(ref _sessionValid) && IsWithinTtl())
+        var cacheKey = BuildValidationCacheKey(Sid);
+
+        if (validationCache.TryGetValue(cacheKey, out _))
         {
             return true;
         }
@@ -114,7 +122,7 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
 
         try
         {
-            if (Volatile.Read(ref _sessionValid) && IsWithinTtl())
+            if (validationCache.TryGetValue(cacheKey, out _))
             {
                 return true;
             }
@@ -127,13 +135,17 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
             // sessions that should be rejected.
             if (response?.Success != true)
             {
-                Volatile.Write(ref _sessionValid, false);
-                _lastSessionValidation = DateTime.UtcNow;
+                validationCache.Remove(cacheKey);
                 return false;
             }
 
-            Volatile.Write(ref _sessionValid, true);
-            _lastSessionValidation = DateTime.UtcNow;
+            // Absolute, not sliding: an active user must still be re-checked every TTL, otherwise a
+            // session revoked on the NAS would stay accepted here for as long as they kept clicking.
+            validationCache.Set(cacheKey, true, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(ApplicationConstants.SessionValidationTtlMinutes)
+            });
+
             return true;
         }
         finally
@@ -142,8 +154,13 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
         }
     }
 
-    private bool IsWithinTtl()
-        => (DateTime.UtcNow - _lastSessionValidation).TotalMinutes < ApplicationConstants.SessionValidationTtlMinutes;
+    /// <summary>
+    /// Builds the per-SID cache key. Keying on the SID keeps one user's validity from answering for
+    /// another's, which instance-scoped state gave for free and a shared cache must do deliberately.
+    /// </summary>
+    /// <param name="sid">The DSM session identifier.</param>
+    private static string BuildValidationCacheKey(string sid)
+        => ApplicationConstants.SessionValidationCacheKeyPrefix + sid;
 
     /// <summary>
     /// Revokes the session on the NAS, then clears local state. Use this whenever a SID is abandoned
@@ -193,11 +210,15 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     /// </summary>
     public void Disconnect()
     {
+        // Evict first: the key derives from the SID that is about to be cleared, and leaving the entry
+        // behind would keep a signed-out session passing validation until the TTL lapsed.
+        if (Sid is { Length: > 0 } sid)
+        {
+            validationCache.Remove(BuildValidationCacheKey(sid));
+        }
+
         Sid = null;
         Username = null;
-
-        Volatile.Write(ref _sessionValid, false);
-        _lastSessionValidation = DateTime.MinValue;
 
         UserLanguage = null;
         UserDateFormat = null;

@@ -14,6 +14,7 @@ using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -29,6 +30,7 @@ public class DsmSessionTests : IDisposable
     readonly FakeSession _session;
     readonly Mock<IHttpContextAccessor> _httpContextAccessor;
     readonly Mock<ILogger<ILogDsmSession>> _logger;
+    readonly MemoryCache _validationCache;
 
     public DsmSessionTests()
     {
@@ -40,6 +42,10 @@ public class DsmSessionTests : IDisposable
         _httpContextAccessor = new Mock<IHttpContextAccessor>();
         _httpContextAccessor.Setup(h => h.HttpContext!.Session).Returns(_session);
         _logger = new Mock<ILogger<ILogDsmSession>>();
+
+        // One cache shared by every session the fixture builds, mirroring the Singleton registration:
+        // a per-instance cache would hide the very defect these tests cover.
+        _validationCache = new MemoryCache(new MemoryCacheOptions());
     }
 
     DsmApiClient CreateClient()
@@ -62,13 +68,14 @@ public class DsmSessionTests : IDisposable
 
     DsmSession CreateSession()
     {
-        return new DsmSession(CreateClient(), _httpContextAccessor.Object, _logger.Object);
+        return new DsmSession(CreateClient(), _httpContextAccessor.Object, _validationCache, _logger.Object);
     }
 
     public void Dispose()
     {
         _httpClient.Dispose();
         _httpHandler.Object.Dispose();
+        _validationCache.Dispose();
     }
 
     #region ValidateSessionAsync
@@ -153,6 +160,47 @@ public class DsmSessionTests : IDisposable
 
         // Assert
         Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ValidateSessionAsync_ReusesTheCachedResult_AcrossSessionInstances()
+    {
+        // Arrange — IDsmSession is Scoped, so each request builds a new instance. Validity has to live
+        // in the shared cache; instance fields reset every request and made the TTL cache useless.
+        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
+        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+
+        SetupHttpResponse("{\"success\":true,\"data\":{\"users\":[{\"name\":\"admin\",\"uid\":1024}]}}");
+
+        // Act — two separate instances, exactly as two consecutive HTTP requests would produce.
+        Assert.True(await CreateSession().ValidateSessionAsync());
+        Assert.True(await CreateSession().ValidateSessionAsync());
+
+        // Assert — the second must be served from cache, costing no DSM round trip.
+        VerifyHttpCallCount(Times.Once());
+    }
+
+    [Fact]
+    public async Task ValidateSessionAsync_CallsDsmAgain_AfterTheSessionIsDisconnected()
+    {
+        // Arrange — a signed-out SID must not keep passing validation until the TTL lapses.
+        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
+        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+
+        SetupHttpResponse("{\"success\":true,\"data\":{\"users\":[{\"name\":\"admin\",\"uid\":1024}]}}");
+
+        Assert.True(await CreateSession().ValidateSessionAsync());
+
+        // Act — disconnect evicts, then the same SID comes back.
+        CreateSession().Disconnect();
+
+        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
+        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+
+        Assert.True(await CreateSession().ValidateSessionAsync());
+
+        // Assert
+        VerifyHttpCallCount(Times.Exactly(2));
     }
 
     #endregion
@@ -347,6 +395,19 @@ public class DsmSessionTests : IDisposable
             {
                 Content = new StringContent(json)
             });
+    }
+
+    /// <summary>
+    /// Asserts how many HTTP calls reached the handler, which is how cache hits are observed.
+    /// </summary>
+    /// <param name="times">Expected number of calls.</param>
+    void VerifyHttpCallCount(Times times)
+    {
+        _httpHandler.Protected().Verify(
+            "SendAsync",
+            times,
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>());
     }
 
     /// <summary>

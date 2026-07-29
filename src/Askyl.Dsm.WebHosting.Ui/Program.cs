@@ -25,6 +25,10 @@ builder.Host.UseSerilog();
 
 // Add session services for authentication persistence
 builder.Services.AddDistributedMemoryCache();
+
+// Backs the DSM session validation cache. Scoped IDsmSession instances share it, so validity survives
+// the request that established it — instance fields on a Scoped service never could.
+builder.Services.AddMemoryCache();
 builder.Services.AddSession(options =>
 {
     options.Cookie.Name = "ADWH.Session";

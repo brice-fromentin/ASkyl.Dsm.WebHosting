@@ -215,7 +215,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | **IDownloaderService** | DownloadVersionToAsync(), GetAspNetCoreReleasesAsync(), GetAspNetCoreChannelsAsync() | Tools.Runtime |
 | **IVersionsDetectorService** | GetInstalledVersionsAsync(), RefreshCacheAsync(), IsChannelInstalled(), IsVersionInstalled() | Tools.Runtime (Singleton) |
 | **IAssemblyRuntimeDetector** | Detect() | Tools.Runtime (Singleton) |
-| **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), DisconnectAsync(), Disconnect(); properties: UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
+| **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), DisconnectAsync(), Disconnect(); properties: HasSession, UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
 | **IDsmSettingsService** | Server, Port, Language | Tools.Infrastructure |
 | **ILicenseService** | GetLicensesAsync() | Ui.Client.Services |
 | **ITreeContentService** | LoadChildDirectoriesAsync() | Ui.Client.Services |
@@ -639,7 +639,9 @@ Dialogs (Overlay)
 
 1. **Router-Level Navigation Guard** — `AuthenticationNavigationGuard` intercepts all navigation via `<Router OnNavigateAsync>`; async auth check before any component renders; no cached state
 2. **Server-Side Session Storage** — DSM SID in server session (not client); HttpOnly cookies; SameSite=Strict
-3. **Server-Side Session Validation** — `IsAuthenticatedAsync()` validates session keys + calls `SYNO.Core.User.get`; 1-minute TTL cache
+3. **Server-Side Session Validation** — `IsAuthenticatedAsync()` validates session keys + calls
+   `SYNO.Core.User.get`; 1-minute TTL cache keyed by SID, evicted on disconnect so a signed-out session
+   stops passing immediately
 4. **Antiforgery & CSRF Protection** — Enabled for all Blazor components and API endpoints
 5. **HTTPS & HSTS Enforcement** — `UseHttpsRedirection()`, `UseHsts()` (30-day max-age non-dev)
 
@@ -737,7 +739,9 @@ Culture is **DSM-controlled** — resolved once at login, locked for the session
 ### Caching Strategy
 
 - **ApiInformations Cache:** Lazy-init with `SemaphoreLock` double-checked locking in `DsmApiClient`; fetched once, cached forever
-- **Session Validation Cache:** 1-minute TTL for DSM session validation
+- **Session Validation Cache:** 1-minute absolute TTL, held in `IMemoryCache` keyed by SID. It must be
+  shared, not instance state: `IDsmSession` is Scoped, so fields reset every request and each request
+  paid a DSM round trip while the log claimed the result was cached.
 - **Instance Cache:** In-memory `ConcurrentDictionary` for website instances
 - **Configuration Cache:** JSON file read on startup, in-memory during runtime
 
