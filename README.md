@@ -72,6 +72,6 @@ The application will be available from the **DSM Menu**.
 
 ### 🏗️ Improvements
 
-* [ ] **Health Checks:** `/health` endpoint, website responsiveness, DSM API connectivity monitoring
+* [ ] **Health Checks:** real website liveness — a site counts as running purely because its process exists, so one that has wedged still reports healthy. Plus `/health` and DSM connectivity.
 * [ ] **Configuration Migration:** Version `websites.json` schema, migration tool, backup/restore
 * [ ] **Multi-Language E2E Testing:** Validate localization across all supported cultures
