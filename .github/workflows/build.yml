@@ -15,10 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
@@ -64,10 +64,10 @@ jobs:
     timeout-minutes: 45
     needs: verify
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
@@ -75,7 +75,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y pigz jq
 
       - name: Cache .NET runtimes
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: src/spk-project/package/runtimes/downloads
           key: ${{ runner.os }}-runtimes-${{ hashFiles('src/Askyl.Dsm.WebHosting.Ui/appsettings.json') }}
