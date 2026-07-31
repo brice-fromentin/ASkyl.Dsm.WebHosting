@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # GitHub Actions only, on purpose. This file previously also tracked NuGet weekly with a limit of
+  # ten open pull requests, which produced enough noise that the whole file was deleted — and the
+  # actions then drifted several major versions behind until CI started warning about Node 20.
+  # Grouped and monthly so refreshing the actions costs one pull request, not five.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
