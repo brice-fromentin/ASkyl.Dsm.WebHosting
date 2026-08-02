@@ -24,9 +24,33 @@ extraction, and a failure to read `AGENTS.md` at all.
 
 The process spends its budget where it does not matter and leaves what does matter to instinct.
 
-## Decisions needed first
+## Decisions — settled 2026-08-03
 
-These gate the mechanical work. Nothing else should start until they are settled.
+- **D1: mock the DSM API surface, in stages.** Stage A lifts §13 for local runs and proves the
+  application boots and serves a request against `dev-mock/` — no `SYNO.*` fake needed for that. Stage B
+  adds fakes one API at a time, when a concrete question requires one.
+- **D2: the proposed allowlist, as written.** Applied in `.claude/settings.json`, with an `ask` list for
+  what stays gated (it also overrides the unrestricted `git push` allow in `settings.local.json`).
+- **D3: scope §14 to local-model setups.** Kept, but explicitly inapplicable on a hosted model.
+- **D4: delete the 2026-07-25 assessment.** Done; `open-technical-items.md` carries what was still live.
+
+The reasoning behind each is preserved below.
+
+### D5. Single source of instructions (raised during the session, not in the original agenda)
+
+`CLAUDE.md` duplicated `AGENTS.md` as a summary that told the assistant to consult the original "when in
+doubt" — which is the mechanism behind one of the five substantive corrections ("a failure to read
+`AGENTS.md` at all"), not inattention. `AGENTS-WORKING-PREFERENCES.md`, meanwhile, was loaded by OpenCode
+only and was invisible to Claude Code.
+
+Settled: `CLAUDE.md` becomes two `@` imports and holds no duplicated rule. The content it carried that
+`AGENTS.md` lacked — the annexe commands, the cross-project architecture orientation, the CONTRIBUTING
+rule — moved into `AGENTS.md`, where both harnesses see it. `opencode.json` was aligned with D2 at the
+same time; it still had `git add` and `git commit` at `ask`, so D2 would otherwise have landed for one
+harness out of two.
+
+**Unverified until the next session:** that the imports actually load. Check with `/context` under
+**Memory files**.
 
 ### D1. How should the application become runnable?
 
@@ -93,9 +117,9 @@ citing findings that were disproved.
 Ordered by unlock per unit of effort. Items 1-3 are cheap and unblock immediately; item 4 is the real
 project.
 
-1. **Apply the permission allowlist** (D2). Converts ~19 interruptions into ~9. Minutes.
-2. **Remove or scope §14** (D3). Free.
-3. **Start `docs/ai/dsm-api-notes.md`.** Synology does not document the Core APIs, so every fact learned
+1. ~~**Apply the permission allowlist** (D2).~~ Done — `.claude/settings.json`.
+2. ~~**Remove or scope §14** (D3).~~ Done — scoped to local-model setups.
+3. ~~**Start `docs/ai/dsm-api-notes.md`.**~~ Done. Synology does not document the Core APIs, so every fact learned
    about them currently lives in chat history and has to be re-asked. Seed it with what is already
    established: `SYNO.Core.User.get` is admin-only and is therefore the application's entire
    administrator gate; `SYNO.API.Auth.logout` at version 6 works and returns 200. Cheap, and it stops the
@@ -109,6 +133,38 @@ project.
    was invisible in source — the class looks correct until you notice `IDsmSession` is Scoped. That habit
    is worth more than any rule currently in `AGENTS.md`. Write it down as a step: deploy, pull the log,
    compare against the previous one.
+
+## Post-merge check — run this in a fresh session
+
+Once the PR is merged, start a new session at the repository root and paste:
+
+```text
+Read docs/ai/plans/2026-07-31-unblocking-development.md and run the post-merge check.
+```
+
+Everything below must be answered from a clean context. The point is to catch a configuration that looks
+right in a diff and does nothing in practice — the imports especially, which cannot be verified in the
+session that wrote them.
+
+1. **Imports loaded.** Without opening any file, state what the arrow notation `X > Y` means in this
+   repository, and what §13 now permits. The first fact lives only in `AGENTS-WORKING-PREFERENCES.md`,
+   the second only in `AGENTS.md`. Needing to read a file to answer means the imports did not load, and
+   the assistant is running with no project instructions at all — stop and fix that before anything else.
+   Maintainer side: `/context` must list `CLAUDE.md` under **Memory files**.
+2. **Permissions.** Create a throwaway branch and an empty commit:
+   `git checkout -b chore/verify-unblocking` then `git commit --allow-empty -m "chore: verify permissions"`.
+   Neither should raise an approval prompt. Then clean up: `git checkout main`, `git branch -D chore/verify-unblocking`.
+   A prompt on the branch creation or the commit means `.claude/settings.json` is not being read. A prompt
+   on `git checkout main` is expected — plain `git checkout` is deliberately not in the allowlist.
+3. **§14 scoped.** Issue two independent tool calls in a single turn. If nothing objects, the local-model
+   rule is correctly inapplicable here.
+4. **Repository state.** `docs/ai/` contains `dsm-api-notes.md` and no longer contains
+   `2026-07-25-codebase-assessment.md`.
+5. **Ready for stage A.** `dotnet --list-runtimes` shows an ASP.NET Core 10 runtime, and
+   `/etc/synoinfo.conf` does **not** exist — local configuration must come from `dev-mock/` only.
+
+Report each as pass or fail with the evidence. Do not repair anything before reporting: a silent fix
+hides which part of the setup was wrong.
 
 ## Verifying it worked
 
