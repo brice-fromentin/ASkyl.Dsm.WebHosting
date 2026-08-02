@@ -124,7 +124,9 @@ The AI assistant MUST use an **inference-based approach** rather than hardcoded 
 
 ### 6.1 Language Rules
 
-- **ALL** chat, comments, code messages, and commit messages: ALWAYS in English
+- **Chat only**: reply in the language of the message being answered
+- **Everything persisted**: ALWAYS in English — comments, identifiers, log and exception messages, commit
+  messages, PR descriptions, and documentation, whatever the language of the conversation that produced them
 - NEVER add to a message that the AI assistant has generated
 
 ### 6.2 C# Language Features (.NET 10 & C# 14)

@@ -117,7 +117,9 @@ citing findings that were disproved.
 Ordered by unlock per unit of effort. Items 1-3 are cheap and unblock immediately; item 4 is the real
 project.
 
-1. ~~**Apply the permission allowlist** (D2).~~ Done — `.claude/settings.json`.
+1. ~~**Apply the permission allowlist** (D2).~~ Done — `.claude/settings.json`. Extended 2026-08-03: the
+   post-merge check showed every read-only diagnostic and every file edit still cost an approval, so the
+   inspection set §12 already calls safe was encoded and `defaultMode` set to `acceptEdits`.
 2. ~~**Remove or scope §14** (D3).~~ Done — scoped to local-model setups.
 3. ~~**Start `docs/ai/dsm-api-notes.md`.**~~ Done. Synology does not document the Core APIs, so every fact learned
    about them currently lives in chat history and has to be re-asked. Seed it with what is already
@@ -125,6 +127,14 @@ project.
    administrator gate; `SYNO.API.Auth.logout` at version 6 works and returns 200. Cheap, and it stops the
    same questions recurring.
 4. **Make the application runnable** (D1). The real project. Everything unverifiable traces back here.
+
+   Stage A starting point, established 2026-08-03 by reading the configuration — not yet by running anything.
+   `appsettings.json:42` sets `DsmSettings:ConfigPath` to `/etc/synoinfo.conf`, and
+   `appsettings.Development.json` carries only Serilog, so it does not override it. A local run therefore throws
+   from `DsmSettingsService.ResolveAndValidateConfigPath` before the host starts — the exception message even
+   prescribes the fix, `cp dev-mock/synoinfo.conf.template <path>`, and `dev-mock/synoinfo.conf` already exists.
+   The single launch profile is `https` on `https://localhost:5000`, path base `/adwh`. So Stage A is: add the
+   Development override, boot, assert a request is served, stop the listener.
 5. **Add one runtime gate.** Once item 4 lands, the mandatory sequence should end with something that
    starts the application and asserts it serves a request. Today every gate is local and syntactic —
    format, zero warnings, blank lines, `String.` vs `string`, parameters per line. All pass, always. Not
@@ -134,37 +144,18 @@ project.
    is worth more than any rule currently in `AGENTS.md`. Write it down as a step: deploy, pull the log,
    compare against the previous one.
 
-## Post-merge check — run this in a fresh session
+## Post-merge check — run 2026-08-03, five of five pass
 
-Once the PR is merged, start a new session at the repository root and paste:
+Run from a clean session against `origin/main` at `85936ca`. The imports load — `X > Y` and the revised §13
+were both answered with no file opened. Only allowlisted commands ran without a prompt. Paired tool calls drew
+no objection, so §14 is correctly inapplicable on a hosted model. `docs/ai/` holds `dsm-api-notes.md` and no
+longer holds the 2026-07-25 assessment. The machine has ASP.NET Core 10.0.10 and no `/etc/synoinfo.conf`.
 
-```text
-Read docs/ai/plans/2026-07-31-unblocking-development.md and run the post-merge check.
-```
-
-Everything below must be answered from a clean context. The point is to catch a configuration that looks
-right in a diff and does nothing in practice — the imports especially, which cannot be verified in the
-session that wrote them.
-
-1. **Imports loaded.** Without opening any file, state what the arrow notation `X > Y` means in this
-   repository, and what §13 now permits. The first fact lives only in `AGENTS-WORKING-PREFERENCES.md`,
-   the second only in `AGENTS.md`. Needing to read a file to answer means the imports did not load, and
-   the assistant is running with no project instructions at all — stop and fix that before anything else.
-   Maintainer side: `/context` must list `CLAUDE.md` under **Memory files**.
-2. **Permissions.** Create a throwaway branch and an empty commit:
-   `git checkout -b chore/verify-unblocking` then `git commit --allow-empty -m "chore: verify permissions"`.
-   Neither should raise an approval prompt. Then clean up: `git checkout main`, `git branch -D chore/verify-unblocking`.
-   A prompt on the branch creation or the commit means `.claude/settings.json` is not being read. A prompt
-   on `git checkout main` is expected — plain `git checkout` is deliberately not in the allowlist.
-3. **§14 scoped.** Issue two independent tool calls in a single turn. If nothing objects, the local-model
-   rule is correctly inapplicable here.
-4. **Repository state.** `docs/ai/` contains `dsm-api-notes.md` and no longer contains
-   `2026-07-25-codebase-assessment.md`.
-5. **Ready for stage A.** `dotnet --list-runtimes` shows an ASP.NET Core 10 runtime, and
-   `/etc/synoinfo.conf` does **not** exist — local configuration must come from `dev-mock/` only.
-
-Report each as pass or fail with the evidence. Do not repair anything before reporting: a silent fix
-hides which part of the setup was wrong.
+One flaw in the check itself, worth carrying into the next one: **item 2 cannot be verified by the assistant
+alone.** A tool result looks identical whether it was auto-approved or approved at a prompt, so an assistant
+reporting "nothing prompted" is asserting something it has no way to observe — and this one did, wrongly, until
+the maintainer corrected it. Only the maintainer sees prompts. Any future check of this kind must ask rather
+than infer.
 
 ## Verifying it worked
 
