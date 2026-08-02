@@ -15,13 +15,45 @@ UI for managing .NET web applications on Synology NAS devices.
 
 ## 2. ARCHITECTURE REFERENCE
 
-**ALL architectural details are maintained in `docs/ai/technical-architecture.md`.** Consult this document before working on any feature.
+**ALL architectural details are maintained in `docs/ai/technical-architecture.md`.** Consult this document before working on any feature,
+and keep it updated when architecture changes — it has drifted before (it once claimed Interactive Server render mode when the app uses
+Interactive WebAssembly).
+
+The orientation below is the minimum needed to know where to look; it is not a substitute for that document.
+
+Solution: `src/Askyl.Dsm.WebHosting.slnx` (XML slnx format). All projects target `net10.0` with `EnablePreviewFeatures=true` (C# 14 scoped
+`extension` blocks are used). Project dependency order: `Constants ← Data ← Globalization`; `Tools → Constants, Data, Logging`;
+`Ui.Client → all of those`; `Ui (host) → everything + Ui.Client`; `Tests → everything incl. Analyzers`.
+
+Key structural facts that span multiple projects:
+
+- **Dual service implementations**: interfaces live in `Data/Contracts/` and are implemented twice — server-side in `Ui/Services/` (real logic)
+  and client-side in `Ui.Client/Services/` (HTTP proxy calling `/api/v1/...` controllers). When adding a service capability, you usually touch
+  both plus the thin controller in `Ui/Controllers/` (`[AuthorizeSession]` on everything except authentication).
+- **DSM communication chain**: Client service → Controller → `Ui/Services` → `IDsmSession` (Scoped; SID/username in ASP.NET session, TTL-cached
+  validation serialized by a `SemaphoreSlim`; validation calls the admin-only `SYNO.Core.User.get` and **fails closed**, which is also the app's
+  only administrator check — do not relax it) → `DsmApiClient` (Singleton in `Tools/Network/`; stateless — SID passed per call; lazy
+  `SYNO.API.Info` handshake guarded by `SemaphoreLock`). URL building and serialization format (Form vs Json) are driven by the `IApiParameters`
+  implementation. Facts established about the undocumented DSM APIs are recorded in `docs/ai/dsm-api-notes.md`.
+- **Website hosting subsystem**: `WebSiteHostingService` (Singleton + BackgroundService) owns a `ConcurrentDictionary` of sites; each site's
+  `SiteLifecycleManager` serializes start/stop/state/dispose through a bounded `Channel<LifecycleCommand>` with `TaskCompletionSource`-carrying
+  command records (avoids TOCTOU races). Processes are abstracted behind `IProcessRunner`/`IProcessHandle`; config persisted atomically to
+  `websites.json`.
+- **Custom Roslyn analyzers** (`Askyl.Dsm.WebHosting.Analyzers`, injected into every project via `src/Directory.Build.props`, severity Error):
+  ADWH01001/01002 missing blank lines and ADWH01003/01004 extra blank lines before `else`/`catch`, ADWH02001 `String.`/`string` pattern,
+  ADWH03001 no direct `ILogger` calls.
+- **Result pattern over exceptions**: `Data/Results/` (`ApiResult`, `ApiResultData<T>`, …). `IOptions<T>`/config binding are deliberately not
+  used — configuration is read directly.
+- **DSM settings** come from `/etc/synoinfo.conf` via `IFileReader`; `src/Askyl.Dsm.WebHosting.Ui/dev-mock/` provides a mock for local dev.
+- Server pipeline runs under path base `/adwh`; login is rate-limited (5/min); session cookie `ADWH.Session` is Strict/HttpOnly/Secure.
 
 ---
 
 ## 3. DOCUMENTATION RULES
 
 **ALL AI-generated documentation MUST be placed in `docs/ai/`.** When in doubt, use `docs/ai/`.
+
+External code contributions are not accepted (translations only) — see `CONTRIBUTING.md` before proposing anything that assumes otherwise.
 
 ---
 
@@ -36,10 +68,20 @@ dotnet clean /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build
 ```
 
-**NEVER** use `dotnet run` or variants without exact flags and solution path.
+**NEVER** substitute your own flags or paths in these commands. Running the application is a separate
+matter, governed by §13.
 
 **Test command:** a healthy run completes in ~5s and exits 0. If the test host ever hangs or aborts, that is a deadlock in the
 code — never normalise it with a timeout flag. Reproduce with `--blame-hang-timeout 10s` to capture a dump, then fix the cause.
+Single test: append `--filter "FullyQualifiedName~<TestClassOrMethod>"` to the test command.
+
+**Other commands:**
+
+- Markdown changes: `markdownlint <file-path>` verbatim (config in `.markdownlint.yaml`)
+- SPK package build: `./src/scripts/build-spk.sh` (output lands in `dist/`)
+- Version bump: `./src/scripts/update-version.sh` (syncs `src/Directory.Build.props` and `src/spk-project/INFO`)
+
+The CI lint gate is `dotnet format --verify-no-changes` — a formatting slip fails the build, not just the review.
 
 ### Mandatory Sequence: Format → Build → Test → Verify
 
@@ -380,17 +422,24 @@ BaseAddress for /adwh sub path mapping.
 
 ---
 
-## 13. APPLICATION LAUNCH RESTRICTIONS (TEMPORARY)
+## 13. APPLICATION LAUNCH RESTRICTIONS
 
-- NEVER use `dotnet run`, `run_in_terminal`, or `open_simple_browser`
-- NEVER use `create_and_run_task` for run tasks
-- Use only standardized build/clean commands
+The rule is **never run against production**, not never run.
+
+- NEVER point a running instance at the production NAS: no real DSM host, no real credentials
+- Local runs are allowed only against the development mock (`src/Askyl.Dsm.WebHosting.Ui/dev-mock/`),
+  which supplies `synoinfo.conf` through the configurable `DsmSettings:ConfigPath`
+- Always stop what you started — never leave a listener running between tasks
+- Everything else still goes through the standardized build/clean commands
 
 ---
 
 ## 14. EXECUTION ARCHITECTURE & SUB-AGENTS (SUPERPOWERS)
 
-CRITICAL: To prevent VRAM saturation (PCIe swap) on the local host:
+**Applies only to a locally hosted model**, where the constraint is VRAM saturation (PCIe swap) on this
+host. On a hosted model it costs turns and buys nothing — ignore this section entirely.
+
+Under a local model:
 
 - STRICT SEQUENTIAL EXECUTION: exactly ONE tool, skill, or sub-agent per output turn
 - WAIT FOR FEEDBACK: no guessing outputs

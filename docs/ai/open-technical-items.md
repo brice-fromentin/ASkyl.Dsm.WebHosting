@@ -2,9 +2,9 @@
 
 Defects, gaps and drift. **Features are not tracked here** — they belong in the README roadmap.
 
-Unlike `2026-07-25-codebase-assessment.md`, which was a dated snapshot never meant to be maintained, this
-document is meant to be kept current: close items as they land, and add nothing that has not been checked
-against source.
+This document is meant to be kept current: close items as they land, and add nothing that has not been
+checked against source. It replaces the 2026-07-25 assessment, a dated snapshot that was wrong on several
+claims and has been deleted.
 
 Every entry below was verified on 2026-07-29 against `main`, with the file and line that shows it.
 Nothing here is inherited on trust.
@@ -91,8 +91,8 @@ management. Noted in the code.
 `Ui/Program.cs`. DSM's nginx terminates TLS and proxies plain HTTP to port 7120, so ASP.NET logs
 `Failed to determine the https port for redirect` (EventId 3) at every startup — visible in two consecutive
 deployment logs. Fix is either processing `XForwardedProto` or removing the middleware. Scoped out of
-PR #36 because it changes what the middleware observes and AGENTS.md §13 forbids launching the application
-to confirm the result.
+PR #36 because it changes what the middleware observes and nothing in the process could run the application
+to confirm the result. AGENTS.md §13 now allows a local run against `dev-mock/`, so this is answerable.
 
 ### Cosmetic: install reports a worse error than uninstall for a bad version
 
