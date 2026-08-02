@@ -33,6 +33,7 @@
     ],
     "ask": [
       "Bash(gh pr merge *)",
+      "Bash(git push)",
       "Bash(git push origin main)",
       "Bash(git push origin main *)",
       "Bash(git push --force *)",
