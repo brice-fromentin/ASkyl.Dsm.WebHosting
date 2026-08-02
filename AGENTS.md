@@ -71,6 +71,13 @@ dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build
 **NEVER** substitute your own flags or paths in these commands. Running the application is a separate
 matter, governed by §13.
 
+**Why `/nr:false`:** it disables MSBuild node reuse. Measured 2026-08-03 on an incremental build of this
+solution: node reuse saves ~0.8s per build (1.9s vs 2.7s) but leaves 8 worker processes holding ~1.6 GB
+resident for 15 minutes afterwards. In an agent loop that builds ten to twenty times per session, that is
+the wrong side of the trade — and fresh nodes also guarantee no stale state carries over between builds,
+which matters because the custom analyzers are built by the same solution that consumes them. On CI the
+runner is disposable, so reuse buys nothing there either. Do not "optimise" the flag away.
+
 **Test command:** a healthy run completes in ~5s and exits 0. If the test host ever hangs or aborts, that is a deadlock in the
 code — never normalise it with a timeout flag. Reproduce with `--blame-hang-timeout 10s` to capture a dump, then fix the cause.
 Single test: append `--filter "FullyQualifiedName~<TestClassOrMethod>"` to the test command.

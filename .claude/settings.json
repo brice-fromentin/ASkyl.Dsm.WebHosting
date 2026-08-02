@@ -28,6 +28,7 @@
       "Bash(gh pr view *)",
       "Bash(dotnet format *)",
       "Bash(dotnet build *)",
+      "Bash(dotnet clean *)",
       "Bash(dotnet test *)",
       "Bash(markdownlint *)"
     ],
