@@ -92,7 +92,17 @@ management. Noted in the code.
 `Failed to determine the https port for redirect` (EventId 3) at every startup — visible in two consecutive
 deployment logs. Fix is either processing `XForwardedProto` or removing the middleware. Scoped out of
 PR #36 because it changes what the middleware observes and nothing in the process could run the application
-to confirm the result. AGENTS.md §13 now allows a local run against `dev-mock/`, so this is answerable.
+to confirm the result.
+
+**Confirmed locally 2026-08-03**, the first item settled by running the application rather than by reading a
+deployment log. `Program.cs:121` sets `options.ForwardedHeaders = ForwardedHeaders.XForwardedFor` and nothing
+else, so `X-Forwarded-Proto` is never honoured and `Request.Scheme` stays `http` behind any proxy.
+`app.UseHttpsRedirection()` at line 167 then finds no HTTPS port to redirect to, emits the same EventId 3
+warning seen in production, and passes the request through: `GET http://localhost:5000/adwh` answered **200**
+with no redirect. So the middleware cannot fire in either environment — it is inert, not merely noisy, which
+downgrades this from a possible redirect loop to dead configuration. Removing it is the honest fix; adding
+`ForwardedHeaders.XForwardedProto` is the fix that makes it mean something. Either way it is one line, and it
+is now testable.
 
 ### Cosmetic: install reports a worse error than uninstall for a bad version
 
