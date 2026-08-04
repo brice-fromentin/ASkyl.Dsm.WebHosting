@@ -26,9 +26,10 @@
             "cwd": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0",
             "webRoot": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui/wwwroot",
             "timeout": 123456,
+            // DsmSettings:ConfigPath comes from appsettings.Development.json, which applies to
+            // every Development launch — F5, dotnet run, or the raw dll. Do not duplicate it here.
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development",
-                "DsmSettings__ConfigPath": "./dev-mock/synoinfo.conf"
+                "ASPNETCORE_ENVIRONMENT": "Development"
             }
         },
         {
