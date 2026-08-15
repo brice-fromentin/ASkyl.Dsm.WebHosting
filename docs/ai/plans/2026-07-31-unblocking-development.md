@@ -120,21 +120,87 @@ project.
 1. ~~**Apply the permission allowlist** (D2).~~ Done — `.claude/settings.json`. Extended 2026-08-03: the
    post-merge check showed every read-only diagnostic and every file edit still cost an approval, so the
    inspection set §12 already calls safe was encoded and `defaultMode` set to `acceptEdits`.
+
+   **Extended again the same day, after D2 was found to have landed only halfway.** The permissions were
+   loosened; `AGENTS.md` §12 was not. It still read "Never auto-commit / MUST ask before committing / wait
+   for approval", and `AGENTS.md` outranks a settings file, so a compliant assistant kept asking for every
+   commit — the exact ceremony D2 exists to delete. It was caught the way it had to be: the assistant did
+   ask, and the maintainer asked why. §12 now states that the pull request is the gate, with a narrow
+   exception for changes that are genuinely the maintainer's call (amending the standards files, personal
+   tooling, dependencies, scope creep).
+
+   Two lessons worth generalising. **Loosening a permission does nothing while a higher-precedence document
+   still forbids the act** — settings and standards have to move together, and the standards file wins.
+   And **the allowlist was incomplete in a way that guaranteed one approval per PR anyway**: no `git push`
+   of any form was allowed, so opening the draft PR that D2 designates as the review gate required a prompt.
+   Pushes are now allowed scoped by branch prefix, with an `ask` rule catching any push that mentions
+   `main`.
+
+   **That pairing is itself a corrected error, and the third lesson.** The prefix list was first shipped
+   with the claim that "no spelling of a push can reach `main` unattended" — asserted, never checked. The
+   pre-merge review checked it: a trailing `*` in a Bash permission rule matches any sequence of characters
+   including spaces, so `Bash(git push -u origin feat/*)` also matches `git push -u origin feat/x main`.
+   Claude Code's documentation states plainly that patterns constraining command arguments are fragile, and
+   uses `Bash(git push *)` as an example of an *ask* rule rather than an allow. A positive list of prefixes
+   is not a boundary; the `ask` rule is what holds, and only against accidents. **An assertion about a
+   security control is worth exactly what its verification is worth** — this one was worth nothing until it
+   was read against the documentation.
+
+   The same review then found the half of the hole the first fix had missed: `git push -u origin feat/x
+   --force` matches the allow rule for exactly the same reason, and the pre-existing
+   `Bash(git push --force *)` never fires because it requires the flag to follow `git push` immediately.
+   `--force`, `--delete`, `-f` and `-d` are now caught in any position. Finding one instance of a class of
+   bug is not fixing the class — the first fix felt complete because it closed the case that had been
+   *noticed*, not because anything had enumerated the rest.
 2. ~~**Remove or scope §14** (D3).~~ Done — scoped to local-model setups.
 3. ~~**Start `docs/ai/dsm-api-notes.md`.**~~ Done. Synology does not document the Core APIs, so every fact learned
    about them currently lives in chat history and has to be re-asked. Seed it with what is already
    established: `SYNO.Core.User.get` is admin-only and is therefore the application's entire
    administrator gate; `SYNO.API.Auth.logout` at version 6 works and returns 200. Cheap, and it stops the
    same questions recurring.
-4. **Make the application runnable** (D1). The real project. Everything unverifiable traces back here.
+4. ~~**Make the application runnable** (D1), stage A.~~ Done 2026-08-03 — and the application boots.
 
-   Stage A starting point, established 2026-08-03 by reading the configuration — not yet by running anything.
-   `appsettings.json:42` sets `DsmSettings:ConfigPath` to `/etc/synoinfo.conf`, and
-   `appsettings.Development.json` carries only Serilog, so it does not override it. A local run therefore throws
-   from `DsmSettingsService.ResolveAndValidateConfigPath` before the host starts — the exception message even
-   prescribes the fix, `cp dev-mock/synoinfo.conf.template <path>`, and `dev-mock/synoinfo.conf` already exists.
-   The single launch profile is `https` on `https://localhost:5000`, path base `/adwh`. So Stage A is: add the
-   Development override, boot, assert a request is served, stop the listener.
+   **The 2026-08-03 entry point recorded here was wrong, and its error is the lesson.** It claimed a local run
+   throws from `DsmSettingsService.ResolveAndValidateConfigPath` because `appsettings.Development.json` carries
+   only Serilog. That conclusion came from reading `appsettings*.json` and `launchSettings.json` and calling the
+   configuration understood. It never opened `.vscode/launch.json`, which set
+   `DsmSettings__ConfigPath=./dev-mock/synoinfo.conf` in the debugger's environment — and environment variables
+   are layered over the JSON providers, so F5 had been booting fine for a month. Configuration lives wherever a
+   provider reaches, not only where the repository's own files are: check the launcher too.
+
+   What stage A actually needed was to move that override somewhere every launch path sees. It now lives in
+   `appsettings.Development.json`, and `launch.json` no longer duplicates it. One relative value serves both
+   paths, because `dev-mock/` sits in the project directory *and* is copied to the output by the `csproj`, while
+   MSBuild's `RunWorkingDirectory` is the project directory and the debugger's `cwd` is the output directory.
+
+   Verified by running it, not by reading it:
+
+   | Launch path | Working directory | Result |
+   |---|---|---|
+   | `dotnet run --launch-profile https` | project directory | `GET https://localhost:5000/adwh` → **200**, 82 ms |
+   | raw dll, `ASPNETCORE_ENVIRONMENT` only (the F5 conditions) | `bin/Debug/net10.0` | `GET http://localhost:5000/adwh` → **200** |
+
+   The debug log confirms which file was read — `Resolving DSM settings from: dev-mock/synoinfo.conf
+   (configured: true)`, without the `./` that `launch.json` used, so the new setting is demonstrably the one in
+   effect. Both listeners were stopped afterwards.
+
+   Two things surfaced only because the thing ran, and neither is fixed here:
+
+   - **The local `dev-mock/synoinfo.conf` has drifted from the versioned template**, naming a real host and
+     port where the template uses loopback values. The file is gitignored, so it drifted invisibly. Nothing was
+     sent to it — `DsmApiClient`'s `SYNO.API.Info` handshake is lazy and only the anonymous login page was
+     requested — but an instance configured toward production is what §13 exists to prevent. Reset it from the
+     template.
+   - **`websites.json` carries a real deployment entry** whose binary is absent locally, so it fails to start
+     with `ApplicationBinaryNotFound`. Harmless, but it means local state is a copy of production state.
+
+   Neither is quoted here on purpose. This document is public, and the first draft of this section named the
+   host, the port and the deployed site — a maintainer's infrastructure, republished from private local files
+   into a public repository and a pull request description. **Findings about local state get described, never
+   transcribed.** The finding is the drift; the values are not needed to act on it.
+
+   Stage B remains: fakes for the `SYNO.*` calls, added one at a time when a concrete question needs one. The
+   first question to need one is login, which is the boundary this run stopped at.
 5. **Add one runtime gate.** Once item 4 lands, the mandatory sequence should end with something that
    starts the application and asserts it serves a request. Today every gate is local and syntactic —
    format, zero warnings, blank lines, `String.` vs `string`, parameters per line. All pass, always. Not
@@ -162,9 +228,12 @@ than infer.
 Do not declare this done on the basis that the changes were made. Measure the next feature session:
 
 - **Approval round-trips per PR: target under 2** (currently ~2 per PR plus a merge, times ten PRs).
-- **Runtime questions answerable without asking the maintainer.** Pick a concrete one already open —
-  `XForwardedProto`, or `UseHttpsRedirection` — and see whether it can be settled without a human relaying
-  a log.
+- ~~**Runtime questions answerable without asking the maintainer.**~~ **Met, 2026-08-03.** Both named
+  candidates were settled in the same run that closed stage A, from a local log rather than a relayed
+  deployment log: `Program.cs:121` registers `ForwardedHeaders.XForwardedFor` only, so `X-Forwarded-Proto` is
+  never processed; `app.UseHttpsRedirection()` at line 167 therefore logs `Failed to determine the https port
+  for redirect` and passes the request through — observed, with `http://localhost:5000/adwh` answering 200 and
+  no redirect. The middleware is inert rather than protective. Recorded in `open-technical-items.md`.
 - **A deliberately introduced runtime fault is caught by the gates**, not by a deployment. If it is not,
   item 5 did not land.
 

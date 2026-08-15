@@ -55,6 +55,23 @@ Key structural facts that span multiple projects:
 
 External code contributions are not accepted (translations only) — see `CONTRIBUTING.md` before proposing anything that assumes otherwise.
 
+### This repository is public — describe local state, never transcribe it
+
+Documentation, commit messages and pull request descriptions are published the moment they are pushed, and a
+pull request description is mailed to every watcher and indexed by search engines. Gitignored and untracked
+files — `dev-mock/synoinfo.conf`, `websites.json`, `logs/`, anything under `bin/` — hold the maintainer's real
+infrastructure. They are gitignored precisely so that it stays out of the repository.
+
+- ❌ Never quote a hostname, IP, port, credential, share or deployment path read from local or gitignored state
+- ❌ Never paste a raw log excerpt without checking every line of it for the same
+- ✅ Name the *finding*: "the mock has drifted from the template and points at a real host" is fully actionable
+- ✅ Values from the versioned templates and fixtures are fine — they are already public by definition
+
+This rule exists because it was broken: a finding about a drifted local mock was written up with the host, the
+port and the deployed site spelled out, in a document and in a pull request description, on a public
+repository. Editing a description later does not unpublish it — GitHub keeps the revision, and the
+notification mail has already gone out. The check belongs *before* the push, and it costs one reread.
+
 ---
 
 ## 4. BUILD & FORMAT WORKFLOW
@@ -386,14 +403,24 @@ After EVERY code modification:
 3. **GET** explicit confirmation
 4. **RUN `git status`** first
 
-### No Commits Without Authorization
+### Committing: the pull request is the gate, not the commit
 
-- ❌ Never auto-commit after making changes
-- ✅ MUST ask before committing
-- ✅ MUST show proposed commit message, wait for approval
-- ✅ MUST offer `git diff` review
+Nothing reaches `main` without a merge, so gating each commit on a feature branch is a checkpoint on a
+checkpoint. Settled by decision D2 of `docs/ai/plans/2026-07-31-unblocking-development.md`, and encoded in
+`.claude/settings.json`, which allows `git add`, `git commit` and `gh pr create --draft`.
 
-**Correct workflow:** Make changes → format → build → ask user → show message → get approval → commit
+- ✅ Commit freely on a feature branch once format, build and test are green — no approval round-trip
+- ✅ Open the draft PR at the first commit, so CI runs from the start
+- ✅ Say what was committed and why, after the fact, in a line or two
+- ❌ Never commit on `main`, and never merge a PR, without explicit authorization
+- ❌ Never commit a red build, a failing test, or an unformatted tree
+
+**Correct workflow:** make changes → format → build → test → commit → push → draft PR → report
+
+Ask before committing only when the change is genuinely the maintainer's call — amending this file or
+`AGENTS-WORKING-PREFERENCES.md`, touching personal tooling such as `.vscode/`, adding a dependency, or
+anything whose scope exceeds what was asked for. That exception is narrow on purpose: it exists for
+decisions, not for reassurance.
 
 ### Commit Message Conventions
 
@@ -419,8 +446,21 @@ BaseAddress for /adwh sub path mapping.
 
 ### Safe Operations (No Confirmation Needed)
 
-- ✅ `git status`, `git diff`, `git log`, `git branch`
-- ✅ `git add <specific-file>`, `git commit -m "..."` (after showing message)
+- ✅ `git status`, `git diff`, `git log`, `git branch`, `git checkout -b`
+- ✅ `git add`, `git commit`, and `git push -u origin <branch>` on a feature branch
+- ✅ `gh pr create --draft`, `gh pr checks`, `gh pr view`
+
+Always push with the explicit `git push -u origin <branch>` form, every time and not only the first. The
+argument-less `git push` is deliberately gated because what it pushes depends on remote state rather than on
+the command. The allowlist is scoped by branch prefix (`feat/`, `fix/`, `chore/`, `docs/`, `ci/`,
+`refactor/`), and a separate `ask` rule catches any push whose command mentions `main` in any position.
+
+**Do not read that as a guarantee.** A trailing `*` in a Bash permission rule matches any sequence of
+characters *including spaces*, so a prefix rule constrains the start of a command and nothing else:
+`Bash(git push -u origin feat/*)` also matches `git push -u origin feat/x main`. Claude Code's own
+documentation warns that "Bash permission patterns that try to constrain command arguments are fragile".
+The `ask` rule on `main` is what actually holds the line here, and it holds it against accidents, not
+against a determined bypass. Treat the allowlist as a convenience, never as a boundary.
 
 ---
 
@@ -433,6 +473,48 @@ The rule is **never run against production**, not never run.
   which supplies `synoinfo.conf` through the configurable `DsmSettings:ConfigPath`
 - Always stop what you started — never leave a listener running between tasks
 - Everything else still goes through the standardized build/clean commands
+
+### Standardized Run Commands
+
+```bash
+dotnet run --project src/Askyl.Dsm.WebHosting.Ui --no-build --launch-profile https
+pkill -f "Askyl.Dsm.WebHosting.Ui"
+```
+
+Build first — `--no-build` is deliberate, so a run never silently rebuilds behind the mandatory sequence.
+Serves `https://localhost:5000/adwh`; the certificate is the local dev one, so `curl` needs `-k`.
+
+**`pkill -f` matches the whole command line, so it stops every instance — including a VS Code debug
+session the maintainer is using**, whose `program` path contains the same string. Run `pgrep -fl
+"Askyl.Dsm.WebHosting.Ui"` first and stop only what you started; killing someone else's debugger is not
+"stopping what you started".
+
+`appsettings.Development.json` points `DsmSettings:ConfigPath` at `dev-mock/synoinfo.conf`, which resolves
+under both the project directory (`dotnet run`) and the output directory (the VS Code debugger). Do not
+re-add that override to `.vscode/launch.json`: an environment variable there overrides the JSON silently,
+and one that had drifted is why a whole session concluded the application could not start at all.
+
+Run both commands **from the repository root**: the `--project` path above is relative, so it resolves
+nowhere else and fails with MSB1009 rather than starting anything.
+
+**Always `dotnet run --project`, never the built dll directly.** `dotnet run` sets the *launched
+application's* working directory to the project directory — MSBuild's `RunWorkingDirectory` — so the mock
+resolves regardless of the shell's own directory, verified by launching with an absolute `--project` path
+from an unrelated directory. That invariance is about the app's working directory, not about the relative
+path in the command. Running
+`dotnet src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0/Askyl.Dsm.WebHosting.Ui.dll` instead leaves the
+working directory wherever the shell stood, and that directory is also the content root: from anywhere but
+the output directory ASP.NET finds **no `appsettings*.json` at all**, so the override is never seen and
+startup dies on `/etc/synoinfo.conf`. The error then names `/etc/`, which reads as a missing mock and is
+really a missing configuration — an expensive twenty minutes if it is not expected. The VS Code debugger
+avoids this only because `launch.json` pins `cwd` to the output directory.
+
+The mock is gitignored. On a fresh clone, create it and **keep the template's values** — the template names
+`127.0.0.1`, and a mock naming the real NAS turns every local run into a §13 violation:
+
+```bash
+cp src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf.template src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf
+```
 
 ---
 
