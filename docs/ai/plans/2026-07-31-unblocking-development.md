@@ -222,8 +222,19 @@ project.
 
    **Proven the way the plan asked.** Removing `AddSingleton<IDsmSettingsService, DsmSettingsService>()`
    left `dotnet build` at **zero errors and zero warnings** and the other 546 tests green; only these
-   three turned red, naming the missing registration. A fault that would previously have reached a
-   deployment now stops at the mandatory sequence. Registration restored, 549 tests pass.
+   turned red, naming the missing registration. A fault that would previously have reached a deployment
+   now stops at the mandatory sequence. Registration restored, the suite passes.
+
+   **A first draft of the gate asserted only `200` and `text/html`, which the maintainer challenged as too
+   weak. He was right.** An error page, an empty shell and a host page whose assets failed to resolve all
+   satisfy that. The gate now parses the response and requires two markers that cannot appear by accident:
+   `<base href="/adwh/">`, and a *fingerprinted* `_framework/blazor.web.<hash>.js`, whose hash only a
+   resolved static asset manifest produces. Proven differentially: with `MapStaticAssets()` removed, the
+   build stayed clean, the `200`/`text/html` assertion still passed, and only the new one failed. **The
+   strength of a gate is the fault it rejects, not the fact that it runs.**
+
+   Checking what the gate actually received also surfaced a defect no test could have seen: every 404
+   returns an empty body. Recorded in `open-technical-items.md`.
 
    One dependency was added for this: `Microsoft.AspNetCore.Mvc.Testing`, authorised by the maintainer.
 6. **Formalise the deployment log review.** Reading a deployed log found the PR #39 cache defect, which
