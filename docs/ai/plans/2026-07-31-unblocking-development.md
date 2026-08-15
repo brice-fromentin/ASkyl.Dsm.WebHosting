@@ -201,10 +201,31 @@ project.
 
    Stage B remains: fakes for the `SYNO.*` calls, added one at a time when a concrete question needs one. The
    first question to need one is login, which is the boundary this run stopped at.
-5. **Add one runtime gate.** Once item 4 lands, the mandatory sequence should end with something that
-   starts the application and asserts it serves a request. Today every gate is local and syntactic —
-   format, zero warnings, blank lines, `String.` vs `string`, parameters per line. All pass, always. Not
-   one asks whether the feature works.
+5. ~~**Add one runtime gate.**~~ Done 2026-08-15. `ApplicationStartupTests` boots the real `Program.cs`
+   in memory through `ApplicationHostFactory` and asserts that `/adwh` is served, that the security
+   headers are present, and that a `[AuthorizeSession]` route refuses an unauthenticated caller.
+
+   **It rides inside `dotnet test`, so nothing else changed** — not the four-step sequence, not the CI
+   workflow, not a command in §4. That was the deciding argument for an in-process
+   `WebApplicationFactory` over a script that launches the process and curls it: no new step, no port, no
+   listener to kill, and a stack trace instead of a timeout. The rejected route also collided with §13's
+   "always stop what you started", since `pkill -f` takes the maintainer's debugger with it.
+
+   Two things worth keeping:
+
+   - **The entry point is `App`, not `Program`.** Both the host and the WebAssembly client declare a
+     top-level `Program`, so `WebApplicationFactory<Program>` is ambiguous from the test assembly. The
+     type argument only locates the entry-point assembly, so any public host type serves.
+   - **All mutable state goes to one throwaway directory.** The factory writes a synthetic
+     `synoinfo.conf` there from `FakeDsmSettings`' constants and redirects `WebSitesConfigurationService`
+     to it, so a run never reads the host's real `/etc/synoinfo.conf` and never starts a real site.
+
+   **Proven the way the plan asked.** Removing `AddSingleton<IDsmSettingsService, DsmSettingsService>()`
+   left `dotnet build` at **zero errors and zero warnings** and the other 546 tests green; only these
+   three turned red, naming the missing registration. A fault that would previously have reached a
+   deployment now stops at the mandatory sequence. Registration restored, 549 tests pass.
+
+   One dependency was added for this: `Microsoft.AspNetCore.Mvc.Testing`, authorised by the maintainer.
 6. **Formalise the deployment log review.** Reading a deployed log found the PR #39 cache defect, which
    was invisible in source — the class looks correct until you notice `IDsmSession` is Scoped. That habit
    is worth more than any rule currently in `AGENTS.md`. Write it down as a step: deploy, pull the log,
@@ -234,8 +255,10 @@ Do not declare this done on the basis that the changes were made. Measure the ne
   never processed; `app.UseHttpsRedirection()` at line 167 therefore logs `Failed to determine the https port
   for redirect` and passes the request through — observed, with `http://localhost:5000/adwh` answering 200 and
   no redirect. The middleware is inert rather than protective. Recorded in `open-technical-items.md`.
-- **A deliberately introduced runtime fault is caught by the gates**, not by a deployment. If it is not,
-  item 5 did not land.
+- ~~**A deliberately introduced runtime fault is caught by the gates**, not by a deployment.~~ **Met,
+  2026-08-15.** Removing a service registration that only startup resolves left the build at zero errors
+  and zero warnings, and the 546 pre-existing tests green; the three new startup tests failed and named
+  the missing registration. The fault was invisible to every gate that existed before item 5.
 
 ## What must not change
 

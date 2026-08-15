@@ -109,6 +109,15 @@ The CI lint gate is `dotnet format --verify-no-changes` — a formatting slip fa
 
 **NEVER skip the format step.** A build that compiles is not a passing build — "Verify" also requires the test run to exit 0.
 
+**The test step now starts the application.** `ApplicationStartupTests` boots the real `Program.cs` in
+memory through `ApplicationHostFactory` — the actual registrations, the actual middleware pipeline, the
+actual configuration providers — and asserts that a request is served. So a failure there usually means
+the host cannot come up, not that an assertion drifted: read the exception before touching the test.
+Every other gate in this repository is syntactic and stays green whatever the application does at startup,
+which is how a permanent deadlock (P0-1) and a 64 KB freeze on hosted sites (P0-2) both shipped through a
+fully green build. Verified by removing a service registration: the build stayed at zero errors and zero
+warnings, and only these tests turned red.
+
 ### What `dotnet format` Enforces Automatically
 
 - ✅ **Using directives**: System first, then alphabetical; removes unused usings

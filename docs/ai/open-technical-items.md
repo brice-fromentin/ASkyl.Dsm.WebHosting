@@ -19,6 +19,10 @@ surfaces as a 500. It fails closed, but noisily, and gives clients nothing to br
 
 Check how `Ui.Client`'s `AuthenticationNavigationGuard` reacts before changing the status code.
 
+`ApplicationStartupTests.ProtectedApi_WithoutSession_DoesNotSucceed` now pins the property that actually
+matters — an unauthenticated caller is refused — without asserting the status code, so it stays green
+through the fix rather than having to be rewritten alongside it.
+
 ### Session identifier is not rotated on login
 
 `Ui/Services/DsmSession.cs`. No rotation exists anywhere — no regeneration, no clear-and-reissue. Risk is
