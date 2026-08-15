@@ -57,6 +57,13 @@ All eight scripts under `spk-project/scripts/` run as root on the user's NAS, an
 continues past a failed command. `build-spk.sh` gets this right at line 3 — the packaging scripts simply
 never adopted it.
 
+**TODO, prerequisite for the three SPK items above: a disposable DSM instance.** None of them can be
+confirmed or fixed with confidence by reading — they need an install, a stop and an upgrade actually run.
+Mocking cannot substitute, since `synopkg` and the package lifecycle are the thing under test. A Virtual
+DSM under Virtual Machine Manager is the candidate (one free instance per host, Btrfs volume required).
+Recorded, not planned: it shares its physical machine with production, and reachable credentials are a
+separate decision from the hardware.
+
 ### `AddWebsiteAsync` applies side effects before persisting, with no rollback
 
 `Ui/Services/WebSiteHostingService.cs:90-114`. ACLs are set (step 1) and the reverse-proxy rule is created
