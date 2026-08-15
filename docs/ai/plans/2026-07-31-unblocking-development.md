@@ -133,8 +133,25 @@ project.
    still forbids the act** — settings and standards have to move together, and the standards file wins.
    And **the allowlist was incomplete in a way that guaranteed one approval per PR anyway**: no `git push`
    of any form was allowed, so opening the draft PR that D2 designates as the review gate required a prompt.
-   Pushes are now allowed scoped by branch prefix — a positive list, so no spelling reaches `main`
-   unattended, which a blocklist could not promise.
+   Pushes are now allowed scoped by branch prefix, with an `ask` rule catching any push that mentions
+   `main`.
+
+   **That pairing is itself a corrected error, and the third lesson.** The prefix list was first shipped
+   with the claim that "no spelling of a push can reach `main` unattended" — asserted, never checked. The
+   pre-merge review checked it: a trailing `*` in a Bash permission rule matches any sequence of characters
+   including spaces, so `Bash(git push -u origin feat/*)` also matches `git push -u origin feat/x main`.
+   Claude Code's documentation states plainly that patterns constraining command arguments are fragile, and
+   uses `Bash(git push *)` as an example of an *ask* rule rather than an allow. A positive list of prefixes
+   is not a boundary; the `ask` rule is what holds, and only against accidents. **An assertion about a
+   security control is worth exactly what its verification is worth** — this one was worth nothing until it
+   was read against the documentation.
+
+   The same review then found the half of the hole the first fix had missed: `git push -u origin feat/x
+   --force` matches the allow rule for exactly the same reason, and the pre-existing
+   `Bash(git push --force *)` never fires because it requires the flag to follow `git push` immediately.
+   `--force`, `--delete`, `-f` and `-d` are now caught in any position. Finding one instance of a class of
+   bug is not fixing the class — the first fix felt complete because it closed the case that had been
+   *noticed*, not because anything had enumerated the rest.
 2. ~~**Remove or scope §14** (D3).~~ Done — scoped to local-model setups.
 3. ~~**Start `docs/ai/dsm-api-notes.md`.**~~ Done. Synology does not document the Core APIs, so every fact learned
    about them currently lives in chat history and has to be re-asked. Seed it with what is already

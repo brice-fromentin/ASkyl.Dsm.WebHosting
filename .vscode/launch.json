@@ -41,7 +41,12 @@
             "args": [],
             "cwd": "${workspaceFolder}/src/Askyl.Dsm.WebHosting.Ui",
             "stopAtEntry": false,
-            "console": "internalConsole"
+            "console": "internalConsole",
+            // Without this the environment is Production, appsettings.Development.json is never
+            // loaded, and startup throws on /etc/synoinfo.conf.
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
         }
     ],
     // Compound configurations - "Build + Blazor WASM" is the default for development

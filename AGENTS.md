@@ -452,8 +452,15 @@ BaseAddress for /adwh sub path mapping.
 
 Always push with the explicit `git push -u origin <branch>` form, every time and not only the first. The
 argument-less `git push` is deliberately gated because what it pushes depends on remote state rather than on
-the command, and the allowlist is scoped by branch prefix (`feat/`, `fix/`, `chore/`, `docs/`, `ci/`,
-`refactor/`) so that no spelling of a push can reach `main` unattended.
+the command. The allowlist is scoped by branch prefix (`feat/`, `fix/`, `chore/`, `docs/`, `ci/`,
+`refactor/`), and a separate `ask` rule catches any push whose command mentions `main` in any position.
+
+**Do not read that as a guarantee.** A trailing `*` in a Bash permission rule matches any sequence of
+characters *including spaces*, so a prefix rule constrains the start of a command and nothing else:
+`Bash(git push -u origin feat/*)` also matches `git push -u origin feat/x main`. Claude Code's own
+documentation warns that "Bash permission patterns that try to constrain command arguments are fragile".
+The `ask` rule on `main` is what actually holds the line here, and it holds it against accidents, not
+against a determined bypass. Treat the allowlist as a convenience, never as a boundary.
 
 ---
 
@@ -477,14 +484,24 @@ pkill -f "Askyl.Dsm.WebHosting.Ui"
 Build first — `--no-build` is deliberate, so a run never silently rebuilds behind the mandatory sequence.
 Serves `https://localhost:5000/adwh`; the certificate is the local dev one, so `curl` needs `-k`.
 
+**`pkill -f` matches the whole command line, so it stops every instance — including a VS Code debug
+session the maintainer is using**, whose `program` path contains the same string. Run `pgrep -fl
+"Askyl.Dsm.WebHosting.Ui"` first and stop only what you started; killing someone else's debugger is not
+"stopping what you started".
+
 `appsettings.Development.json` points `DsmSettings:ConfigPath` at `dev-mock/synoinfo.conf`, which resolves
 under both the project directory (`dotnet run`) and the output directory (the VS Code debugger). Do not
 re-add that override to `.vscode/launch.json`: an environment variable there overrides the JSON silently,
 and one that had drifted is why a whole session concluded the application could not start at all.
 
-**Always `dotnet run --project`, never the built dll directly.** `dotnet run` launches with the working
-directory set to the project directory — MSBuild's `RunWorkingDirectory` — so the command above behaves
-identically from wherever it is invoked, verified from an unrelated directory. Running
+Run both commands **from the repository root**: the `--project` path above is relative, so it resolves
+nowhere else and fails with MSB1009 rather than starting anything.
+
+**Always `dotnet run --project`, never the built dll directly.** `dotnet run` sets the *launched
+application's* working directory to the project directory — MSBuild's `RunWorkingDirectory` — so the mock
+resolves regardless of the shell's own directory, verified by launching with an absolute `--project` path
+from an unrelated directory. That invariance is about the app's working directory, not about the relative
+path in the command. Running
 `dotnet src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0/Askyl.Dsm.WebHosting.Ui.dll` instead leaves the
 working directory wherever the shell stood, and that directory is also the content root: from anywhere but
 the output directory ASP.NET finds **no `appsettings*.json` at all**, so the override is never seen and
