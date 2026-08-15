@@ -2,6 +2,21 @@
 
 **Lifespan:** delete this file once the items are done or rejected. It is an agenda, not a reference.
 
+**What still stands between this file and its own deletion, as of 2026-08-15.** Items 1 to 5 are done.
+Two things remain, and only one of them is a task:
+
+1. **Item 6**, formalising the deployment log review. A genuine, small piece of work.
+2. **Stage B of item 4 is not a task and must be moved before this file can die.** It reads "fakes for the
+   `SYNO.*` calls, added one at a time when a concrete question needs one" — a standing policy with no
+   completion condition. Nothing will ever make it *done*, so leaving it here guarantees the agenda
+   outlives its purpose and fossilises into the reference it declares it is not. Move it to `AGENTS.md`
+   or `technical-architecture.md`, where a permanent approach belongs, then close item 6, then delete
+   this file.
+
+Defects discovered while working through these items do **not** belong here — they go to
+`docs/ai/open-technical-items.md`. Recording one in this file would give it the same immortality as
+stage B, for the same reason.
+
 **Goal of the session:** remove what forces an assistant to stop and ask, without removing what actually
 protects the repository. Success is measured, not asserted — see Verifying It Worked.
 
