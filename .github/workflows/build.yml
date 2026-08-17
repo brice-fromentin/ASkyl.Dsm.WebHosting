@@ -5,8 +5,12 @@ on:
     branches: [main]
     tags:
       - 'v*'
+  # No `branches` filter on purpose. That filter matches the *base* branch, so with `[main]` a pull
+  # request stacked on a feature branch triggered nothing at all — and pushes to a feature branch
+  # trigger nothing either, since `push` is limited to main and tags. A stacked pull request therefore
+  # had zero checks while looking reviewed, which is the same hole that let PR #30 carry a red suite
+  # and ~38 never-executing tests for a month. Verify every pull request, whatever it targets.
   pull_request:
-    branches: [main]
 
 # The checks below were one sequential job until 2026-08-17. They share no artefacts — `dotnet format`
 # loads the solution into an in-memory Roslyn workspace while `dotnet build` compiles to disk, so
