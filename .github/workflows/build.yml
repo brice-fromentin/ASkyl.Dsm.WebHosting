@@ -8,10 +8,78 @@ on:
   pull_request:
     branches: [main]
 
+# The checks below were one sequential job until 2026-08-17. They share no artefacts — `dotnet format`
+# loads the solution into an in-memory Roslyn workspace while `dotnet build` compiles to disk, so
+# neither reuses the other's work and running them in either order cost the sum of both. Measured on
+# one run: 85s total, of which format 25s and build 22s. Split into parallel jobs, wall clock becomes
+# the slowest job rather than the sum. Runner minutes go up by about a third, which is free on a
+# public repository.
+#
+# `release` gates on these jobs, and a skipped dependency would skip the release with it. So every job
+# a release depends on must also run on tags — see the condition on `vulnerable`.
+
 jobs:
-  # Runs on pushes, PRs and tags. Tags are included on purpose: `release` gates on this job,
-  # so skipping it on tags would skip the release along with it.
-  verify:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # No explicit restore: dotnet format restores by default, and an explicit step ahead of it does
+      # the same work plus one process start. Measured, see the build-test job.
+      - name: Check format
+        run: dotnet format --verify-no-changes ./src/Askyl.Dsm.WebHosting.slnx
+
+  # Test stays with Build: `--no-build` needs the compiled output, so splitting them would mean
+  # publishing and re-downloading artefacts to save nothing.
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # No explicit restore step: dotnet build restores implicitly, so both spellings do exactly one
+      # restore and the explicit one just adds a process start. Measured on three cold clones —
+      # restore + `build --no-restore` came out at 7/5/4s against 6/4/4s for build alone, never the
+      # other way round. The vulnerable job below keeps its restore, because `dotnet list package`
+      # reads project.assets.json and does not produce it.
+      - name: Build
+        run: dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
+
+      - name: Test
+        run: dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build
+
+  # No .NET here at all: markdownlint needs only the checkout, so this job finishes in seconds instead
+  # of waiting behind a restore it never uses.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # Only tracked files: .opencode/node_modules ships hundreds of third-party .md files that
+      # do not meet this repository's rules and are not ours to reformat.
+      - name: Lint markdown
+        run: |
+          npm install -g markdownlint-cli
+          markdownlint $(git ls-files '*.md')
+
+  # Off the pull-request path by decision, 2026-08-17. The dependency set moves with a Dependabot PR or
+  # a deliberate bump, not with the average feature branch, so paying 10s on every push to a branch
+  # bought little. `github.event_name == 'push'` covers both main and tags: gating on the branch name
+  # instead would skip this on a tag and take `release` down with it.
+  vulnerable:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -24,22 +92,6 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore ./src/Askyl.Dsm.WebHosting.slnx
-
-      - name: Check format
-        run: dotnet format --no-restore --verify-no-changes ./src/Askyl.Dsm.WebHosting.slnx
-
-      - name: Build
-        run: dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
-
-      - name: Test
-        run: dotnet test ./src/Askyl.Dsm.WebHosting.Tests --no-build
-
-      # Only tracked files: .opencode/node_modules ships hundreds of third-party .md files that
-      # do not meet this repository's rules and are not ours to reformat.
-      - name: Lint markdown
-        run: |
-          npm install -g markdownlint-cli
-          markdownlint $(git ls-files '*.md')
 
       # `dotnet list package --vulnerable` always exits 0, so its JSON output is inspected
       # instead. JSON also keeps this locale-independent, unlike grepping the table text.
@@ -57,12 +109,12 @@ jobs:
 
           echo "No vulnerable packages."
 
-  # Format, build and test are not repeated here: `needs: verify` already ran them on this SHA.
+  # Format, build and test are not repeated here: the jobs above already ran them on this SHA.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    needs: verify
+    needs: [format, build-test, lint, vulnerable]
     steps:
       - uses: actions/checkout@v7
 
