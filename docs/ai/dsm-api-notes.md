@@ -66,3 +66,5 @@ Shared codes live in `Constants/DSM/API/DsmConstants.cs`:
   nothing reads them — each parameters class hardcodes its own `Version`, and the reported range has
   never been recorded from a real NAS. `ApiConstants.MinVersion`/`MaxVersion` (1 and 7) are unused
   leftovers, not a negotiated range.
+
+<!-- temporary: proving that a stacked pull request now triggers CI -->
