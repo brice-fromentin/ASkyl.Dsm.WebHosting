@@ -356,6 +356,20 @@ After EVERY code modification:
 
 **For API integration patterns, see `docs/ai/technical-architecture.md` section "Data Models & API Integration".**
 
+### Testing DSM interactions: fake on demand, never speculatively
+
+No general `SYNO.*` mock exists, and none should be built ahead of a need. **Add a fake for one API when a
+concrete question requires it**, not before. `dev-mock/synoinfo.conf` covers the settings file for the same
+reason: it was built when a local run actually needed it.
+
+The insertion point exists since the runtime gate landed. `ApplicationHostFactory` builds the real host, so
+a test replaces `DsmApiClient`'s message handler there rather than standing up a whole fake DSM.
+
+**Check the overlap before building anything.** `open-technical-items.md` records a disposable DSM instance
+as the prerequisite for validating the SPK lifecycle scripts, and a real instance answers some of the same
+questions a fake would. Ask which of the two the question in front of you actually needs. Building both for
+one question is precisely the waste this rule exists to prevent.
+
 ---
 
 ## 10. FRAMEWORK REQUIREMENTS
@@ -416,11 +430,14 @@ After EVERY code modification:
 ### Committing: the pull request is the gate, not the commit
 
 Nothing reaches `main` without a merge, so gating each commit on a feature branch is a checkpoint on a
-checkpoint. Settled by decision D2 of `docs/ai/plans/2026-07-31-unblocking-development.md`, and encoded in
-`.claude/settings.json`, which allows `git add`, `git commit` and `gh pr create --draft`.
+checkpoint. Encoded in `.claude/settings.json`, which allows `git add`, `git commit` and
+`gh pr create --draft`. The reasoning is in the description of PR #43, where it landed.
 
 - ✅ Commit freely on a feature branch once format, build and test are green — no approval round-trip
 - ✅ Open the draft PR at the first commit, so CI runs from the start
+- ✅ Keep a branch to **one purpose**. PR #30 was 151 commits and unreviewable; every defect caught in
+  review since has been caught in a branch of one to three. If a second purpose appears while working,
+  say so and let the maintainer decide whether to split
 - ✅ Say what was committed and why, after the fact, in a line or two
 - ❌ Never commit on `main`, and never merge a PR, without explicit authorization
 - ❌ Never commit a red build, a failing test, or an unformatted tree
@@ -471,6 +488,13 @@ characters *including spaces*, so a prefix rule constrains the start of a comman
 documentation warns that "Bash permission patterns that try to constrain command arguments are fragile".
 The `ask` rule on `main` is what actually holds the line here, and it holds it against accidents, not
 against a determined bypass. Treat the allowlist as a convenience, never as a boundary.
+
+**The boundary is on GitHub, not here.** `main` is protected: a pull request is required, `format`,
+`build-test` and `lint` must pass, force pushes and deletions are refused, history stays linear, and the
+rules apply to administrators too. So a push to `main` fails at the remote whatever any local setting
+says — which is the point. `vulnerable` is deliberately **not** a required check: it is skipped on pull
+requests, and a skipped required check blocks a merge forever. A branch cut before the parallel CI landed
+reports only the old `verify` job and stays blocked until it is rebased.
 
 ---
 
@@ -609,3 +633,48 @@ When AGENTS.md specifies a command (e.g., `markdownlint <file-path>`), use it ve
 ## 17. NON-COMPLIANCE CONSEQUENCES
 
 Failure to follow these instructions systematically is a critical error and must be corrected immediately.
+
+---
+
+## 18. VERIFICATION HABITS
+
+Three practices, kept together because they share one root: **never confuse what you believe with what you
+have measured.** They outlived the 2026-07-31 agenda that produced them, which was deleted once its items
+were done — these are rules, not history. Numbered last so that every reference to §12, §13 and §16
+elsewhere in this repository stays valid.
+
+### Prove a fix by reverting it
+
+Temporarily undo the fix, watch the check fail **for the right reason**, restore. A test that has never
+been seen to fail has not been shown to test anything.
+
+It caught a test asserting against `Request.Path` where production uses
+`IStatusCodeReExecuteFeature.OriginalPath`. It is how the runtime gate earned its place: removing one
+service registration left the build at zero errors and zero warnings with every pre-existing test green,
+and only the new tests red. And it is how that same gate was found too weak a day later — with
+`MapStaticAssets()` removed, the application still answered `200` with `text/html`, so an assertion on the
+status and content type alone proved nothing.
+
+**The strength of a gate is the fault it rejects, not the fact that it runs.**
+
+### Verify a claim before repeating it
+
+Treat any inherited finding as a lead until checked against source. The 2026-07-25 assessment was
+confident, well-structured and wrong in several places, and its claims were repeated for weeks.
+
+This applies hardest to claims about a safety control, because those are the ones nobody re-reads. "No
+spelling of a push can reach `main` unattended" was written into this file *and* into a pull request
+description without once being checked against the documentation. It was false: a trailing `*` in a Bash
+permission rule spans spaces, so the rule also matched a command pushing `main` alongside the branch. The
+review that caught it then found the same hole for `--force`, which the first fix had missed — **finding
+one instance of a class of bug is not fixing the class.**
+
+### You cannot observe your own approval prompts
+
+A tool result looks identical whether it ran unattended or was approved at a prompt. An assistant
+reporting "nothing prompted" is asserting something it has no way to observe — and one did, wrongly, until
+the maintainer corrected it. Only the maintainer sees prompts.
+
+**Any check of that kind must ask rather than infer.** The same reflex applies wherever the evidence lives
+outside what the assistant can read: say what was verified, say what was assumed, and never let the second
+wear the clothes of the first.
