@@ -19,6 +19,10 @@ surfaces as a 500. It fails closed, but noisily, and gives clients nothing to br
 
 Check how `Ui.Client`'s `AuthenticationNavigationGuard` reacts before changing the status code.
 
+`ApplicationStartupTests.ProtectedApi_WithoutSession_DoesNotSucceed` now pins the property that actually
+matters — an unauthenticated caller is refused — without asserting the status code, so it stays green
+through the fix rather than having to be rewritten alongside it.
+
 ### Session identifier is not rotated on login
 
 `Ui/Services/DsmSession.cs`. No rotation exists anywhere — no regeneration, no clear-and-reissue. Risk is
@@ -53,6 +57,13 @@ All eight scripts under `spk-project/scripts/` run as root on the user's NAS, an
 continues past a failed command. `build-spk.sh` gets this right at line 3 — the packaging scripts simply
 never adopted it.
 
+**TODO, prerequisite for the three SPK items above: a disposable DSM instance.** None of them can be
+confirmed or fixed with confidence by reading — they need an install, a stop and an upgrade actually run.
+Mocking cannot substitute, since `synopkg` and the package lifecycle are the thing under test. A Virtual
+DSM under Virtual Machine Manager is the candidate (one free instance per host, Btrfs volume required).
+Recorded, not planned: it shares its physical machine with production, and reachable credentials are a
+separate decision from the hardware.
+
 ### `AddWebsiteAsync` applies side effects before persisting, with no rollback
 
 `Ui/Services/WebSiteHostingService.cs:90-114`. ACLs are set (step 1) and the reverse-proxy rule is created
@@ -85,6 +96,22 @@ as the literal text `null`.
 miss several concurrent requests for one user can each call `SYNO.Core.User`. Bounded and infrequent since
 PR #39 introduced the shared cache; per-SID locking would need a semaphore dictionary with lifetime
 management. Noted in the code.
+
+### The custom not-found page never renders — every 404 is a blank response
+
+`Ui/Program.cs:166`. `UseStatusCodePagesWithReExecute("/not-found?status={0}")` produces **no body and no
+content type at all**: a request for a missing path answers `404` with `Content-Length: 0`. Users get a
+blank page rather than the error page the application ships.
+
+The endpoint itself is fine, which localises the fault precisely. Requesting `/adwh/not-found?status=404`
+directly returns 176 bytes of correct HTML with the right status, so `MapErrorEndpoints` and
+`HandleStatusCode` both work; it is the *re-execution* that delivers nothing.
+
+Found 2026-08-15 while checking what the runtime gate actually receives, and reproduced on both paths — in
+process through `ApplicationHostFactory`, and against a locally running instance. Worth noting that
+`ErrorEndpointsTests` passes throughout: it calls the handler directly, so it can never observe that the
+middleware never reaches it. A likely suspect is the interaction between `UsePathBase` at line 140 and the
+re-execute path, but that has not been diagnosed and should not be assumed.
 
 ### `UseHttpsRedirection` is a permanent no-op behind nginx
 
