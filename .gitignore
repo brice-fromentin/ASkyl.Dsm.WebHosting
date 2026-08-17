@@ -30,3 +30,7 @@ PULL_REQUEST.md
 # Local development mock files (only ignore the actual config, keep template visible)
 **/dev-mock/synoinfo.conf
 
+# Deployment log archives pulled from the NAS for review. They carry hostnames, ports and deployment
+# paths — the exact category section 3 forbids putting in this repository. Never unignore this.
+logs-review/
+

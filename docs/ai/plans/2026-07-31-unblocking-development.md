@@ -252,10 +252,31 @@ project.
    returns an empty body. Recorded in `open-technical-items.md`.
 
    One dependency was added for this: `Microsoft.AspNetCore.Mvc.Testing`, authorised by the maintainer.
-6. **Formalise the deployment log review.** Reading a deployed log found the PR #39 cache defect, which
-   was invisible in source — the class looks correct until you notice `IDsmSession` is Scoped. That habit
-   is worth more than any rule currently in `AGENTS.md`. Write it down as a step: deploy, pull the log,
-   compare against the previous one.
+6. ~~**Formalise the deployment log review.**~~ Done 2026-08-17. `src/scripts/compare-logs.sh`, a `📊 Logs`
+   task in VS Code, and the procedure in `AGENTS.md` §13.
+
+   **Written as a tool rather than a checklist, on purpose.** Every other item in this agenda taught the
+   same lesson — a rule nothing enforces decays. §12 kept demanding an approval D2 had removed, the
+   allowlist claimed a guarantee it did not provide, `main` had no protection while this document called
+   CI the trust boundary, and item 5 only became real when it *ran*. A section saying "remember to read
+   the log" would have been the weakest artefact of the whole chantier.
+
+   So the comparison is mechanical and the judgement stays human. The script reports new event ids, count
+   deltas, warnings and errors attributed to their owning service through the `LogEventIds.cs` ranges, a
+   startup-sequence diff, and duration outliers. It runs with no arguments against the two most recent
+   archives in the gitignored `logs-review/`, which keeps the VS Code entry a single click.
+
+   Three defects were found in it by testing rather than by reading, which is the point:
+
+   - `awk` read `12.5` as `12` under a comma-decimal locale, so every duration was quietly wrong. The
+     script now forces `LC_ALL=C` — the same trap the vulnerable-package check already documents.
+   - `mapfile` does not exist in bash 3.2, which is what macOS ships, so the **no-argument path — the one
+     the status bar button uses** — failed outright. Replaced with a portable read loop.
+   - Comparing two distant logs produced a 783-line startup diff. Capped, with an explanation of what to
+     do instead.
+
+   What it cannot do: pull the archive. That step needs credentials reaching the NAS, the same blocker as
+   the disposable-DSM prerequisite recorded in `open-technical-items.md`.
 
 ## Post-merge check — run 2026-08-03, five of five pass
 

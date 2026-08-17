@@ -97,6 +97,7 @@ Single test: append `--filter "FullyQualifiedName~<TestClassOrMethod>"` to the t
 - Markdown changes: `markdownlint <file-path>` verbatim (config in `.markdownlint.yaml`)
 - SPK package build: `./src/scripts/build-spk.sh` (output lands in `dist/`)
 - Version bump: `./src/scripts/update-version.sh` (syncs `src/Directory.Build.props` and `src/spk-project/INFO`)
+- Deployment log review: `./src/scripts/compare-logs.sh` (see §13, and the `📊 Logs` task in VS Code)
 
 The CI lint gate is `dotnet format --verify-no-changes` — a formatting slip fails the build, not just the review.
 
@@ -524,6 +525,39 @@ The mock is gitignored. On a fresh clone, create it and **keep the template's va
 ```bash
 cp src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf.template src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf
 ```
+
+### Deployment Log Review
+
+**After every deployment, read the log against the previous one.** This is the habit with the best record
+in the project, and it is not a formality: it found the two defects nothing else could.
+
+- **PR #38** confirmed the `SYNO.API.Auth.logout` call shape from EventId 2900009 in a deployed log. No
+  reading of source could have settled it.
+- **PR #39** found the validation cache resetting every request. The class looks correct until you notice
+  `IDsmSession` is Scoped, so an instance field can never outlive the request. The log said it plainly:
+  "cached for 1 minutes" while every authenticated request still paid a round trip.
+
+The procedure, in three steps:
+
+1. Deploy, then download the log archive from the application's own log download page.
+2. Drop it in `logs-review/`, beside the archive from the previous deployment. That directory is
+   gitignored and must stay so.
+3. Run the review — the `📊 Logs` task in VS Code, or:
+
+```bash
+./src/scripts/compare-logs.sh
+```
+
+With no arguments it takes the two most recent archives in `logs-review/`; pass two paths to compare
+anything else. It accepts a `.zip`, a directory or a single `.txt`. It reports new event ids, count
+changes, warnings and errors attributed to their owning service, a startup-sequence diff, and request
+duration outliers — the last of which is the exact shape the PR #39 defect took.
+
+**The script surfaces, it does not decide.** A new event id is a lead, not a verdict.
+
+**Its output is local infrastructure data** — hostnames, ports, deployment paths. §3 applies to it in
+full: read it, act on it, and never transcribe it into a document, a commit message or a pull request
+description.
 
 ---
 

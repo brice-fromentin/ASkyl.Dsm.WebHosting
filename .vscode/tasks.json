@@ -76,6 +76,22 @@
                 "panel": "shared",
                 "clear": true
             }
+        },
+        {
+            // Compares the two most recent archives in logs-review/. Takes no arguments on purpose,
+            // so the status bar entry stays a single click; pass two paths on the command line to
+            // compare something else.
+            "label": "📊 Logs",
+            "type": "shell",
+            "command": "sh",
+            "args": [
+                "./src/scripts/compare-logs.sh"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "clear": true
+            }
         }
     ]
 }
