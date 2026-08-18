@@ -97,22 +97,6 @@ miss several concurrent requests for one user can each call `SYNO.Core.User`. Bo
 PR #39 introduced the shared cache; per-SID locking would need a semaphore dictionary with lifetime
 management. Noted in the code.
 
-### The custom not-found page never renders — every 404 is a blank response
-
-`Ui/Program.cs:166`. `UseStatusCodePagesWithReExecute("/not-found?status={0}")` produces **no body and no
-content type at all**: a request for a missing path answers `404` with `Content-Length: 0`. Users get a
-blank page rather than the error page the application ships.
-
-The endpoint itself is fine, which localises the fault precisely. Requesting `/adwh/not-found?status=404`
-directly returns 176 bytes of correct HTML with the right status, so `MapErrorEndpoints` and
-`HandleStatusCode` both work; it is the *re-execution* that delivers nothing.
-
-Found 2026-08-15 while checking what the runtime gate actually receives, and reproduced on both paths — in
-process through `ApplicationHostFactory`, and against a locally running instance. Worth noting that
-`ErrorEndpointsTests` passes throughout: it calls the handler directly, so it can never observe that the
-middleware never reaches it. A likely suspect is the interaction between `UsePathBase` at line 140 and the
-re-execute path, but that has not been diagnosed and should not be assumed.
-
 ### `UseHttpsRedirection` is a permanent no-op behind nginx
 
 `Ui/Program.cs`. DSM's nginx terminates TLS and proxies plain HTTP to port 7120, so ASP.NET logs
@@ -130,6 +114,18 @@ with no redirect. So the middleware cannot fire in either environment — it is 
 downgrades this from a possible redirect loop to dead configuration. Removing it is the honest fix; adding
 `ForwardedHeaders.XForwardedProto` is the fix that makes it mean something. Either way it is one line, and it
 is now testable.
+
+### Cosmetic: the status code page reports `errorCode: 500` whatever the status
+
+`Ui/Endpoints/ErrorEndpoints.cs`. `HandleStatusCode` builds `new ApiResult(false, …)` without an error
+code, so the JSON branch always serialises `ApiErrorCode.Failure`, including on a 404. `ApiErrorCode`
+already carries `NotFound`, `Unauthorized`, `BadRequest` and `Forbidden` at their HTTP values, so the
+status could simply be mapped.
+
+Pre-existing but unreachable until the re-execution was fixed, and still harmless: every client path in
+`HttpClientExtensions` and `Ui.Client/Services/AuthenticationService.cs` short-circuits on
+`IsSuccessStatusCode` before reading the body, so nothing consumes the field. The message wording is wrong
+for the same reason — "Resource not found" on a 403 — and both are the same one-line fix.
 
 ### Cosmetic: install reports a worse error than uninstall for a bad version
 
