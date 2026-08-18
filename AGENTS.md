@@ -57,20 +57,18 @@ External code contributions are not accepted (translations only) — see `CONTRI
 
 ### This repository is public — describe local state, never transcribe it
 
-Documentation, commit messages and pull request descriptions are published the moment they are pushed, and a
-pull request description is mailed to every watcher and indexed by search engines. Gitignored and untracked
-files — `dev-mock/synoinfo.conf`, `websites.json`, `logs/`, anything under `bin/` — hold the maintainer's real
-infrastructure. They are gitignored precisely so that it stays out of the repository.
+Documentation, commit messages and pull request descriptions publish the moment they are pushed, and a PR
+description is mailed to every watcher. Gitignored files — `dev-mock/synoinfo.conf`, `websites.json`,
+`logs/`, `logs-review/`, anything under `bin/` — hold the maintainer's real infrastructure, and are
+gitignored precisely so it stays out of the repository.
 
-- ❌ Never quote a hostname, IP, port, credential, share or deployment path read from local or gitignored state
+- ❌ Never quote a hostname, IP, port, credential, share or deployment path read from local state
 - ❌ Never paste a raw log excerpt without checking every line of it for the same
-- ✅ Name the *finding*: "the mock has drifted from the template and points at a real host" is fully actionable
-- ✅ Values from the versioned templates and fixtures are fine — they are already public by definition
+- ✅ Name the *finding*: "the mock has drifted from the template and points at a real host" is actionable
+- ✅ Values from versioned templates and fixtures are fine — already public by definition
 
-This rule exists because it was broken: a finding about a drifted local mock was written up with the host, the
-port and the deployed site spelled out, in a document and in a pull request description, on a public
-repository. Editing a description later does not unpublish it — GitHub keeps the revision, and the
-notification mail has already gone out. The check belongs *before* the push, and it costs one reread.
+This rule exists because it was broken, and editing a description afterwards does not unpublish it: GitHub
+keeps the revision and the notification mail has gone out. The check belongs *before* the push.
 
 ---
 
@@ -110,14 +108,12 @@ The CI lint gate is `dotnet format --verify-no-changes` — a formatting slip fa
 
 **NEVER skip the format step.** A build that compiles is not a passing build — "Verify" also requires the test run to exit 0.
 
-**The test step now starts the application.** `ApplicationStartupTests` boots the real `Program.cs` in
-memory through `ApplicationHostFactory` — the actual registrations, the actual middleware pipeline, the
-actual configuration providers — and asserts that a request is served. So a failure there usually means
-the host cannot come up, not that an assertion drifted: read the exception before touching the test.
-Every other gate in this repository is syntactic and stays green whatever the application does at startup,
-which is how a permanent deadlock (P0-1) and a 64 KB freeze on hosted sites (P0-2) both shipped through a
-fully green build. Verified by removing a service registration: the build stayed at zero errors and zero
-warnings, and only these tests turned red.
+**The test step starts the application.** `ApplicationStartupTests` boots the real `Program.cs` in memory
+through `ApplicationHostFactory` — actual registrations, actual pipeline, actual configuration — and
+asserts a request is served. A failure there usually means the host cannot come up, not that an assertion
+drifted: **read the exception before touching the test.** Every other gate here is syntactic and stays
+green whatever the application does at startup, which is how a permanent deadlock and a 64 KB freeze on
+hosted sites both shipped through a fully green build.
 
 ### What `dotnet format` Enforces Automatically
 
@@ -358,17 +354,13 @@ After EVERY code modification:
 
 ### Testing DSM interactions: fake on demand, never speculatively
 
-No general `SYNO.*` mock exists, and none should be built ahead of a need. **Add a fake for one API when a
-concrete question requires it**, not before. `dev-mock/synoinfo.conf` covers the settings file for the same
-reason: it was built when a local run actually needed it.
+No general `SYNO.*` mock exists and none should be built ahead of a need. **Add a fake for one API when a
+concrete question requires it**, not before. The insertion point is `ApplicationHostFactory`, which builds
+the real host, so a test replaces `DsmApiClient`'s message handler rather than standing up a fake DSM.
 
-The insertion point exists since the runtime gate landed. `ApplicationHostFactory` builds the real host, so
-a test replaces `DsmApiClient`'s message handler there rather than standing up a whole fake DSM.
-
-**Check the overlap before building anything.** `open-technical-items.md` records a disposable DSM instance
-as the prerequisite for validating the SPK lifecycle scripts, and a real instance answers some of the same
-questions a fake would. Ask which of the two the question in front of you actually needs. Building both for
-one question is precisely the waste this rule exists to prevent.
+**Check the overlap first.** `open-technical-items.md` records a disposable DSM instance as the prerequisite
+for validating the SPK lifecycle scripts, and a real instance answers some of the same questions. Building
+both for one question is the waste this rule exists to prevent.
 
 ---
 
@@ -477,24 +469,19 @@ BaseAddress for /adwh sub path mapping.
 - ✅ `git add`, `git commit`, and `git push -u origin <branch>` on a feature branch
 - ✅ `gh pr create --draft`, `gh pr checks`, `gh pr view`
 
-Always push with the explicit `git push -u origin <branch>` form, every time and not only the first. The
-argument-less `git push` is deliberately gated because what it pushes depends on remote state rather than on
-the command. The allowlist is scoped by branch prefix (`feat/`, `fix/`, `chore/`, `docs/`, `ci/`,
-`refactor/`), and a separate `ask` rule catches any push whose command mentions `main` in any position.
+Always push with the explicit `git push -u origin <branch>` form, every time. Argument-less `git push` is
+gated because what it pushes depends on remote state rather than on the command.
 
-**Do not read that as a guarantee.** A trailing `*` in a Bash permission rule matches any sequence of
-characters *including spaces*, so a prefix rule constrains the start of a command and nothing else:
-`Bash(git push -u origin feat/*)` also matches `git push -u origin feat/x main`. Claude Code's own
-documentation warns that "Bash permission patterns that try to constrain command arguments are fragile".
-The `ask` rule on `main` is what actually holds the line here, and it holds it against accidents, not
-against a determined bypass. Treat the allowlist as a convenience, never as a boundary.
+**The allowlist is a convenience, never a boundary.** A trailing `*` in a Bash permission rule spans
+spaces, so a prefix rule constrains the start of a command and nothing else: `Bash(git push -u origin
+feat/*)` also matches `git push -u origin feat/x main`. Upstream documentation calls such patterns
+fragile. `ask` rules on `main`, `--force`, `--delete`, `-f` and `-d` hold the line against accidents, not
+against a determined bypass.
 
-**The boundary is on GitHub, not here.** `main` is protected: a pull request is required, `format`,
-`build-test` and `lint` must pass, force pushes and deletions are refused, history stays linear, and the
-rules apply to administrators too. So a push to `main` fails at the remote whatever any local setting
-says — which is the point. `vulnerable` is deliberately **not** a required check: it is skipped on pull
-requests, and a skipped required check blocks a merge forever. A branch cut before the parallel CI landed
-reports only the old `verify` job and stays blocked until it is rebased.
+**The real boundary is on GitHub.** `main` requires a pull request with `format`, `build-test` and `lint`
+passing; force pushes, deletions and non-linear history are refused; admins included. `vulnerable` is
+deliberately **not** required — it is skipped on pull requests, and a skipped required check blocks a merge
+forever.
 
 ---
 
@@ -515,36 +502,27 @@ dotnet run --project src/Askyl.Dsm.WebHosting.Ui --no-build --launch-profile htt
 pkill -f "Askyl.Dsm.WebHosting.Ui"
 ```
 
-Build first — `--no-build` is deliberate, so a run never silently rebuilds behind the mandatory sequence.
-Serves `https://localhost:5000/adwh`; the certificate is the local dev one, so `curl` needs `-k`.
+Run both **from the repository root** — the `--project` path is relative and fails with MSB1009 elsewhere.
+Build first: `--no-build` keeps a run from rebuilding behind the mandatory sequence. Serves
+`https://localhost:5000/adwh`, with the local dev certificate, so `curl` needs `-k`.
 
-**`pkill -f` matches the whole command line, so it stops every instance — including a VS Code debug
-session the maintainer is using**, whose `program` path contains the same string. Run `pgrep -fl
-"Askyl.Dsm.WebHosting.Ui"` first and stop only what you started; killing someone else's debugger is not
-"stopping what you started".
+**`pkill -f` matches the whole command line**, including a VS Code debug session whose `program` path
+contains the same string. Run `pgrep -fl "Askyl.Dsm.WebHosting.Ui"` first and stop only what you started.
+
+**Always `dotnet run --project`, never the built dll.** `dotnet run` sets the *launched application's*
+working directory to the project directory (MSBuild's `RunWorkingDirectory`), so the mock resolves whatever
+the shell's own directory. Running the dll leaves the working directory where the shell stood, and that
+directory is also the content root: from anywhere but the output directory ASP.NET loads **no
+`appsettings*.json` at all**, so startup dies naming `/etc/synoinfo.conf` — an error that reads as a missing
+mock and is really a missing configuration.
 
 `appsettings.Development.json` points `DsmSettings:ConfigPath` at `dev-mock/synoinfo.conf`, which resolves
-under both the project directory (`dotnet run`) and the output directory (the VS Code debugger). Do not
-re-add that override to `.vscode/launch.json`: an environment variable there overrides the JSON silently,
-and one that had drifted is why a whole session concluded the application could not start at all.
+under both the project directory and the output directory. **Do not re-add that override to
+`.vscode/launch.json`**: an environment variable there overrides the JSON silently, and a drifted one is why
+a whole session concluded the application could not start.
 
-Run both commands **from the repository root**: the `--project` path above is relative, so it resolves
-nowhere else and fails with MSB1009 rather than starting anything.
-
-**Always `dotnet run --project`, never the built dll directly.** `dotnet run` sets the *launched
-application's* working directory to the project directory — MSBuild's `RunWorkingDirectory` — so the mock
-resolves regardless of the shell's own directory, verified by launching with an absolute `--project` path
-from an unrelated directory. That invariance is about the app's working directory, not about the relative
-path in the command. Running
-`dotnet src/Askyl.Dsm.WebHosting.Ui/bin/Debug/net10.0/Askyl.Dsm.WebHosting.Ui.dll` instead leaves the
-working directory wherever the shell stood, and that directory is also the content root: from anywhere but
-the output directory ASP.NET finds **no `appsettings*.json` at all**, so the override is never seen and
-startup dies on `/etc/synoinfo.conf`. The error then names `/etc/`, which reads as a missing mock and is
-really a missing configuration — an expensive twenty minutes if it is not expected. The VS Code debugger
-avoids this only because `launch.json` pins `cwd` to the output directory.
-
-The mock is gitignored. On a fresh clone, create it and **keep the template's values** — the template names
-`127.0.0.1`, and a mock naming the real NAS turns every local run into a §13 violation:
+The mock is gitignored. On a fresh clone, create it and **keep the template's values** — a mock naming the
+real NAS turns every local run into a §13 violation:
 
 ```bash
 cp src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf.template src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf
@@ -552,30 +530,21 @@ cp src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf.template src/Askyl.Dsm.Web
 
 ### Deployment Log Review
 
-**After every deployment, read the log against the previous one.** This is the habit with the best record
-in the project, and it is not a formality: it found the two defects nothing else could.
+**After every deployment, read the log against the previous one.** It found the two defects nothing else
+could: the `SYNO.API.Auth.logout` call shape (PR #38), and the validation cache resetting every request
+because `IDsmSession` is Scoped — invisible in a class that looks correct, stated plainly in the log
+(PR #39).
 
-- **PR #38** confirmed the `SYNO.API.Auth.logout` call shape from EventId 2900009 in a deployed log. No
-  reading of source could have settled it.
-- **PR #39** found the validation cache resetting every request. The class looks correct until you notice
-  `IDsmSession` is Scoped, so an instance field can never outlive the request. The log said it plainly:
-  "cached for 1 minutes" while every authenticated request still paid a round trip.
-
-The procedure, in three steps:
-
-1. Deploy, then download the log archive from the application's own log download page.
-2. Drop it in `logs-review/`, beside the archive from the previous deployment. That directory is
-   gitignored and must stay so.
-3. Run the review — the `📊 Logs` task in VS Code, or:
+Deploy, download the log archive from the application's own log page, drop it in the gitignored
+`logs-review/` beside the previous one, then run the `📊 Logs` task in VS Code or:
 
 ```bash
 ./src/scripts/compare-logs.sh
 ```
 
-With no arguments it takes the two most recent archives in `logs-review/`; pass two paths to compare
-anything else. It accepts a `.zip`, a directory or a single `.txt`. It reports new event ids, count
-changes, warnings and errors attributed to their owning service, a startup-sequence diff, and request
-duration outliers — the last of which is the exact shape the PR #39 defect took.
+No arguments takes the two most recent archives; two paths compare anything else, each a `.zip`, a
+directory or a `.txt`. It reports new event ids, count changes, warnings and errors by owning service, a
+startup-sequence diff, and duration outliers — the shape the PR #39 defect took.
 
 **The script surfaces, it does not decide.** A new event id is a lead, not a verdict.
 
@@ -638,43 +607,23 @@ Failure to follow these instructions systematically is a critical error and must
 
 ## 18. VERIFICATION HABITS
 
-Three practices, kept together because they share one root: **never confuse what you believe with what you
-have measured.** They outlived the 2026-07-31 agenda that produced them, which was deleted once its items
-were done — these are rules, not history. Numbered last so that every reference to §12, §13 and §16
-elsewhere in this repository stays valid.
+One root: **never confuse what you believe with what you have measured.** Numbered last so existing
+references to §12, §13 and §16 stay valid.
 
-### Prove a fix by reverting it
+**Prove a fix by reverting it.** Undo it, watch the check fail *for the right reason*, restore. A test
+never seen to fail has not been shown to test anything. It caught a test asserting on `Request.Path` where
+production uses `IStatusCodeReExecuteFeature.OriginalPath`, and it is how the runtime gate was shown to be
+worth having — and, a day later, too weak: with `MapStaticAssets()` removed the app still answered `200`
+with `text/html`. **The strength of a gate is the fault it rejects, not the fact that it runs.**
 
-Temporarily undo the fix, watch the check fail **for the right reason**, restore. A test that has never
-been seen to fail has not been shown to test anything.
+**Verify a claim before repeating it.** Treat an inherited finding as a lead until checked against source;
+the 2026-07-25 assessment was confident, well-structured and wrong for weeks. This bites hardest on claims
+about a safety control, which nobody re-reads: "no spelling of a push can reach `main` unattended" went
+into this file *and* a pull request description unchecked, and was false. The review that caught it found
+the same hole for `--force` that the first fix had missed — **finding one instance of a class of bug is
+not fixing the class.**
 
-It caught a test asserting against `Request.Path` where production uses
-`IStatusCodeReExecuteFeature.OriginalPath`. It is how the runtime gate earned its place: removing one
-service registration left the build at zero errors and zero warnings with every pre-existing test green,
-and only the new tests red. And it is how that same gate was found too weak a day later — with
-`MapStaticAssets()` removed, the application still answered `200` with `text/html`, so an assertion on the
-status and content type alone proved nothing.
-
-**The strength of a gate is the fault it rejects, not the fact that it runs.**
-
-### Verify a claim before repeating it
-
-Treat any inherited finding as a lead until checked against source. The 2026-07-25 assessment was
-confident, well-structured and wrong in several places, and its claims were repeated for weeks.
-
-This applies hardest to claims about a safety control, because those are the ones nobody re-reads. "No
-spelling of a push can reach `main` unattended" was written into this file *and* into a pull request
-description without once being checked against the documentation. It was false: a trailing `*` in a Bash
-permission rule spans spaces, so the rule also matched a command pushing `main` alongside the branch. The
-review that caught it then found the same hole for `--force`, which the first fix had missed — **finding
-one instance of a class of bug is not fixing the class.**
-
-### You cannot observe your own approval prompts
-
-A tool result looks identical whether it ran unattended or was approved at a prompt. An assistant
-reporting "nothing prompted" is asserting something it has no way to observe — and one did, wrongly, until
-the maintainer corrected it. Only the maintainer sees prompts.
-
-**Any check of that kind must ask rather than infer.** The same reflex applies wherever the evidence lives
-outside what the assistant can read: say what was verified, say what was assumed, and never let the second
+**You cannot observe your own approval prompts.** A tool result looks identical whether it ran unattended
+or was approved at a prompt; only the maintainer sees prompts. Any check of that kind must **ask rather
+than infer** — and more generally, say what was verified, say what was assumed, and never let the second
 wear the clothes of the first.
