@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using System.Text.Encodings.Web;
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Microsoft.AspNetCore.Diagnostics;
 
@@ -16,7 +17,7 @@ public static class ErrorEndpoints
     public static void MapErrorEndpoints(this IEndpointRouteBuilder routes)
     {
         routes.MapGet("/Error", HandleException);
-        routes.MapGet("/not-found", HandleStatusCode);
+        routes.MapGet(ApplicationConstants.NotFoundPagePath, HandleStatusCode);
     }
 
     static IResult HandleException(HttpContext context)
@@ -43,7 +44,7 @@ public static class ErrorEndpoints
 
     internal static IResult HandleStatusCode(HttpContext context)
     {
-        var statusCode = int.TryParse(context.Request.Query["status"], out var code) ? code : StatusCodes.Status404NotFound;
+        var statusCode = int.TryParse(context.Request.Query[ApplicationConstants.NotFoundPageStatusParameter], out var code) ? code : StatusCodes.Status404NotFound;
         var originalPath = context.Features.Get<IStatusCodeReExecuteFeature>()?.OriginalPath ?? context.Request.Path;
 
         if (RequestAcceptsJson(context))

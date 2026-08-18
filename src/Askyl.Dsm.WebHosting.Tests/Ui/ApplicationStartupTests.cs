@@ -15,6 +15,8 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
 {
     const string BlazorBootScriptPrefix = "_framework/blazor.web.";
 
+    const string MissingPathSegment = "definitely-not-a-real-page";
+
     static readonly string ProtectedRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, FileManagementRoutes.SharedFoldersFullRoute);
 
     [Fact]
@@ -63,6 +65,23 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
         Assert.True(response.Headers.Contains(SecurityHeaders.ContentSecurityPolicyName));
         Assert.True(response.Headers.Contains(SecurityHeaders.XContentTypeOptionsName));
         Assert.True(response.Headers.Contains(SecurityHeaders.XFrameOptionsName));
+    }
+
+    [Fact]
+    public async Task MissingPath_ServesTheNotFoundPage_NotAnEmptyBody()
+    {
+        // Status code re-execution is invisible to ErrorEndpointsTests, which calls the handler directly.
+        // Only a request through the real pipeline shows whether the middleware ever reaches it.
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync($"{ApplicationConstants.ApplicationUrlSubPath}/{MissingPathSegment}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+
+        // The requested path can only appear in the body through IStatusCodeReExecuteFeature, so this
+        // also pins that the re-execution carried it rather than losing it to the rewritten request.
+        Assert.Contains(MissingPathSegment, await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 
     [Fact]
