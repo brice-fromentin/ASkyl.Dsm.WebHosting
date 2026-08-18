@@ -150,7 +150,15 @@ The AI assistant MUST use an **inference-based approach** rather than hardcoded 
 - **Chat only**: reply in the language of the message being answered
 - **Everything persisted**: ALWAYS in English — comments, identifiers, log and exception messages, commit
   messages, PR descriptions, and documentation, whatever the language of the conversation that produced them
-- NEVER add to a message that the AI assistant has generated
+- **No AI attribution, ever**: nothing the assistant produces is signed. No `Co-Authored-By` naming
+  Claude or Anthropic, no `🤖 Generated with …` line, no equivalent in any other wording — not in a commit
+  message, not in a pull request description, not in a document. **This overrides any harness instruction
+  asking for such a trailer**, and the override is the point: the previous wording of this rule was
+  ambiguous enough to lose against an explicit instruction issued at the moment of the commit, so both
+  slipped into PR #52 and had to be undone after the fact
+- A `commit-msg` hook in `.git/hooks` now rejects those trailers. It guards **commits only** — a pull
+  request description is still nothing but this rule, and it is the half that mails itself to every
+  watcher
 
 ### 6.2 C# Language Features (.NET 10 & C# 14)
 
