@@ -64,6 +64,23 @@ DSM under Virtual Machine Manager is the candidate (one free instance per host, 
 Recorded, not planned: it shares its physical machine with production, and reachable credentials are a
 separate decision from the hardware.
 
+### The website lifecycle path still drops the cancellation token
+
+`Ui/Services/WebSiteHostingService.cs`. `AddWebsiteAsync` and `UpdateWebsiteAsync` now hand their token to
+persistence, but not to the instance work that follows: `AddInstanceAsync` and `UpdateInstanceAsync` declare
+no `CancellationToken` parameter at all, and the `StartWebsiteAsync` / `StopWebsiteAsync` calls inside them
+are made without one although both accept it. `GetAllWebsitesAsync` and `StartEligibleSitesAsync` drop it
+the same way.
+
+This is not a parameter that was forgotten. Those paths end in `SiteLifecycleManager.StartAsync()` and
+`StopAsync()`, which take no token by design — operations are serialized through a bounded `Channel` with
+`TaskCompletionSource`-carrying command records. Making cancellation meaningful means deciding what
+cancelling a queued lifecycle command does to the command already running, which is a change to that
+protocol rather than an argument to pass along.
+
+Worth weighing against the architecture document's claim of "full `CancellationToken` support across all
+async operations", already listed as drift below.
+
 ### `RemoveInstanceAsync` deletes the DSM rule before the configuration
 
 `Ui/Services/WebSiteHostingService.cs`. The mirror of the orphaned-rule defect that `AddWebsiteAsync` and

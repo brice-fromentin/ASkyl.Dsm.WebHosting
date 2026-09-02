@@ -334,6 +334,32 @@ public class WebSiteHostingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AddWebsiteAsync_WhenCancelledAfterTheRuleIsCreated_StillRemovesIt()
+    {
+        // Arrange — cancel between step 2 and step 3, the exact window in which the rule exists and the
+        // configuration does not. Persistence only observes that if the token reaches it, and the
+        // compensating delete only runs if it does not itself honour the cancellation.
+        SetupRunningProcess();
+
+        using var cancellation = new CancellationTokenSource();
+
+        _reverseProxyManager.Setup(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .Callback(cancellation.Cancel)
+            .Returns(Task.CompletedTask);
+        _reverseProxyManager.Setup(r => r.DeleteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = CreateService();
+        var configuration = CreateRunnableConfiguration();
+
+        // Act & Assert
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.AddWebsiteAsync(configuration, cancellation.Token));
+
+        _reverseProxyManager.Verify(r => r.DeleteAsync(configuration, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task UpdateWebsiteAsync_WhenPersistenceFails_RestoresThePreviousReverseProxyRule()
     {
         // Arrange — two sites, then rename the second onto the first's name. UpdateSiteAsync rejects

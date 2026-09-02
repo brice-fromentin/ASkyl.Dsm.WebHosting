@@ -108,7 +108,7 @@ public class WebSiteHostingService(
             // STEP 3: Add website configuration (persistent storage)
             try
             {
-                await configService.AddSiteAsync(configuration);
+                await configService.AddSiteAsync(configuration, cancellationToken);
             }
             catch
             {
@@ -117,7 +117,8 @@ public class WebSiteHostingService(
                 // reaches this every time: AddSiteAsync rejects it, and the rule was already created.
                 // Compensation stops at persistence on purpose — once the configuration is on disk,
                 // DSM and disk agree, and deleting the rule would break a site that survives a restart.
-                // CancellationToken.None so the cleanup still runs when the caller cancelled.
+                // CancellationToken.None so the cleanup still runs when the caller cancelled — which
+                // persistence now observes, since it is handed the token rather than defaulting it.
                 await DeleteReverseProxyRuleAsync(configuration, CancellationToken.None);
 
                 throw;
@@ -197,7 +198,7 @@ public class WebSiteHostingService(
             // STEP 3: Update configuration (persistent storage)
             try
             {
-                await configService.UpdateSiteAsync(configuration);
+                await configService.UpdateSiteAsync(configuration, cancellationToken);
             }
             catch
             {
