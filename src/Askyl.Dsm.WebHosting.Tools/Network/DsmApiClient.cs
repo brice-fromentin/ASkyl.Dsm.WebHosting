@@ -134,18 +134,27 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
 
         HttpResponseMessage? response = null;
 
-        using var timer = new OperationTimer(elapsed => logger.ApiRequest(request.Method.Method, url, (int)response!.StatusCode, elapsed));
-
-        response = await _httpClient.SendAsync(request, cancellationToken);
-
-        var text = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (response.StatusCode != HttpStatusCode.OK)
+        // The response is disposed in the finally, which runs after the inner scope has already disposed
+        // the timer: the timer's callback still reads a live response, so the logging is unchanged.
+        try
         {
-            return default;
-        }
+            using var timer = new OperationTimer(elapsed => logger.ApiRequest(request.Method.Method, url, (int)response!.StatusCode, elapsed));
 
-        return JsonSerializer.Deserialize<R>(text);
+            response = await _httpClient.SendAsync(request, cancellationToken);
+
+            var text = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            if (response.StatusCode != HttpStatusCode.OK)
+            {
+                return default;
+            }
+
+            return JsonSerializer.Deserialize<R>(text);
+        }
+        finally
+        {
+            response?.Dispose();
+        }
     }
 
     #endregion

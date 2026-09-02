@@ -193,6 +193,53 @@ public class ExtensionMethodsTests : IDisposable
     }
 
     [Fact]
+    public async Task GetJsonAsync_Success_DisposesTheResponse()
+    {
+        // Arrange
+        SetResponse("{\"name\":\"test\",\"value\":42}");
+        var client = CreateClient();
+
+        // Act
+        var result = await client.GetJsonAsync<TestModel>("/");
+
+        // Assert — the body must be read before disposal, so asserting both together also pins the
+        // ordering: disposing too early would leave result null.
+        Assert.NotNull(result);
+        Assert.True(_handler.LastContent?.Disposed);
+    }
+
+    [Fact]
+    public async Task PostJsonAsync_Success_DisposesTheResponse()
+    {
+        // Arrange
+        SetResponse("{\"name\":\"test\",\"value\":42}");
+        var client = CreateClient();
+
+        // Act
+        var result = await client.PostJsonAsync<TestModel, TestModel>("/", new());
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(_handler.LastContent?.Disposed);
+    }
+
+    [Fact]
+    public async Task DeleteJsonAsync_NonSuccess_DisposesTheResponse()
+    {
+        // The early return on a failed status is its own exit path, and it leaked just as the success
+        // path did.
+        SetResponse(statusCode: (int)HttpStatusCode.NotFound);
+        var client = CreateClient();
+
+        // Act
+        var result = await client.DeleteJsonAsync<TestModel>("/");
+
+        // Assert
+        Assert.Null(result);
+        Assert.True(_handler.LastContent?.Disposed);
+    }
+
+    [Fact]
     public async Task DeleteJsonAsync_NonSuccess_ReturnsDefault()
     {
         // Arrange
@@ -271,6 +318,16 @@ public class ExtensionMethodsTests : IDisposable
         private string? _content;
         private int _statusCode = (int)HttpStatusCode.OK;
 
+        /// <summary>
+        /// Content handed to the last response. Disposing an HttpResponseMessage disposes its content,
+        /// so this is what makes "the caller disposed the response" observable from a test.
+        /// </summary>
+        public TrackingContent? LastContent
+        {
+            get;
+            private set;
+        }
+
         public void AddResponse(string content, int statusCode = 200)
         {
             _content = content;
@@ -279,10 +336,27 @@ public class ExtensionMethodsTests : IDisposable
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            LastContent = new TrackingContent(_content ?? "");
+
             return Task.FromResult(new HttpResponseMessage((HttpStatusCode)_statusCode)
             {
-                Content = new StringContent(_content ?? "")
+                Content = LastContent
             });
+        }
+    }
+
+    private sealed class TrackingContent(string value) : StringContent(value)
+    {
+        public bool Disposed
+        {
+            get;
+            private set;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
         }
     }
 

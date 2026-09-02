@@ -78,11 +78,6 @@ same ordering at lines 160-184.
 - `Ui.Client/Components/Pages/Home.razor:118` — `_ = ShowWebSiteConfigurationDialogAsync(instance)`
   discards the task and any exception it carries.
 
-### `HttpClientExtensions` never disposes its responses
-
-`Tools/Extensions/HttpClientExtensions.cs:21,49` — both `GetAsync` and `PostAsync` results are assigned
-without `using`, so `HttpResponseMessage` is left to finalization.
-
 ### `build-spk.sh` version extraction can silently yield "null"
 
 `src/scripts/build-spk.sh:68-71` — `local version=$(jq -r …)` masks the command's exit status because
