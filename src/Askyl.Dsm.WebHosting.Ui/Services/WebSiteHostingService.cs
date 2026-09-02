@@ -106,7 +106,22 @@ public class WebSiteHostingService(
             }
 
             // STEP 3: Add website configuration (persistent storage)
-            await configService.AddSiteAsync(configuration);
+            try
+            {
+                await configService.AddSiteAsync(configuration);
+            }
+            catch
+            {
+                // The rule created at step 2 lives in DSM, which this application never lists, so one
+                // left behind is invisible from here and has to be removed by hand. A duplicate name
+                // reaches this every time: AddSiteAsync rejects it, and the rule was already created.
+                // Compensation stops at persistence on purpose — once the configuration is on disk,
+                // DSM and disk agree, and deleting the rule would break a site that survives a restart.
+                // CancellationToken.None so the cleanup still runs when the caller cancelled.
+                await DeleteReverseProxyRuleAsync(configuration, CancellationToken.None);
+
+                throw;
+            }
 
             // STEP 4: Create instance
             var instance = await AddInstanceAsync(configuration);
@@ -139,6 +154,10 @@ public class WebSiteHostingService(
         }
 
         var existingInstance = entry.Instance;
+
+        // Captured before step 4 replaces it on the instance: it is what DSM must be pointed back at
+        // if the new configuration never reaches the disk.
+        var previousConfiguration = existingInstance.Configuration;
 
         // Validate the whole configuration before any side effects
         var validationResult = await ValidateConfigurationAsync(configuration, cancellationToken);
@@ -176,7 +195,19 @@ public class WebSiteHostingService(
             }
 
             // STEP 3: Update configuration (persistent storage)
-            await configService.UpdateSiteAsync(configuration);
+            try
+            {
+                await configService.UpdateSiteAsync(configuration);
+            }
+            catch
+            {
+                // Step 2 already pointed DSM at the new configuration. Leaving it there would route
+                // traffic by a configuration that is not the one on disk, and a restart would reload
+                // the old one without touching DSM.
+                await UpdateReverseProxyRuleAsync(previousConfiguration, CancellationToken.None);
+
+                throw;
+            }
 
             // STEP 4: Update instance
             await UpdateInstanceAsync(entry, configuration);
