@@ -88,7 +88,7 @@ public class WebSiteHostingServiceTests : IDisposable
         }
     }
 
-    WebSiteHostingService CreateService()
+    WebSiteHostingService CreateService(IServiceScopeFactory? scopeFactory = null)
     {
         var configService = new WebSitesConfigurationService(_configLogger.Object, _tempDir);
         return new WebSiteHostingService(
@@ -96,7 +96,7 @@ public class WebSiteHostingServiceTests : IDisposable
             _loggerFactory.Object,
             _processRunner.Object,
             configService,
-            _scopeFactory.Object,
+            scopeFactory ?? _scopeFactory.Object,
             _assemblyRuntimeDetector.Object,
             _versionsDetector.Object,
             new WebSiteConfigurationValidator(),
@@ -303,6 +303,67 @@ public class WebSiteHostingServiceTests : IDisposable
         Assert.True(result.Success);
         _processRunner.Verify(r => r.Start(It.IsAny<ProcessStartInfo>()), Times.Exactly(2));
         handle.Verify(h => h.SendGracefulShutdownSignal(), Times.Once);
+    }
+
+    #endregion
+
+    #region Scope Disposal
+
+    [Fact]
+    public async Task AddWebsiteAsync_DisposesItsScopes_WithoutTrippingTheRealContainer()
+    {
+        // Every scoped DSM service depends on IDsmSession, which implements IAsyncDisposable and not
+        // IDisposable. A real container refuses a synchronous Dispose on a scope holding one. The mocked
+        // scope factory the other tests use cannot see that — its scope disposes to a no-op — which is
+        // how a service that fails on every call reached production through a green suite.
+        SetupRunningProcess();
+
+        var services = new ServiceCollection();
+
+        services.AddScoped<IFileSystemService, AsyncOnlyFileSystemService>();
+        services.AddScoped<IReverseProxyManagerService, AsyncOnlyReverseProxyManagerService>();
+
+        await using var provider = services.BuildServiceProvider();
+
+        var service = CreateService(provider.GetRequiredService<IServiceScopeFactory>());
+
+        // Act
+        var result = await service.AddWebsiteAsync(CreateRunnableConfiguration());
+
+        // Assert
+        Assert.True(result.Success);
+    }
+
+    /// <summary>
+    /// Mirrors DsmSession: disposable only asynchronously, so a scope holding it cannot be disposed
+    /// synchronously.
+    /// </summary>
+    sealed class AsyncOnlyFileSystemService : IFileSystemService, IAsyncDisposable
+    {
+        public Task<SharedFoldersResult> GetSharedFoldersAsync(CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory, CancellationToken cancellationToken = default)
+            => Task.FromResult(ApiResult.CreateSuccess());
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// Same shape, for the scopes the reverse proxy helpers open.
+    /// </summary>
+    sealed class AsyncOnlyReverseProxyManagerService : IReverseProxyManagerService, IAsyncDisposable
+    {
+        public Task CreateAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task UpdateAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task DeleteAsync(WebSiteConfiguration site, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     #endregion

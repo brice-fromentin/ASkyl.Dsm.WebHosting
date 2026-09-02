@@ -531,7 +531,11 @@ public class WebSiteHostingService(
 
         logger.SettingHttpGroupPermissions(configuration.Name, configuration.ApplicationRealPath, isDirectory);
 
-        using var scope = scopeFactory.CreateScope();
+        // Async scope, here and in every helper below: the scoped DSM services resolved inside depend on
+        // IDsmSession, which implements IAsyncDisposable and not IDisposable. Disposing such a scope
+        // synchronously throws, after the DSM call has already been made — so the work happened and the
+        // caller was told it failed.
+        await using var scope = scopeFactory.CreateAsyncScope();
         var fileSystemService = scope.ServiceProvider.GetRequiredService<IFileSystemService>();
         return await fileSystemService.SetHttpGroupPermissionsAsync(configuration.ApplicationRealPath, isDirectory, cancellationToken);
     }
@@ -547,7 +551,7 @@ public class WebSiteHostingService(
     {
         try
         {
-            using var scope = scopeFactory.CreateScope();
+            await using var scope = scopeFactory.CreateAsyncScope();
             var reverseProxyManager = scope.ServiceProvider.GetRequiredService<IReverseProxyManagerService>();
             await reverseProxyManager.CreateAsync(configuration, cancellationToken);
             logger.ReverseProxyRuleCreated(configuration.Name);
@@ -571,7 +575,7 @@ public class WebSiteHostingService(
     {
         try
         {
-            using var scope = scopeFactory.CreateScope();
+            await using var scope = scopeFactory.CreateAsyncScope();
             var reverseProxyManager = scope.ServiceProvider.GetRequiredService<IReverseProxyManagerService>();
             await reverseProxyManager.UpdateAsync(configuration, cancellationToken);
             logger.ReverseProxyRuleUpdated(configuration.Name);
@@ -595,7 +599,7 @@ public class WebSiteHostingService(
     {
         try
         {
-            using var scope = scopeFactory.CreateScope();
+            await using var scope = scopeFactory.CreateAsyncScope();
             var reverseProxyManager = scope.ServiceProvider.GetRequiredService<IReverseProxyManagerService>();
             await reverseProxyManager.DeleteAsync(configuration, cancellationToken);
             logger.ReverseProxyRuleDeleted(configuration.Name);
