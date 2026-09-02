@@ -65,6 +65,24 @@ public static class ApplicationConstants
     /// </summary>
     public const string LoginPagePath = "login";
 
+    /// <summary>
+    /// Path of the endpoint that renders the status code page, and the path the status code pages
+    /// middleware re-executes the request against.
+    /// </summary>
+    public const string NotFoundPagePath = "/not-found";
+
+    /// <summary>
+    /// Query format handed to UseStatusCodePagesWithReExecute. It must stay separate from the path:
+    /// the middleware assigns the path format to Request.Path verbatim, so a query embedded there
+    /// becomes part of the path, matches no route, and the re-execution answers with an empty body.
+    /// </summary>
+    public const string NotFoundPageQueryFormat = "?status={0}";
+
+    /// <summary>
+    /// Query parameter carrying the original status code to the status code page.
+    /// </summary>
+    public const string NotFoundPageStatusParameter = "status";
+
     #endregion
 
     #region Session & Authentication

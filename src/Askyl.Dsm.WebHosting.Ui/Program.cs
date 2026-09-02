@@ -163,7 +163,7 @@ else
 // Rate limiter must be before status code pages to prevent 429 from being re-executed to /not-found
 app.UseRateLimiter();
 
-app.UseStatusCodePagesWithReExecute("/not-found?status={0}", createScopeForStatusCodePages: true);
+app.UseStatusCodePagesWithReExecute(ApplicationConstants.NotFoundPagePath, ApplicationConstants.NotFoundPageQueryFormat, createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
 // Security headers
