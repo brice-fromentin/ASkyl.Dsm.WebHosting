@@ -132,11 +132,17 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
             request.Headers.Add(NetworkConstants.CookieHeader, NetworkConstants.SsidCookiePrefix + sid);
         }
 
-        HttpResponseMessage? response = null;
+        // The timer must be started before the request: SendAsync buffers the whole body by default, so
+        // it is the measurement. It reports on disposal, which is why it reads a captured status rather
+        // than the response — the response is disposed first, and dereferencing it here would replace a
+        // failed send's own exception with a NullReferenceException.
+        var statusCode = 0;
 
-        using var timer = new OperationTimer(elapsed => logger.ApiRequest(request.Method.Method, url, (int)response!.StatusCode, elapsed));
+        using var timer = new OperationTimer(elapsed => logger.ApiRequest(request.Method.Method, url, statusCode, elapsed));
 
-        response = await _httpClient.SendAsync(request, cancellationToken);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        statusCode = (int)response.StatusCode;
 
         var text = await response.Content.ReadAsStringAsync(cancellationToken);
 

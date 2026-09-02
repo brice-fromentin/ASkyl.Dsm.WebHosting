@@ -291,6 +291,33 @@ public class DsmApiClientTests : IDisposable
 
     #endregion
 
+    #region Failure Propagation
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheSendThrows_SurfacesTheOriginalException()
+    {
+        // The request timer reports on disposal, which happens while this exception is unwinding. A
+        // callback that dereferenced the response would throw NullReferenceException from there and
+        // replace the real cause, leaving a network failure indistinguishable from a bug.
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new HttpRequestException("network down"));
+
+        var client = CreateClient();
+        var parameters = new TestFormParameters();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+            () => client.ExecuteAsync<TestResponse>("test-session-id", parameters));
+
+        Assert.Equal("network down", exception.Message);
+    }
+
+    #endregion
+
     #region Test Helpers
 
     sealed class TestFormParameters : IApiParameters

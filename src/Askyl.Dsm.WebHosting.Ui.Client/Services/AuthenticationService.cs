@@ -31,7 +31,7 @@ public class AuthenticationService(IHttpClientFactory httpClientFactory, ILocali
 
         var jsonContent = new StringContent(JsonSerializer.Serialize(new LoginCredentials(login, password, otpCode), JsonOptionsCache.Options), Encoding.UTF8, NetworkConstants.ApplicationJson);
 
-        var response = await httpClient.PostAsync(AuthenticationRoutes.LoginFullRoute, jsonContent, cancellationToken);
+        using var response = await httpClient.PostAsync(AuthenticationRoutes.LoginFullRoute, jsonContent, cancellationToken);
 
         // Handle rate limiting (HTTP 429) with a user-friendly message
         if (response.StatusCode == HttpStatusCode.TooManyRequests)

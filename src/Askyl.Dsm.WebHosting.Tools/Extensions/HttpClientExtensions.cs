@@ -18,7 +18,7 @@ public static class HttpClientExtensions
         /// </summary>
         public async Task<TResponse?> GetJsonAsync<TResponse>(string requestUri, CancellationToken cancellationToken = default) where TResponse : class
         {
-            var response = await client.GetAsync(requestUri, cancellationToken);
+            using var response = await client.GetAsync(requestUri, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -46,7 +46,7 @@ public static class HttpClientExtensions
                 ? new StringContent(JsonSerializer.Serialize(content, JsonOptionsCache.Options), Encoding.UTF8, NetworkConstants.ApplicationJson)
                 : null;
 
-            var response = await client.PostAsync(requestUri, jsonContent, cancellationToken);
+            using var response = await client.PostAsync(requestUri, jsonContent, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -70,7 +70,7 @@ public static class HttpClientExtensions
         /// </summary>
         public async Task<TResponse?> DeleteJsonAsync<TResponse>(string requestUri, CancellationToken cancellationToken = default) where TResponse : class
         {
-            var response = await client.DeleteAsync(requestUri, cancellationToken);
+            using var response = await client.DeleteAsync(requestUri, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
