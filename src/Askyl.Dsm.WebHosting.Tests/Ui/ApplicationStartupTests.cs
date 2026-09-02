@@ -3,6 +3,9 @@ using System.Text.RegularExpressions;
 using AngleSharp.Html.Parser;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.WebApi;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Net.Http.Headers;
 
 namespace Askyl.Dsm.WebHosting.Tests.Ui;
 
@@ -16,6 +19,12 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
     const string BlazorBootScriptPrefix = "_framework/blazor.web.";
 
     const string MissingPathSegment = "definitely-not-a-real-page";
+
+    /// <summary>
+    /// Any host but localhost, which <c>HstsOptions.ExcludedHosts</c> skips by default — addressing the
+    /// test server by its usual name would hide the header whatever the pipeline does.
+    /// </summary>
+    const string ProxiedBaseAddress = "http://nas.example.test";
 
     static readonly string ProtectedRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, FileManagementRoutes.SharedFoldersFullRoute);
 
@@ -82,6 +91,28 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
         // The requested path can only appear in the body through IStatusCodeReExecuteFeature, so this
         // also pins that the re-execution carried it rather than losing it to the rewritten request.
         Assert.Contains(MissingPathSegment, await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Application_SendsHsts_OnlyWhenTheProxyReportsHttps()
+    {
+        // DSM's nginx terminates TLS and forwards plain HTTP over loopback, so Request.IsHttps is false
+        // unless X-Forwarded-Proto is honoured — and HstsMiddleware writes no header at all when it is
+        // false. Without the XForwardedProto flag the application therefore ships HSTS to nobody, which
+        // a status code or a body assertion can never reveal.
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new(ProxiedBaseAddress) });
+
+        var forwarded = new HttpRequestMessage(HttpMethod.Get, ApplicationConstants.ApplicationUrlSubPath);
+        forwarded.Headers.Add(ForwardedHeadersDefaults.XForwardedProtoHeaderName, Uri.UriSchemeHttps);
+
+        var overHttps = await client.SendAsync(forwarded);
+        var overHttp = await client.GetAsync(ApplicationConstants.ApplicationUrlSubPath);
+
+        Assert.True(overHttps.Headers.Contains(HeaderNames.StrictTransportSecurity));
+
+        // The negative half matters as much: a header sent unconditionally would pass the assertion
+        // above while telling a plain-HTTP client to never speak plain HTTP again.
+        Assert.False(overHttp.Headers.Contains(HeaderNames.StrictTransportSecurity));
     }
 
     [Fact]

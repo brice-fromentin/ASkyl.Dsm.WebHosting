@@ -97,24 +97,6 @@ miss several concurrent requests for one user can each call `SYNO.Core.User`. Bo
 PR #39 introduced the shared cache; per-SID locking would need a semaphore dictionary with lifetime
 management. Noted in the code.
 
-### `UseHttpsRedirection` is a permanent no-op behind nginx
-
-`Ui/Program.cs`. DSM's nginx terminates TLS and proxies plain HTTP to port 7120, so ASP.NET logs
-`Failed to determine the https port for redirect` (EventId 3) at every startup — visible in two consecutive
-deployment logs. Fix is either processing `XForwardedProto` or removing the middleware. Scoped out of
-PR #36 because it changes what the middleware observes and nothing in the process could run the application
-to confirm the result.
-
-**Confirmed locally 2026-08-03**, the first item settled by running the application rather than by reading a
-deployment log. `Program.cs:121` sets `options.ForwardedHeaders = ForwardedHeaders.XForwardedFor` and nothing
-else, so `X-Forwarded-Proto` is never honoured and `Request.Scheme` stays `http` behind any proxy.
-`app.UseHttpsRedirection()` at line 167 then finds no HTTPS port to redirect to, emits the same EventId 3
-warning seen in production, and passes the request through: `GET http://localhost:5000/adwh` answered **200**
-with no redirect. So the middleware cannot fire in either environment — it is inert, not merely noisy, which
-downgrades this from a possible redirect loop to dead configuration. Removing it is the honest fix; adding
-`ForwardedHeaders.XForwardedProto` is the fix that makes it mean something. Either way it is one line, and it
-is now testable.
-
 ### Cosmetic: the status code page reports `errorCode: 500` whatever the status
 
 `Ui/Endpoints/ErrorEndpoints.cs`. `HandleStatusCode` builds `new ApiResult(false, …)` without an error

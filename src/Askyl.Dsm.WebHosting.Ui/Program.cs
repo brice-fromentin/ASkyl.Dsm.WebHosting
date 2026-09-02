@@ -116,9 +116,12 @@ builder.Services.AddSingleton(sp => (IHostedService)sp.GetRequiredService<IWebSi
 // 127.0.0.1 and the login throttle below would partition everyone into one bucket. nginx appends the
 // peer to X-Forwarded-For, placing the real address last; ForwardLimit stays at its default of 1 so
 // only that last entry is read and a client-supplied prefix cannot spoof the address.
+// XForwardedProto matters just as much: nginx terminates TLS and forwards plain HTTP, so without it
+// Request.IsHttps is false for every request and UseHsts below silently writes no header at all.
+// Only the loopback proxies listed here can set either value, so neither is client-spoofable.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     options.KnownProxies.Add(IPAddress.Loopback);
     options.KnownProxies.Add(IPAddress.IPv6Loopback);
 });
@@ -164,7 +167,10 @@ else
 app.UseRateLimiter();
 
 app.UseStatusCodePagesWithReExecute(ApplicationConstants.NotFoundPagePath, ApplicationConstants.NotFoundPageQueryFormat, createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+
+// No UseHttpsRedirection: DSM's nginx terminates TLS and owns the http-to-https redirect, and nothing
+// binds an HTTPS port in this process, so the middleware could only log "Failed to determine the https
+// port for redirect" and pass the request through. Reporting the scheme truthfully is this app's job.
 
 // Security headers
 app.Use((context, next) =>

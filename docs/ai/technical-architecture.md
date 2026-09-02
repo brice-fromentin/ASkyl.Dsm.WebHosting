@@ -338,8 +338,8 @@ both redirects, so the drain must run for every hosted site.
 
 **Middleware pipeline:** Culture setup → path base `/adwh` → forwarded headers → request localization →
 X-Request-ID tracking → error handling/HSTS (dev: WASM debugging) → rate limiting → status code pages →
-HTTPS redirection → security headers → session → routing → controllers + error endpoints → antiforgery →
-static assets → Blazor WASM render mode.
+security headers → session → routing → controllers + error endpoints → antiforgery → static assets →
+Blazor WASM render mode.
 
 **Forwarded headers are load-bearing, not cosmetic.** DSM's nginx proxies `/adwh` over loopback, so every
 request otherwise reports `127.0.0.1` — which would collapse the per-client login throttle into a single
@@ -643,7 +643,11 @@ Dialogs (Overlay)
    `SYNO.Core.User.get`; 1-minute TTL cache keyed by SID, evicted on disconnect so a signed-out session
    stops passing immediately
 4. **Antiforgery & CSRF Protection** — Enabled for all Blazor components and API endpoints
-5. **HTTPS & HSTS Enforcement** — `UseHttpsRedirection()`, `UseHsts()` (30-day max-age non-dev)
+5. **HSTS Enforcement** — `UseHsts()` (30-day max-age, non-dev only). It depends on
+   `ForwardedHeaders.XForwardedProto` being set: `HstsMiddleware` writes nothing when `Request.IsHttps`
+   is false, which behind DSM's nginx is every request until the forwarded scheme is honoured. There is
+   deliberately no `UseHttpsRedirection()` — nginx terminates TLS and owns the redirect, and nothing in
+   this process binds an HTTPS port for the middleware to redirect to
 
 ### API Security
 
