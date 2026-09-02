@@ -132,29 +132,26 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
             request.Headers.Add(NetworkConstants.CookieHeader, NetworkConstants.SsidCookiePrefix + sid);
         }
 
-        HttpResponseMessage? response = null;
+        // The timer must be started before the request: SendAsync buffers the whole body by default, so
+        // it is the measurement. It reports on disposal, which is why it reads a captured status rather
+        // than the response — the response is disposed first, and dereferencing it here would replace a
+        // failed send's own exception with a NullReferenceException.
+        var statusCode = 0;
 
-        // The response is disposed in the finally, which runs after the inner scope has already disposed
-        // the timer: the timer's callback still reads a live response, so the logging is unchanged.
-        try
+        using var timer = new OperationTimer(elapsed => logger.ApiRequest(request.Method.Method, url, statusCode, elapsed));
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        statusCode = (int)response.StatusCode;
+
+        var text = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (response.StatusCode != HttpStatusCode.OK)
         {
-            using var timer = new OperationTimer(elapsed => logger.ApiRequest(request.Method.Method, url, (int)response!.StatusCode, elapsed));
-
-            response = await _httpClient.SendAsync(request, cancellationToken);
-
-            var text = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            if (response.StatusCode != HttpStatusCode.OK)
-            {
-                return default;
-            }
-
-            return JsonSerializer.Deserialize<R>(text);
+            return default;
         }
-        finally
-        {
-            response?.Dispose();
-        }
+
+        return JsonSerializer.Deserialize<R>(text);
     }
 
     #endregion
