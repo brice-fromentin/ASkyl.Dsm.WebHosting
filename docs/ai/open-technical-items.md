@@ -64,12 +64,41 @@ DSM under Virtual Machine Manager is the candidate (one free instance per host, 
 Recorded, not planned: it shares its physical machine with production, and reachable credentials are a
 separate decision from the hardware.
 
-### `AddWebsiteAsync` applies side effects before persisting, with no rollback
+### The website lifecycle path still drops the cancellation token
 
-`Ui/Services/WebSiteHostingService.cs:90-114`. ACLs are set (step 1) and the reverse-proxy rule is created
-(step 2) before the configuration is persisted (step 3). The catch returns a failure result without
-compensating, so a failure after step 2 leaves an orphaned DSM proxy rule. `UpdateWebsiteAsync` has the
-same ordering at lines 160-184.
+`Ui/Services/WebSiteHostingService.cs`. `AddWebsiteAsync` and `UpdateWebsiteAsync` now hand their token to
+persistence, but not to the instance work that follows: `AddInstanceAsync` and `UpdateInstanceAsync` declare
+no `CancellationToken` parameter at all, and the `StartWebsiteAsync` / `StopWebsiteAsync` calls inside them
+are made without one although both accept it. `GetAllWebsitesAsync` and `StartEligibleSitesAsync` drop it
+the same way.
+
+This is not a parameter that was forgotten. Those paths end in `SiteLifecycleManager.StartAsync()` and
+`StopAsync()`, which take no token by design — operations are serialized through a bounded `Channel` with
+`TaskCompletionSource`-carrying command records. Making cancellation meaningful means deciding what
+cancelling a queued lifecycle command does to the command already running, which is a change to that
+protocol rather than an argument to pass along.
+
+Worth weighing against the architecture document's claim of "full `CancellationToken` support across all
+async operations", already listed as drift below.
+
+### `RemoveInstanceAsync` deletes the DSM rule before the configuration
+
+`Ui/Services/WebSiteHostingService.cs`. The mirror of the orphaned-rule defect that `AddWebsiteAsync` and
+`UpdateWebsiteAsync` had: the reverse-proxy rule is deleted first, and if `RemoveSiteAsync` then throws the
+site stays on disk, in memory and running, with nothing routing to it.
+
+Left open rather than folded into the fix for the other two, because it is a different failure with a
+different weight. The rule that goes missing belongs to a site the UI still lists, so a user can see it and
+repair it through an update; an orphaned rule was invisible from this application entirely. It is also far
+less reachable — the other two were triggered by a duplicate name, which is an ordinary mistake, while this
+one needs a write to fail. Whether `SYNO.Core.ReverseProxy` accepts an update for a rule that no longer
+exists has not been checked, and decides whether repair actually works.
+
+Also unresolved, and shared with the two that were fixed: compensation is best-effort. If the compensating
+call fails it is logged and the caller still sees the original error, so a stray rule can survive a failed
+cleanup with only the deployment log recording it.
+
+### Fire-and-forget async on the client
 
 ### Fire-and-forget async on the client
 

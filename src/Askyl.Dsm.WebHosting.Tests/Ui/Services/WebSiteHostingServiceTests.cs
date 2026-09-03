@@ -307,6 +307,99 @@ public class WebSiteHostingServiceTests : IDisposable
 
     #endregion
 
+    #region Reverse Proxy Compensation
+
+    [Fact]
+    public async Task AddWebsiteAsync_WhenPersistenceFails_DeletesTheReverseProxyRuleItCreated()
+    {
+        // Arrange — a duplicate name is rejected by AddSiteAsync, after the rule has been created in
+        // DSM. Nothing in this application lists DSM rules, so one left behind is invisible from here.
+        SetupRunningProcess();
+        _reverseProxyManager.Setup(r => r.DeleteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = CreateService();
+
+        await AddRunningSiteAsync(service);
+
+        var duplicate = CreateRunnableConfiguration();
+
+        // Act
+        var result = await service.AddWebsiteAsync(duplicate);
+
+        // Assert
+        Assert.False(result.Success);
+        _reverseProxyManager.Verify(r => r.CreateAsync(duplicate, It.IsAny<CancellationToken>()), Times.Once);
+        _reverseProxyManager.Verify(r => r.DeleteAsync(duplicate, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddWebsiteAsync_WhenCancelledAfterTheRuleIsCreated_StillRemovesIt()
+    {
+        // Arrange — cancel between step 2 and step 3, the exact window in which the rule exists and the
+        // configuration does not. Persistence only observes that if the token reaches it, and the
+        // compensating delete only runs if it does not itself honour the cancellation.
+        SetupRunningProcess();
+
+        using var cancellation = new CancellationTokenSource();
+
+        _reverseProxyManager.Setup(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .Callback(cancellation.Cancel)
+            .Returns(Task.CompletedTask);
+        _reverseProxyManager.Setup(r => r.DeleteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = CreateService();
+        var configuration = CreateRunnableConfiguration();
+
+        // Act & Assert
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.AddWebsiteAsync(configuration, cancellation.Token));
+
+        _reverseProxyManager.Verify(r => r.DeleteAsync(configuration, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateWebsiteAsync_WhenPersistenceFails_RestoresThePreviousReverseProxyRule()
+    {
+        // Arrange — two sites, then rename the second onto the first's name. UpdateSiteAsync rejects
+        // that, but DSM has already been pointed at the new configuration.
+        SetupRunningProcess();
+
+        var service = CreateService();
+
+        await AddRunningSiteAsync(service);
+
+        var second = CreateRunnableConfiguration();
+        second.Name = "SecondSite";
+        second.InternalPort = 5002;
+
+        var added = await service.AddWebsiteAsync(second);
+
+        Assert.True(added.Success);
+
+        var renamed = CreateRunnableConfiguration();
+        renamed.Id = added.Value!.Id;
+        renamed.InternalPort = 5002;
+
+        _reverseProxyManager.Invocations.Clear();
+
+        // Act
+        var result = await service.UpdateWebsiteAsync(renamed);
+
+        // Assert
+        Assert.False(result.Success);
+        _reverseProxyManager.Verify(r => r.UpdateAsync(renamed, It.IsAny<CancellationToken>()), Times.Once);
+
+        // DSM must end up describing what is on disk, which is still the site under its own name.
+        _reverseProxyManager.Verify(
+            r => r.UpdateAsync(It.Is<WebSiteConfiguration>(c => c.Name == "SecondSite"), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    #endregion
+
+
     #region AddWebsiteAsync - Validation
 
     [Fact]
