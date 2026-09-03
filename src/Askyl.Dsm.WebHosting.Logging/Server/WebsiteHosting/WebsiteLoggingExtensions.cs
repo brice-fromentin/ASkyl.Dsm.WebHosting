@@ -225,6 +225,12 @@ public static partial class WebsiteLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1800031, Level = LogLevel.Error, Message = "Failed to delete reverse proxy rule for '{SiteName}'")]
     public static partial void FailedToDeleteReverseProxyRule(this ILogger<ILogWebSiteHostingService> logger, Exception ex, string siteName);
+    /// <summary>
+    /// Logs that no instance could be initialized because the configuration could not be read.
+    /// </summary>
+    [LoggerMessage(EventId = 1800032, Level = LogLevel.Error, Message = "No website was initialized: the configuration could not be read. The host starts so the interface and logs stay reachable, and no write is attempted over an unreadable file")]
+    public static partial void InstanceInitializationSkipped(this ILogger<ILogWebSiteHostingService> logger, Exception ex);
+
 
     #endregion
 }

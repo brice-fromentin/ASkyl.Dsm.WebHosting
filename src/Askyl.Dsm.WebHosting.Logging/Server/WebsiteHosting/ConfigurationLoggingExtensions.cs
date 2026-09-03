@@ -49,7 +49,7 @@ public static partial class ConfigurationLoggingExtensions
     /// <summary>
     /// Logs that configuration file is corrupted (invalid JSON).
     /// </summary>
-    [LoggerMessage(EventId = 1900007, Level = LogLevel.Error, Message = "Configuration file is corrupted (invalid JSON). Backup created and new empty configuration initialized")]
+    [LoggerMessage(EventId = 1900007, Level = LogLevel.Error, Message = "Configuration file is corrupted (invalid JSON). It is left untouched and no site is loaded — repair or restore it, then restart")]
     public static partial void ConfigurationCorrupted(this ILogger<ILogWebSitesConfigurationService> logger, Exception ex);
 
     /// <summary>
@@ -70,15 +70,4 @@ public static partial class ConfigurationLoggingExtensions
     [LoggerMessage(EventId = 1900010, Level = LogLevel.Error, Message = "Failed to save configuration to {FilePath}")]
     public static partial void FailedToSaveConfiguration(this ILogger<ILogWebSitesConfigurationService> logger, Exception ex, string filePath);
 
-    /// <summary>
-    /// Logs that corrupted configuration was backed up.
-    /// </summary>
-    [LoggerMessage(EventId = 1900011, Level = LogLevel.Information, Message = "Corrupted configuration backed up to {BackupPath}")]
-    public static partial void ConfigurationBackedUp(this ILogger<ILogWebSitesConfigurationService> logger, string backupPath);
-
-    /// <summary>
-    /// Logs failure to create backup of corrupted configuration.
-    /// </summary>
-    [LoggerMessage(EventId = 1900012, Level = LogLevel.Warning, Message = "Failed to create backup of corrupted configuration")]
-    public static partial void FailedToCreateBackup(this ILogger<ILogWebSitesConfigurationService> logger, Exception ex);
 }

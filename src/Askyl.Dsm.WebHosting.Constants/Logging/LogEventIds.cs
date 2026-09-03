@@ -53,7 +53,7 @@ static class LogEventIds
 
     #region Website Hosting — 1800000–1800999
 
-    /// <summary>WebSiteHostingService — IDs 1800001–1800031.</summary>
+    /// <summary>WebSiteHostingService — IDs 1800001–1800032.</summary>
     public const int WebsiteHostingBase = 1800000;
 
     #endregion
