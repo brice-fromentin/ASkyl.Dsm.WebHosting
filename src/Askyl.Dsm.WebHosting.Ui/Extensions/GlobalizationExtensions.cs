@@ -16,6 +16,10 @@ public static class GlobalizationExtensions
     /// </summary>
     public static void ApplyDsmSystemCulture(this IApplicationBuilder app)
     {
+        // Synchronous scope on purpose: the caller is void, and both services resolved below are
+        // Singletons owned by the root provider, so this scope tracks nothing to dispose. Resolving
+        // anything Scoped here would need CreateAsyncScope — IDsmSession is IAsyncDisposable-only, and
+        // a synchronous Dispose on a scope holding one throws.
         using var scope = app.ApplicationServices.CreateScope();
         var serviceProvider = scope.ServiceProvider;
 
