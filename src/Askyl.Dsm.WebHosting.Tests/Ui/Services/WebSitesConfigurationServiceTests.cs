@@ -343,4 +343,42 @@ public class WebSitesConfigurationServiceTests : IDisposable
     }
 
     #endregion
+
+    #region Failed Save
+
+    [Fact]
+    public async Task RemoveSiteAsync_WhenTheSaveFails_LeavesTheSiteRetrievableAndTheRemovalRetryable()
+    {
+        // Every mutator changes the cached configuration before writing it. A failed write therefore left
+        // the cache describing a file that was never written: the site vanished from the cache while
+        // staying on disk, and a second attempt to remove it reported "not found" until a restart.
+        var site = new WebSiteConfiguration { Name = "Doomed", ApplicationPath = _tempDir, InternalPort = 5001, HostName = "doomed.local" };
+
+        SetupEmptyConfig();
+
+        var service = CreateService();
+
+        await service.AddSiteAsync(site);
+
+        // A directory where the atomic save wants its temporary file: the write fails and the real
+        // configuration file is left untouched.
+        var obstruction = _configFilePath + WebSiteConstants.ConfigurationTempExtension;
+
+        Directory.CreateDirectory(obstruction);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => service.RemoveSiteAsync(site.Id));
+
+        // The disk still has it, so the service must still report it.
+        Assert.Contains(await service.GetAllSitesAsync(), s => s.Name == "Doomed");
+
+        // And once whatever blocked the write is gone, the removal must actually work.
+        Directory.Delete(obstruction);
+
+        await service.RemoveSiteAsync(site.Id);
+
+        Assert.DoesNotContain(await service.GetAllSitesAsync(), s => s.Name == "Doomed");
+        Assert.DoesNotContain("Doomed", File.ReadAllText(_configFilePath), StringComparison.Ordinal);
+    }
+
+    #endregion
 }

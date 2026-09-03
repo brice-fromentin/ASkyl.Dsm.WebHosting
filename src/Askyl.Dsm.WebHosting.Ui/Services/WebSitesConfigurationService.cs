@@ -139,6 +139,13 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
         {
             logger.FailedToSaveConfiguration(ex, _configurationFilePath);
 
+            // Every caller mutates the cached configuration before asking for it to be written, so a
+            // failed write leaves the cache describing a file that does not exist. Dropping it makes the
+            // next operation reload from disk, which is the only copy that survived. Without this the
+            // site vanished from the cache while staying on disk, and could not be removed again until
+            // a restart. One place rather than an inverse operation at each of the three mutators.
+            _cachedConfiguration = null;
+
             throw;
         }
         finally
