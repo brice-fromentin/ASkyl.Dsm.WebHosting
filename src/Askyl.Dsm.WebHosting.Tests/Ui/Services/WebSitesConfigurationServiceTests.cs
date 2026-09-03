@@ -353,12 +353,14 @@ public class WebSitesConfigurationServiceTests : IDisposable
         // the cache describing a file that was never written: the site vanished from the cache while
         // staying on disk, and a second attempt to remove it reported "not found" until a restart.
         var site = new WebSiteConfiguration { Name = "Doomed", ApplicationPath = _tempDir, InternalPort = 5001, HostName = "doomed.local" };
+        var bystander = new WebSiteConfiguration { Name = "Bystander", ApplicationPath = _tempDir, InternalPort = 5002, HostName = "bystander.local" };
 
         SetupEmptyConfig();
 
         var service = CreateService();
 
         await service.AddSiteAsync(site);
+        await service.AddSiteAsync(bystander);
 
         // A directory where the atomic save wants its temporary file: the write fails and the real
         // configuration file is left untouched.
@@ -371,6 +373,11 @@ public class WebSitesConfigurationServiceTests : IDisposable
         // The disk still has it, so the service must still report it.
         Assert.Contains(await service.GetAllSitesAsync(), s => s.Name == "Doomed");
 
+        // And nothing else may have moved. Recovering by dropping the cache passed the assertion above
+        // but not this one: the reload it triggered answers an unreadable file with an empty
+        // configuration, and the next successful write then persists that emptiness over the rest.
+        Assert.Contains(await service.GetAllSitesAsync(), s => s.Name == "Bystander");
+
         // And once whatever blocked the write is gone, the removal must actually work.
         Directory.Delete(obstruction);
 
@@ -378,6 +385,7 @@ public class WebSitesConfigurationServiceTests : IDisposable
 
         Assert.DoesNotContain(await service.GetAllSitesAsync(), s => s.Name == "Doomed");
         Assert.DoesNotContain("Doomed", File.ReadAllText(_configFilePath), StringComparison.Ordinal);
+        Assert.Contains("Bystander", File.ReadAllText(_configFilePath), StringComparison.Ordinal);
     }
 
     #endregion
