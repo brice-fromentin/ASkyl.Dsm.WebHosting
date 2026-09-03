@@ -81,22 +81,26 @@ protocol rather than an argument to pass along.
 Worth weighing against the architecture document's claim of "full `CancellationToken` support across all
 async operations", already listed as drift below.
 
-### `RemoveInstanceAsync` deletes the DSM rule before the configuration
+### A failed rule deletion still orphans the rule on removal
 
-`Ui/Services/WebSiteHostingService.cs`. The mirror of the orphaned-rule defect that `AddWebsiteAsync` and
-`UpdateWebsiteAsync` had: the reverse-proxy rule is deleted first, and if `RemoveSiteAsync` then throws the
-site stays on disk, in memory and running, with nothing routing to it.
+`Ui/Services/WebSiteHostingService.cs`. `RemoveInstanceAsync` now restores the reverse-proxy rule when the
+configuration removal fails, so a failed removal no longer strands a running site with nothing routing to
+it. One hole is left open, on the other branch: deleting the rule is **best effort**, so if DSM refuses the
+deletion the removal continues, the configuration is removed, and the rule stays behind — orphaned and
+invisible to this application, which is the state the compensation elsewhere exists to prevent.
 
-Left open rather than folded into the fix for the other two, because it is a different failure with a
-different weight. The rule that goes missing belongs to a site the UI still lists, so a user can see it and
-repair it through an update; an orphaned rule was invisible from this application entirely. It is also far
-less reachable — the other two were triggered by a duplicate name, which is an ordinary mistake, while this
-one needs a write to fail. Whether `SYNO.Core.ReverseProxy` accepts an update for a rule that no longer
-exists has not been checked, and decides whether repair actually works.
+That is a deliberate trade rather than an oversight: failing the removal instead would make a site
+impossible to delete for as long as DSM refuses, which is worse for the user in front of it. Closing it
+properly means somewhere to record "this rule is known to be stale", which does not exist today. The
+`ReverseProxyDeletionFailed` log line is the only trace.
 
-Also unresolved, and shared with the two that were fixed: compensation is best-effort. If the compensating
-call fails it is logged and the caller still sees the original error, so a stray rule can survive a failed
-cleanup with only the deployment log recording it.
+Worth re-reading against a real deployment now that PR #57 landed: the scope disposal defect made
+`DeleteReverseProxyRuleAsync` report failure for deletions that had in fact succeeded, so this branch was
+being taken constantly and for the wrong reason. How often it fires for a *real* DSM refusal is unknown.
+
+Also unverified, and it decides how the restore behaves at the edge: whether `SYNO.Core.ReverseProxy`
+accepts a create for a rule that already exists. The restore is guarded on the deletion having succeeded
+precisely so it never has to find out.
 
 ### Fire-and-forget async on the client
 
