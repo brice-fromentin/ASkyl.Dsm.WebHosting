@@ -122,9 +122,10 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
 
         var response = await client.GetAsync(ProtectedRoute);
 
-        // Asserting "not success" rather than a status code on purpose. [AuthorizeSession] currently
-        // surfaces as 500 because Program.cs registers no authentication scheme, which is recorded in
-        // open-technical-items.md; this test pins the security property and survives the fix.
+        // The property that matters is that an unauthenticated caller is refused. The status code can
+        // be asserted now that it is deterministic: this used to be a 500, because ForbidResult wants
+        // an authentication scheme the application never registers.
         Assert.False(response.IsSuccessStatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 }
