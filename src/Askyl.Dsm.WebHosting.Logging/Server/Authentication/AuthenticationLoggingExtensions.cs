@@ -37,8 +37,8 @@ public static partial class AuthenticationLoggingExtensions
     /// <summary>
     /// Logs that the DSM session was validated successfully against the server.
     /// </summary>
-    [LoggerMessage(EventId = 1000005, Level = LogLevel.Debug, Message = "DSM session validated successfully (cached for {TtlMinutes} minutes)")]
-    public static partial void SessionValidationSuccess(this ILogger<ILogAuthenticationService> logger, int ttlMinutes);
+    [LoggerMessage(EventId = 1000005, Level = LogLevel.Debug, Message = "DSM session is valid")]
+    public static partial void SessionValidationSuccess(this ILogger<ILogAuthenticationService> logger);
 
     /// <summary>
     /// Logs that the DSM session validation failed — session is expired or invalid on the server.

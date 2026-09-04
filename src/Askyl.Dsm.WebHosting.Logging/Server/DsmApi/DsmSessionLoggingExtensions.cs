@@ -75,4 +75,10 @@ public static partial class DsmSessionLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2900011, Level = LogLevel.Warning, Message = "DSM session revocation call failed; the SID stays valid on the NAS until it expires")]
     public static partial void SessionRevocationFailed(this ILogger<ILogDsmSession> logger, Exception exception);
+
+    /// <summary>
+    /// Logs a session validated by an actual call to DSM, as opposed to one served from the cache.
+    /// </summary>
+    [LoggerMessage(EventId = 2900012, Level = LogLevel.Debug, Message = "DSM session validated against SYNO.Core.User and cached for {TtlMinutes} minutes")]
+    public static partial void SessionValidatedAgainstDsm(this ILogger<ILogDsmSession> logger, int ttlMinutes);
 }

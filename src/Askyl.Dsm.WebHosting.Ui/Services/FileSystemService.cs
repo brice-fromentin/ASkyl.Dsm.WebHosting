@@ -156,11 +156,11 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
 
         if (response?.Success != true || response.Data?.TaskId is null)
         {
-            logger.FailedToSetAclPermissions(path, response?.Success, response?.Error?.Code);
+            logger.FailedToSetAclPermissions(targetPath, response?.Success, response?.Error?.Code);
             return ApiResult.CreateFailure(localizer[LK.Error.FailedToSetACL, path, response?.Success ?? false, response?.Error?.Code ?? 0]);
         }
 
-        logger.AclPermissionsSet(path, response.Data.TaskId);
+        logger.AclPermissionsSet(targetPath, response.Data.TaskId);
         return ApiResult.CreateSuccess();
     }
 

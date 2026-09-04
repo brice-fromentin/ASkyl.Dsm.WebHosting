@@ -225,9 +225,12 @@ public sealed class SiteLifecycleManager(
 
         if (runtimeInfo is { IsCompatible: false })
         {
-            var incompatibleMessage = localizer[LK.Error.RuntimeNotInstalled, runtimeInfo.Channel];
-            logger.SiteStartBlockedIncompatible(incompatibleMessage);
-            return ApiResult.CreateFailure(incompatibleMessage);
+            // The result is for whoever is looking at the interface, so it is localized. The log is not:
+            // it is read later, by whoever is diagnosing, and a NAS set to another language turned this
+            // line into one nobody can grep for.
+            logger.SiteStartBlockedIncompatible(configuration.Name, runtimeInfo.Channel);
+
+            return ApiResult.CreateFailure(localizer[LK.Error.RuntimeNotInstalled, runtimeInfo.Channel]);
         }
 
         try

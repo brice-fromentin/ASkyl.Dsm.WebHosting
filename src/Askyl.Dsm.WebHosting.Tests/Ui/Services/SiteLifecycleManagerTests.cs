@@ -490,6 +490,35 @@ public class SiteLifecycleManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task StartAsync_IncompatibleFramework_LogsInEnglishNotTheLocalizedMessage()
+    {
+        // The result is user-facing and localized. The log is not: it is read later, by whoever is
+        // diagnosing, and it used to be handed the same localized sentence — so a NAS set to another
+        // language produced a log line nobody could grep for. Seen in a production log in French.
+        const string Localized = "MESSAGE-LOCALISE-QUI-NE-DOIT-PAS-ETRE-JOURNALISE";
+
+        var recorder = new CapturingLogger<ILogSiteLifecycleManager>();
+
+        _detector.Setup(d => d.Detect(_configuration.ApplicationRealPath))
+            .Returns(new AssemblyRuntimeInfo("9.0", false));
+        _localizer.Setup(l => l[LK.Error.RuntimeNotInstalled, "9.0"]).Returns(Localized);
+
+        using var manager = new SiteLifecycleManager(recorder, _localizer.Object, _processRunner, _detector.Object, _configuration);
+
+        // Act
+        var result = await manager.StartAsync();
+
+        // Assert — the caller still gets the localized text.
+        Assert.Equal(Localized, result.Message);
+
+        var blocked = Assert.Single(recorder.Messages, m => m.Contains("Cannot start site", StringComparison.Ordinal));
+
+        Assert.DoesNotContain(Localized, blocked, StringComparison.Ordinal);
+        Assert.Contains("9.0", blocked, StringComparison.Ordinal);
+        Assert.Contains(_configuration.Name, blocked, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task StartAsync_CompatibleFramework_StartsSuccessfully()
     {
         // Arrange
