@@ -104,8 +104,6 @@ precisely so it never has to find out.
 
 ### Fire-and-forget async on the client
 
-### Fire-and-forget async on the client
-
 - `Ui.Client/Services/CultureManager.cs:278` — `private async void UpdateHtmlLangAndDir`. An exception
   here cannot be caught by the caller and will fault the WebAssembly app.
 - `Ui.Client/Components/Pages/Home.razor:118` — `_ = ShowWebSiteConfigurationDialogAsync(instance)`
