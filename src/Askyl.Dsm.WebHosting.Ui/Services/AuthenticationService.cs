@@ -89,7 +89,7 @@ public class AuthenticationService(
             return ApiResultBool.CreateSuccess(false, localizer[LK.Error.SessionExpired]);
         }
 
-        logger.SessionValidationSuccess(ApplicationConstants.SessionValidationTtlMinutes);
+        logger.SessionValidationSuccess();
         return ApiResultBool.CreateSuccess(true);
     }
 }

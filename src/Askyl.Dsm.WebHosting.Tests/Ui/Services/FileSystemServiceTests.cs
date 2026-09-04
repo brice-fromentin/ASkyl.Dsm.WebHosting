@@ -269,6 +269,31 @@ public class FileSystemServiceTests
     }
 
     [Fact]
+    public async Task SetHttpGroupPermissionsAsync_ForAFile_LogsTheDirectoryItActedOn()
+    {
+        // Given a file, the ACL is applied to its parent directory. The success line used to name the
+        // file instead, so a deployment log review — the habit that found two defects this repository
+        // still carries — read that permissions had been set on the assembly. They never were.
+        var recorder = new CapturingLogger<ILogFileSystemService>();
+        var service = new FileSystemService(_dsmSession, recorder, _localizer.Object);
+
+        _dsmSession.SetupExecuteAsync(new CoreAclSetResponse
+        {
+            Success = true,
+            Data = new CoreAclSetData { TaskId = "task-123" }
+        });
+
+        // Act
+        await service.SetHttpGroupPermissionsAsync("/volume1/test/app.dll", isDirectory: false);
+
+        // Assert
+        var success = Assert.Single(recorder.Messages, m => m.Contains("ACL permissions set successfully", StringComparison.Ordinal));
+
+        Assert.Contains("/volume1/test", success, StringComparison.Ordinal);
+        Assert.DoesNotContain("app.dll", success, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SetHttpGroupPermissionsAsync_PathTraversal_ReturnsFailure()
     {
         // Arrange

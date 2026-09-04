@@ -146,6 +146,11 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(ApplicationConstants.SessionValidationTtlMinutes)
             });
 
+            // Only this branch talks to DSM. The caller logs every successful validation, hit or miss,
+            // so without this line the two are indistinguishable in a log — and the cache defect fixed
+            // in PR #39 was found by reading exactly that.
+            logger.SessionValidatedAgainstDsm(ApplicationConstants.SessionValidationTtlMinutes);
+
             return true;
         }
         finally
