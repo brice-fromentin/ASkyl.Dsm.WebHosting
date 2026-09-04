@@ -53,14 +53,14 @@ static class LogEventIds
 
     #region Website Hosting — 1800000–1800999
 
-    /// <summary>WebSiteHostingService — IDs 1800001–1800031.</summary>
+    /// <summary>WebSiteHostingService — IDs 1800001–1800032.</summary>
     public const int WebsiteHostingBase = 1800000;
 
     #endregion
 
     #region Configuration — 1900000–1900999
 
-    /// <summary>WebSitesConfigurationService — IDs 1900001–1900012.</summary>
+    /// <summary>WebSitesConfigurationService — IDs 1900001–1900010.</summary>
     public const int ConfigurationBase = 1900000;
 
     #endregion
@@ -98,7 +98,7 @@ static class LogEventIds
     /// <summary>GlobalizationSettings — IDs 2700001–2700004.</summary>
     public const int GlobalizationSettingsBase = 2700000;
 
-    /// <summary>DsmSettingsService — IDs 2800001–2800005.</summary>
+    /// <summary>DsmSettingsService — IDs 2800001–2800006.</summary>
     public const int DsmSettingsBase = 2800000;
 
     /// <summary>DsmSession — IDs 2900001–2900011.</summary>

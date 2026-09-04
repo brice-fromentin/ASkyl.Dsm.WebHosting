@@ -111,13 +111,13 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
         {
             logger.ConfigurationCorrupted(jsonEx);
 
-            await HandleCorruptedConfigurationAsync();
-            return new();
+            throw;
         }
         catch (Exception ex)
         {
             logger.FailedToLoadConfiguration(ex, _configurationFilePath);
-            return new();
+
+            throw;
         }
     }
 
@@ -139,10 +139,9 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
         {
             logger.FailedToSaveConfiguration(ex, _configurationFilePath);
 
-            // Deliberately does NOT drop the cache. Doing so lets a later operation reload, and this
-            // class answers any failed read with an empty configuration — so one unreadable file turns
-            // into a save that writes the remaining site over every other. Each mutator undoes its own
-            // change instead, which needs no reload at all.
+            // Deliberately does NOT drop the cache: that is the only thing that would make a later
+            // operation reload, and a reload can now fail outright. Each mutator undoes its own change
+            // instead, so the cache stays the last state known to match the file on disk.
             throw;
         }
         finally
@@ -151,23 +150,6 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
             {
                 File.Delete(tempPath);
             }
-        }
-    }
-
-    /// <summary>
-    /// Handles corrupted configuration file by creating a backup with timestamp.
-    /// </summary>
-    private async Task HandleCorruptedConfigurationAsync()
-    {
-        try
-        {
-            var backupPath = $"{_configurationFilePath}.corrupted.{DateTime.UtcNow:yyyyMMddHHmmss}.bak";
-            File.Move(_configurationFilePath, backupPath);
-            logger.ConfigurationBackedUp(backupPath);
-        }
-        catch (Exception backupEx)
-        {
-            logger.FailedToCreateBackup(backupEx);
         }
     }
 

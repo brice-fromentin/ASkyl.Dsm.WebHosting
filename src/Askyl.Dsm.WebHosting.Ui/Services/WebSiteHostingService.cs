@@ -317,7 +317,22 @@ public class WebSiteHostingService(
 
     private async Task InitializeAllInstancesAsync()
     {
-        var allSites = await configService.GetAllSitesAsync();
+        IEnumerable<WebSiteConfiguration> allSites;
+
+        // An unreadable configuration used to surface as an empty one, which stopped every site without
+        // saying so and let the next write erase the file. It now throws, and this is the one place that
+        // has to absorb it: the host still comes up, so the interface and the log archive stay reachable
+        // while the file is repaired, and no site is started from a configuration nobody could read.
+        try
+        {
+            allSites = await configService.GetAllSitesAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.InstanceInitializationSkipped(ex);
+
+            return;
+        }
 
         foreach (var site in allSites)
         {

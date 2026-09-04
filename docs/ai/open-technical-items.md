@@ -163,6 +163,36 @@ directly. `ProcessRunner` and `ErrorEndpoints` gained tests in PRs #32 and #33.
 `ResourceCompletenessTests` hardcodes `fr-FR`, so a newly added culture would be silently untested for key
 parity — which undercuts the "drop in a `.resx`, zero code changes" story.
 
+### The EventId registry claims an accuracy nothing checks
+
+`Constants/Logging/LogEventIds.cs` documents a range per service, and §6.6 asks for it to be updated by
+hand. That instruction has failed twice: `WebSitesConfigurationService` declared two ids that no longer
+existed after PR #59 deleted them, and `DsmSettingsService` had been declaring one fewer than it used since
+`2800006` was added — visible in every deployment log, unnoticed for as long. Nothing in format, build or
+test observes any of it, because the ranges are prose beside constants that **nothing reads**: the file is
+`static class` with no accessibility modifier, the grep for `LogEventIds.` is empty, and its own summary
+admits the source generator inlines literal values instead.
+
+**Decided: make the registry enforceable rather than delete it.** The design, with the parts already
+verified:
+
+- `LoggerMessageAttribute` survives into metadata. Measured on the real assembly: 197 methods carry it,
+  with 197 distinct ids from 1000001 to 7600010. So the check needs **no source parsing and no path
+  walking** — reflection over the `Logging` assembly is enough, which is what makes this worth doing at all.
+- Replace each documented range with a pair of constants (`…Base`, `…Last`), so the bounds become data
+  rather than a sentence.
+- Assert three things: no id falls outside every declared range, no two ranges overlap, and each range's
+  highest used id equals its `Last`. The third is the one that catches both failures above.
+
+**The trap to avoid**, and the reason the first sketch of this was thrown away: a check that discovers its
+own inputs can pass by finding nothing. Parsing `— IDs A–B.` out of a doc comment fails silently the day
+someone types a hyphen for the en dash, and a green test that verified nothing is worse than no test. Any
+implementation must assert its input set is non-empty before asserting anything about it.
+
+A duplicate-id assertion is the cheap half and stands on its own: two services logging under one id breaks
+the by-service grouping `compare-logs.sh` relies on. There are no duplicates today, so it costs nothing now
+and guards the future.
+
 ## Documentation drift
 
 All in `technical-architecture.md`, all confirmed on 2026-07-29:
