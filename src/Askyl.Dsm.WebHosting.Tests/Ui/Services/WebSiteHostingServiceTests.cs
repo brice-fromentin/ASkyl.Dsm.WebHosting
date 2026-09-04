@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
@@ -369,6 +370,61 @@ public class WebSiteHostingServiceTests : IDisposable
     #endregion
 
     #region Reverse Proxy Compensation
+
+    [Fact]
+    public async Task RemoveWebsiteAsync_WhenPersistenceFails_RestoresTheReverseProxyRule()
+    {
+        // Arrange — the rule is deleted before the configuration is. If the write then fails the site is
+        // still on disk, still in memory and still running, with nothing routing to it.
+        SetupRunningProcess();
+        _reverseProxyManager.Setup(r => r.DeleteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = CreateService();
+        var id = await AddRunningSiteAsync(service);
+
+        // A directory where the atomic save wants to put its temporary file: the write fails, and the
+        // real configuration file is left untouched, which is exactly the state being compensated for.
+        Directory.CreateDirectory(Path.Combine(_tempDir, WebSiteConstants.ConfigurationFileName + WebSiteConstants.ConfigurationTempExtension));
+
+        _reverseProxyManager.Invocations.Clear();
+
+        // Act
+        var result = await service.RemoveWebsiteAsync(id);
+
+        // Assert
+        Assert.False(result.Success);
+        _reverseProxyManager.Verify(r => r.DeleteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        // The site survived the failed removal, so DSM has to describe it again.
+        _reverseProxyManager.Verify(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+
+    [Fact]
+    public async Task RemoveWebsiteAsync_WhenTheRuleWasNeverDeleted_DoesNotRecreateIt()
+    {
+        // Arrange — deletion fails, so the rule is presumed still in DSM. Persistence then fails too.
+        // Restoring here would mean creating a rule that already exists, which is a different call with
+        // an unverified outcome; the failed deletion is already in the log.
+        SetupRunningProcess();
+        _reverseProxyManager.Setup(r => r.DeleteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("DSM refused the deletion"));
+
+        var service = CreateService();
+        var id = await AddRunningSiteAsync(service);
+
+        Directory.CreateDirectory(Path.Combine(_tempDir, WebSiteConstants.ConfigurationFileName + WebSiteConstants.ConfigurationTempExtension));
+
+        _reverseProxyManager.Invocations.Clear();
+
+        // Act
+        var result = await service.RemoveWebsiteAsync(id);
+
+        // Assert
+        Assert.False(result.Success);
+        _reverseProxyManager.Verify(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 
     [Fact]
     public async Task AddWebsiteAsync_WhenPersistenceFails_DeletesTheReverseProxyRuleItCreated()

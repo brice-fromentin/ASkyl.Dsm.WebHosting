@@ -458,7 +458,24 @@ public class WebSiteHostingService(
             }
 
             // Remove configuration (persistent storage) — MUST succeed before removing from memory
-            await configService.RemoveSiteAsync(instance.Configuration.Id, cancellationToken);
+            try
+            {
+                await configService.RemoveSiteAsync(instance.Configuration.Id, cancellationToken);
+            }
+            catch
+            {
+                // The site is still on disk, still in memory and still running, so DSM has to describe
+                // it again — otherwise the removal that failed has silently made the site unreachable.
+                // Guarded on the deletion having succeeded: recreating a rule that is still there is a
+                // different operation with an unverified outcome, and the log already carries that case.
+                // CancellationToken.None so the restore still runs when the caller cancelled.
+                if (proxyDeleteResult.Success)
+                {
+                    await CreateReverseProxyRuleAsync(instance.Configuration, CancellationToken.None);
+                }
+
+                throw;
+            }
 
             // Safe to remove from memory now — persistent config is gone
             _ = _sites.TryRemove(instanceId, out var removedEntry);

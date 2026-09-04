@@ -139,6 +139,10 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
         {
             logger.FailedToSaveConfiguration(ex, _configurationFilePath);
 
+            // Deliberately does NOT drop the cache. Doing so lets a later operation reload, and this
+            // class answers any failed read with an empty configuration — so one unreadable file turns
+            // into a save that writes the remaining site over every other. Each mutator undoes its own
+            // change instead, which needs no reload at all.
             throw;
         }
         finally
@@ -203,7 +207,16 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
             site.Id = Guid.NewGuid();
             _cachedConfiguration.Sites.Add(site);
 
-            await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
+            try
+            {
+                await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
+            }
+            catch
+            {
+                _cachedConfiguration.Sites.Remove(site);
+
+                throw;
+            }
         }
     }
 
@@ -223,9 +236,20 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
                 throw new InvalidOperationException($"Site with name '{site.Name}' already exists");
             }
 
+            var previousSite = _cachedConfiguration.Sites[existingSiteIndex];
+
             _cachedConfiguration.Sites[existingSiteIndex] = site;
 
-            await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
+            try
+            {
+                await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
+            }
+            catch
+            {
+                _cachedConfiguration.Sites[existingSiteIndex] = previousSite;
+
+                throw;
+            }
         }
     }
 
@@ -233,11 +257,27 @@ public class WebSitesConfigurationService(ILogger<ILogWebSitesConfigurationServi
     {
         using (await SemaphoreLock.AcquireAsync(this, () => EnsureInitializedAndLoadedAsync(cancellationToken), cancellationToken))
         {
-            var site = _cachedConfiguration!.Sites.FirstOrDefault(s => s.Id == siteId) ?? throw new InvalidOperationException($"Site with Id '{siteId}' not found");
+            var siteIndex = _cachedConfiguration!.Sites.FindIndex(s => s.Id == siteId);
 
-            _cachedConfiguration.Sites.Remove(site);
+            if (siteIndex < 0)
+            {
+                throw new InvalidOperationException($"Site with Id '{siteId}' not found");
+            }
 
-            await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
+            var site = _cachedConfiguration.Sites[siteIndex];
+
+            _cachedConfiguration.Sites.RemoveAt(siteIndex);
+
+            try
+            {
+                await SaveConfigurationAsync((WebSitesConfiguration)_cachedConfiguration, cancellationToken);
+            }
+            catch
+            {
+                _cachedConfiguration.Sites.Insert(siteIndex, site);
+
+                throw;
+            }
         }
     }
 
