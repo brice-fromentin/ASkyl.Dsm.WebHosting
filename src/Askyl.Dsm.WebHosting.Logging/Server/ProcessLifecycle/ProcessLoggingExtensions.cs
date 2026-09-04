@@ -37,8 +37,8 @@ public static partial class ProcessLoggingExtensions
     /// <summary>
     /// Logs that site start was blocked due to incompatible framework.
     /// </summary>
-    [LoggerMessage(EventId = 1600005, Level = LogLevel.Warning, Message = "Cannot start site: {Reason}")]
-    public static partial void SiteStartBlockedIncompatible(this ILogger<ILogSiteLifecycleManager> logger, string reason);
+    [LoggerMessage(EventId = 1600005, Level = LogLevel.Warning, Message = "Cannot start site '{SiteName}': it requires .NET {Channel}, which is not installed")]
+    public static partial void SiteStartBlockedIncompatible(this ILogger<ILogSiteLifecycleManager> logger, string siteName, string channel);
 
     /// <summary>
     /// Logs successful site start with PID.
