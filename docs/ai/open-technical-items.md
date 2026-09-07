@@ -6,8 +6,13 @@ This document is meant to be kept current: close items as they land, and add not
 checked against source. It replaces the 2026-07-25 assessment, a dated snapshot that was wrong on several
 claims and has been deleted.
 
-Every entry below was verified on 2026-07-29 against `main`, with the file and line that shows it.
-Nothing here is inherited on trust.
+Nothing here is inherited on trust: each entry names the file, and a line where one pins the claim.
+
+Entries are written when the defect is found and rewritten when it changes, so they do not share one
+verification date. What is shared is a sweep — every remaining entry was re-checked against `main` on
+**2026-09-07**, which is what the line references below reflect. Five of them had drifted by then, all in
+the table under Documentation drift, because the file they point into was edited by PR #54 while the table
+was not. Line numbers are the first thing to go stale here; re-run the sweep rather than trusting them.
 
 ## Security
 
@@ -92,7 +97,7 @@ precisely so it never has to find out.
 
 ### `build-spk.sh` version extraction can silently yield "null"
 
-`src/scripts/build-spk.sh:68-71` — `local version=$(jq -r …)` masks the command's exit status because
+`src/scripts/build-spk.sh:69` — `local version=$(jq -r …)` masks the command's exit status because
 `local` supplies its own, defeating `set -e`. And `jq -r` prints the string `null` for a missing key, which
 the following `[ -z "$version" ]` check does not catch, so a missing `Download.ChannelVersion` propagates
 as the literal text `null`.
@@ -176,18 +181,19 @@ and guards the future.
 
 ## Documentation drift
 
-All in `technical-architecture.md`, all confirmed on 2026-07-29:
+All in `technical-architecture.md`. Claims and line references both re-verified on 2026-09-07; the last
+four line numbers had each moved by four to fourteen lines since they were first recorded.
 
 | Line | Claim | Reality |
 |---|---|---|
 | 57 | Full `CancellationToken` support across all async operations | `IVersionsDetectorService.GetInstalledVersionsAsync()` takes none |
 | 258 | Resource keys are `L.*` | The class is `LK` |
-| 277 | `OperationTimer` used by seven services | Exactly one usage, in `DsmApiClient` |
+| 286 | `OperationTimer` used by seven services | Exactly one usage, in `DsmApiClient` |
 | 301 | `SystemProcessHandle` is a Transient registration | Not DI-registered; constructed by `SystemProcessRunner` |
-| 821 | HTTPS on port 7121 | Declared in `adwh.sc`, but nothing binds it |
-| 829 | `preinst` performs architecture detection | It only logs `SYNOPKG_DSM_ARCH`; detection is `uname -m` in `common-functions.sh:216`, called from `postinst` and `postupgrade` |
-| 834 | `postuninst` performs final cleanup | The script is literally `exit 0` |
-| 843+ | Deployment is manual, CI is planned | `.github/workflows/build.yml` implements it |
+| 825 | HTTPS on port 7121 | Declared in `spk-project/package/etc/adwh.sc:11`, and nothing in the source binds it |
+| 833 | `preinst` performs architecture detection | It only logs `SYNOPKG_DSM_ARCH`; detection is `uname -m` in `common-functions.sh:216`, called from `postinst` and `postupgrade` |
+| 838 | `postuninst` performs final cleanup | The script ends at `exit 0` and does nothing else |
+| 857 | Deployment is manual, CI is planned | `.github/workflows/build.yml` implements it |
 
 `RequestTrackingMiddleware.cs:14` writes `HttpContext.Items[RequestId]` and nothing ever reads it, so the
 propagation the document describes does nothing.
@@ -199,14 +205,14 @@ propagation the document describes does nothing.
 **Not a defect today. Do not fix it as one.** The weaknesses below are unreachable under the current
 threat model, and recording them as security findings would misrepresent the risk.
 
-`Tools/Infrastructure/ArchiveExtractorService.cs:47-52` has three:
+`Tools/Infrastructure/ArchiveExtractorService.cs:49` has three:
 
 - The zip-slip guard is `absoluteTargetPath.StartsWith(targetDirectory)` with **no trailing separator**,
   and `FileManagerService.GetDirectory("")` returns `Path.GetFullPath(...)`, which never ends in one.
 - Only `TarEntryType.Directory` is special-cased; symlink and hardlink entries fall through to
   `ExtractToFile`, which creates the link without validating its target.
 - `Tools/Runtime/DownloaderService.cs` verifies no hash, and `install_dotnet_runtime`
-  (`common-functions.sh:253`) simply untars. SHA512 is checked only at build time by `build-spk.sh`.
+  (`common-functions.sh:212`) simply untars. SHA512 is checked only at build time by `build-spk.sh`.
 
 Why none of it is currently exploitable:
 
