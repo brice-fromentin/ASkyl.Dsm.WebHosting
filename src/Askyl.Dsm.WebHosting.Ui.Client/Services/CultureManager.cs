@@ -271,11 +271,17 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
     {
         ApplyCultureToThread(culture);
         CurrentCulture = culture;
-        UpdateHtmlLangAndDir(culture);
+
+        // Deliberately not awaited: setting two DOM attributes must not delay the culture change, and no
+        // caller has anything to do with its outcome. It is a Task rather than async void so that an
+        // exception the method somehow fails to handle is dropped instead of being rethrown on the
+        // synchronization context, where it would take the WebAssembly application down.
+        _ = UpdateHtmlLangAndDirAsync(culture);
+
         logger.CultureApplied(culture.Name);
     }
 
-    private async void UpdateHtmlLangAndDir(CultureInfo culture)
+    private async Task UpdateHtmlLangAndDirAsync(CultureInfo culture)
     {
         try
         {
@@ -285,6 +291,12 @@ public class CultureManager(IJSRuntime jsRuntime, ILogger<ILogCultureManager> lo
         catch (JSException)
         {
             // JS interop may fail during early startup (before DOM is ready) — non-critical, safe to ignore.
+        }
+        catch (Exception exception)
+        {
+            // Everything else: the renderer refusing interop, a disposed circuit, a cancelled call. None
+            // of it is worth losing the application over, and none of it was being caught before.
+            logger.HtmlLangAndDirUpdateFailed(exception);
         }
     }
 

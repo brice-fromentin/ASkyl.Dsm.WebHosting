@@ -112,10 +112,13 @@
         }
     }
 
-    private void HandleInstanceDoubleClicked(WebSiteInstance instance)
+    private async Task HandleInstanceDoubleClicked(WebSiteInstance instance)
     {
         SelectedInstance = instance;
-        _ = ShowWebSiteConfigurationDialogAsync(instance);
+
+        // OnRowDoubleClick is an EventCallback that AutoDataGrid already awaits, so returning the task
+        // costs nothing and puts any failure back on the component instead of dropping it.
+        await ShowWebSiteConfigurationDialogAsync(instance);
     }
 
     private async Task AddWebSite() => await ShowWebSiteConfigurationDialogAsync(new WebSiteInstance());

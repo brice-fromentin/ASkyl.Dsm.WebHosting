@@ -98,5 +98,11 @@ public static partial class ClientLoggingExtensions
     [LoggerMessage(EventId = 7600010, Level = LogLevel.Warning, Message = "User culture '{UserCulture}' not supported, falling back to '{FallbackCulture}'")]
     public static partial void UserCultureUnsupported(this ILogger<ILogCultureManager> logger, string userCulture, string fallbackCulture);
 
+    /// <summary>
+    /// Logs a failure to write the lang and dir attributes that is not the expected early-startup one.
+    /// </summary>
+    [LoggerMessage(EventId = 7600011, Level = LogLevel.Warning, Message = "Could not set the html lang and dir attributes; the culture itself was applied")]
+    public static partial void HtmlLangAndDirUpdateFailed(this ILogger<ILogCultureManager> logger, Exception exception);
+
     #endregion
 }
