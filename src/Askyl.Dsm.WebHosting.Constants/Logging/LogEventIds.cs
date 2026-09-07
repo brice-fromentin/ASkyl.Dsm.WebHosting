@@ -111,7 +111,7 @@ static class LogEventIds
     /// <summary>LicenseService (client) — ID 7000001.</summary>
     public const int ClientBase = 7000000;
 
-    /// <summary>CultureManager (client) — IDs 7600001–7600010.</summary>
+    /// <summary>CultureManager (client) — IDs 7600001–7600011.</summary>
     public const int CultureManagerBase = 7600000;
 
     /// <summary>Client utilities (JS interop) — ID 7100001.</summary>

@@ -1,8 +1,10 @@
 using System.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tests;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
+using Microsoft.JSInterop.Infrastructure;
 using Moq;
 
 namespace Askyl.Dsm.WebHosting.Tests.Globalization;
@@ -19,6 +21,34 @@ public class CultureManagerTests
     private Mock<ILogger<ILogCultureManager>> CreateLoggerMock()
     {
         return new Mock<ILogger<ILogCultureManager>>();
+    }
+
+    #endregion
+
+    #region Interop Failure
+
+    [Fact]
+    public void ApplyCulture_WhenInteropFailsUnexpectedly_SwallowsItAndKeepsTheCulture()
+    {
+        // Writing lang and dir is cosmetic and was fire-and-forget from an async void method that caught
+        // only JSException. Anything else — the renderer refusing interop, a disposed circuit, a cancelled
+        // call — escaped onto the synchronization context, where an unhandled exception faults the whole
+        // WebAssembly application over two DOM attributes.
+        var jsRuntime = CreateJsRuntimeMock();
+        var recorder = new CapturingLogger<ILogCultureManager>();
+
+        jsRuntime.Setup(j => j.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object?[]?>()))
+                 .Throws(new InvalidOperationException("JavaScript interop calls cannot be issued at this time"));
+
+        var cultureManager = new CultureManager(jsRuntime.Object, recorder);
+
+        // Act
+        cultureManager.InitializeFromLogin("en-US", null, null);
+
+        // Assert — the culture still applied, and the failure was recorded rather than thrown away or
+        // left to take the application down.
+        Assert.Equal("en-US", cultureManager.CurrentCulture.Name);
+        Assert.Contains(recorder.Messages, m => m.Contains("html lang and dir", StringComparison.Ordinal));
     }
 
     #endregion
