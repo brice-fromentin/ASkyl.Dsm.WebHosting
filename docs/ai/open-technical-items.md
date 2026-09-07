@@ -11,18 +11,6 @@ Nothing here is inherited on trust.
 
 ## Security
 
-### `[AuthorizeSession]` denies with 500 instead of 401/403
-
-`Ui/Authorization/AuthorizeSessionAttribute.cs`. `ForbidResult` requires a registered authentication
-scheme; `Program.cs` calls neither `AddAuthentication` nor `AddAuthorization`, so the denial throws and
-surfaces as a 500. It fails closed, but noisily, and gives clients nothing to branch on.
-
-Check how `Ui.Client`'s `AuthenticationNavigationGuard` reacts before changing the status code.
-
-`ApplicationStartupTests.ProtectedApi_WithoutSession_DoesNotSucceed` now pins the property that actually
-matters — an unauthenticated caller is refused — without asserting the status code, so it stays green
-through the fix rather than having to be rewritten alongside it.
-
 ### Session identifier is not rotated on login
 
 `Ui/Services/DsmSession.cs`. No rotation exists anywhere — no regeneration, no clear-and-reissue. Risk is
@@ -155,9 +143,9 @@ resolve to the same place — and it only diverges under tests, which do supply 
 
 ## Test coverage
 
-`AuthorizeSessionAttribute` has no tests, which is notable for the class that gates every API call. Neither
-do `ProcessHandle`, `ProcessTerminator`, `DownloaderService`, `RequestTrackingMiddleware`, or the six
-controllers. The two FluentValidation validators are exercised indirectly through service tests but not
+`ProcessHandle`, `ProcessTerminator`, `DownloaderService`, `RequestTrackingMiddleware` and the six
+controllers have no tests. `AuthorizeSessionAttribute` gained them alongside its status code fix — the
+pass-through, both refusal paths and the cancellation token it forwards. The two FluentValidation validators are exercised indirectly through service tests but not
 directly. `ProcessRunner` and `ErrorEndpoints` gained tests in PRs #32 and #33.
 
 `ResourceCompletenessTests` hardcodes `fr-FR`, so a newly added culture would be silently untested for key

@@ -20,7 +20,11 @@ public class AuthorizeSessionAttribute : Attribute, IAsyncAuthorizationFilter
 
         if (result.Value != true)
         {
-            context.Result = new ForbidResult();
+            // Unauthorized, not Forbid: ForbidResult asks the authentication middleware to challenge,
+            // and Program.cs registers no scheme, so it threw and every refusal surfaced as a 500.
+            // 401 is also the honest code — the session is missing or no longer valid, which is a
+            // question of identity rather than of privilege.
+            context.Result = new UnauthorizedResult();
         }
     }
 }
