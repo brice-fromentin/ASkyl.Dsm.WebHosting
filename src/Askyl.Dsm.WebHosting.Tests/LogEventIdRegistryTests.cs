@@ -16,6 +16,11 @@ namespace Askyl.Dsm.WebHosting.Tests;
 public class LogEventIdRegistryTests
 {
     /// <summary>
+    /// Width of the block each service owns. Every <c>Base</c> sits on a multiple of it.
+    /// </summary>
+    const int BlockSize = 1000;
+
+    /// <summary>
     /// The declared ranges, discovered by pairing each <c>XxxBase</c> constant with its <c>XxxLast</c>.
     /// </summary>
     static IReadOnlyList<(string Owner, int Base, int Last)> DeclaredRanges()
@@ -98,6 +103,20 @@ public class LogEventIdRegistryTests
             .ToList();
 
         Assert.Empty(overlaps);
+    }
+
+    [Fact]
+    public void EveryRange_StaysInsideTheBlockItsBaseNames()
+    {
+        // Added after the four assertions above let a lowered Base pass unnoticed: nothing lived in the
+        // territory it wrongly claimed, so no id was orphaned and no neighbour was overlapped. The
+        // registry's premise is one thousand-wide block per service, and only this says so.
+        var wrong = DeclaredRanges()
+            .Where(range => range.Base % BlockSize != 0 || range.Last <= range.Base || range.Last - range.Base >= BlockSize)
+            .Select(range => $"{range.Owner}: {range.Base}..{range.Last}")
+            .ToList();
+
+        Assert.Empty(wrong);
     }
 
     [Fact]
