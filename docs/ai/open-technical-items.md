@@ -95,12 +95,19 @@ Also unverified, and it decides how the restore behaves at the edge: whether `SY
 accepts a create for a rule that already exists. The restore is guarded on the deletion having succeeded
 precisely so it never has to find out.
 
-### `build-spk.sh` version extraction can silently yield "null"
+### `build-spk.sh` reports success after skipping an architecture
 
-`src/scripts/build-spk.sh:69` — `local version=$(jq -r …)` masks the command's exit status because
-`local` supplies its own, defeating `set -e`. And `jq -r` prints the string `null` for a missing key, which
-the following `[ -z "$version" ]` check does not catch, so a missing `Download.ChannelVersion` propagates
-as the literal text `null`.
+`src/scripts/build-spk.sh`. When a release lists no file for one of the three architectures, the loop warns
+and continues, and the function still ends on "All .NET runtimes are downloaded and verified" with a status
+of zero. The SPK is then packaged without that architecture, and nothing downstream says so.
+
+Left as it is by the masked-failure fix rather than changed with it: warn-and-continue is what the loop was
+written to do, and whether a missing architecture should abort the build is a packaging decision, not a
+defect to correct in passing. Measured: with only `linux-x64` present, two warnings are printed and the
+build reports success — unchanged before and after that fix.
+
+Closing it means deciding what the package should contain. Failing the build is one answer; recording the
+architectures actually bundled, and letting the caller judge, is another.
 
 ### Validation stampede on a cold cache
 

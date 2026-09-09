@@ -66,8 +66,16 @@ extract_dotnet_channel_version() {
         return 1
     fi
 
-    local version=$(jq -r '.Download.ChannelVersion' "$appsettings_path")
+    # -e so a missing key fails instead of yielding the string "null", and the assignment is separate
+    # from the declaration so its status is jq's own — `local` supplies a status of its own and hides it.
+    local version
 
+    if ! version=$(jq -er '.Download.ChannelVersion' "$appsettings_path"); then
+        printf "❌ Error: ChannelVersion is missing or unreadable in %s\n" "$appsettings_path" >&2
+        return 1
+    fi
+
+    # Still reachable: jq -e accepts an empty string, which is neither null nor false.
     if [ -z "$version" ]; then
         printf "❌ Error: Could not extract ChannelVersion from %s\n" "$appsettings_path" >&2
         return 1
@@ -109,7 +117,10 @@ get_releases_json() {
         echo "⬇️  Fetching release information for .NET ${DOTNET_CHANNEL_VERSION}..." >&2
 
         local releases_url="https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/${DOTNET_CHANNEL_VERSION}/releases.json"
-        local releases_json=$(curl -s -L "$releases_url")
+        # -f so an HTTP error is a non-zero status rather than an error body that looks like content.
+        local releases_json
+
+        releases_json=$(curl -fsL "$releases_url")
 
         if [ -z "$releases_json" ]; then
             printf "❌ Error: Failed to download release information from %s\n" "$releases_url" >&2
@@ -139,7 +150,9 @@ download_and_verify() {
     if [ -f "$dest_path" ]; then
         echo "🔎 File '$filename' already exists. Verifying checksum..."
 
-        local existing_hash=$(get_sha512_checksum "$dest_path")
+        local existing_hash
+
+        existing_hash=$(get_sha512_checksum "$dest_path")
 
         if [ "$existing_hash" == "$expected_hash" ]; then
             echo "✅ Checksum matches for '$filename'. Skipping download."
@@ -154,7 +167,9 @@ download_and_verify() {
     curl -s -L -o "$dest_path" "$url"
 
     echo "🔎 Verifying checksum for '$filename'..."
-    local downloaded_hash=$(get_sha512_checksum "$dest_path")
+    local downloaded_hash
+
+    downloaded_hash=$(get_sha512_checksum "$dest_path")
 
     if [ "$downloaded_hash" != "$expected_hash" ]; then
         printf "❌ FATAL: Checksum mismatch for %s\n" "$filename" >&2
@@ -172,7 +187,9 @@ download_dotnet_runtimes() {
     echo "🧹 Preparing runtimes download directory..."
     mkdir -p "$RUNTIMES_DOWNLOAD_DIR"
 
-    local releases_json=$(get_releases_json)
+    local releases_json
+
+    releases_json=$(get_releases_json)
 
     if [ -z "$releases_json" ]; then
         printf "❌ Error: Could not get release information.\n" >&2
@@ -180,7 +197,9 @@ download_dotnet_runtimes() {
     fi
 
     # Get the latest runtime version string from the top-level property
-    local latest_version_string=$(echo "$releases_json" | jq -r '."latest-runtime"')
+    local latest_version_string
+
+    latest_version_string=$(echo "$releases_json" | jq -er '."latest-runtime"')
     if [ -z "$latest_version_string" ]; then
         printf "❌ Error: Could not find 'latest-runtime' in release information for .NET %s\n" "$DOTNET_CHANNEL_VERSION" >&2
         return 1
@@ -189,30 +208,45 @@ download_dotnet_runtimes() {
     echo "ℹ️ Latest runtime version: $latest_version_string"
 
     # Find the release object that matches this version
-    local latest_release_json=$(echo "$releases_json" | jq ".releases[] | select(.\"release-version\" == \"$latest_version_string\")")
+    local latest_release_json
+
+    latest_release_json=$(echo "$releases_json" | jq ".releases[] | select(.\"release-version\" == \"$latest_version_string\")")
 
     if [ -z "$latest_release_json" ]; then
         printf "❌ Error: Could not find release object for version %s\n" "$latest_version_string" >&2
         return 1
     fi
 
-    local files_json=$(echo "$latest_release_json" | jq '.["aspnetcore-runtime"].files')
+    local files_json
+
+    if ! files_json=$(echo "$latest_release_json" | jq -e '.["aspnetcore-runtime"].files'); then
+        printf "❌ Error: No aspnetcore-runtime files listed for version %s\n" "$latest_version_string" >&2
+        return 1
+    fi
     local archs=("linux-arm" "linux-arm64" "linux-x64")
 
     for arch in "${archs[@]}"; do
         echo "--- Processing architecture: $arch ---"
 
         local expected="aspnetcore-runtime-$arch.tar.gz"
-        local file_info=$(echo "$files_json" | jq ".[] | select(.rid == \"$arch\" and .name == \"$expected\")")
+        local file_info
+
+        file_info=$(echo "$files_json" | jq ".[] | select(.rid == \"$arch\" and .name == \"$expected\")") || true
         
         if [ -z "$file_info" ]; then
             printf "⚠️ Warning: Could not find file info for architecture %s in version %s\n" "$arch" "$latest_version_string" >&2
             continue
         fi
 
-        local filename=$(echo "$file_info" | jq -r .name)
-        local url=$(echo "$file_info" | jq -r .url)
-        local hash=$(echo "$file_info" | jq -r .hash)
+        # -e on all three: a missing field used to become the string "null", and a download was then
+        # attempted against a URL of "null" and verified against a hash of "null".
+        local filename
+        local url
+        local hash
+
+        filename=$(echo "$file_info" | jq -er .name)
+        url=$(echo "$file_info" | jq -er .url)
+        hash=$(echo "$file_info" | jq -er .hash)
         local dest_path="$RUNTIMES_DOWNLOAD_DIR/$filename"
 
         if ! download_and_verify "$dest_path" "$url" "$hash"; then
@@ -266,7 +300,9 @@ create_spk_package() {
     rm -f package.tgz
 
     local spk_path="$BUILD_DIR/${SPK_FILENAME}"
-    local spk_size_mib=$(get_file_size_mib "$spk_path")
+    local spk_size_mib
+
+    spk_size_mib=$(get_file_size_mib "$spk_path")
 
     printf "✅ SPK package created successfully!\n"
     printf "   -> Path: %s\n" "$spk_path"
