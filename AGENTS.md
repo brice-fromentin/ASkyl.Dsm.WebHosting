@@ -283,10 +283,13 @@ logger.LogWarning("Login failed");   // ❌ direct ILogger call
 
 **When adding new log methods:**
 
-1. Identify service's EventId range in `Constants/Logging/LogEventIds.cs`
+1. Identify the service's range in `Constants/Logging/LogEventIds.cs` — the `XxxBase` and `XxxLast` pair
 2. Find next available ID in corresponding extension file
 3. Add `[LoggerMessage]` method with XML doc comment
-4. Update `LogEventIds.cs` range comment if the range extends
+4. Raise `XxxLast` to the new id. It is a constant, not a comment, and `LogEventIdRegistryTests` fails if it
+   disagrees with the assembly in either direction — an id past `Last`, or a `Last` past the highest id in
+   use. Deleting a log method means lowering it for the same reason. This used to be a prose range kept in
+   step by hand, and it drifted twice before anything could see it
 
 ---
 
