@@ -635,3 +635,31 @@ not fixing the class.**
 or was approved at a prompt; only the maintainer sees prompts. Any check of that kind must **ask rather
 than infer** — and more generally, say what was verified, say what was assumed, and never let the second
 wear the clothes of the first.
+
+The three habits below are the operational form of the rules above, added because those rules were already
+written and did not hold. Each names the incident that produced it.
+
+**An empty result is not a finding.** A search that matches nothing is ambiguous between "the property
+holds" and "the pattern never ran": `grep "local [a-z_]*=\$("` inside double quotes becomes `=$(`, where
+`$` anchors end-of-line, so it could never match — and its silence was read as "there is one such line".
+There were thirteen, and the second was found by accident. **Validate a pattern against a case known to
+match before believing a zero**, and treat a passing linter the same way: `markdownlint` accepted a
+duplicated heading for two days because MD024 is not enabled. It answered its own question, not the one
+being asked.
+
+**A sentence that reads as measured names its command.** "Reading `StatusCode` on a disposed response would
+throw" was reasoning in the register of measurement, and it was wrong — the getter returns the value.
+"Measured end to end on the real function" described a function whose collaborators were stubbed, so the
+download and packaging paths it implied were never exercised. If the command cannot be named in the same
+breath, write it as reasoning.
+
+**A gate's blind spot is the input it never looks at.** Five assertions over the EventId registry passed on
+one whose `Base` had been moved a thousand below its block: nothing was orphaned, nothing overlapped, every
+`Last` still matched the highest id in use. Before accepting a gate, **enumerate the ways the thing can be
+wrong and check the list against it** — "the bounds" is plural, and only three of the four directions were
+covered until someone asked.
+
+**What actually caught these.** Not self-review — a pointed question from the maintainer, four times out of
+eight, including the four that mattered most. A question forces the claim to be re-derived from evidence
+rather than recalled as a conclusion. Nothing here is mechanically enforceable, which is the reason to
+write down which claims are measured: it is what makes such a question cheap to ask.
