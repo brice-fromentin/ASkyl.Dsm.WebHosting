@@ -103,9 +103,32 @@ public class FrameworkManagementServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallFrameworkAsync_ReturnsFailure_WhenInvalidVersionFormat()
+    {
+        // Uninstall checked the format and install did not, so a malformed version travelled as far as the
+        // release lookup, matched nothing, threw, and came back as a generic "operation failed".
+        _dotnetVersionService.Setup(d => d.IsValidVersionFormat("invalid")).Returns(false);
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.InstallFrameworkAsync("invalid", "8.0");
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Invalid version format", result.Message);
+
+        // Refusing before any work is what makes the message worth having: the download is not attempted.
+        _downloader.Verify(
+            d => d.DownloadVersionToAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task InstallFrameworkAsync_Success_DownloadsExtractsAndRefreshes()
     {
         // Arrange
+        _dotnetVersionService.Setup(d => d.IsValidVersionFormat("8.0.5")).Returns(true);
         _downloader.Setup(d => d.DownloadVersionToAsync("8.0.5", "8.0", true, It.IsAny<CancellationToken>()))
             .ReturnsAsync("/tmp/dotnet-8.0.5.tar.gz");
 
@@ -127,6 +150,7 @@ public class FrameworkManagementServiceTests : IDisposable
     public async Task InstallFrameworkAsync_ReturnsFailure_WhenDownloadThrows()
     {
         // Arrange
+        _dotnetVersionService.Setup(d => d.IsValidVersionFormat("8.0.5")).Returns(true);
         _downloader.Setup(d => d.DownloadVersionToAsync("8.0.5", "8.0", true, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new IOException("Network error"));
 

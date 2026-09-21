@@ -151,16 +151,30 @@ Pre-existing but unreachable until the re-execution was fixed, and still harmles
 `IsSuccessStatusCode` before reading the body, so nothing consumes the field. The message wording is wrong
 for the same reason — "Resource not found" on a 403 — and both are the same one-line fix.
 
-### Cosmetic: install reports a worse error than uninstall for a bad version
+### The version format check on uninstall is a path guard, not a message
 
-`Ui/Services/FrameworkManagementService.cs` — `InstallFrameworkAsync` (lines 20-52) checks only that the
-version is non-empty, while `IsValidVersionFormat` is called at line 61 inside `UninstallFrameworkAsync`.
+`Ui/Services/FrameworkManagementService.cs`. `UninstallFrameworkAsync` interpolates the caller's version
+straight into three paths it then deletes recursively — `host/fxr/{version}` and the two `shared/…` trees.
+A previous version of this entry said the value "never reaches a URL or a file path", which is true of
+install and false here, and it filed the check as cosmetic. **Do not remove `IsValidVersionFormat` from
+that method in the name of symmetry with install.** It is the first of two things standing in front of a
+`Directory.Delete(path, recursive: true)`.
 
-**This is not a security gap.** The version never reaches a URL or a file path: `DownloadVersionToAsync`
-hands it to `GetReleaseByVersionAsync`, which does a `String.Equals` against the release list Microsoft
-returned (`DownloaderService.cs:135`). A malformed version matches nothing, throws, and is caught into a
-generic failure result. The only consequence is that install says "operation failed" where uninstall would
-have said "invalid version format".
+Measured, both layers:
+
+- `IsValidVersionFormat` is `^\d+\.\d+(\.\d+)?$`. It accepts `10.0` and `10.0.1`, and rejects `..`,
+  `../../etc`, `10.0/../..`, an embedded newline, a trailing space, and anything carrying shell
+  punctuation.
+- `DeleteDirectory` calls `SanitizeSubdirectoryPath` before doing anything: it splits on both separator
+  kinds, throws on a `.` or `..` segment, and only then combines with the normalized root.
+
+So there is no gap today. The entry is kept because the reason there is none was recorded wrongly, and a
+reader acting on the old wording would have deleted a control believing it formatted an error string.
+
+Install now validates the format too, which was the original cosmetic half: a malformed version used to
+travel as far as `GetReleaseByVersionAsync`, match nothing, throw, and return "operation failed" instead of
+naming what was wrong with the input. Nothing about that path touches the filesystem — the downloaded file
+name comes from the matched release object, never from the string the caller typed.
 
 ### Latent: initialization write-tests the wrong directory
 

@@ -25,6 +25,14 @@ public class FrameworkManagementService(
             return InstallationResult.CreateFailure(localizer[LK.Validation.VersionRequired]);
         }
 
+        // Uninstall checked this and install did not. A malformed version travelled as far as the release
+        // lookup, matched nothing, threw, and came back as a generic failure — so the caller was told the
+        // operation failed rather than what was wrong with what they typed.
+        if (!dotnetVersionService.IsValidVersionFormat(version))
+        {
+            return InstallationResult.CreateFailure(localizer[LK.Validation.InvalidVersionFormat]);
+        }
+
         try
         {
             // Download the specific framework version
