@@ -102,6 +102,14 @@ public partial class DotnetVersionService(ILogger<ILogDotnetVersionService> logg
         {
             throw;
         }
+        catch (HttpRequestException ex)
+        {
+            // Reaching Microsoft's release index is the only part of this that leaves the machine, and it
+            // is the part most likely to fail. Saying so beats "the operation failed", which reads as a
+            // defect in this application rather than as something to retry.
+            logger.FailedToGetChannels(ex);
+            return ChannelsResult.CreateFailure(localizer[LK.Error.DotnetReleaseServiceUnreachable]);
+        }
         catch (Exception ex)
         {
             logger.FailedToGetChannels(ex);
@@ -131,6 +139,14 @@ public partial class DotnetVersionService(ILogger<ILogDotnetVersionService> logg
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            // Reaching Microsoft's release index is the only part of this that leaves the machine, and it
+            // is the part most likely to fail. Saying so beats "the operation failed", which reads as a
+            // defect in this application rather than as something to retry.
+            logger.FailedToGetReleases(ex, channel);
+            return ReleasesResult.CreateFailure(localizer[LK.Error.DotnetReleaseServiceUnreachable]);
         }
         catch (Exception ex)
         {

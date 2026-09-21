@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using Askyl.Dsm.WebHosting.Constants.Runtime;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
@@ -23,6 +24,7 @@ public class DotnetVersionServiceTests
         _versionsDetector = new Mock<IVersionsDetectorService>();
         _downloader = new Mock<IDownloaderService>();
         _localizer.Setup(l => l[LK.Error.OperationFailed]).Returns("Operation failed");
+        _localizer.Setup(l => l[LK.Error.DotnetReleaseServiceUnreachable]).Returns("Release service unreachable");
     }
 
     DotnetVersionService CreateService()
@@ -385,6 +387,63 @@ public class DotnetVersionServiceTests
 
         // Act
         var result = await service.GetReleasesWithStatusAsync("8.0");
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Operation failed", result.Message);
+    }
+
+    #endregion
+
+    #region Network Failures
+
+    [Fact]
+    public async Task GetChannelsAsync_WhenTheReleaseServiceIsUnreachable_SaysSoRatherThanOperationFailed()
+    {
+        // The shape seen in a deployment log: the first outbound connection of the process was refused,
+        // and the dialog reported "the operation failed" — indistinguishable from a defect in this
+        // application, when the right move was to retry.
+        _downloader.Setup(d => d.GetAspNetCoreChannelsAsync(It.IsAny<CancellationToken>()))
+                   .ThrowsAsync(new HttpRequestException("Resource temporarily unavailable", new SocketException(11)));
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetChannelsAsync();
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Release service unreachable", result.Message);
+    }
+
+    [Fact]
+    public async Task GetReleasesWithStatusAsync_WhenTheReleaseServiceIsUnreachable_SaysSoRatherThanOperationFailed()
+    {
+        _downloader.Setup(d => d.GetAspNetCoreReleasesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                   .ThrowsAsync(new HttpRequestException("Resource temporarily unavailable", new SocketException(11)));
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetReleasesWithStatusAsync("9.0");
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("Release service unreachable", result.Message);
+    }
+
+    [Fact]
+    public async Task GetChannelsAsync_WhenSomethingElseFails_StillSaysOperationFailed()
+    {
+        // The three other catches in this service cover dotnet --info and the cache. Naming connectivity
+        // there would be a lie, so only an HttpRequestException may take the new wording.
+        _downloader.Setup(d => d.GetAspNetCoreChannelsAsync(It.IsAny<CancellationToken>()))
+                   .ThrowsAsync(new InvalidOperationException("no products returned"));
+
+        var service = CreateService();
+
+        // Act
+        var result = await service.GetChannelsAsync();
 
         // Assert
         Assert.False(result.Success);

@@ -373,6 +373,9 @@
   <data name="Error_OperationFailed" xml:space="preserve">
     <value>L'opération a échoué. Consultez les journaux pour plus de détails.</value>
   </data>
+  <data name="Error_DotnetReleaseServiceUnreachable" xml:space="preserve">
+    <value>Impossible de joindre le service de publication .NET. Vérifiez la connexion Internet et réessayez.</value>
+  </data>
   <data name="Error_RateLimitExceeded" xml:space="preserve">
     <value>Trop de tentatives de connexion. Veuillez attendre une minute avant de réessayer.</value>
   </data>
