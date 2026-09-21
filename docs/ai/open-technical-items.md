@@ -109,6 +109,29 @@ build reports success — unchanged before and after that fix.
 Closing it means deciding what the package should contain. Failing the build is one answer; recording the
 architectures actually bundled, and letting the caller judge, is another.
 
+### The .NET release lookup cannot be cancelled, and owns its own HttpClient
+
+`Tools/Runtime/DownloaderService.cs`. `ProductCollection.GetAsync()`, from
+`Microsoft.Deployment.DotNet.Releases` 1.0.2, has three overloads — `()`, `(String)` and `(Uri)` — and
+**none takes a `CancellationToken`**. It also builds its own `HttpClient` rather than taking one, so it sits
+outside `IHttpClientFactory` and outside any policy configured there. The solution configures none anyway:
+no resilience handler, no retry, nothing.
+
+The consequence is not the failure that revealed this. A deployment on 2026-09-21 showed the call refused
+in 50 ms — the process's first outbound connection, an `EAGAIN` on connect — and the caller reported it
+cleanly. **A refusal is the harmless shape.** A hang is the one that hurts: the token checked before the
+call is the only cancellation point, so a stalled connection holds the dialog open and closing it stops
+nothing.
+
+Closing this means either wrapping the call so a timeout can be imposed from outside, or replacing the
+library call with a direct fetch of the release index through the application's own client, where a timeout
+and a policy would apply. The second is more code and takes on a format the library currently owns.
+
+**Left undecided, deliberately:** whether to retry that call at all. The same deployment succeeded on the
+next attempt eight seconds later, so a single retry would have made the incident invisible — which is an
+argument for it and against it. Hiding a transient network condition is a product decision, not a
+correctness one.
+
 ### Validation stampede on a cold cache
 
 `Ui/Services/DsmSession.cs`. `_validationLock` is per-instance while `IDsmSession` is Scoped, so on a cache

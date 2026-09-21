@@ -178,6 +178,7 @@ public static class LK
         public const string AuthenticationFailed = "Error_AuthenticationFailed";
         public const string AdministratorRequired = "Error_AdministratorRequired";
         public const string OperationFailed = "Error_OperationFailed";
+        public const string DotnetReleaseServiceUnreachable = "Error_DotnetReleaseServiceUnreachable";
         public const string RateLimitExceeded = "Error_RateLimitExceeded";
         public const string FailedToLoadWebsites = "Error_FailedToLoadWebsites";
         public const string FailedToAddWebsite = "Error_FailedToAddWebsite";

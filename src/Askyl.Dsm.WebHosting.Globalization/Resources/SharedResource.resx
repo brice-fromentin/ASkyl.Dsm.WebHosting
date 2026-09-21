@@ -373,6 +373,9 @@
   <data name="Error_OperationFailed" xml:space="preserve">
     <value>The operation failed. Check the logs for details.</value>
   </data>
+  <data name="Error_DotnetReleaseServiceUnreachable" xml:space="preserve">
+    <value>Could not reach the .NET release service. Check the internet connection and try again.</value>
+  </data>
   <data name="Error_RateLimitExceeded" xml:space="preserve">
     <value>Too many login attempts. Please wait a minute before trying again.</value>
   </data>
