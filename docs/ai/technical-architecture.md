@@ -54,7 +54,8 @@ The solution follows modern .NET 10 best practices, using a Blazor Web App with 
 - ✅ JSON-based configuration persistence
 - ✅ Infrastructure services refactored to DI-based architecture
 - ✅ Smart caching strategy for expensive operations (VersionsDetectorService with lazy initialization)
-- ✅ Full CancellationToken support across all async operations
+- ✅ `CancellationToken` on every async service contract except `IVersionsDetectorService.GetInstalledVersionsAsync()`;
+  the website lifecycle path accepts one without forwarding it (see `open-technical-items.md`)
 - ✅ All static classes converted to injectable services for testability
 - ✅ Critical security issues resolved (all security phases complete)
 - ✅ SIGTERM process termination fix (cross-platform `ProcessTerminator`)
@@ -255,7 +256,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
   Covers login credentials and website configuration rules.
 - **Localizer.cs** — `ILocalizer` abstraction wrapping `ResourceManager`; returns `string` directly,  
   reads `CurrentUICulture` at call time (not cached at construction like `IStringLocalizer<T>`).
-- **LocalizationKeys.cs** — strongly-typed resource keys (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`)
+- **LocalizationKeys.cs** — strongly-typed resource keys (`LK.WebSiteConfiguration.*`, `LK.LoginCredentials.*`)
 
 **Key design decisions:** shared validators are the single source of truth — the client binds them to its
 forms and the server runs the same rules; no DataAnnotations (cannot use runtime-localized messages).
@@ -284,7 +285,7 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
   singleton with lazy-initialized `ApiInformations`,  
   compile-time generic constraints, Form vs JSON serialization strategy.
 - **Diagnostics/** — `OperationTimer`: disposable scope timer (`struct`) that fires callback on Dispose (success or exception);  
-  used across ReverseProxyManagerService, FrameworkManagementService, WebSiteHostingService, SiteLifecycleManager, DownloaderService.
+  used only by `DsmApiClient`, to time each DSM request.
 - **Runtime/** — .NET runtime management: binary downloads with cancellation, version detection with smart caching (singleton), assembly runtime detection from `*.runtimeconfig.json`
 - **Threading/** — `SemaphoreLock`: semaphore-based async locking utility for thread-safe lazy initialization
 
@@ -298,7 +299,7 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 | **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | PlatformInfoService, IFileManagerService |
 | **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | ILogger, ISemaphoreOwner |
 | **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes, drains their redirected output | ILogger, ILoggerFactory |
-| **SystemProcessHandle** | `IProcessHandle` | Transient | Wraps `Process` for testability | ILogger<ILogSystemProcessHandle> |
+| **SystemProcessHandle** | `IProcessHandle` | Not registered | Wraps `Process`; created per process by `SystemProcessRunner` | ILogger<ILogSystemProcessHandle> |
 | **DsmSettingsService** | `IDsmSettingsService` | Singleton | Reads /etc/synoinfo.conf via IFileReader | ILogger, IFileReader |
 
 **DsmApiClient Key Features:**
@@ -330,7 +331,8 @@ both redirects, so the drain must run for every hosted site.
 - **Endpoints/** — minimal API endpoints: `MapErrorEndpoints()` maps `/Error` and `/not-found` with JSON vs HTML content negotiation.
 - **Extensions/** — server-side globalization extensions: `ApplyDsmSystemCulture()`, `UseGlobalizationRequestLocalization()`.
 - **Infrastructure/** — `GlobalizationSettings`: discovers supported cultures from satellite assemblies at construction (server-only; avoids WASM file system API crashes).
-- **Middleware/** — `RequestTrackingMiddleware`: propagates `X-Request-ID` through HTTP pipeline via `HttpContext.Items` for support ticket correlation.
+- **Middleware/** — `RequestTrackingMiddleware`: echoes the caller's `X-Request-ID`, or a generated one, on every response.
+  It also stores the value in `HttpContext.Items`, where nothing reads it.
 - **Services/** — business logic implementations of Data.Contracts interfaces: authentication façade, file system operations,  
   framework management, reverse proxy CRUD, website hosting orchestrator (BackgroundService with ConcurrentDictionary),  
   per-site lifecycle manager (Channel-based command queue, SIGTERM graceful shutdown),  
@@ -512,13 +514,18 @@ SiteLifecycleManager (Per-instance, Thread-safe)
 `OperationTimer` — value-type (`struct`) disposable timer in `Tools/Diagnostics/OperationTimer.cs`.
 
 ```csharp
-using var timer = new OperationTimer(elapsed => logger.FrameworkInstalledDuration(elapsed, version));
-// ... method body ... callback fires on Dispose (success or exception)
+var statusCode = 0;
+
+using var timer = new OperationTimer(elapsed => logger.ApiRequest(request.Method.Method, url, statusCode, elapsed));
+
+using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+statusCode = (int)response.StatusCode;
+// ... callback fires on Dispose (success or exception)
 ```
 
-**Usage:** ReverseProxyManagerService (Create/Update/Delete), FrameworkManagementService (Install/Uninstall),
-WebSiteHostingService (Add/Update/Start/Stop/Remove), SiteLifecycleManager, DownloaderService,
-DotnetVersionService, WebSitesConfigurationService.
+**Usage:** `DsmApiClient` only. The callback reads a captured status rather than the response, because the
+response is disposed first.
 
 ---
 
@@ -757,9 +764,11 @@ Culture is **DSM-controlled** — resolved once at login, locked for the session
 
 Serilog's `WithActivity` enricher adds `ActivityId`, `ActivityTraceId`, and `ActivitySpanId` to log entries. These correlate with .NET's built-in `System.Diagnostics.Activity` infrastructure.
 
-**Current State:** `RequestTrackingMiddleware` propagates `X-Request-ID` through the HTTP pipeline via `HttpContext.Items`.
+**Current State:** `RequestTrackingMiddleware` echoes the caller's `X-Request-ID` on the response, or generates one
+when the request carries none. The value is also stored in `HttpContext.Items`, but nothing reads it and it is never
+pushed into the log context, so a response's request ID cannot be matched to a log line.
 Serilog's `WithActivity` enricher captures `ActivityId`, `ActivityTraceId`, and `ActivitySpanId` in server-side logs.
-The Blazor WebAssembly client does not include request ID headers on outgoing API calls, and the server does not expose trace identifiers in API responses for support ticket correlation.
+The Blazor WebAssembly client does not include request ID headers on outgoing API calls.
 
 **Pipeline Flow (when Activities are active):**
 
@@ -768,7 +777,8 @@ The Blazor WebAssembly client does not include request ID headers on outgoing AP
 3. Outgoing DSM API calls inherit Activity scope via `HttpClient` diagnostics handler
 4. All logs within the request scope share the same trace identifiers
 
-**For Support Correlation:** Currently relies on timestamp + EventId correlation. Future enhancement could surface `X-Request-ID` in API response headers for client-side support ticket inclusion.
+**For Support Correlation:** Currently relies on timestamp + EventId correlation. The `X-Request-ID` already returned
+on responses would become useful once it is written to the log context as well.
 
 ---
 
@@ -817,25 +827,28 @@ This path survives package upgrades per Synology's package data directory conven
 
 ### Port Configuration
 
-`adwh.sc` defines the application listening ports:
+The application listens on HTTP `7120` only, set by `ASPNETCORE_URLS` in `start-stop-status` and proxied via
+Nginx `/adwh`.
 
-| Protocol | Port | Purpose |
-|----------|------|---------|
-| HTTP | 7120 | Primary application port (proxied via Nginx `/adwh`) |
-| HTTPS | 7121 | SSL-enabled alternative |
+`adwh.sc` declares service ports to DSM's firewall and port forwarding, not listening ports:
 
-Port `7120` is declared in the SPK `INFO` file for conflict detection during installation.
+| Protocol | Port | Bound by the application |
+|----------|------|--------------------------|
+| HTTP | 7120 | Yes |
+| HTTPS | 7121 | No — declared, but nothing in the source binds it |
+
+Port `7120` is declared in the SPK `INFO` file (`checkport`) for conflict detection during installation.
 
 ### Lifecycle Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `preinst` | Environment setup, architecture detection |
-| `postinst` | .NET runtime installation for detected architecture |
+| `preinst` | Clears the debug log on a fresh install, logs the installation environment |
+| `postinst` | .NET runtime installation for the architecture reported by `uname -m` |
 | `preupgrade` | Service stop, configuration backup |
 | `postupgrade` | Configuration restore, runtime reinstall, service start |
 | `preuninst` | Service stop, PID file cleanup |
-| `postuninst` | Final cleanup |
+| `postuninst` | Nothing — exits immediately |
 | `start-stop-status` | Service lifecycle management with PID tracking |
 | `common-functions.sh` | Shared utilities: logging, process management, runtime install/verify |
 
@@ -854,24 +867,25 @@ Use `scripts/update-version.sh` to synchronize both simultaneously.
 
 ### Current State
 
-Deployment is entirely manual: developer runs `build-spk.sh` locally, then copies the resulting `.spk` from `dist/` to the target NAS via Package Center.
+`.github/workflows/build.yml` runs on every pull request, on pushes to `main`, and on `v*` tag pushes. The checks
+are parallel jobs:
 
-### Planned Workflow
+| Job | Runs on | Steps |
+|-----|---------|-------|
+| `format` | Every trigger | `dotnet format --verify-no-changes` |
+| `build-test` | Every trigger | Build, then tests |
+| `lint` | Every trigger | `markdownlint` over tracked `.md` files |
+| `vulnerable` | Pushes (`main` and tags) | `dotnet list package --vulnerable`, fails on any hit |
+| `release` | `v*` tags, once the four jobs above pass | `build-spk.sh`, then a GitHub release carrying the `.spk` |
 
-A GitHub Actions pipeline would operate with two job paths triggered by repository events:
-
-**Triggers:** Push to `main`, pull requests, and tag pushes (`v*.*.*`)
-
-| Job Path | Trigger | Steps |
-|----------|---------|-------|
-| **Verify** (lightweight) | Push to `main`, PRs | Format check, build, unit tests, markdown lint |
-| **Release** (full) | Tag push | Verify steps + SPK assembly + GitHub release with artifact attachment |
+A local build remains possible: `build-spk.sh` writes the `.spk` to `dist/`, installed through Package Center.
 
 ### Artifact Strategy
 
-- Release artifacts: `.spk` package attached to GitHub release
-- Runtime binaries cached in Actions cache keyed by architecture and ChannelVersion to avoid redundant downloads
-- Artifact retention aligned with GitHub default policies (90 days for workflow artifacts, indefinite for releases)
+- Release artifacts: `.spk` package attached to the GitHub release
+- Downloaded runtimes cached in the Actions cache, keyed by runner OS and a hash of `appsettings.json`, which
+  carries `ChannelVersion`
+- No workflow artifacts are uploaded; the release is the only published output
 
 ---
 

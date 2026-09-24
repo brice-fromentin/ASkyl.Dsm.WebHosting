@@ -10,9 +10,8 @@ Nothing here is inherited on trust: each entry names the file, and a line where 
 
 Entries are written when the defect is found and rewritten when it changes, so they do not share one
 verification date. What is shared is a sweep — every remaining entry was re-checked against `main` on
-**2026-09-07**, which is what the line references below reflect. Five of them had drifted by then, all in
-the table under Documentation drift, because the file they point into was edited by PR #54 while the table
-was not. Line numbers are the first thing to go stale here; re-run the sweep rather than trusting them.
+**2026-09-07**, which is what the line references below reflect. Line numbers are the first thing to go
+stale here; re-run the sweep rather than trusting them.
 
 ## Security
 
@@ -70,9 +69,6 @@ This is not a parameter that was forgotten. Those paths end in `SiteLifecycleMan
 `TaskCompletionSource`-carrying command records. Making cancellation meaningful means deciding what
 cancelling a queued lifecycle command does to the command already running, which is a change to that
 protocol rather than an argument to pass along.
-
-Worth weighing against the architecture document's claim of "full `CancellationToken` support across all
-async operations", already listed as drift below.
 
 ### A failed rule deletion still orphans the rule on removal
 
@@ -192,25 +188,6 @@ directly. `ProcessRunner` and `ErrorEndpoints` gained tests in PRs #32 and #33.
 
 `ResourceCompletenessTests` hardcodes `fr-FR`, so a newly added culture would be silently untested for key
 parity — which undercuts the "drop in a `.resx`, zero code changes" story.
-
-## Documentation drift
-
-All in `technical-architecture.md`. Claims and line references both re-verified on 2026-09-07; the last
-four line numbers had each moved by four to fourteen lines since they were first recorded.
-
-| Line | Claim | Reality |
-|---|---|---|
-| 57 | Full `CancellationToken` support across all async operations | `IVersionsDetectorService.GetInstalledVersionsAsync()` takes none |
-| 258 | Resource keys are `L.*` | The class is `LK` |
-| 286 | `OperationTimer` used by seven services | Exactly one usage, in `DsmApiClient` |
-| 301 | `SystemProcessHandle` is a Transient registration | Not DI-registered; constructed by `SystemProcessRunner` |
-| 825 | HTTPS on port 7121 | Declared in `spk-project/package/etc/adwh.sc:11`, and nothing in the source binds it |
-| 833 | `preinst` performs architecture detection | It only logs `SYNOPKG_DSM_ARCH`; detection is `uname -m` in `common-functions.sh:216`, called from `postinst` and `postupgrade` |
-| 838 | `postuninst` performs final cleanup | The script ends at `exit 0` and does nothing else |
-| 857 | Deployment is manual, CI is planned | `.github/workflows/build.yml` implements it |
-
-`RequestTrackingMiddleware.cs:14` writes `HttpContext.Items[RequestId]` and nothing ever reads it, so the
-propagation the document describes does nothing.
 
 ## Prerequisite for a roadmap feature
 
