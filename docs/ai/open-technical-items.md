@@ -10,9 +10,8 @@ Nothing here is inherited on trust: each entry names the file, and a line where 
 
 Entries are written when the defect is found and rewritten when it changes, so they do not share one
 verification date. What is shared is a sweep — every remaining entry was re-checked against `main` on
-**2026-09-07**, which is what the line references below reflect. Five of them had drifted by then, all in
-the table under Documentation drift, because the file they point into was edited by PR #54 while the table
-was not. Line numbers are the first thing to go stale here; re-run the sweep rather than trusting them.
+**2026-09-07**, which is what the line references below reflect. Line numbers are the first thing to go
+stale here; re-run the sweep rather than trusting them.
 
 ## Security
 
@@ -21,6 +20,20 @@ was not. Line numbers are the first thing to go stale here; re-run the sweep rat
 `Ui/Services/DsmSession.cs`. No rotation exists anywhere — no regeneration, no clear-and-reissue. Risk is
 low because the cookie is HttpOnly, Secure and SameSite=Strict, and nothing of value is stored
 pre-authentication, but fixation remains theoretically possible.
+
+### The application listens on every IPv4 interface, not only behind nginx
+
+`spk-project/scripts/start-stop-status:9` exports `ASPNETCORE_URLS="http://0.0.0.0:7120"`, and
+`spk-project/package/etc/adwh.sc` — the `port-config` protocol file `conf/resource` registers with DSM's firewall and
+port forwarding — declares 7120/tcp with `port_forward="yes"`. Nginx reaches the application over loopback
+(`adwh-alias.conf`, `proxy_pass http://127.0.0.1:7120`), but nothing in the package makes that the only path: unless
+the DSM firewall blocks the `adwh_http` service, a client on the network can reach port 7120 directly over plain HTTP,
+bypassing the TLS nginx terminates. Inferred from the binding; not tried against a NAS.
+
+A browser session cannot survive there — the session cookie is `CookieSecurePolicy.Always` (`Ui/Program.cs:37`) — but
+a login form posted to that port still carries the credentials in clear. Binding `127.0.0.1:7120` would make the alias
+the only way in; whether anything depends on the direct port, and whether `adwh.sc` should keep offering it for
+forwarding, is to be checked before changing it.
 
 ## Reliability
 
@@ -70,9 +83,6 @@ This is not a parameter that was forgotten. Those paths end in `SiteLifecycleMan
 `TaskCompletionSource`-carrying command records. Making cancellation meaningful means deciding what
 cancelling a queued lifecycle command does to the command already running, which is a change to that
 protocol rather than an argument to pass along.
-
-Worth weighing against the architecture document's claim of "full `CancellationToken` support across all
-async operations", already listed as drift below.
 
 ### A failed rule deletion still orphans the rule on removal
 
@@ -183,6 +193,51 @@ name comes from the matched release object, never from the string the caller typ
 regardless. Currently harmless — `Program.cs:111` registers the service without a directory, so both
 resolve to the same place — and it only diverges under tests, which do supply one.
 
+### Three configured Serilog enrichers exist in no referenced package
+
+`Ui/appsettings.json:33-35` (and the Development file) list `WithMachineName`, `WithThreadId` and
+`WithActivity` under `Enrich`; `Ui.Client/wwwroot/appsettings.json` lists `WithActivity`. The resolved
+Serilog packages in `Ui/obj/project.assets.json` include no `Serilog.Enrichers.*`, so none of the three can
+bind. Not observed at runtime: `Serilog.Settings.Configuration` presumably skips the names it cannot resolve.
+
+Nothing is lost that the logs used to carry — no output template renders those properties either — but the
+configuration reads as if request correlation were in place. Either reference the enricher packages and add
+the properties to the templates, or delete the three entries.
+
+### The installed package keeps all three runtime archives
+
+`src/scripts/build-spk.sh` downloads the three architectures into `package/runtimes/downloads` and tars the
+whole `package/` directory. `install_dotnet_runtime` (`common-functions.sh`) extracts the one matching
+`uname -m` and removes nothing, so the NAS keeps all three archives — 46.6 to 49.4 MB each in the last
+local build — plus the release metadata, for as long as the package is installed.
+
+### A locally built SPK ships the developer's own `websites.json`
+
+`src/Askyl.Dsm.WebHosting.Ui/websites.json` is gitignored — it is written by local runs and holds the local site
+configuration — but the Web SDK's default content glob publishes it into `admin-ui/`, and `build-spk.sh` cleans only
+`*Development.json` and `dev-mock`. Measured without reading the file: the published copy is byte-identical to the
+source (`cmp`), and the last locally built SPK lists `admin-ui/websites.json` in its `package.tgz`.
+
+A fresh install from such a package starts with that site list; an upgrade restores the NAS's own copy through
+`preupgrade`/`postupgrade`, so the developer's own NAS is unaffected. CI releases build from a clean checkout and do
+not carry it. Excluding it from publish in the `.csproj`, or deleting it in `build-spk.sh`, closes it.
+
+### Cosmetic: packaging leaves precompressed development settings behind
+
+`build-spk.sh` deletes `*Development.json` from the publish output, which misses the client's
+`wwwroot/appsettings.Development.json.br` and `.gz`: both are in the last local publish output, and the published
+static-assets endpoints manifest still routes `appsettings.Development.json` to them. The client never loads them in
+production and their content is the versioned public file, so nothing leaks; the pattern just does not do what it says.
+
+### Cosmetic: a region-qualified browser language falls through to `en-US` in `App.razor`
+
+`Ui/Components/App.razor`, `ResolveCulture()`. When DSM's language is `def` — follow the browser, which
+`SystemDefaults.DefaultLanguage` names as the default — or a code the converter does not map, there is no system
+culture, and the first `Accept-Language` tag is compared as a whole against two-letter language names: `fr` matches,
+`fr-FR` does not, and the page falls back to `en-US`. The comment there says it takes "the first 2 chars"; the code
+does not. It only decides the server-rendered `lang`/`dir` until the client sets its own
+(`Ui.Client/Services/CultureManager.cs`). How often real installs run with `def` has not been measured.
+
 ## Test coverage
 
 `ProcessHandle`, `ProcessTerminator`, `DownloaderService`, `RequestTrackingMiddleware` and the six
@@ -192,25 +247,6 @@ directly. `ProcessRunner` and `ErrorEndpoints` gained tests in PRs #32 and #33.
 
 `ResourceCompletenessTests` hardcodes `fr-FR`, so a newly added culture would be silently untested for key
 parity — which undercuts the "drop in a `.resx`, zero code changes" story.
-
-## Documentation drift
-
-All in `technical-architecture.md`. Claims and line references both re-verified on 2026-09-07; the last
-four line numbers had each moved by four to fourteen lines since they were first recorded.
-
-| Line | Claim | Reality |
-|---|---|---|
-| 57 | Full `CancellationToken` support across all async operations | `IVersionsDetectorService.GetInstalledVersionsAsync()` takes none |
-| 258 | Resource keys are `L.*` | The class is `LK` |
-| 286 | `OperationTimer` used by seven services | Exactly one usage, in `DsmApiClient` |
-| 301 | `SystemProcessHandle` is a Transient registration | Not DI-registered; constructed by `SystemProcessRunner` |
-| 825 | HTTPS on port 7121 | Declared in `spk-project/package/etc/adwh.sc:11`, and nothing in the source binds it |
-| 833 | `preinst` performs architecture detection | It only logs `SYNOPKG_DSM_ARCH`; detection is `uname -m` in `common-functions.sh:216`, called from `postinst` and `postupgrade` |
-| 838 | `postuninst` performs final cleanup | The script ends at `exit 0` and does nothing else |
-| 857 | Deployment is manual, CI is planned | `.github/workflows/build.yml` implements it |
-
-`RequestTrackingMiddleware.cs:14` writes `HttpContext.Items[RequestId]` and nothing ever reads it, so the
-propagation the document describes does nothing.
 
 ## Prerequisite for a roadmap feature
 
