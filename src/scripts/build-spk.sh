@@ -233,9 +233,11 @@ download_dotnet_runtimes() {
 
         file_info=$(echo "$files_json" | jq ".[] | select(.rid == \"$arch\" and .name == \"$expected\")") || true
         
+        # Fatal, not a warning: skipping ahead packaged whatever archive a previous build had left in the downloads
+        # directory — or none — while the build still reported every runtime as downloaded and verified.
         if [ -z "$file_info" ]; then
-            printf "⚠️ Warning: Could not find file info for architecture %s in version %s\n" "$arch" "$latest_version_string" >&2
-            continue
+            printf "❌ Error: Could not find file info for architecture %s in version %s\n" "$arch" "$latest_version_string" >&2
+            return 1
         fi
 
         # -e on all three: a missing field used to become the string "null", and a download was then

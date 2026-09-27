@@ -781,7 +781,7 @@ The SPK build pipeline (`src/scripts/build-spk.sh`) assembles the Synology packa
 1. **Pre-flight Checks:** Verifies availability of `curl`, `tar`, `dotnet`, `jq`, `awk`, `pigz`
 2. **.NET Runtime Download:** Reads `ChannelVersion` from `appsettings.json`, fetches Microsoft
    releases metadata, downloads aspnetcore-runtime for `linux-arm`, `linux-arm64`, `linux-x64`
-   with SHA512 verification
+   with SHA512 verification; the build fails if the release lists no file for any of them
 3. **Application Publish:** Framework-dependent publish (`--self-contained false`) to `spk-project/package/admin-ui/`
 4. **SPK Assembly:** Compresses via `pigz -2`, creates tar archive containing `INFO`, `package.tgz`, lifecycle scripts, configuration, and icons
 

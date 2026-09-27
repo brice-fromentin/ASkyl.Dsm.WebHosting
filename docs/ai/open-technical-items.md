@@ -95,20 +95,6 @@ Also unverified, and it decides how the restore behaves at the edge: whether `SY
 accepts a create for a rule that already exists. The restore is guarded on the deletion having succeeded
 precisely so it never has to find out.
 
-### `build-spk.sh` reports success after skipping an architecture
-
-`src/scripts/build-spk.sh`. When a release lists no file for one of the three architectures, the loop warns
-and continues, and the function still ends on "All .NET runtimes are downloaded and verified" with a status
-of zero. The SPK is then packaged without that architecture, and nothing downstream says so.
-
-Left as it is by the masked-failure fix rather than changed with it: warn-and-continue is what the loop was
-written to do, and whether a missing architecture should abort the build is a packaging decision, not a
-defect to correct in passing. Measured: with only `linux-x64` present, two warnings are printed and the
-build reports success — unchanged before and after that fix.
-
-Closing it means deciding what the package should contain. Failing the build is one answer; recording the
-architectures actually bundled, and letting the caller judge, is another.
-
 ### The .NET release lookup cannot be cancelled, and owns its own HttpClient
 
 `Tools/Runtime/DownloaderService.cs`. `ProductCollection.GetAsync()`, from
