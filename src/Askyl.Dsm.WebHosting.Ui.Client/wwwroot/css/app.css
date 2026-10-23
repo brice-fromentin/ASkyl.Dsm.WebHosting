@@ -38,7 +38,7 @@ body {
 }
 
 .toolbar fluent-divider {
-    /* SPIKE: v4 --type-ramp-base-line-height has no v5 definition; --lineHeightBase300 is the Fluent 2 body line height */
+    /* FluentUI 5 has no --type-ramp tokens; --lineHeightBase300 is the Fluent 2 body line height */
     height: var(--lineHeightBase300);
 }
 
@@ -46,6 +46,16 @@ body {
 [role="tabpanel"] {
     height: 100%;
     overflow-y: auto;
+}
+
+/* FluentUI 4's FluentHeader: a 50px bar in the accent colour. FluentUI 5's layout items paint nothing */
+.app-header {
+    display: flex;
+    height: 50px;
+    padding: 0 var(--spacingHorizontalL);
+    align-items: center;
+    background-color: var(--colorBrandBackground);
+    color: var(--colorNeutralForegroundOnBrand);
 }
 
 /* The header text color: a default link color is unreadable on the accent background */

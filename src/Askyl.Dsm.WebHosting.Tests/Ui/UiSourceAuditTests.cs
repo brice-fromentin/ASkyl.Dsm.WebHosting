@@ -10,15 +10,16 @@ using Microsoft.FluentUI.AspNetCore.Components;
 namespace Askyl.Dsm.WebHosting.Tests.Ui;
 
 /// <summary>
-/// Holds every component tag in the <c>.razor</c> sources to the parameters that component really declares.
+/// Holds the UI sources to what the installed FluentUI really accepts, where the build cannot.
 /// </summary>
 /// <remarks>
 /// FluentUI components capture unmatched attributes, so a parameter the library removed still compiles and
 /// renders as a stray HTML attribute: no error, no warning. The FluentUI 5 compile spike measured it twice —
 /// <c>SelectedOption</c> on <c>FluentSelect</c> and <c>Fill</c> on <c>FluentButton</c> — both green until an
-/// audit script found them (docs/ai/fluentui-5-migration.md §3). This class is that audit, made permanent.
+/// audit script found them, and its first run here found three more already on 4.14.5
+/// (docs/ai/fluentui-5-migration.md §3). Stylesheets and selectors fail the same way, silently.
 /// </remarks>
-public partial class RazorParameterAuditTests
+public partial class UiSourceAuditTests
 {
     /// <summary>
     /// Found by walking up from the test binaries; it marks the directory the projects live in.
@@ -75,6 +76,13 @@ public partial class RazorParameterAuditTests
 
     [GeneratedRegex(@"\.Show(Error|Info|Confirmation)Async\(")]
     private static partial Regex DirectMessageBoxCall();
+
+    /// <summary>
+    /// FluentUI 4 design tokens, which FluentUI 5 defines nowhere and aliases to nothing, and the elements and
+    /// classes of FluentUI 4 components that no longer render. Comments are not matched: only <c>var(...)</c> uses.
+    /// </summary>
+    [GeneratedRegex(@"var\(\s*--(neutral|accent|type-ramp|design-unit|body-font)[a-z0-9-]*|fluent-(toolbar|text-field|number-field|dialog-header|dialog-footer)\b")]
+    private static partial Regex FluentUi4OnlyReference();
 
     static string SourceRoot()
     {
@@ -272,6 +280,18 @@ public partial class RazorParameterAuditTests
             .Select(entry => $"{Path.GetRelativePath(root, entry.Path)}:{entry.Number}")];
 
         AssertNone(direct);
+    }
+
+    [Fact]
+    public void Sources_ReferenceNoTokenOrElementOnlyFluentUi4Had()
+    {
+        var root = SourceRoot();
+
+        string[] stale = [.. SourceFiles("*.razor").Concat(SourceFiles("*.css")).Concat(SourceFiles("*.js"))
+            .SelectMany(path => File.ReadLines(path).Select((line, index) => (Path: path, Line: line, Number: index + 1)))
+            .SelectMany(entry => FluentUi4OnlyReference().Matches(entry.Line).Select(match => $"{Path.GetRelativePath(root, entry.Path)}:{entry.Number} {match.Value}"))];
+
+        AssertNone(stale);
     }
 
     /// <summary>

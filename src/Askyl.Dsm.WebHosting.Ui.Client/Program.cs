@@ -3,6 +3,7 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Globalization.Extensions;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Ui.Client.Contracts;
+using Askyl.Dsm.WebHosting.Ui.Client.Extensions;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using FluentValidation;
@@ -38,7 +39,7 @@ builder.Services.AddHttpClient(ApplicationConstants.HttpClientName, client =>
 })
 .AddHttpMessageHandler<AcceptLanguageHandler>();
 
-builder.Services.AddFluentUIComponents();
+builder.Services.AddFluentUIComponentsWithDefaults();
 
 // Register FluentValidation validators from Globalization assembly
 builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();

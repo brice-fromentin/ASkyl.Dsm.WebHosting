@@ -73,16 +73,15 @@
                 </FluentStack>
                 <FluentCheckbox @bind-Value="Configuration.EnableHSTS" Label="@localizer[LK.WebsiteConfig.EnableHSTSLabel]" />
             </FluentStack>
-            <div class="fluent-dialog-footer">
-                <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
-                    <FluentButton OnClick="CancelAsync" Appearance="ButtonAppearance.Default" Type="ButtonType.Button">
-                        @localizer[LK.Common.Cancel]
-                    </FluentButton>
-                    <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary">
-                        @(IsEditMode ? localizer[LK.WebsiteConfig.UpdateButton] : localizer[LK.WebsiteConfig.CreateButton])
-                    </FluentButton>
-                </FluentStack>
-            </div>
+            @* Inside the form rather than in ActionTemplate, so the submit button submits it *@
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
+                <FluentButton OnClick="CancelAsync" Appearance="ButtonAppearance.Default" Type="ButtonType.Button">
+                    @localizer[LK.Common.Cancel]
+                </FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary">
+                    @(IsEditMode ? localizer[LK.WebsiteConfig.UpdateButton] : localizer[LK.WebsiteConfig.CreateButton])
+                </FluentButton>
+            </FluentStack>
         </EditForm>
     </ChildContent>
 </FluentDialogBody>
@@ -191,7 +190,7 @@
     {
         var options = new DialogOptions { Width = DialogConstants.WidthAuto, Modal = true, Header = { CloseAction = { Visible = true } } };
         options.Parameters[nameof(AspNetReleasesDialog.Content)] = channel;
-        // SPIKE: v4 returned once the dialog was shown; v5 returns when it closes, so this dialog now stays open behind it
+        // Returns when the releases dialog closes, so this one stays open behind it until then
         await DialogService.ShowDialogAsync<AspNetReleasesDialog>(options);
     }
 

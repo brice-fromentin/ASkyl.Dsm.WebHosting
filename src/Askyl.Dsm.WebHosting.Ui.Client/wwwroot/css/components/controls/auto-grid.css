@@ -17,7 +17,7 @@
 }
 
 .auto-data-grid-area .selected-row {
-    /* SPIKE: v4 tokens are undefined in v5; Fluent 2 equivalents chosen by name, visual result unverified */
+    /* Fluent 2 counterparts of the FluentUI 4 selection tokens, which FluentUI 5 no longer defines */
     background-color: var(--colorNeutralBackground1Selected);
     border-color: var(--colorBrandStroke1);
 }

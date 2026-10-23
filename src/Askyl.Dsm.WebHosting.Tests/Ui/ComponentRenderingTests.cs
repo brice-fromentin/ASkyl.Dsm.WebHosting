@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.UI;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
@@ -52,7 +53,7 @@ public class ComponentRenderingTests : IAsyncLifetime
     public ComponentRenderingTests()
     {
         _ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        _ctx.Services.AddFluentUIComponents();
+        _ctx.Services.AddFluentUIComponentsWithDefaults();
         _ctx.Services.AddGlobalization();
         _ctx.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
         _ctx.Services.AddSingleton(_authService.Object);
@@ -70,6 +71,18 @@ public class ComponentRenderingTests : IAsyncLifetime
 
     // FluentUI registers services that only implement IAsyncDisposable
     public async Task DisposeAsync() => await _ctx.DisposeAsync();
+
+    [Fact]
+    public void Stacks_KeepTheGapFluentUi4AppliedByDefault()
+    {
+        var cut = _ctx.Render<NotFound>();
+
+        // NotFound sets no gap of its own, so every gap here comes from the registered defaults
+        var gaps = cut.FindAll("[style*='column-gap']");
+
+        Assert.Equal(2, gaps.Count);
+        Assert.All(gaps, stack => Assert.Contains($"column-gap: {LayoutConstants.StackGap}", stack.GetAttribute("style"), StringComparison.Ordinal));
+    }
 
     [Fact]
     public void Login_RendersItsThreeCredentialFields()

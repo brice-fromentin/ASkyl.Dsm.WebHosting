@@ -1,7 +1,7 @@
 <FluentOverlay Visible="@WorkingState.IsWorking" Opacity="@Opacity">
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
         <FluentSpinner />
-        @* SPIKE: Size400 approximates v4 Typography.Header (an h5); visual size unverified *@
+        @* Size400 approximates FluentUI 4's Typography.Header, an h5 *@
         <FluentText As="TextTag.H5" Size="TextSize.Size400" Weight="TextWeight.Semibold" Class="full-size">
             @WorkingState.Message
         </FluentText>
