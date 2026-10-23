@@ -980,8 +980,9 @@ the injected `IConfiguration`.
 
 **`DsmSettingsService`:** Reads `/etc/synoinfo.conf` for DSM-specific settings (server address, port, language). The
 file path is configurable (`DsmSettings:ConfigPath`) so local runs can read `dev-mock/synoinfo.conf`, a gitignored
-copy of `synoinfo.conf.template` that must keep the template's values; `AGENTS.md` §13 forbids pointing it at a real
-DSM.
+copy of `synoinfo.conf.template` that holds the real NAS settings; the template keeps placeholders because it is
+published. The test host points the path at a synthetic file instead, and `AGENTS.md` §13 requires the maintainer's
+approval before an assistant launches the application.
 
 ### Layered Configuration Merge
 
