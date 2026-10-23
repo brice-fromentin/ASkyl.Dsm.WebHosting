@@ -31,6 +31,13 @@ public sealed class InstallationResult(bool success, string? message, string? ve
         => new(true, message, version, DateTime.UtcNow, ApiErrorCode.None);
 
     /// <summary>
+    /// Hides the inherited factory, which called on this type with one argument still compiled and returned a plain
+    /// <see cref="ApiResult"/> without a version.
+    /// </summary>
+    [Obsolete("Use CreateSuccess(version, message).", error: true)]
+    public static new ApiResult CreateSuccess(string? message = null) => ApiResult.CreateSuccess(message);
+
+    /// <summary>
     /// Creates a failed installation result.
     /// </summary>
     /// <param name="message">Error message describing the installation failure.</param>
