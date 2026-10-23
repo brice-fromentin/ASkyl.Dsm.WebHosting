@@ -407,7 +407,8 @@ load-bearing: nginx terminates TLS, so without it `Request.IsHttps` is false and
 - **Services/** — HTTP client wrappers that call server API endpoints: authentication, file system, framework management,  
   runtime versions, website hosting. Plus `AcceptLanguageHandler` (DelegatingHandler attaches Accept-Language from ICultureManager),  
   `AuthenticationNavigationGuard` (Router OnNavigateAsync guard),  
-  `CultureManager` (resolves culture at login, clones with date/time formats).
+  `CultureManager` (resolves culture at login, clones with date/time formats),
+  `FluentUILocalizer` (FluentUI's built-in strings from SharedResource `FluentUI_*` entries, English fallback).
 - **Routes.razor** — Router with OnNavigateAsync auth guard
 - **Program.cs** — WASM entry point, service registration
 
