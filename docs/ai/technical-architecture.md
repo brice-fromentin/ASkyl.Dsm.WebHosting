@@ -33,7 +33,8 @@
 - File system operations through FileStation API
 - Framework/runtime installation and management
 - Centralized logging with Serilog
-- Immutable C# record types for DSM API models with `init` setters
+- Immutable C# record types with `init` setters for the DSM API models, except the three classes listed under
+  the Data project's `Models/`
 
 The solution follows modern .NET 10 best practices, using a Blazor Web App with the Interactive WebAssembly render mode, FluentUI components, and a clean layered architecture pattern.
 
@@ -41,21 +42,26 @@ The solution follows modern .NET 10 best practices, using a Blazor Web App with 
 
 - **Interactive WebAssembly Rendering:** statically server-rendered shell, all interactivity in WebAssembly; authentication and API work stay server-side behind controllers
 - **Result Pattern:** Strongly-typed success/failure results instead of exceptions for control flow
-- **C# Records (init setters):** DSM API model classes converted from source-generated clone methods to immutable records
+- **C# Records (init setters):** DSM API model classes converted from source-generated clone methods to immutable records,
+  all but three
 - **Centralized Constants:** All magic strings/numbers extracted to dedicated Constants project
 - **Background Service:** WebSiteHostingService orchestrates website instances; per-site process lifecycle delegated to SiteLifecycleManager (SIGTERM graceful shutdown, force kill fallback)
 - **Cross-platform Process Termination:** `ProcessTerminator` sends SIGTERM on Unix/Linux/macOS (P/Invoke `libc.kill`) and CloseMainWindow on Windows — enables ~1-3 second graceful drain
 
 **Current Status:**
 
-- ✅ Interactive WebAssembly rendering (prerendering disabled)
+- ✅ Interactive WebAssembly rendering (prerendering disabled for `Routes`; the framework `HeadOutlet` is given the
+  stock `InteractiveWebAssembly` mode, which prerenders)
 - ✅ DSM API integration (Authentication, FileStation, ReverseProxy)
 - ✅ Website lifecycle management with process control
 - ✅ JSON-based configuration persistence
 - ✅ Infrastructure services refactored to DI-based architecture
 - ✅ Smart caching strategy for expensive operations (VersionsDetectorService with lazy initialization)
-- ✅ Full CancellationToken support across all async operations
-- ✅ All static classes converted to injectable services for testability
+- ✅ `CancellationToken` on every async service contract except `IVersionsDetectorService.GetInstalledVersionsAsync()`;
+  the website lifecycle path accepts one without forwarding it (see `open-technical-items.md`)
+- ✅ Side-effecting infrastructure behind injectable services for testability. Besides extension, constant and
+  logging classes, a few static classes remain — `ProcessTerminator` (reached only through `IProcessHandle`), the two
+  converters, `ErrorEndpoints` and `LoginRateLimitPolicy`
 - ✅ Critical security issues resolved (all security phases complete)
 - ✅ SIGTERM process termination fix (cross-platform `ProcessTerminator`)
 - ✅ Unit test implementation
@@ -79,7 +85,7 @@ Askyl.Dsm.WebHosting.slnx
 ├── Askyl.Dsm.WebHosting.Analyzers          # Custom Roslyn analyzers (ADWH01001-01004, 02001, 03001)
 ├── Askyl.Dsm.WebHosting.Constants          # Centralized constants & enums
 ├── Askyl.Dsm.WebHosting.Data               # Core data layer, API definitions, services
-├── Askyl.Dsm.WebHosting.Globalization      # Localization resources, validators, culture management
+├── Askyl.Dsm.WebHosting.Globalization      # Localization resources and keys, localizer, validators
 ├── Askyl.Dsm.WebHosting.Logging            # Logging extensions (source-generated log methods)
 ├── Askyl.Dsm.WebHosting.Tools              # Utility tools & DSM API client
 ├── Askyl.Dsm.WebHosting.Tests              # Unit tests (xUnit, Moq)
@@ -91,23 +97,31 @@ Askyl.Dsm.WebHosting.slnx
 
 - **Multi-project solution** with clear separation of concerns
 - **Custom Roslyn analyzers** for enforcing project-specific code standards (String/String pattern, Logger calls, blank lines)
-- **Source generators** for reducing boilerplate code (Serilog logging methods)
+- **Source generators** for reducing boilerplate code (`[LoggerMessage]` methods from Microsoft.Extensions.Logging;
+  Serilog is the backend they are written through)
 - **Interactive WebAssembly render mode** — there is no `AddInteractiveServerComponents` registration
 - **Background services** for long-running operations
 - **Centralized versioning** via Directory.Build.props
 
 ### Test Project (`Askyl.Dsm.WebHosting.Tests`)
 
-**Purpose:** Unit tests for analyzers, domain models, globalization, tools, and UI services.
+**Purpose:** Unit tests for analyzers, domain models, globalization, tools, and UI services, plus one in-memory
+startup test class: `ApplicationStartupTests` (six tests) boots the real `Program.cs` through `ApplicationHostFactory`
+(`WebApplicationFactory<App>`) and asserts on the served host page, the security headers, the 404 page, HSTS
+behind the proxy, and the session gate on the API.
 
-**Frameworks:** xUnit, Moq, coverlet (code coverage), bunit (BunitContext). Analyzer testing via Microsoft.CodeAnalysis.Analyzer.Testing ecosystem.
+**Frameworks:** xUnit, Moq, coverlet (code coverage), bunit (BunitContext), Microsoft.AspNetCore.Mvc.Testing,
+AngleSharp. Analyzer testing via Microsoft.CodeAnalysis.Analyzer.Testing ecosystem.
 
 **Test organization by subsystem:**
 
 Tests mirror source structure: Analyzers (blank lines, logger calls, string/static pattern), Data/Domain (model classes),
 Data/Results (result types + serialization), Globalization (culture management, localization, validators),
-Tools (converters, diagnostics, infrastructure services, network client, runtime detection, threading),
-Ui/Services (authentication, file system, framework management, website hosting, reverse proxy).
+Tools (converters, diagnostics, extensions, infrastructure services, network client, runtime detection, threading),
+Ui (startup), Ui/Authorization, Ui/Endpoints, Ui/Infrastructure, and Ui/Services (server services — DSM session,
+authentication, file system, website hosting, configuration and lifecycle, framework and version management, log
+download, reverse proxy — plus the client-side license, tree-content and navigation-guard services). `LogEventIdRegistryTests` sits at
+the project root.
 
 **Design:** controllers are thin routing wrappers with no business logic — all behavior delegated to services which are tested directly.  
 bunit is referenced for `BunitContext` usage in navigation guard tests; no Blazor component rendering tests currently exist.
@@ -135,7 +149,7 @@ All projects share common build settings from `Directory.Build.props`:
 | Category | Rule ID | Severity | Purpose |
 |----------|---------|----------|---------|
 | Collection Expression | dotnet_style_prefer_collection_expression | error | Prefer `[..]` over `.ToList()`/`.ToArray()` |
-| String/String Pattern | IDE0049 | error | Use `string` for types, `String.` for static methods |
+| String/String Pattern | IDE0049 (+ ADWH02001) | error | IDE0049 enforces `string` for types; `String.` for static members comes from the custom ADWH02001 analyzer |
 | Primary Constructors | IDE0290, dotnet_style_primary_constructors | warning | MANDATORY for classes with parameters |
 | Magic String Prevention | IDE0280 | warning | Use `nameof()` instead of string literals |
 | Var Usage | dotnet_style_var_for_built_in_types | error | Use explicit types for built-in types |
@@ -160,7 +174,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 **Purpose:** Custom Roslyn analyzers for enforcing project-specific code standards
 
-**Target:** `netstandard2.0` (DevelopmentDependency, no build output)
+**Target:** `net10.0` (DevelopmentDependency, no build output)
 
 | Analyzer | ID | Severity | Purpose | Code Fix |
 |----------|-----|----------|---------|----------|
@@ -179,13 +193,14 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 **Organization by domain:**
 
-- **Application/** — app paths, URLs, HTTP client names, session keys (DsmSid, DsmUsername), security headers, validation messages, website lifecycle defaults
+- **Application/** — app paths, URLs, HTTP client names, session keys (DsmSid, DsmUsername), security headers,
+  validation limits and path-traversal literals (the messages live in Globalization resources), website lifecycle defaults
 - **DSM/API/** — DSM API names, methods, version ranges, error codes, PHP→.NET format token mappings, serialization formats (Form/Json enum)
 - **DSM/FileStation/** — FileStation listing defaults, sorting, file type enum (File/Directory)
 - **DSM/System/** — DSM 3-letter language code data, config paths, external ports
 - **Globalization/** — default culture, text direction (LTR/RTL), environment variable names
 - **JSON/** — static `JsonSerializerOptions` cache (camelCase, ignore nulls)
-- **Logging/** — EventId range bases for `[LoggerMessage]` extensions (100K ranges at 1M spacing)
+- **Logging/** — EventId `Base`/`Last` pairs per service for `[LoggerMessage]` extensions, held to the assembly by `LogEventIdRegistryTests`
 - **Network/** — cookie headers, localhost addresses, MIME types, protocol type enum (HTTP/HTTPS)
 - **Runtime/** — .NET framework type strings, architecture identifiers (x64/arm/arm64), OS identifiers (linux/osx/windows)
 - **UI/** — dialog dimensions, byte calculation constants (KiB/MiB/GiB)
@@ -202,10 +217,10 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | Interface | Key Methods | Implemented By |
 |-----------|-------------|----------------|
 | **IAuthenticationService** | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() | Ui + Ui.Client |
-| **ICultureManager** | InitializeFromLogin(), ResetToSystem(); properties: CurrentCulture, CurrentUICulture | Ui.Client.CultureManager |
+| **ICultureManager** | InitializeFromLogin(), ResetToSystem(); properties: CurrentCulture, CurrentUICulture | Ui.Client.Services.CultureManager |
 | **IDotnetVersionService** | GetInstalledVersionsAsync(), GetChannelsAsync(), IsChannelInstalledAsync(), IsVersionInstalledAsync(), GetReleasesWithStatusAsync(), RefreshCacheAsync(), IsValidVersionFormat() | Ui + Ui.Client |
 | **IFileSystemService** | GetSharedFoldersAsync(), GetDirectoryContentsAsync(), SetHttpGroupPermissionsAsync() | Ui + Ui.Client |
-| **IFrameworkManagementService** | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui.Services |
+| **IFrameworkManagementService** | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui + Ui.Client |
 | **IGlobalizationSettings** | SupportedCultures, SupportedCultureNamesJson, SystemCulture | Ui.Infrastructure.GlobalizationSettings |
 | **ILogDownloadService** | CreateLogZipStreamAsync() | Ui.Services |
 | **IReverseProxyManagerService** | CreateAsync(), UpdateAsync(), DeleteAsync() | Ui.Services |
@@ -217,31 +232,37 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | **IAssemblyRuntimeDetector** | Detect() | Tools.Runtime (Singleton) |
 | **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), DisconnectAsync(), Disconnect(); properties: HasSession, UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
 | **IDsmSettingsService** | Server, Port, Language | Tools.Infrastructure |
-| **ILicenseService** | GetLicensesAsync() | Ui.Client.Services |
-| **ITreeContentService** | LoadChildDirectoriesAsync() | Ui.Client.Services |
+
+Two client-only interfaces live in `Ui.Client/Interfaces/`, not in Data: **ILicenseService** (`GetLicensesAsync()`)
+and **ITreeContentService** (`LoadChildDirectoriesAsync()`), both implemented in `Ui.Client.Services`.
 
 **Structure:**
 
 - **Contracts/** — service interfaces shared between server and WASM client. 16 interfaces defining the boundary
-  between Data (contracts) and Ui/Tools (implementations). See "Complete Service Contracts Inventory" table above for full method signatures.
+  between Data (contracts) and Ui/Tools (implementations). The table above lists each interface's key methods; the
+  interfaces themselves hold the full signatures.
 - **Domain/** — model classes organized by subsystem: Authentication (login credentials), FileSystem (FsEntry),
   Licensing (license info), Runtime (.NET framework/release models), System (DSM preferences from synoinfo.conf),
   WebSites (website configuration, instances, process state). New domain? Add a subdirectory.
 - **DsmApi/** — DSM API integration layer:
-  - **Models/** — immutable C# records with `init` setters for every DSM API type, organized by API namespace
-    (Auth, Core/Acl, Core/User, Core/UserSettings, FileStation, ReverseProxy)
+  - **Models/** — immutable C# records with `init` setters for the DSM API payload types, organized by API namespace
+    (Auth, Core/Acl, Core/User, Core/UserSettings, FileStation, ReverseProxy). Three exceptions are classes:
+    `ApiInformation` (mutable `set` properties) and `ApiInformationCollection` (contents swapped by `DsmApiClient`
+    via `Replace()`) for the `SYNO.API.Info` handshake, and `ReverseProxyUuids` (derives from `List<Guid>`)
   - **Parameters/** — request parameter classes mirroring Models structure; inherit from `ApiParametersBase` or implement
     `IApiParameters`; includes `Info/` (SYNO.API.Info queries), `Core/AppPortal/ReverseProxy/` (proxy CRUD params);
     serialization format determined by `SerializationFormat` property (Form vs Json strategy pattern)
   - **Responses/** — response wrappers per API endpoint inheriting from `ApiResponseBase<T>` with embedded error model;
-    includes `Core/AppPortal/ReverseProxy/` (proxy list response), `Info/` (API info response).
+    includes `Core/AppPortal/ReverseProxy/` (proxy list response) and, at the root, `ApiInformationResponse`
+    (API info response).
 - **Results/** — strongly-typed success/failure types replacing exceptions for control flow.  
   Generic variants (`ApiResultData<T>`, `ApiResultItems<T>`) and domain-specific results (InstallationResult, WebSiteInstanceResult, etc.).
 - **Exceptions/** — 4 custom exception types for unrecoverable failures: FileStationApiException, LastReleaseUninstallException, MissingChannelConfigurationException, ReverseProxyNotFoundException
 
 ### 4. Askyl.Dsm.WebHosting.Globalization
 
-**Purpose:** Localization resources, shared validators, culture management, C# 14 scoped extensions.
+**Purpose:** Localization resources and keys, the localizer, shared validators, C# 14 scoped extensions. Culture
+management lives elsewhere: `CultureManager` in `Ui.Client/Services`, `GlobalizationSettings` in `Ui/Infrastructure`.
 
 **Structure:**
 
@@ -255,7 +276,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
   Covers login credentials and website configuration rules.
 - **Localizer.cs** — `ILocalizer` abstraction wrapping `ResourceManager`; returns `string` directly,  
   reads `CurrentUICulture` at call time (not cached at construction like `IStringLocalizer<T>`).
-- **LocalizationKeys.cs** — strongly-typed resource keys (`L.WebSiteConfiguration.*`, `L.LoginCredentials.*`)
+- **LocalizationKeys.cs** — strongly-typed resource keys (`LK.WebSiteConfiguration.*`, `LK.LoginCredentials.*`)
 
 **Key design decisions:** shared validators are the single source of truth — the client binds them to its
 forms and the server runs the same rules; no DataAnnotations (cannot use runtime-localized messages).
@@ -275,7 +296,8 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 **Structure:**
 
 - **Converters/** — format/language converters: DSM 3-letter language code → .NET culture name, PHP date/time tokens → .NET format strings.
-- **Extensions/** — C# 14 scoped `extension` methods on `ApiResponse` (mapping helpers) and `HttpClient` (HTTP client helpers).
+- **Extensions/** — C# 14 scoped `extension` blocks on `HttpClient` (JSON GET/POST/DELETE helpers) and `HttpContent`
+  (`ReadFromJsonAsync`), plus a classic `IsValid()` extension on `ApiResponseBase<T>` (success/data validation).
 - **Infrastructure/** — core utilities: archive extraction (tar.gz), file management with configurable root path,  
   platform detection, process lifecycle (`IProcessRunner`/`IProcessHandle` co-located with implementations for testability),  
   cross-platform termination (SIGTERM on Unix, CloseMainWindow on Windows), file system abstraction (`IFileReader`/`SystemFileReader`),  
@@ -284,7 +306,7 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
   singleton with lazy-initialized `ApiInformations`,  
   compile-time generic constraints, Form vs JSON serialization strategy.
 - **Diagnostics/** — `OperationTimer`: disposable scope timer (`struct`) that fires callback on Dispose (success or exception);  
-  used across ReverseProxyManagerService, FrameworkManagementService, WebSiteHostingService, SiteLifecycleManager, DownloaderService.
+  used only by `DsmApiClient`, to time each DSM request.
 - **Runtime/** — .NET runtime management: binary downloads with cancellation, version detection with smart caching (singleton), assembly runtime detection from `*.runtimeconfig.json`
 - **Threading/** — `SemaphoreLock`: semaphore-based async locking utility for thread-safe lazy initialization
 
@@ -296,9 +318,9 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 | **FileManagerService** | `IFileManagerService` | Scoped | Directory management, configurable root | ILogger, string rootPath |
 | **ArchiveExtractorService** | `IArchiveExtractorService` | Scoped | tar.gz extraction | IFileManagerService |
 | **DownloaderService** | `IDownloaderService` | Scoped | .NET runtime downloads with cancellation | PlatformInfoService, IFileManagerService |
-| **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info | ILogger, ISemaphoreOwner |
+| **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info (implements `ISemaphoreOwner` for the cache lock) | ILogger |
 | **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes, drains their redirected output | ILogger, ILoggerFactory |
-| **SystemProcessHandle** | `IProcessHandle` | Transient | Wraps `Process` for testability | ILogger<ILogSystemProcessHandle> |
+| **SystemProcessHandle** | `IProcessHandle` | Not registered | Wraps `Process`; created per process by `SystemProcessRunner` | ILogger<ILogSystemProcessHandle> |
 | **DsmSettingsService** | `IDsmSettingsService` | Singleton | Reads /etc/synoinfo.conf via IFileReader | ILogger, IFileReader |
 
 **DsmApiClient Key Features:**
@@ -330,7 +352,8 @@ both redirects, so the drain must run for every hosted site.
 - **Endpoints/** — minimal API endpoints: `MapErrorEndpoints()` maps `/Error` and `/not-found` with JSON vs HTML content negotiation.
 - **Extensions/** — server-side globalization extensions: `ApplyDsmSystemCulture()`, `UseGlobalizationRequestLocalization()`.
 - **Infrastructure/** — `GlobalizationSettings`: discovers supported cultures from satellite assemblies at construction (server-only; avoids WASM file system API crashes).
-- **Middleware/** — `RequestTrackingMiddleware`: propagates `X-Request-ID` through HTTP pipeline via `HttpContext.Items` for support ticket correlation.
+- **Middleware/** — `RequestTrackingMiddleware`: echoes the caller's `X-Request-ID`, or a generated one, on every response.
+  It also stores the value in `HttpContext.Items`, where nothing reads it.
 - **Services/** — business logic implementations of Data.Contracts interfaces: authentication façade, file system operations,  
   framework management, reverse proxy CRUD, website hosting orchestrator (BackgroundService with ConcurrentDictionary),  
   per-site lifecycle manager (Channel-based command queue, SIGTERM graceful shutdown),  
@@ -343,10 +366,11 @@ Blazor WASM render mode.
 
 **Forwarded headers are load-bearing, not cosmetic.** DSM's nginx proxies `/adwh` over loopback, so every
 request otherwise reports `127.0.0.1` — which would collapse the per-client login throttle into a single
-shared bucket. Only `XForwardedFor` is processed, and `ForwardLimit` stays at its default of 1: nginx uses
-`$proxy_add_x_forwarded_for`, which appends the real peer _after_ anything the client sent, so reading
-only the last entry is what makes a forged header harmless. Raising `ForwardLimit` would reintroduce
-spoofing.
+shared bucket. `XForwardedFor` and `XForwardedProto` are processed, and only from the loopback
+`KnownProxies`. `ForwardLimit` stays at its default of 1: nginx uses `$proxy_add_x_forwarded_for`, which
+appends the real peer _after_ anything the client sent, so reading only the last entry is what makes a
+forged header harmless. Raising `ForwardLimit` would reintroduce spoofing. `XForwardedProto` is just as
+load-bearing: nginx terminates TLS, so without it `Request.IsHttps` is false and `UseHsts` writes no header.
 
 ### 7. Askyl.Dsm.WebHosting.Ui.Client
 
@@ -376,7 +400,9 @@ spoofing.
 - **Routes.razor** — Router with OnNavigateAsync auth guard
 - **Program.cs** — WASM entry point, service registration
 
-**JavaScript interop:** single usage in FileSelectionDialog — `selectChildItem` for tree navigation after folder double-click.
+**JavaScript interop:** two usages — FileSelectionDialog calls `selectChildItem` (`wwwroot/js/tree-navigation.js`) for
+tree navigation after a folder double-click, and `CultureManager` sets the `lang` and `dir` attributes on
+`document.documentElement` whenever the culture is applied.
 
 ### 8. Askyl.Dsm.WebHosting.Logging
 
@@ -399,15 +425,21 @@ server/client folder separation.
   - _ProcessLifecycle/_ — ProcessHandle, SiteLifecycleManager, ProcessRunner
   - _ReverseProxy/_ — ReverseProxyManagerService
   - _WebsiteHosting/_ — WebSitesConfigurationService, WebSiteHostingService
-- **Client/** — `ClientLoggingExtensions.cs`: WASM-side logging for Home page, dialogs, license service
+- **Client/** — `ClientLoggingExtensions.cs`: WASM-side logging for `CultureManager` (culture resolution and
+  application), `LicenseService`, and JS interop failures in FileSelectionDialog
 
-**Naming convention:** `{ServiceName}LoggingExtensions.cs`.
+**Naming convention:** under `Server/`, one `{Domain}LoggingExtensions.cs` per service, declaring that service's
+`ILog{ClassName}` category interface beside the extensions. The file name is often a shortened domain rather than the
+class name: `ProcessLoggingExtensions.cs` holds `ILogSiteLifecycleManager`, and `WebsiteLoggingExtensions.cs` holds
+`ILogWebSiteHostingService`. `Client/ClientLoggingExtensions.cs` holds all three client categories.
 
 New service? Add a `[LoggerMessage]` extension method with XML doc comment; consult `Constants/Logging/LogEventIds.cs` for next available EventId in the service's range.
 
 **EventId Management:**
 
-All `[LoggerMessage]` attributes use inline `int` literals. Each service owns a 100K range at 1M spacing.  
+All `[LoggerMessage]` attributes use inline `int` literals. Each service owns a block of 1,000 ids whose `Base` sits on
+a multiple of 1,000 (bases are normally 100,000 apart); its ids run from `Base` exclusive to `Last` inclusive, and
+`LogEventIdRegistryTests` fails if the assembly and `Constants/Logging/LogEventIds.cs` disagree.  
 See `Constants/Logging/LogEventIds.cs` for current ranges and next available IDs per service.  
 All services use `[LoggerMessage]` extensions — zero CA2254 warnings.
 
@@ -415,7 +447,9 @@ All services use `[LoggerMessage]` extensions — zero CA2254 warnings.
 
 - Output template: `{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [EventId:{EventId}] {Message:lj}{NewLine}{Exception}`
 - Graceful flush: `Log.CloseAndFlush()` via `ApplicationStopping` lifetime hook
-- Activity correlation: `WithActivity` enricher adds `ActivityId`, `ActivityTraceId`, `ActivitySpanId`
+- Activity correlation: not rendered. `Enrich` lists `WithActivity` (with `WithMachineName` and `WithThreadId`), but
+  no referenced package provides those enrichers, and the output template does not render the `TraceId`/`SpanId`
+  Serilog captures on its own either
 
 ---
 
@@ -437,9 +471,12 @@ All services use `[LoggerMessage]` extensions — zero CA2254 warnings.
 2. **`HttpClient` reuse:** Named client with connection pooling
 3. **`BackgroundService` anchor:** `WebSiteHostingService` (Singleton) depends on services using `DsmApiClient`
 
-**Mitigation:** `SetSid()` updates `_sid` + cookie header. Session validation cache: 1-minute TTL.
+**Mitigation:** `DsmApiClient` keeps no SID at all. `ExecuteAsync` takes the SID as a parameter and `ExecutePostAsync`
+attaches it as a cookie header to each `HttpRequestMessage`. Session validation cache: 1-minute TTL.
 
-Note: `DsmApiClient` is consumed by the Scoped `IDsmSession`, which manages per-request SID state. Controllers interact with `IDsmSession`, not `DsmApiClient` directly.
+Note: `DsmApiClient` is consumed by the Scoped `IDsmSession`, which manages per-request SID state. Controllers use neither directly: each calls one
+`Data/Contracts` service interface, and the server implementations that reach DSM (`AuthenticationService`,
+`FileSystemService`, `ReverseProxyManagerService`) inject `IDsmSession`.
 
 **Service Lifetime Hierarchy:**
 
@@ -512,13 +549,18 @@ SiteLifecycleManager (Per-instance, Thread-safe)
 `OperationTimer` — value-type (`struct`) disposable timer in `Tools/Diagnostics/OperationTimer.cs`.
 
 ```csharp
-using var timer = new OperationTimer(elapsed => logger.FrameworkInstalledDuration(elapsed, version));
-// ... method body ... callback fires on Dispose (success or exception)
+var statusCode = 0;
+
+using var timer = new OperationTimer(elapsed => logger.ApiRequest(request.Method.Method, url, statusCode, elapsed));
+
+using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+statusCode = (int)response.StatusCode;
+// ... callback fires on Dispose (success or exception)
 ```
 
-**Usage:** ReverseProxyManagerService (Create/Update/Delete), FrameworkManagementService (Install/Uninstall),
-WebSiteHostingService (Add/Update/Start/Stop/Remove), SiteLifecycleManager, DownloaderService,
-DotnetVersionService, WebSitesConfigurationService.
+**Usage:** `DsmApiClient` only. The callback reads a captured status rather than the response, because the
+response is disposed first.
 
 ---
 
@@ -543,15 +585,17 @@ DotnetVersionService, WebSitesConfigurationService.
 
 - **WebSiteConfiguration** — main config model (name, path, port, SSL, environment variables)
 - **WebSiteInstance** — runtime instance wrapping configuration + process lifecycle
-- **ProcessInfo** — immutable process snapshot (Id, IsResponding) — captures at construction to avoid `InvalidOperationException` if process exits during serialization
+- **ProcessInfo** — immutable process snapshot (`Id` only). It holds no live `Process` reference, and
+  `WebSiteInstance.Process` is `[JsonIgnore]`, so it stays server-side
 
 ### DSM API Integration
 
 #### Authentication Flow
 
 ```text
-1. Client → LoginCredentials { Username, Password, [LotP] }
-2. DsmSettingsService → Load /etc/synoinfo.conf (graceful fallback defaults)
+1. Client → LoginCredentials { Login, Password, [OtpCode] }
+2. DsmSettingsService → settings read once per process from DsmSettings:ConfigPath (default /etc/synoinfo.conf);
+   a missing file or host key throws, only the language and HTTPS port fall back to defaults
 3. DsmApiClient.EnsureInitializedAsync() → SYNO.API.Info query (lazy-init, SemaphoreLock)
 4. DsmSession.AuthenticateAsync() → auth.login API call
 5. Response: SID stored per-request via HttpRequestMessage cookie header
@@ -592,9 +636,14 @@ check at login so non-administrators are refused there rather than on their next
 
 #### FileStation Operations
 
-`util.list`, `util.upload`, `util.download`, `util.delete`, `util.mkdir`, `file.move`, `file.copy`, `core.acl.set`
+`SYNO.FileStation.List` (`list_share`, `list`) backs the directory browser, and `SYNO.Core.ACL` (`set`) backs
+permissions. No upload, download, delete, mkdir, move or copy operation is implemented.
 
-**HTTP Group Permissions:** Uses `SYNO.Core.ACL` API to grant `http` group read/execute on deployment directories — called after framework installation.
+**HTTP Group Permissions:** `FileSystemService.SetHttpGroupPermissionsAsync` calls `SYNO.Core.ACL` `set` on the site's
+application directory (its parent when the path is a `.dll`). It grants the `http` group read, write, execute and
+delete rights — everything but change-permission and take-ownership — inherited by all descendants. It runs as the
+first side-effecting step of adding or updating a website, after the configuration and environment variables are
+validated.
 
 ---
 
@@ -603,8 +652,10 @@ check at login so non-administrators are refused there rather than on their next
 ### Rendering Strategy
 
 **Render mode:** `AddRazorComponents().AddInteractiveWebAssemblyComponents()` — WebAssembly only.
-`App.razor` uses `new InteractiveWebAssemblyRenderMode(false)`, so prerendering is off and no component
-can bind to a server-side service implementation.
+`App.razor` renders `Routes` with `new InteractiveWebAssemblyRenderMode(false)`, so nothing under `Routes` is
+prerendered and no interactive component can bind to a server-side service implementation. `App.razor` itself
+renders statically on the server and does inject server services; the framework `HeadOutlet` is given the stock
+`InteractiveWebAssembly` mode, which prerenders.
 
 ### Component Hierarchy
 
@@ -642,7 +693,9 @@ Dialogs (Overlay)
 3. **Server-Side Session Validation** — `IsAuthenticatedAsync()` validates session keys + calls
    `SYNO.Core.User.get`; 1-minute TTL cache keyed by SID, evicted on disconnect so a signed-out session
    stops passing immediately
-4. **Antiforgery & CSRF Protection** — Enabled for all Blazor components and API endpoints
+4. **CSRF Protection** — `UseAntiforgery()` covers the Razor component endpoints only; no API controller validates an
+   antiforgery token. The five `[AuthorizeSession]` controllers document their CSRF defence instead: the
+   `SameSite=Strict` session cookie plus `[AuthorizeSession]` validation against DSM
 5. **HSTS Enforcement** — `UseHsts()` (30-day max-age, non-dev only). It depends on
    `ForwardedHeaders.XForwardedProto` being set: `HstsMiddleware` writes nothing when `Request.IsHttps`
    is false, which behind DSM's nginx is every request until the forwarded scheme is honoured. There is
@@ -662,7 +715,8 @@ Dialogs (Overlay)
 ### File System Security
 
 - HTTP group permissions set before deployment
-- Path validation against allowed directories via `IsPathValid()`
+- Path traversal rejection via `IsPathValid()` — rejects empty paths, any `..`, and any URL-encoded or
+  double-encoded dot or slash (`%2e`, `%2f`, `%252e`, `%252f`); there is no allow-list of directories
 
 ---
 
@@ -679,12 +733,17 @@ Culture is **DSM-controlled** — resolved once at login, locked for the session
 3. **Server injects to WASM** — Supported cultures as JSON + system culture via `Blazor.start()` `dotnet.withEnvironmentVariable()`
 4. **WASM parses cultures** — `CultureManager` static initializer deserializes env vars
 5. **Early resolution** — `Program.cs` forces DI resolution of `ICultureManager` before `host.RunAsync()`
-6. **Login resolves culture** — Priority: login response `Culture` → system culture → browser culture → `en-US`
+6. **Login resolves culture** — Priority: login response `Culture` (if supported) → system culture (if supported) →
+   browser culture matched to a supported culture → the unmatched browser culture itself (`en-US` only when the
+   browser culture cannot be constructed)
 7. **WASM propagates to server** — `AcceptLanguageHandler` attaches `Accept-Language` header
 8. **Server reads header** — `RequestLocalization` middleware sets thread culture per request
-9. **Logout** — `forceLoad: true` resets culture to system/browser
+9. **Logout** — `CultureManager.ResetToSystem()` re-resolves the culture (system → browser), then the app navigates to
+   the login page without a forced reload
 
-**html lang:** Set server-side in `App.razor` via `GetLanguageTag()` (DSM system culture → Accept-Language header → `en`).
+**html lang:** Set server-side in `App.razor` via `ResolveCulture()` (DSM system culture → first `Accept-Language` tag
+when it is a bare language code such as `fr` → `en-US`); the same resolved culture drives `dir` through
+`GetTextDirection()`.
 
 ### Date/Time Format Flow
 
@@ -698,8 +757,9 @@ Culture is **DSM-controlled** — resolved once at login, locked for the session
 
 ### Culture Resolution Priority
 
-**At construction (login page, post-logout):** DSM system culture → Browser culture → `en-US`
-**After login:** Login response culture → DSM system culture → Browser culture → `en-US`
+**At construction (login page, post-logout):** DSM system culture (if supported) → browser culture matched to a
+supported culture → the unmatched browser culture (`en-US` only if it cannot be constructed)
+**After login:** Login response culture (if supported) → the same chain
 
 ### Adding a New Culture
 
@@ -714,7 +774,7 @@ Culture is **DSM-controlled** — resolved once at login, locked for the session
 - **`CultureManager` updates `html lang` and `dir` via `IJSRuntime`** — Enables RTL support
 - **`DsmLanguageToCultureConverter` returns `null` for `"def"`** — Means "use browser default", not English
 - **`GlobalizationSettings` as singleton in Ui/Infrastructure/** — Server-only; avoids WASM file system API crashes
-- **`IRequestCultureFeature` doesn't match neutral languages** (`fr` → `fr-FR`) — `GetLanguageTag()` parses header directly
+- **`IRequestCultureFeature` doesn't match neutral languages** (`fr` → `fr-FR`) — `App.razor`'s `ResolveCulture()` parses the header directly
 - **Safe static initialization** — Each static field uses a `Safe*` wrapper catching `CultureNotFoundException`, `ArgumentException`, `JsonException`
 - **`NotSupportedException` on pattern setters** — Defensive against rare immutable culture variants
 
@@ -737,7 +797,7 @@ Culture is **DSM-controlled** — resolved once at login, locked for the session
 ### Connection Pool Sizing
 
 - Single named `HttpClient` instance for DSM API calls via `DsmApiClient` (Singleton)
-- Default connection pool sizing from .NET runtime defaults (2 connections per server)
+- Default connection pool sizing from .NET runtime defaults (`MaxConnectionsPerServer` is unlimited — `int.MaxValue`)
 - No custom `SocketsHttpHandler` configuration — relies on framework defaults for local DSM communication
 
 ### Caching Strategy
@@ -755,20 +815,26 @@ Culture is **DSM-controlled** — resolved once at login, locked for the session
 
 ### X-Request-ID Propagation
 
-Serilog's `WithActivity` enricher adds `ActivityId`, `ActivityTraceId`, and `ActivitySpanId` to log entries. These correlate with .NET's built-in `System.Diagnostics.Activity` infrastructure.
+No trace identifier reaches the log output today. `appsettings.json` lists a `WithActivity` enricher (alongside
+`WithMachineName` and `WithThreadId`), but no referenced Serilog package provides any of the three, and every output
+template renders only timestamp, level, `EventId`, message and exception.
 
-**Current State:** `RequestTrackingMiddleware` propagates `X-Request-ID` through the HTTP pipeline via `HttpContext.Items`.
-Serilog's `WithActivity` enricher captures `ActivityId`, `ActivityTraceId`, and `ActivitySpanId` in server-side logs.
-The Blazor WebAssembly client does not include request ID headers on outgoing API calls, and the server does not expose trace identifiers in API responses for support ticket correlation.
+**Current State:** `RequestTrackingMiddleware` echoes the caller's `X-Request-ID` on the response, or generates one
+when the request carries none. The value is also stored in `HttpContext.Items`, but nothing reads it and it is never
+pushed into the log context, so a response's request ID cannot be matched to a log line.
+The Blazor WebAssembly client does not include request ID headers on outgoing API calls.
 
 **Pipeline Flow (when Activities are active):**
 
 1. Incoming HTTP request creates `Activity` via ASP.NET Core hosting
-2. Serilog enricher attaches `ActivityId`, `ActivityTraceId`, `ActivitySpanId` to log context
+2. No enricher runs — `WithActivity` resolves to no referenced package. Serilog 4 still stamps `TraceId`/`SpanId` on
+   each event from `Activity.Current` by itself (its documented behaviour, not measured here)
 3. Outgoing DSM API calls inherit Activity scope via `HttpClient` diagnostics handler
-4. All logs within the request scope share the same trace identifiers
+4. No output template renders those identifiers; adding `{TraceId}` to the templates would surface them without a
+   new package
 
-**For Support Correlation:** Currently relies on timestamp + EventId correlation. Future enhancement could surface `X-Request-ID` in API response headers for client-side support ticket inclusion.
+**For Support Correlation:** Currently relies on timestamp + EventId correlation. The `X-Request-ID` already returned
+on responses would become useful once it is written to the log context as well.
 
 ---
 
@@ -787,15 +853,17 @@ The SPK build pipeline (`src/scripts/build-spk.sh`) assembles the Synology packa
 
 ### Runtime Selection Strategy
 
-The SPK is a fat package containing runtimes for all three architectures. At install time,
-the `postinst` script detects the NAS architecture and extracts only the matching runtime,
-keeping the installed footprint minimal.
+The SPK is a fat package containing runtimes for all three architectures. At install time, `postinst` (through
+`install_dotnet_runtime` in `common-functions.sh`) detects the NAS architecture and extracts only the matching runtime
+into `runtimes/`. The three source archives remain installed under `runtimes/downloads/`, so the installed footprint
+still carries all of them.
 
 ### Nginx Reverse Proxy Integration
 
-`adwh-alias.conf` provides reverse proxy from `/adwh` to `localhost:7120`. The configuration
-is injected into DSM's built-in Nginx via the package's `web-config` resource declaration in `INFO`.
-All application traffic flows through this alias, enabling sub-path access without port conflicts.
+`adwh-alias.conf` provides reverse proxy from `/adwh` to `localhost:7120`. The configuration is injected into DSM's
+built-in Nginx via the `web-config` resource declaration (`nginx-static-config`, type `dsm`) in `conf/resource`.
+The alias is the intended access path, enabling sub-path access without port conflicts, but not the only one: the
+application listens on `0.0.0.0:7120` and `adwh.sc` marks that port for forwarding.
 
 ### Service Account and Permissions
 
@@ -806,36 +874,39 @@ All application traffic flows through this alias, enabling sub-path access witho
 
 ### Data Persistence
 
-All persistent data resides under `/var/packages/AskylWebHosting/var/`:
+Package-level state resides under `/var/packages/AskylWebHosting/var/`: the lifecycle log (`logs/install.log`), the
+service log (`logs/service.log`), the application's console output (`logs/application.log`), the PID file, and
+`upgrade-backup/`.
 
-- Website configurations (JSON)
-- Application logs (Serilog rolling files)
-- Downloaded .NET runtimes
-- User-specific state
-
-This path survives package upgrades per Synology's package data directory conventions.
+Application data lives in the package target instead: `websites.json` and the Serilog rolling files (`logs/`) beside
+the binaries in `target/admin-ui/`, and the .NET runtimes in `target/runtimes/`. The target is replaced on upgrade,
+which is why `preupgrade` backs up `websites.json` and `postupgrade` restores it. Nothing backs up the Serilog
+rolling files.
 
 ### Port Configuration
 
-`adwh.sc` defines the application listening ports:
+The application listens on HTTP `7120` only, set by `ASPNETCORE_URLS` in `start-stop-status` and proxied via
+Nginx `/adwh`.
 
-| Protocol | Port | Purpose |
-|----------|------|---------|
-| HTTP | 7120 | Primary application port (proxied via Nginx `/adwh`) |
-| HTTPS | 7121 | SSL-enabled alternative |
+`adwh.sc` declares service ports to DSM's firewall and port forwarding, not listening ports:
 
-Port `7120` is declared in the SPK `INFO` file for conflict detection during installation.
+| Protocol | Port | Bound by the application |
+|----------|------|--------------------------|
+| HTTP | 7120 | Yes |
+| HTTPS | 7121 | No — declared, but nothing in the source binds it |
+
+Port `7120` is declared in the SPK `INFO` file (`checkport`) for conflict detection during installation.
 
 ### Lifecycle Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `preinst` | Environment setup, architecture detection |
-| `postinst` | .NET runtime installation for detected architecture |
+| `preinst` | Clears the debug log on a fresh install, logs the installation environment |
+| `postinst` | .NET runtime installation for the architecture reported by `uname -m` |
 | `preupgrade` | Service stop, configuration backup |
-| `postupgrade` | Configuration restore, runtime reinstall, service start |
+| `postupgrade` | Configuration restore, runtime reinstall and verification; does not start the service itself |
 | `preuninst` | Service stop, PID file cleanup |
-| `postuninst` | Final cleanup |
+| `postuninst` | Nothing — exits immediately |
 | `start-stop-status` | Service lifecycle management with PID tracking |
 | `common-functions.sh` | Shared utilities: logging, process management, runtime install/verify |
 
@@ -854,24 +925,25 @@ Use `scripts/update-version.sh` to synchronize both simultaneously.
 
 ### Current State
 
-Deployment is entirely manual: developer runs `build-spk.sh` locally, then copies the resulting `.spk` from `dist/` to the target NAS via Package Center.
+`.github/workflows/build.yml` runs on every pull request, on pushes to `main`, and on `v*` tag pushes. The checks
+are parallel jobs:
 
-### Planned Workflow
+| Job | Runs on | Steps |
+|-----|---------|-------|
+| `format` | Every trigger | `dotnet format --verify-no-changes` |
+| `build-test` | Every trigger | Build, then tests |
+| `lint` | Every trigger | `markdownlint` over tracked `.md` files |
+| `vulnerable` | Pushes (`main` and tags) | `dotnet list package --vulnerable`, fails on any hit |
+| `release` | `v*` tags, once the four jobs above pass | `build-spk.sh`, then a GitHub release carrying the `.spk` |
 
-A GitHub Actions pipeline would operate with two job paths triggered by repository events:
-
-**Triggers:** Push to `main`, pull requests, and tag pushes (`v*.*.*`)
-
-| Job Path | Trigger | Steps |
-|----------|---------|-------|
-| **Verify** (lightweight) | Push to `main`, PRs | Format check, build, unit tests, markdown lint |
-| **Release** (full) | Tag push | Verify steps + SPK assembly + GitHub release with artifact attachment |
+A local build remains possible: `build-spk.sh` writes the `.spk` to `dist/`, installed through Package Center.
 
 ### Artifact Strategy
 
-- Release artifacts: `.spk` package attached to GitHub release
-- Runtime binaries cached in Actions cache keyed by architecture and ChannelVersion to avoid redundant downloads
-- Artifact retention aligned with GitHub default policies (90 days for workflow artifacts, indefinite for releases)
+- Release artifacts: `.spk` package attached to the GitHub release
+- Downloaded runtimes cached in the Actions cache, keyed by runner OS and a hash of `appsettings.json`, which
+  carries `ChannelVersion`
+- No workflow artifacts are uploaded; the release is the only published output
 
 ---
 
@@ -897,17 +969,22 @@ requires a full rebuild to maintain consistency between bundled runtime and appl
 
 ### Direct Configuration Access Pattern
 
-The codebase does not use `IOptions<T>` or `IConfiguration` binding anywhere. All configuration
-values are accessed directly via `builder.Configuration["Section:Key"]` or through dedicated
-services like `DsmSettingsService`.
+No application setting is bound to an options class; the options pattern appears only for framework types such as
+`ForwardedHeadersOptions`. Settings are read directly: `PlatformInfoService` loads `Download:ChannelVersion` from
+`appsettings.json` with its own `ConfigurationBuilder`, and `DsmSettingsService` reads `DsmSettings:ConfigPath` from
+the injected `IConfiguration`.
 
-**`DsmSettingsService`:** Reads `/etc/synoinfo.conf` for DSM-specific settings (server address, port, language). The file path is configurable to support local debugging against a remote DSM instance.
+**`DsmSettingsService`:** Reads `/etc/synoinfo.conf` for DSM-specific settings (server address, port, language). The
+file path is configurable (`DsmSettings:ConfigPath`) so local runs can read `dev-mock/synoinfo.conf`, a gitignored
+copy of `synoinfo.conf.template` that must keep the template's values; `AGENTS.md` §13 forbids pointing it at a real
+DSM.
 
 ### Layered Configuration Merge
 
 Standard .NET configuration layering applies: `appsettings.json` → `appsettings.{Environment}.json`
-→ environment variables → command-line arguments. Currently only the base `appsettings.json` files
-are used in production; no environment-specific overrides are packaged with the SPK.
+→ environment variables → command-line arguments. Only the base `appsettings.json` files are used in production.
+`build-spk.sh` deletes `*Development.json` from the publish output, but the client's precompressed
+`wwwroot/appsettings.Development.json.br` and `.gz` escape that pattern and are still packaged, unused.
 
 ---
 
@@ -920,6 +997,9 @@ All routes prefixed `/api/v1/`. Controllers: `Authentication`, `WebsiteHosting`,
 
 ### B. DSM API Reference
 
-**Authentication:** `auth.login`, `auth.logout`, `auth.multifactor.login`
-**FileStation:** `util.list`, `file.download`, `core.acl.set`
-**ReverseProxy:** `list`, `add`, `set`, `delete`
+**Authentication:** `SYNO.API.Auth` `login` (with an optional `otp_code` for two-factor accounts) and `logout`;
+`SYNO.Core.User` `get` doubles as the administrator check
+**FileStation:** `SYNO.FileStation.List` `list` and `list_share`; **ACL:** `SYNO.Core.ACL` `set`
+**ReverseProxy:** `SYNO.Core.AppPortal.ReverseProxy` `list`, `create`, `update`, `delete`
+**User preferences:** `SYNO.Core.UserSettings` `get` (language, date and time format, read at login)
+**Handshake:** `SYNO.API.Info` `query`
