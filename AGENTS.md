@@ -96,6 +96,9 @@ Single test: append `--filter "FullyQualifiedName~<TestClassOrMethod>"` to the t
 - SPK package build: `./src/scripts/build-spk.sh` (output lands in `dist/`)
 - Version bump: `./src/scripts/update-version.sh` (syncs `src/Directory.Build.props` and `src/spk-project/INFO`)
 - Deployment log review: `./src/scripts/compare-logs.sh` (see §13, and the `📊 Logs` task in VS Code)
+- NuGet update: `sh ./src/scripts/update-nuget.sh` (no execute bit). It raises every major: put FluentUI
+  back on 4.x, and keep the analyzer's Roslyn at or below the compiler of the SDK CI installs (comment in
+  `Askyl.Dsm.WebHosting.Analyzers.csproj`; above it, CS9057 silently disables every ADWH rule)
 
 The CI lint gate is `dotnet format --verify-no-changes` — a formatting slip fails the build, not just the review.
 
@@ -492,7 +495,8 @@ against a determined bypass.
 **The real boundary is on GitHub.** `main` requires a pull request with `format`, `build-test` and `lint`
 passing; force pushes, deletions and non-linear history are refused; admins included. `vulnerable` is
 deliberately **not** required — it is skipped on pull requests, and a skipped required check blocks a merge
-forever.
+forever. The consequence: **after every merge, watch the push run on `main`** before calling the merge done.
+PR #70 merged green and `main` went red in `vulnerable` (run #115) on advisories published since.
 
 ---
 
@@ -555,7 +559,10 @@ Deploy, download the log archive from the application's own log page, drop it in
 
 No arguments takes the two most recent archives; two paths compare anything else, each a `.zip`, a
 directory or a `.txt`. It reports new event ids, count changes, warnings and errors by owning service, a
-startup-sequence diff, and duration outliers — the shape the PR #39 defect took.
+startup-sequence diff and the slowest timed lines. **Measured on production-format archives, it is much
+weaker than that list reads:** its startup section never finds the application's boot in production, its
+timings are DSM calls rather than requests, and of the five defects found by reading logs by hand it
+surfaces none as a defect. `open-technical-items.md` records why and what to read by hand meanwhile.
 
 **The script surfaces, it does not decide.** A new event id is a lead, not a verdict.
 
