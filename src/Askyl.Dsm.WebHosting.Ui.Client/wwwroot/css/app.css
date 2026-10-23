@@ -50,3 +50,10 @@ fluent-tab-panel {
 .build-commit {
     color: inherit;
 }
+
+/* The width FluentDialog gave the login form before it became a page, narrowed on small screens. A card
+   defaults to 100% of both dimensions, which would stretch it over the whole page instead of centering it */
+.login-card {
+    width: min(640px, 100%);
+    height: auto;
+}
