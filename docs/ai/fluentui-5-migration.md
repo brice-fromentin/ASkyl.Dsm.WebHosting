@@ -379,3 +379,14 @@ On the NAS, since only the maintainer runs the application:
 - **Every gate was proven by reverting it.** Each one was made to fail by putting back the defect it
   guards against: an unknown tag, `AriaLabel`, a direct message box call, the unencoded helper, the missing
   stack gap, and the 4.x stylesheet.
+- **The first run on a real browser failed at startup, and no test had seen it.** The browser reported that
+  `DefaultValues` was missing from FluentUI 5.0.1. The browser had in fact received **4.14.5**:
+  - The SDK's `ConvertDllsToWebCil` reconverts a DLL only when it is newer than the existing output, and that
+    output's name carries no version (decompiled from the WebAssembly pack, 10.0.13).
+  - The 5.0.1 DLL is dated 2026-10-14; the 4.14.5 webcil left by the morning's build was newer.
+  - The tests load the DLLs, never the webcil, so all of them passed.
+
+  `WebAssemblyOutputTests` now compares every webcil assembly with the DLL the client compiled against. It
+  failed on the stale tree, listing the six FluentUI assemblies, and passed after `dotnet clean`. The publish
+  path (`obj/Release/.../webcil/publish`, which `build-spk.sh` uses) has the same flaw, and this test does not
+  cover it.

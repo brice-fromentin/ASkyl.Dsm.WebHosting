@@ -84,7 +84,7 @@ public partial class UiSourceAuditTests
     [GeneratedRegex(@"var\(\s*--(neutral|accent|type-ramp|design-unit|body-font)[a-z0-9-]*|fluent-(toolbar|text-field|number-field|dialog-header|dialog-footer)\b")]
     private static partial Regex FluentUi4OnlyReference();
 
-    static string SourceRoot()
+    internal static string SourceRoot()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {

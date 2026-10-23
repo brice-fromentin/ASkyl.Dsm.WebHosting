@@ -320,6 +320,10 @@ of them can see is left here:
   Chrome 125, Firefox 147 or Safari 26, or a polyfill the application does not ship.
 - **Upstream #5516.** `FluentDataGrid` never unregisters its key listener, and the file and releases dialogs
   create and dispose a grid on every opening.
+- **A locally built SPK can ship a stale FluentUI.** The SDK reconverts a DLL to webcil only when the DLL is newer
+  than the previous output, so a package upgrade can leave the old version in `obj/Release/.../webcil/publish`.
+  `build-spk.sh` publishes from that folder without cleaning it. `WebAssemblyOutputTests` covers the Debug
+  build only. CI release builds start from a clean checkout and are not affected.
 - **Built-in strings are English.** v5 routes them through `IFluentLocalizer` (confirmation buttons, "This
   field is required", the grid's empty state) but ships English only. v4 hardcoded the same English text, so
   nothing regressed, but nothing is translated either.
