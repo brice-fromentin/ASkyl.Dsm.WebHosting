@@ -16,7 +16,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Client.Services;
 /// <param name="localizer">Localizer for user-facing strings.</param>
 public partial class DotnetVersionService(IHttpClientFactory httpClientFactory, ILocalizer localizer) : IDotnetVersionService
 {
-    [GeneratedRegex(@"^\d+\.\d+(\.\d+)?$")]
+    [GeneratedRegex(RuntimeConstants.VersionPattern)]
     private static partial Regex VersionPattern();
 
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);

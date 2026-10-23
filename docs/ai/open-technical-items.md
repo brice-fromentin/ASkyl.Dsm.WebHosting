@@ -160,9 +160,14 @@ that method in the name of symmetry with install.** It is the first of two thing
 
 Measured, both layers:
 
-- `IsValidVersionFormat` is `^\d+\.\d+(\.\d+)?$`. It accepts `10.0` and `10.0.1`, and rejects `..`,
-  `../../etc`, `10.0/../..`, an embedded newline, a trailing space, and anything carrying shell
-  punctuation.
+- `IsValidVersionFormat` is `RuntimeConstants.VersionPattern`, shared by server and client since 0.8.0.
+  - **Accepts** `10.0`, `10.0.1` and a prerelease suffix of dot-separated `[0-9A-Za-z-]` identifiers. The
+    previous `^\d+\.\d+(\.\d+)?$` refused previews and release candidates, which made them impossible to
+    install since #67 and to uninstall ever.
+  - **Rejects** `..`, `../../etc`, `10.0/../..`, a slash, dot-only or empty identifier inside the suffix,
+    whitespace and shell punctuation (theory tests in `DotnetVersionServiceTests`).
+  - **It ends in `\z`.** The old `$` also matched before a final newline, so `"10.0\n"` passed. That was
+    measured when the tests were written, and it contradicts what this entry used to claim.
 - `DeleteDirectory` calls `SanitizeSubdirectoryPath` before doing anything: it splits on both separator
   kinds, throws on a `.` or `..` segment, and only then combines with the normalized root.
 

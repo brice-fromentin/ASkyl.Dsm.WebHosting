@@ -19,7 +19,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// <param name="downloader">Service for downloading .NET runtimes.</param>
 public partial class DotnetVersionService(ILogger<ILogDotnetVersionService> logger, ILocalizer localizer, IVersionsDetectorService versionsDetector, IDownloaderService downloader) : IDotnetVersionService
 {
-    [GeneratedRegex(@"^\d+\.\d+(\.\d+)?$")]
+    [GeneratedRegex(RuntimeConstants.VersionPattern)]
     private static partial Regex VersionPattern();
 
     public async Task<InstalledVersionsResult> GetInstalledVersionsAsync(CancellationToken cancellationToken = default)
