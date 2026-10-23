@@ -12,9 +12,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.6.0" PrivateAssets="all" />
-    <PackageReference Include="System.Composition" Version="10.0.10" PrivateAssets="all" />
+    <!-- Never above the compiler of the SDK CI installs (setup-dotnet 10.0.x, now 10.0.402: Roslyn 5.9.0). An analyzer
+         built against a newer Roslyn is refused with CS9057, a warning, and every ADWH rule silently stops applying.
+         Check with `dotnet <sdk>/Roslyn/bincore/csc.dll -version` before raising these. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.9.0" PrivateAssets="all" />
+    <PackageReference Include="System.Composition" Version="10.0.13" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>
