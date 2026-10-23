@@ -16,6 +16,7 @@ using Askyl.Dsm.WebHosting.Ui.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
 using Moq;
 using Moq.Protected;
 
@@ -31,6 +32,7 @@ public class DsmSessionTests : IDisposable
     readonly Mock<IHttpContextAccessor> _httpContextAccessor;
     readonly Mock<ILogger<ILogDsmSession>> _logger;
     readonly MemoryCache _validationCache;
+    DefaultHttpContext _request;
 
     public DsmSessionTests()
     {
@@ -39,8 +41,9 @@ public class DsmSessionTests : IDisposable
         _settingsService = FakeDsmSettings.Create();
         _clientLogger = new Mock<ILogger<ILogDsmApiClient>>();
         _session = new FakeSession();
+        _request = new DefaultHttpContext { Session = _session };
         _httpContextAccessor = new Mock<IHttpContextAccessor>();
-        _httpContextAccessor.Setup(h => h.HttpContext!.Session).Returns(_session);
+        _httpContextAccessor.Setup(h => h.HttpContext).Returns(() => _request);
         _logger = new Mock<ILogger<ILogDsmSession>>();
 
         // One cache shared by every session the fixture builds, mirroring the Singleton registration:
@@ -111,8 +114,7 @@ public class DsmSessionTests : IDisposable
     public async Task ValidateSessionAsync_SuccessfulResponse_ReturnsTrue()
     {
         // Arrange
-        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
-        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+        SeedAuthenticatedSession("admin");
 
         SetupHttpResponse("{\"success\":true,\"data\":{\"users\":[{\"name\":\"admin\",\"uid\":1024}]}}");
 
@@ -130,8 +132,7 @@ public class DsmSessionTests : IDisposable
     {
         // Arrange — 105 is "insufficient user privilege", the code a non-administrator gets
         // from SYNO.Core.User.get. Every code other than -4 used to be read as a valid session.
-        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
-        _session.Set(ApplicationConstants.DsmUsernameKey, "guest");
+        SeedAuthenticatedSession("guest");
 
         SetupHttpResponse($"{{\"success\":false,\"error\":{{\"code\":{DsmConstants.ErrorCodePermissionDenied}}}}}");
 
@@ -148,8 +149,7 @@ public class DsmSessionTests : IDisposable
     public async Task ValidateSessionAsync_NonOkStatusCode_ReturnsFalse()
     {
         // Arrange
-        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
-        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+        SeedAuthenticatedSession("admin");
 
         SetupHttpResponse(String.Empty, HttpStatusCode.InternalServerError);
 
@@ -167,8 +167,7 @@ public class DsmSessionTests : IDisposable
     {
         // Arrange — IDsmSession is Scoped, so each request builds a new instance. Validity has to live
         // in the shared cache; instance fields reset every request and made the TTL cache useless.
-        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
-        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+        SeedAuthenticatedSession("admin");
 
         SetupHttpResponse("{\"success\":true,\"data\":{\"users\":[{\"name\":\"admin\",\"uid\":1024}]}}");
 
@@ -184,8 +183,7 @@ public class DsmSessionTests : IDisposable
     public async Task ValidateSessionAsync_CallsDsmAgain_AfterTheSessionIsDisconnected()
     {
         // Arrange — a signed-out SID must not keep passing validation until the TTL lapses.
-        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
-        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+        SeedAuthenticatedSession("admin");
 
         SetupHttpResponse("{\"success\":true,\"data\":{\"users\":[{\"name\":\"admin\",\"uid\":1024}]}}");
 
@@ -194,13 +192,37 @@ public class DsmSessionTests : IDisposable
         // Act — disconnect evicts, then the same SID comes back.
         CreateSession().Disconnect();
 
-        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
-        _session.Set(ApplicationConstants.DsmUsernameKey, "admin");
+        SeedAuthenticatedSession("admin");
 
         Assert.True(await CreateSession().ValidateSessionAsync());
 
         // Assert
         VerifyHttpCallCount(Times.Exactly(2));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("forged-binding")]
+    public async Task ValidateSessionAsync_RejectsAFixatedSession_EvenWhileItsSidIsCached(string? attackerBinding)
+    {
+        // Arrange — the victim signs in on a session key the attacker planted, so both browsers present the
+        // same session cookie and only the binding cookie tells them apart. The login primes the cache.
+        SetupHttpResponses(
+            "{\"success\":true,\"data\":{\"sid\":\"test-sid\"}}",
+            "{\"success\":true,\"data\":{\"users\":[{\"name\":\"admin\",\"uid\":1024}]}}",
+            "{\"success\":true,\"data\":{\"personal\":{}}}");
+
+        Assert.True((await CreateSession().ConnectAsync(new LoginCredentials("admin", "password", null))).Success);
+
+        StartRequest(IssuedBindingCookie()?.Value.ToString());
+        Assert.True(await CreateSession().ValidateSessionAsync());
+
+        // Act — the attacker's next request, on the very same session.
+        StartRequest(attackerBinding);
+        var result = await CreateSession().ValidateSessionAsync();
+
+        // Assert
+        Assert.False(result);
     }
 
     #endregion
@@ -226,6 +248,7 @@ public class DsmSessionTests : IDisposable
         Assert.Equal(ApiErrorCode.Forbidden, result.ErrorCode);
         Assert.Null(_session.Get(ApplicationConstants.DsmSessionKey));
         Assert.Null(_session.Get(ApplicationConstants.DsmUsernameKey));
+        Assert.Null(_session.Get(ApplicationConstants.SessionBindingKey));
     }
 
     [Fact]
@@ -263,6 +286,47 @@ public class DsmSessionTests : IDisposable
         Assert.True(result.Success);
         Assert.Equal("test-sid", _session.Get(ApplicationConstants.DsmSessionKey));
         Assert.Equal("admin", _session.Get(ApplicationConstants.DsmUsernameKey));
+    }
+
+    [Fact]
+    public async Task ConnectAsync_Administrator_IssuesABindingCookieMatchingTheSession()
+    {
+        // Arrange
+        SetupHttpResponses(
+            "{\"success\":true,\"data\":{\"sid\":\"test-sid\"}}",
+            "{\"success\":true,\"data\":{\"users\":[{\"name\":\"admin\",\"uid\":1024}]}}",
+            "{\"success\":true,\"data\":{\"personal\":{}}}");
+
+        // Act
+        await CreateSession().ConnectAsync(new LoginCredentials("admin", "password", null));
+
+        // Assert — same attributes as the session cookie: script, plain HTTP and cross-site requests never see it.
+        var cookie = IssuedBindingCookie();
+
+        Assert.NotNull(cookie);
+        Assert.Equal(_session.Get(ApplicationConstants.SessionBindingKey), cookie.Value.ToString());
+        Assert.True(cookie.HttpOnly);
+        Assert.True(cookie.Secure);
+        Assert.Equal(Microsoft.Net.Http.Headers.SameSiteMode.Strict, cookie.SameSite);
+    }
+
+    [Fact]
+    public async Task ConnectAsync_ReplacesTheBinding_OnEveryLogin()
+    {
+        // Arrange — rotation is the defence: a binding surviving from an earlier login is known to whoever
+        // held the browser at the time.
+        _session.Set(ApplicationConstants.SessionBindingKey, "earlier-binding");
+
+        SetupHttpResponses(
+            "{\"success\":true,\"data\":{\"sid\":\"test-sid\"}}",
+            "{\"success\":true,\"data\":{\"users\":[{\"name\":\"admin\",\"uid\":1024}]}}",
+            "{\"success\":true,\"data\":{\"personal\":{}}}");
+
+        // Act
+        await CreateSession().ConnectAsync(new LoginCredentials("admin", "password", null));
+
+        // Assert
+        Assert.NotEqual("earlier-binding", _session.Get(ApplicationConstants.SessionBindingKey));
     }
 
     #endregion
@@ -344,6 +408,23 @@ public class DsmSessionTests : IDisposable
         Assert.Null(_session.Get(ApplicationConstants.DsmUsernameKey));
     }
 
+    [Fact]
+    public void Disconnect_ClearsTheBinding_AndExpiresItsCookie()
+    {
+        // Arrange
+        SeedAuthenticatedSession("admin");
+
+        // Act
+        CreateSession().Disconnect();
+
+        // Assert
+        var cookie = IssuedBindingCookie();
+
+        Assert.Null(_session.Get(ApplicationConstants.SessionBindingKey));
+        Assert.NotNull(cookie);
+        Assert.True(cookie.Expires < DateTimeOffset.UtcNow);
+    }
+
     #endregion
 
     #region ExecuteAsync
@@ -382,6 +463,44 @@ public class DsmSessionTests : IDisposable
     TestParameters CreateTestParameters()
     {
         return new TestParameters();
+    }
+
+    /// <summary>
+    /// Starts the next request on the same session, as a browser holding the same session cookie would.
+    /// </summary>
+    /// <param name="bindingCookie">Binding cookie the browser presents, or null for none.</param>
+    void StartRequest(string? bindingCookie)
+    {
+        _request = new DefaultHttpContext { Session = _session };
+
+        if (bindingCookie is not null)
+        {
+            _request.Request.Headers.Cookie = $"{ApplicationConstants.SessionBindingCookieName}={bindingCookie}";
+        }
+    }
+
+    /// <summary>
+    /// Leaves the session as a completed login does, with the current request presenting its binding.
+    /// </summary>
+    /// <param name="username">DSM user the session belongs to.</param>
+    void SeedAuthenticatedSession(string username)
+    {
+        _session.Set(ApplicationConstants.DsmSessionKey, "test-sid");
+        _session.Set(ApplicationConstants.DsmUsernameKey, username);
+        _session.Set(ApplicationConstants.SessionBindingKey, "test-binding");
+
+        StartRequest("test-binding");
+    }
+
+    /// <summary>
+    /// Reads the binding cookie the current response sets.
+    /// </summary>
+    /// <returns>The cookie, or null when the response sets none.</returns>
+    SetCookieHeaderValue? IssuedBindingCookie()
+    {
+        return _request.Response.Headers.SetCookie
+            .Select(value => SetCookieHeaderValue.Parse(value))
+            .SingleOrDefault(cookie => cookie.Name.Equals(ApplicationConstants.SessionBindingCookieName, StringComparison.Ordinal));
     }
 
     void SetupHttpResponse(string json, HttpStatusCode statusCode = HttpStatusCode.OK)

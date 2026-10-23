@@ -81,4 +81,11 @@ public static partial class DsmSessionLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2900012, Level = LogLevel.Debug, Message = "DSM session validated against SYNO.Core.User and cached for {TtlMinutes} minutes")]
     public static partial void SessionValidatedAgainstDsm(this ILogger<ILogDsmSession> logger, int ttlMinutes);
+
+    /// <summary>
+    /// Logs a session rejected because the request lacks the binding cookie issued at its login: a planted
+    /// session cookie, or a session opened before bindings existed.
+    /// </summary>
+    [LoggerMessage(EventId = 2900013, Level = LogLevel.Warning, Message = "Session rejected: the request does not present the binding issued at login")]
+    public static partial void SessionBindingRejected(this ILogger<ILogDsmSession> logger);
 }
