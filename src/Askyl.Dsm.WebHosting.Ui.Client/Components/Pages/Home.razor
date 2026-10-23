@@ -149,7 +149,7 @@
 
         // Show confirmation dialog
         var confirmationMessage = localizer[LK.Home.DeleteConfirmation, selectedName];
-        var result = await DialogService.ShowConfirmationTextAsync(confirmationMessage);
+        var result = await DialogService.ShowConfirmationTextAsync(confirmationMessage, localizer[LK.Common.OK], localizer[LK.Common.Cancel]);
 
         if (result.Cancelled)
         {

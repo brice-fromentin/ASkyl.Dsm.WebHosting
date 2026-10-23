@@ -27,7 +27,10 @@ public static class DialogServiceExtensions
 
         /// <summary>
         /// Shows a confirmation message box whose text is displayed as written, never interpreted as HTML.
+        /// The button labels are required: FluentUI's defaults are an English "Yes" and "No", which sat under a
+        /// localized text asking the user to click OK.
         /// </summary>
-        public Task<DialogResult> ShowConfirmationTextAsync(string message) => dialogService.ShowConfirmationAsync(WebUtility.HtmlEncode(message));
+        public Task<DialogResult> ShowConfirmationTextAsync(string message, string confirmButton, string cancelButton)
+            => dialogService.ShowConfirmationAsync(WebUtility.HtmlEncode(message), primaryButton: confirmButton, secondaryButton: cancelButton);
     }
 }

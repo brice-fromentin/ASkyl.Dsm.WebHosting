@@ -238,7 +238,7 @@
         }
 
         var confirmationMessage = localizer[LK.AspNetReleases.UninstallConfirmation, SelectedItem.Version];
-        var result = await DialogService.ShowConfirmationTextAsync(confirmationMessage);
+        var result = await DialogService.ShowConfirmationTextAsync(confirmationMessage, localizer[LK.Common.OK], localizer[LK.Common.Cancel]);
 
         if (result.Cancelled)
         {

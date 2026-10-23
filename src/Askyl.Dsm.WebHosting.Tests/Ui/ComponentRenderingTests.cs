@@ -162,6 +162,22 @@ public class ComponentRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Confirmation_ShowsTheLocalizedButtonsItsTextRefersTo()
+    {
+        // FluentUI's default buttons are an English "Yes" and "No", under a French text asking to click OK
+        var cut = _ctx.Render<FluentDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+        var confirm = _localizer[LK.Common.OK];
+        var cancel = _localizer[LK.Common.Cancel];
+
+        Task<DialogResult>? shown = null;
+        await cut.InvokeAsync(() => { shown = dialogService.ShowConfirmationTextAsync(SiteName, confirm, cancel); });
+
+        Assert.False(shown!.IsFaulted, shown.Exception?.ToString());
+        cut.WaitForAssertion(() => Assert.Equal([confirm, cancel], cut.FindAll("fluent-button").Select(button => button.TextContent.Trim()).Where(text => text.Length > 0)));
+    }
+
+    [Fact]
     public async Task WebsiteDialog_OpensWithoutLoadingAMaskScript()
     {
         var cut = _ctx.Render<FluentDialogProvider>();
