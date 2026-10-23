@@ -17,18 +17,19 @@
 }
 
 .auto-data-grid-area .selected-row {
-    background-color: var(--neutral-fill-secondary-rest);
-    border-color: var(--accent-fill-rest);
+    /* SPIKE: v4 tokens are undefined in v5; Fluent 2 equivalents chosen by name, visual result unverified */
+    background-color: var(--colorNeutralBackground1Selected);
+    border-color: var(--colorBrandStroke1);
 }
 
 .auto-data-grid-area .selected-row:hover {
-    background-color: var(--neutral-fill-secondary-hover);
+    background-color: var(--colorNeutralBackground1Hover);
 }
 
-.auto-data-grid-infos-area fluent-toolbar {
+.auto-data-grid-infos-area .toolbar {
     width: 100%;
 }
 
 .auto-data-grid-infos-area fluent-divider {
-    height: var(--type-ramp-base-line-height);
+    height: var(--lineHeightBase300);
 }

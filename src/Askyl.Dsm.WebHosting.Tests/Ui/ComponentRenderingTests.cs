@@ -6,6 +6,7 @@ using Askyl.Dsm.WebHosting.Globalization.Extensions;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Dialogs;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Pages;
+using Askyl.Dsm.WebHosting.Ui.Client.Extensions;
 using Bunit;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,11 @@ public class ComponentRenderingTests : IAsyncLifetime
     /// The JavaScript namespace whose number and pattern masks load IMask from unpkg.com.
     /// </summary>
     const string CdnBackedMaskInterop = "TextMasked";
+
+    /// <summary>
+    /// Where FluentMessageBox renders its text (FluentMessageBox.razor at v5.0.1).
+    /// </summary>
+    const string MessageBoxTextSelector = ".fluent-message-box .message";
 
     const string SiteName = "alpha-site";
 
@@ -94,9 +100,13 @@ public class ComponentRenderingTests : IAsyncLifetime
         var cut = _ctx.Render<FluentDialogProvider>();
         var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
 
-        await cut.InvokeAsync(() => dialogService.ShowErrorAsync(HtmlBodyJsonError));
+        // A dialog's task completes when it closes: a statement lambda keeps InvokeAsync from awaiting it
+        Task<DialogResult>? shown = null;
+        await cut.InvokeAsync(() => { shown = dialogService.ShowErrorTextAsync(HtmlBodyJsonError); });
 
-        cut.WaitForAssertion(() => Assert.Contains("is an invalid start of a value", cut.Markup, StringComparison.Ordinal));
+        // Text content, not markup: an encoding rendered as text would show "&lt;" instead of the bracket
+        Assert.False(shown!.IsFaulted, shown.Exception?.ToString());
+        cut.WaitForAssertion(() => Assert.Contains(HtmlBodyJsonError, cut.Find(MessageBoxTextSelector).TextContent, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -105,8 +115,10 @@ public class ComponentRenderingTests : IAsyncLifetime
         var cut = _ctx.Render<FluentDialogProvider>();
         var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
 
-        await cut.InvokeAsync(() => dialogService.ShowDialogAsync<WebSiteConfigurationDialog>(new WebSiteInstance(), []));
+        Task<DialogResult>? shown = null;
+        await cut.InvokeAsync(() => { shown = dialogService.ShowDialogAsync<WebSiteConfigurationDialog>(options => options.Parameters[nameof(WebSiteConfigurationDialog.Content)] = new WebSiteInstance()); });
 
+        Assert.False(shown!.IsFaulted, shown.Exception?.ToString());
         cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.WebsiteConfig.InternalPortLabel], cut.Markup, StringComparison.Ordinal));
         Assert.DoesNotContain(_ctx.JSInterop.Invocations, invocation => invocation.Identifier.Contains(CdnBackedMaskInterop, StringComparison.Ordinal));
     }

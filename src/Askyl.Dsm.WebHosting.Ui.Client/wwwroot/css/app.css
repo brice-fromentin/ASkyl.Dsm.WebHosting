@@ -37,11 +37,13 @@ body {
     flex-direction: column;
 }
 
-fluent-toolbar fluent-divider {
-    height: var(--type-ramp-base-line-height);
+.toolbar fluent-divider {
+    /* SPIKE: v4 --type-ramp-base-line-height has no v5 definition; --lineHeightBase300 is the Fluent 2 body line height */
+    height: var(--lineHeightBase300);
 }
 
-fluent-tab-panel {
+/* v5 renders tab panels as plain divs with role="tabpanel" instead of a fluent-tab-panel element */
+[role="tabpanel"] {
     height: 100%;
     overflow-y: auto;
 }

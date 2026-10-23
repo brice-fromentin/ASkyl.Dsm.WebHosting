@@ -3,7 +3,6 @@
 @using Askyl.Dsm.WebHosting.Constants.Globalization
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization.Extensions
-@using Microsoft.FluentUI.AspNetCore.Components
 
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IGlobalizationSettings GlobalizationSettings
@@ -30,11 +29,10 @@
 </head>
 
 <body>
-    <FluentDesignTheme Mode="@DesignThemeModes.System" />
-
-    <FluentLayout Class="full-size">
+    @* v5 has no theme component: its JS initializer applies the stored theme and otherwise follows the system *@
+    <div class="full-size">
         <Routes @rendermode="@wasm" />
-    </FluentLayout>
+    </div>
     
     <script src="@Assets["_framework/blazor.web.js"]" autostart="false"></script>
     <script>

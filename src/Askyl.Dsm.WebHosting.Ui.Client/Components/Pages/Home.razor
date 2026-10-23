@@ -14,7 +14,7 @@
 @inject IAuthenticationService AuthService
 @inject IWebSiteHostingService WebsiteHostingService
 @inject NavigationManager navigation
-@inject IToastService ToastService
+@inject INotificationService ToastService
 @inject ILocalizer localizer
 @inject ICultureManager CultureManager
 
@@ -23,41 +23,41 @@
 <LoadingOverlay WorkingState="@this" />
 
 
-    <FluentToolbar Class="full-width">
-    <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="Appearance.Neutral" OnClick="AddWebSite">
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Class="toolbar full-width">
+    <FluentButton IconStart="@(new IconsRegular20.Add())" Appearance="ButtonAppearance.Default" OnClick="AddWebSite">
         @localizer[LK.Home.AddButton]
     </FluentButton>
-    <FluentButton IconStart="@(new IconsRegular20.Edit())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="EditWebSite">
+    <FluentButton IconStart="@(new IconsRegular20.Edit())" Appearance="ButtonAppearance.Default" Disabled="@(SelectedInstance is null)" OnClick="EditWebSite">
         @localizer[LK.Home.EditButton]
     </FluentButton>
-    <FluentButton IconStart="@(new IconsRegular20.Delete())" Appearance="Appearance.Neutral" Disabled="@(SelectedInstance is null)" OnClick="DeleteWebSite">
+    <FluentButton IconStart="@(new IconsRegular20.Delete())" Appearance="ButtonAppearance.Default" Disabled="@(SelectedInstance is null)" OnClick="DeleteWebSite">
         @localizer[LK.Common.Delete]
     </FluentButton>
-    <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
-    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance" aria-label="@localizer[LK.Home.StartButton]">
+    <FluentDivider Vertical="true" />
+    <FluentButton Appearance="ButtonAppearance.Default" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance" aria-label="@localizer[LK.Home.StartButton]">
         <FluentIcon Value="@(new IconsRegular20.Play())" Color="Color.Success" />
     </FluentButton>
-    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="StopSelectedInstance" aria-label="@localizer[LK.Home.StopButton]">
+    <FluentButton Appearance="ButtonAppearance.Default" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="StopSelectedInstance" aria-label="@localizer[LK.Home.StopButton]">
         <FluentIcon Value="@(new IconsRegular20.Stop())" Color="Color.Error" />
     </FluentButton>
     <FluentSpacer />
-    <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="Appearance.Outline">
+    <FluentButton OnClick="ShowDotnetVersionsDialog" Appearance="ButtonAppearance.Outline">
         @localizer[LK.Home.DotnetVersionButton]
     </FluentButton>
-    <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="Appearance.Outline">
+    <FluentButton OnClick="ShowAspNetReleasesDialog" Appearance="ButtonAppearance.Outline">
         @localizer[LK.Home.AspNetOnlineButton]
     </FluentButton>
-    <FluentButton OnClick="ShowLicensesDialog" Appearance="Appearance.Outline">
+    <FluentButton OnClick="ShowLicensesDialog" Appearance="ButtonAppearance.Outline">
         @localizer[LK.Home.LicensesButton]
     </FluentButton>
-    <FluentButton OnClick="DownloadLogs" Appearance="Appearance.Outline">
+    <FluentButton OnClick="DownloadLogs" Appearance="ButtonAppearance.Outline">
         @localizer[LK.Home.DownloadLogsButton]
     </FluentButton>
-    <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
-    <FluentButton OnClick="Logout" Appearance="Appearance.Outline" IconStart="@(new IconsRegular20.SignOut())">
+    <FluentDivider Vertical="true" />
+    <FluentButton OnClick="Logout" Appearance="ButtonAppearance.Outline" IconStart="@(new IconsRegular20.SignOut())">
         @localizer[LK.Home.LogoutButton]
     </FluentButton>
-</FluentToolbar>
+</FluentStack>
 
 <AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="LoadInstancesAsync" OnRowClick="HandleInstanceSelected" OnRowDoubleClick="HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr 1fr">
     <ChildContent>
@@ -99,7 +99,7 @@
             if (!result.Success || result.Value is null)
             {
                 Instances = [];
-                ShowSafeErrorToast($"{localizer[LK.Error.FailedToLoadWebsites]}: {result.Message}");
+                await ShowSafeErrorToast($"{localizer[LK.Error.FailedToLoadWebsites]}: {result.Message}");
                 return;
             }
 
@@ -108,7 +108,7 @@
         catch (Exception ex)
         {
             Instances = [];
-            ShowSafeErrorToast($"{localizer[LK.Error.FailedToLoadWebsites]}: {ex.Message}");
+            await ShowSafeErrorToast($"{localizer[LK.Error.FailedToLoadWebsites]}: {ex.Message}");
         }
     }
 
@@ -149,10 +149,9 @@
 
         // Show confirmation dialog
         var confirmationMessage = localizer[LK.Home.DeleteConfirmation, selectedName];
-        var confirmation = await DialogService.ShowConfirmationAsync(confirmationMessage);
-        var result = await confirmation.Result;
+        var result = await DialogService.ShowConfirmationTextAsync(confirmationMessage);
 
-        if (result == null || result.Cancelled)
+        if (result.Cancelled)
         {
             return;
         }
@@ -165,7 +164,7 @@
 
             if (!deleteResult.Success)
             {
-                ShowSafeErrorToast(deleteResult.Message ?? localizer[LK.Error.FailedToDeleteWebsite]);
+                await ShowSafeErrorToast(deleteResult.Message ?? localizer[LK.Error.FailedToDeleteWebsite]);
                 return;
             }
 
@@ -174,7 +173,7 @@
         }
         catch (Exception ex)
         {
-            ShowSafeErrorToast(localizer[LK.Home.ErrorDeleting, ex.Message]);
+            await ShowSafeErrorToast(localizer[LK.Home.ErrorDeleting, ex.Message]);
         }
     }
 
@@ -185,9 +184,9 @@
             return;
         }
 
-        var parameters = CreateDialogParameters(DialogConstants.WidthMedium);
-        var dialog = await DialogService.ShowDialogAsync<WebSiteConfigurationDialog>(instance, parameters);
-        var result = await dialog.Result;
+        var options = CreateDialogOptions(DialogConstants.WidthMedium);
+        options.Parameters[nameof(WebSiteConfigurationDialog.Content)] = instance;
+        var result = await DialogService.ShowDialogAsync<WebSiteConfigurationDialog>(options);
 
         if (result.Cancelled)
         {
@@ -215,7 +214,7 @@
 
             if (!result.Success)
             {
-                ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToStartWebsite]);
+                await ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToStartWebsite]);
                 return;
             }
 
@@ -223,7 +222,7 @@
         }
         catch (Exception ex)
         {
-            ShowSafeErrorToast(localizer[LK.Home.ErrorStarting, ex.Message]);
+            await ShowSafeErrorToast(localizer[LK.Home.ErrorStarting, ex.Message]);
         }
     }
 
@@ -245,7 +244,7 @@
 
             if (!result.Success)
             {
-                ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToStopWebsite]);
+                await ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToStopWebsite]);
                 return;
             }
 
@@ -253,7 +252,7 @@
         }
         catch (Exception ex)
         {
-            ShowSafeErrorToast(localizer[LK.Home.ErrorStopping, ex.Message]);
+            await ShowSafeErrorToast(localizer[LK.Home.ErrorStopping, ex.Message]);
         }
     }
 
@@ -278,7 +277,7 @@
 
             if (!result.Success)
             {
-                ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToLogout]);
+                await ShowSafeErrorToast(result.Message ?? localizer[LK.Error.FailedToLogout]);
                 return;
             }
 
@@ -287,7 +286,7 @@
         }
         catch (Exception ex)
         {
-            ShowSafeErrorToast(localizer[LK.Home.ErrorLoggingOut, ex.Message]);
+            await ShowSafeErrorToast(localizer[LK.Home.ErrorLoggingOut, ex.Message]);
         }
     }
 
@@ -297,36 +296,26 @@
     /// Displays an error toast. Blazor automatically HTML-encodes rendered text,
     /// so no manual encoding is needed.
     /// </summary>
-    private void ShowSafeErrorToast(string message)
+    private async Task ShowSafeErrorToast(string message)
     {
-        ToastService.ShowError(message);
+        // v5 toasts take a mandatory title; the message alone was all v4 showed
+        await ToastService.ShowErrorToastAsync(message);
     }
 
     #endregion
 
     #region Dialog Helpers
 
-    private async Task ShowDialogAsync<TComponent>(string width) where TComponent : ComponentBase, IDialogContentComponent
-    {
-        var parameters = CreateDialogParameters(width);
-        var dialog = await DialogService.ShowDialogAsync<TComponent>(parameters);
-        _ = await dialog.Result;
-    }
+    private async Task ShowDialogAsync<TComponent>(string width) where TComponent : ComponentBase
+        => await DialogService.ShowDialogAsync<TComponent>(CreateDialogOptions(width));
 
-    private async Task ShowDialogAsync<TComponent>(TComponent component, string width) where TComponent : ComponentBase, IDialogContentComponent
-    {
-        var parameters = CreateDialogParameters(width);
-        var dialog = await DialogService.ShowDialogAsync<TComponent>(component, parameters);
-        _ = await dialog.Result;
-    }
-
-    private DialogParameters CreateDialogParameters(string width) => new()
+    // Modal = true renders type="alert", which ignores overlay clicks (v4 PreventDismissOnOverlayClick).
+    // v4 TrapFocus = false and PreventScroll = true have no v5 option: the native dialog always traps focus.
+    private static DialogOptions CreateDialogOptions(string width) => new()
     {
         Width = width,
         Modal = true,
-        TrapFocus = false,
-        PreventScroll = true,
-        PreventDismissOnOverlayClick = true
+        Header = { CloseAction = { Visible = true } }
     };
 
     #endregion

@@ -7,7 +7,6 @@
 @using Microsoft.JSInterop
 
 @inherits WorkingStateBase
-@implements IDialogContentComponent
 
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @inject IDialogService DialogService
@@ -19,74 +18,71 @@
 
 <LoadingOverlay WorkingState="@this" />
 
-
-<FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">@localizer[LK.FileSelection.DialogTitle]</FluentLabel>
-</FluentDialogHeader>
-
 <FluentDialogBody>
-    <FluentSplitter Orientation="Orientation.Horizontal" Panel1Size="30%" Panel1MinSize="20%" Class="file-dialog-splitter">
-        <Panel1>
-            <div class="full-size file-dialog-tree">
-                <FluentTreeView Items="@TreeItems" LazyLoadItems="true" @bind-SelectedItem="@SelectedTreeItem" OnSelectedChange="OnTreeItemSelectionChanged" />
-            </div>
-        </Panel1>
-        <Panel2>
-            <AutoDataGrid TItem="FsEntry" Items="@_files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick" OnRowDoubleClick="@OnFileDoubleClick" OnReload="@ReloadCurrentDirectory">
-                <ChildContent>
-                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Home.GridColumnName]" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Name)" InitialSortDirection="SortDirection.Ascending">
-                        <ChildContent Context="file">
-                            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                                <FluentIcon Value="@GetFileIcon(file)" />
-                                <FluentLabel Class="file-name-label">@file.Name</FluentLabel>
-                            </FluentStack>
-                        </ChildContent>
-                    </TemplateColumn>
-                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Common.Size]" Align="Align.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
-                        @(GetFileSize(context, localizer))
-                    </TemplateColumn>
-                    <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Common.Type]" Align="Align.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending">
-                        @(GetFileType(context, localizer))
-                    </TemplateColumn>
-                    <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="@localizer[LK.Common.Modified]" Property="@(f => f.Modified)" Format="g" Align="Align.Center" Sortable="true" />
-                </ChildContent>
+    <TitleTemplate>
+        <FluentText As="TextTag.H2" Size="TextSize.Size600" Weight="TextWeight.Semibold">@localizer[LK.FileSelection.DialogTitle]</FluentText>
+    </TitleTemplate>
+    <ChildContent>
+        <FluentMultiSplitter Orientation="Orientation.Horizontal" Class="file-dialog-splitter">
+            <FluentMultiSplitterPane Size="30%" Min="20%" Max="50%">
+                <div class="full-size file-dialog-tree">
+                    <FluentTreeView Items="@TreeItems" LazyLoadItems="true" @bind-SelectedItem="@SelectedTreeItem" OnSelectedChanged="OnTreeItemSelectionChanged" />
+                </div>
+            </FluentMultiSplitterPane>
+            <FluentMultiSplitterPane>
+                <AutoDataGrid TItem="FsEntry" Items="@_files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick" OnRowDoubleClick="@OnFileDoubleClick" OnReload="@ReloadCurrentDirectory">
+                    <ChildContent>
+                        <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Home.GridColumnName]" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Name)" InitialSortDirection="DataGridSortDirection.Ascending">
+                            <ChildContent Context="file">
+                                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                                    <FluentIcon Value="@GetFileIcon(file)" />
+                                    <FluentLabel Class="file-name-label">@file.Name</FluentLabel>
+                                </FluentStack>
+                            </ChildContent>
+                        </TemplateColumn>
+                        <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Common.Size]" Align="DataGridCellAlignment.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
+                            @(GetFileSize(context, localizer))
+                        </TemplateColumn>
+                        <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Common.Type]" Align="DataGridCellAlignment.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="DataGridSortDirection.Ascending">
+                            @(GetFileType(context, localizer))
+                        </TemplateColumn>
+                        <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="@localizer[LK.Common.Modified]" Property="@(f => f.Modified)" Format="g" Align="DataGridCellAlignment.Center" Sortable="true" />
+                    </ChildContent>
 
-                <EmptyContent>
-                    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
-                        @if (!String.IsNullOrEmpty(_selectedPath))
-                        {
-                            <FluentLabel>@localizer[LK.FileSelection.NoFilesFound]</FluentLabel>
-                        }
-                        else
-                        {
-                            <FluentLabel>@localizer[LK.FileSelection.SelectFolder]</FluentLabel>
-                        }
-                    </FluentStack>
-                </EmptyContent>
-            </AutoDataGrid>
-        </Panel2>
-    </FluentSplitter>
+                    <EmptyContent>
+                        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
+                            @if (!String.IsNullOrEmpty(_selectedPath))
+                            {
+                                <FluentLabel>@localizer[LK.FileSelection.NoFilesFound]</FluentLabel>
+                            }
+                            else
+                            {
+                                <FluentLabel>@localizer[LK.FileSelection.SelectFolder]</FluentLabel>
+                            }
+                        </FluentStack>
+                    </EmptyContent>
+                </AutoDataGrid>
+            </FluentMultiSplitterPane>
+        </FluentMultiSplitter>
+    </ChildContent>
+    <ActionTemplate>
+        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
+            <FluentButton OnClick="CancelAsync" Appearance="ButtonAppearance.Default">
+                @localizer[LK.Common.Cancel]
+            </FluentButton>
+            <FluentButton OnClick="ConfirmAsync" Appearance="ButtonAppearance.Primary" Disabled="@(_selectedFile == null)">
+                @localizer[LK.FileSelection.SelectFile]
+            </FluentButton>
+        </FluentStack>
+    </ActionTemplate>
 </FluentDialogBody>
-
-<FluentDialogFooter>
-    <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.End">
-        <FluentButton OnClick="CancelAsync" Appearance="Appearance.Neutral">
-            @localizer[LK.Common.Cancel]
-        </FluentButton>
-        <FluentButton OnClick="ConfirmAsync" Appearance="Appearance.Accent" Disabled="@(_selectedFile == null)">
-            @localizer[LK.FileSelection.SelectFile]
-        </FluentButton>
-    </FluentStack>
-</FluentDialogFooter>
-
-
 
 @code
 {
     #region Parameters
 
     [CascadingParameter]
-    public FluentDialog Dialog { get; set; } = default!;
+    public IDialogInstance Dialog { get; set; } = default!;
 
     [Parameter]
     public EventCallback<FsEntry> OnFileSelected { get; set; }
@@ -127,7 +123,7 @@
             }
 
             var sharedFolders = sharedFoldersResult.Value ?? [];
-            TreeItems = sharedFolders.ToTreeViewItems(LoadChildDirectoriesAsync);
+            TreeItems = sharedFolders.ToTreeViewItems(LoadChildDirectoriesAsync, localizer[LK.Loading.DirectoryContents]);
         }
         catch (Exception ex)
         {
@@ -151,7 +147,8 @@
 
     private async Task OnTreeItemSelectionChanged(FluentTreeItem selectedItem)
     {
-        if (!selectedItem.Selected || selectedItem.Id is not string path)
+        // v5 raises OnSelectedChanged for the newly selected item only, so there is no deselection to filter out
+        if (selectedItem.Id is not string path)
         {
             return;
         }
@@ -236,7 +233,7 @@
 
     #region Error Handling
 
-    private async Task ShowErrorAsync(string error) => await DialogService.ShowErrorAsync(error);
+    private async Task ShowErrorAsync(string error) => await DialogService.ShowErrorTextAsync(error);
 
     private async Task HandleDirectoryLoadErrorAsync(string errorMessage)
     {

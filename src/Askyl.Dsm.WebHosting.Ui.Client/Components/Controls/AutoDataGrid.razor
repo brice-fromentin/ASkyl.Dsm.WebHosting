@@ -6,7 +6,7 @@
 
 <div class="auto-data-grid-content">
     <div class="auto-data-grid-area">
-        <FluentDataGrid TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="GenerateHeaderOption.Sticky" RowClass="@GetRowClass" OnRowClick="@HandleRowClick">
+        <FluentDataGrid TGridItem="TItem" Items="@Items" DisplayMode="DataGridDisplayMode.Grid" ShowHover="true" GridTemplateColumns="@GridTemplateColumns" GenerateHeader="DataGridGeneratedHeaderType.Sticky" RowClass="@GetRowClass" OnRowClick="@HandleRowClick">
             <ChildContent>
                 @ChildContent
             </ChildContent>
@@ -19,7 +19,7 @@
                 else
                 {
                     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
-                        <FluentProgressRing />
+                        <FluentSpinner />
                         <FluentLabel>@localizer[LK.AutoDataGrid.Loading]</FluentLabel>
                     </FluentStack>
                 }
@@ -41,17 +41,17 @@
         </FluentDataGrid>
     </div>
     <div class="auto-data-grid-infos-area">
-        <FluentToolbar>
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Class="toolbar">
             <FluentSpacer />
             <FluentLabel>@localizer[LK.AutoDataGrid.ItemsCount, Items?.Count() ?? 0]</FluentLabel>
             @if (OnReload.HasDelegate)
             {
-                <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
-                <FluentButton Appearance="Appearance.Stealth" OnClick="@HandleReloadClick" Disabled="@(!OnReload.HasDelegate)" aria-label="@localizer[LK.Common.Refresh]">
+                <FluentDivider Vertical="true" />
+                <FluentButton Appearance="ButtonAppearance.Default" OnClick="@HandleReloadClick" Disabled="@(!OnReload.HasDelegate)" aria-label="@localizer[LK.Common.Refresh]">
                     <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
                 </FluentButton>
             }
-        </FluentToolbar>
+        </FluentStack>
     </div>
 </div>
 

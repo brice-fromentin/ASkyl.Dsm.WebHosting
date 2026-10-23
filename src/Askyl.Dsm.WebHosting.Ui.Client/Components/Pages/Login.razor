@@ -9,7 +9,7 @@
 @using Askyl.Dsm.WebHosting.Globalization
 
 @inject IAuthenticationService authService
-@inject IToastService ToastService
+@inject INotificationService ToastService
 @inject NavigationManager navigation
 @inject ILocalizer localizer
 @inject ICultureManager cultureManager
@@ -28,10 +28,10 @@
                 <h2>@localizer[LK.Login.DialogTitle]</h2>
                 <RealTimeTextField @bind-Value="Model.Login" Label="@localizer[LK.Login.LoginLabel]" Class="full-size" Autofocus="true" Name="username" />
                 <FluentValidationMessage For="(() => Model.Login)" />
-                <RealTimeTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Label="@localizer[LK.Login.PasswordLabel]" Class="full-size" Name="password" />
+                <RealTimeTextField @bind-Value="Model.Password" TextInputType="TextInputType.Password" Label="@localizer[LK.Login.PasswordLabel]" Class="full-size" Name="password" />
                 <FluentValidationMessage For="(() => Model.Password)" />
                 <RealTimeTextField @bind-Value="Model.OtpCode" Label="@localizer[LK.Login.OTPLabel]" Class="full-size" Name="otp" />
-                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">@localizer[LK.Common.OK]</FluentButton>
+                <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary">@localizer[LK.Common.OK]</FluentButton>
             </FluentStack>
         </EditForm>
     </FluentCard>
@@ -65,14 +65,14 @@
         {
             // failed - either HTTP call failed or credentials invalid
             var errorMessage = result.Message?.Trim() ?? localizer[LK.Error.AuthenticationFailed];
-            ToastService.ShowError(errorMessage);
+            await ToastService.ShowErrorToastAsync(errorMessage);
             return;
         }
 
         // Initialize culture from login response (user preference or system fallback)
         cultureManager.InitializeFromLogin(result.Culture, result.DateFormat, result.TimeFormat);
 
-        ToastService.ShowSuccess(localizer[LK.Success.AuthenticationSuccessful]);
+        await ToastService.ShowSuccessToastAsync(localizer[LK.Success.AuthenticationSuccessful]);
         navigation.NavigateTo(ApplicationConstants.HomePagePath);
     }
 }

@@ -13,24 +13,25 @@
     <link rel="stylesheet" href="@Assets["css/components/controls/auto-grid.css"]" />
 </HeadContent>
 
-<FluentMainLayout class="full-size">
-    <Header>
+@* SPIKE: v4 FluentMainLayout/FluentHeader painted the header bar in the accent colour; FluentLayoutItem does not, styling unverified *@
+<FluentLayout Class="full-size">
+    <FluentLayoutItem Area="LayoutArea.Header">
         @localizer[LK.Common.ApplicationTitle] @ApplicationVersion.Number
         @if (ApplicationVersion.Commit.Length > 0)
         {
             <sup><a class="build-commit" href="@ApplicationVersion.CommitUrl" target="_blank" rel="noopener noreferrer" title="@ApplicationVersion.Commit">@ApplicationVersion.ShortCommit</a></sup>
         }
-    </Header>
+    </FluentLayoutItem>
 
-    <Body>
+    <FluentLayoutItem Area="LayoutArea.Content">
         <div class="flex-column-container">
             @Body
         </div>
-    </Body>
-</FluentMainLayout>
+    </FluentLayoutItem>
+</FluentLayout>
 
 <div id="blazor-error-ui" data-nosnippet>
-    <FluentHeader>
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
         @localizer[LK.Common.UnhandledError]
         <FluentSpacer />
         <a href="." class="reload">
@@ -39,11 +40,10 @@
         <span class="dismiss">
             <FluentIcon Value="@(new Icons.Regular.Size32.DismissCircle().WithColor(Color.Error))" />
         </span>
-    </FluentHeader>
+    </FluentStack>
 </div>
 
+@* The message bar and menu providers are gone: nothing here raises a message bar or a menu *@
 <FluentToastProvider />
 <FluentDialogProvider />
 <FluentTooltipProvider />
-<FluentMessageBarProvider />
-<FluentMenuProvider />

@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Askyl.Dsm.WebHosting.Ui.Client.Extensions;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Blazilla;
 using Microsoft.AspNetCore.Components;
@@ -72,6 +73,9 @@ public partial class RazorParameterAuditTests
     [GeneratedRegex(@"<([A-Z][A-Za-z0-9]*)")]
     private static partial Regex TagStart();
 
+    [GeneratedRegex(@"\.Show(Error|Info|Confirmation)Async\(")]
+    private static partial Regex DirectMessageBoxCall();
+
     static string SourceRoot()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
@@ -85,16 +89,21 @@ public partial class RazorParameterAuditTests
         throw new DirectoryNotFoundException($"{SolutionFileName} not found above {AppContext.BaseDirectory}");
     }
 
-    static IReadOnlyList<AuditedTag> Tags()
+    static IEnumerable<string> SourceFiles(string pattern)
     {
         var root = SourceRoot();
         var excluded = new[] { $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}" };
 
-        var files = AuditedProjects
-            .SelectMany(project => Directory.EnumerateFiles(Path.Combine(root, project), "*.razor", SearchOption.AllDirectories))
+        return AuditedProjects
+            .SelectMany(project => Directory.EnumerateFiles(Path.Combine(root, project), pattern, SearchOption.AllDirectories))
             .Where(path => !excluded.Any(segment => path.Contains(segment, StringComparison.Ordinal)));
+    }
 
-        return [.. files.SelectMany(path => ParseTags(Path.GetRelativePath(root, path), File.ReadAllText(path)))];
+    static IReadOnlyList<AuditedTag> Tags()
+    {
+        var root = SourceRoot();
+
+        return [.. SourceFiles("*.razor").SelectMany(path => ParseTags(Path.GetRelativePath(root, path), File.ReadAllText(path)))];
     }
 
     static IEnumerable<AuditedTag> ParseTags(string file, string source)
@@ -247,6 +256,22 @@ public partial class RazorParameterAuditTests
             .Select(tag => $"{tag.Location} <{tag.Name}>")];
 
         AssertNone(offending);
+    }
+
+    [Fact]
+    public void MessageBoxes_AreOnlyShownThroughThePlainTextHelpers()
+    {
+        // FluentUI 5 throws on any angle bracket in a message box's text; the helpers encode it first
+        var helpers = $"{nameof(DialogServiceExtensions)}.cs";
+        var root = SourceRoot();
+
+        string[] direct = [.. SourceFiles("*.razor").Concat(SourceFiles("*.cs"))
+            .Where(path => !String.Equals(Path.GetFileName(path), helpers, StringComparison.Ordinal))
+            .SelectMany(path => File.ReadLines(path).Select((line, index) => (Path: path, Line: line, Number: index + 1)))
+            .Where(entry => DirectMessageBoxCall().IsMatch(entry.Line))
+            .Select(entry => $"{Path.GetRelativePath(root, entry.Path)}:{entry.Number}")];
+
+        AssertNone(direct);
     }
 
     /// <summary>
