@@ -45,7 +45,7 @@ public class FrameworkManagementService(
             await dotnetVersionService.RefreshCacheAsync(cancellationToken);
 
             logger.FrameworkInstalled(version);
-            return InstallationResult.CreateSuccess(localizer[LK.Success.InstallationCompleted]);
+            return InstallationResult.CreateSuccess(version, localizer[LK.Success.InstallationCompleted]);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -86,7 +86,7 @@ public class FrameworkManagementService(
             await dotnetVersionService.RefreshCacheAsync(cancellationToken);
 
             logger.FrameworkUninstalled(version);
-            return InstallationResult.CreateSuccess(localizer[LK.Success.UninstallationCompleted]);
+            return InstallationResult.CreateSuccess(version, localizer[LK.Success.UninstallationCompleted]);
         }
         catch (LastReleaseUninstallException ex)
         {
