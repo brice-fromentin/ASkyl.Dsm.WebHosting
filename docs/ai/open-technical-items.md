@@ -214,7 +214,8 @@ source (`cmp`), and the last locally built SPK lists `admin-ui/websites.json` in
 
 A fresh install from such a package starts with that site list; an upgrade restores the NAS's own copy through
 `preupgrade`/`postupgrade`, so the developer's own NAS is unaffected. CI releases build from a clean checkout and do
-not carry it. Excluding it from publish in the `.csproj`, or deleting it in `build-spk.sh`, closes it.
+not carry it, but none has ever been published (see *No release has ever been published*), so every SPK
+installed so far was built locally. Excluding it from publish in the `.csproj`, or deleting it in `build-spk.sh`, closes it.
 
 ### Cosmetic: packaging leaves precompressed development settings behind
 
@@ -273,7 +274,9 @@ The mechanics behind that, each checked against the script:
   `Application started`, which `Microsoft.Hosting.Lifetime` writes at Information and `Microsoft: Warning`
   filters out. The only such text left is a hosted site's own stdout relayed as 2500002, so the section
   brackets site boots. The application's boot runs from 2800006 `ResolvingConfigPath` to 1800010
-  `HostingServiceStarted`.
+  `HostingServiceStarted`. Since 0.7.0 (#76) it opens one line earlier, with 3000001 `ApplicationStarting`.
+  That line also names the build (`x.y.z+<sha>`), which is the bracket section 4 needs and the way to tell two
+  archives apart. Its position comes from reading `Program.cs`: no real archive has shown it yet.
 - **Section 5 times DSM calls, not requests.** Production logs no request duration. The `Nms` pattern
   catches 2000004 `ApiRequest`, the 1600019 timeout setting and relayed site output, and `cut -c1-150` cuts
   each line before the API name and the duration. The comment saying PR #39 "looked exactly like this" is
@@ -288,7 +291,8 @@ The mechanics behind that, each checked against the script:
 - **The no-argument mode orders by modification time**, which a plain `cp` resets, and ignores the timestamp
   the archive name carries; it skips directories although its comment says "whatever their form".
 
-Until those are fixed, a real review needs by hand: the 2800006 → 1800010 block of each archive; each
+Until those are fixed, a real review needs by hand: the 2800006 → 1800010 block of each archive (3000001 →
+1800010 from 0.7.0, its first line naming the build); each
 section-3 id opened with its exception and the lines before it; WRN/ERR lines without an id; 2500002 lines
 carrying `fail:` or `warn:`; the arguments of log lines checked against reality; and `package-logs/`.
 
@@ -308,6 +312,21 @@ no execute bit, so it runs as `sh ./src/scripts/update-nuget.sh`.
 `DialogParameters` and `TextFieldType`, makes `FluentSelect` require `TValue` and changes `FluentTab`: the
 client failed with 16 errors. PR #72 kept 4.14.5, the last 4.x. Moving to 5 is a migration of its own, to
 be planned against the upstream migration guide, not a version bump.
+
+### No release has ever been published
+
+The `release` job in `.github/workflows/build.yml` runs on a `v*` tag only, building the SPK with
+`build-spk.sh` and attaching it to a GitHub release. On 2026-10-23, `git tag` and `gh release list` both
+returned nothing. The job has therefore never produced a release, and the clean-checkout path it describes is
+untested end to end. Versions are now bumped in every pull request that ships (AGENTS.md §12), and each build
+names its commit (#76). That makes builds traceable, but not published. Tagging is the maintainer's call,
+when a version is to be released.
+
+### Low: `update-version.sh` accepts a version that does not go up
+
+`src/scripts/update-version.sh` checks the `x.y.z` format only. A typo that repeats or lowers the current
+version passes silently. Under the bump-per-pull-request rule, that is a pull request that looks bumped but
+is not. Comparing against the current `<Version>`, which the script already prints, would close it.
 
 ## Test coverage
 
