@@ -184,4 +184,23 @@ public static class ApplicationConstants
     public const string RequestIdItemKey = "RequestId";
 
     #endregion
+
+    #region Build Version
+
+    /// <summary>
+    /// Separates the version number from the build metadata — the commit — in an informational version.
+    /// </summary>
+    public const char BuildMetadataSeparator = '+';
+
+    /// <summary>
+    /// Length of the abbreviated commit shown in the UI, as git abbreviates it by default.
+    /// </summary>
+    public const int ShortCommitLength = 7;
+
+    /// <summary>
+    /// Address of a commit in the public repository; the full commit hash is the argument.
+    /// </summary>
+    public const string RepositoryCommitUrlFormat = "https://github.com/brice-fromentin/ASkyl.Dsm.WebHosting/commit/{0}";
+
+    #endregion
 }
