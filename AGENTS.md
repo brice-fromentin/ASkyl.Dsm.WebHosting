@@ -64,7 +64,7 @@ gitignored precisely so it stays out of the repository.
 
 - ❌ Never quote a hostname, IP, port, credential, share or deployment path read from local state
 - ❌ Never paste a raw log excerpt without checking every line of it for the same
-- ✅ Name the *finding*: "the mock has drifted from the template and points at a real host" is actionable
+- ✅ Name the *finding*: "a locally built SPK ships the local `websites.json`" is actionable
 - ✅ Values from versioned templates and fixtures are fine — already public by definition
 
 This rule exists because it was broken, and editing a description afterwards does not unpublish it: GitHub
@@ -502,11 +502,15 @@ PR #70 merged green and `main` went red in `vulnerable` (run #115) on advisories
 
 ## 13. APPLICATION LAUNCH RESTRICTIONS
 
-The rule is **never run against production**, not never run.
+**An assistant never launches the application without the maintainer's explicit approval for that run.**
+The local mock names the real NAS by design, so every local run reaches production; approval for one run
+does not extend to the next.
 
-- NEVER point a running instance at the production NAS: no real DSM host, no real credentials
-- Local runs are allowed only against the development mock (`src/Askyl.Dsm.WebHosting.Ui/dev-mock/`),
+- Local runs read DSM settings from the development mock (`src/Askyl.Dsm.WebHosting.Ui/dev-mock/`),
   which supplies `synoinfo.conf` through the configurable `DsmSettings:ConfigPath`
+- The tests never read it: `ApplicationHostFactory` runs the host as `Testing` and points `ConfigPath` at
+  a synthetic file, so the mandatory sequence needs no approval
+- An assistant never handles DSM credentials — logging in is the maintainer's
 - Always stop what you started — never leave a listener running between tasks
 - Everything else still goes through the standardized build/clean commands
 
@@ -536,8 +540,9 @@ under both the project directory and the output directory. **Do not re-add that 
 `.vscode/launch.json`**: an environment variable there overrides the JSON silently, and a drifted one is why
 a whole session concluded the application could not start.
 
-The mock is gitignored. On a fresh clone, create it and **keep the template's values** — a mock naming the
-real NAS turns every local run into a §13 violation:
+The mock is gitignored **so that it can hold the real NAS settings**; the versioned template keeps
+placeholders because it is published. Differing from the template is its design, not drift. On a fresh
+clone, create it from the template, then fill in the NAS:
 
 ```bash
 cp src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf.template src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf
