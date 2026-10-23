@@ -302,10 +302,17 @@ no execute bit, so it runs as `sh ./src/scripts/update-nuget.sh`.
 
 ### FluentUI is held on 4.x
 
-`Microsoft.FluentUI.AspNetCore.Components` 5.0.1 removes `IToastService`, `IDialogContentComponent`,
-`DialogParameters` and `TextFieldType`, makes `FluentSelect` require `TValue` and changes `FluentTab`: the
-client failed with 16 errors. PR #72 kept 4.14.5, the last 4.x. Moving to 5 is a migration of its own, to
-be planned against the upstream migration guide, not a version bump.
+PR #72 kept 4.14.5, the last 4.x. The move to 5.0.1 was analysed on 2026-10-23 in
+`docs/ai/fluentui-5-migration.md`, with a compile spike on the local branch `spike/fluentui-5`.
+
+The "16 errors" first recorded here were only the first wave, out of 66. The build is blind to most of
+the change:
+
+- removed components are warnings only, and CI does not fail on warnings;
+- removed parameters produce no diagnostic at all;
+- a fully green spike still throws on the login page and loads a script from a CDN the CSP refuses.
+
+The analysis lists the gates to land first and the decisions that are the maintainer's.
 
 ### No release has ever been published
 
