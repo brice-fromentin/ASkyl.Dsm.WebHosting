@@ -10,8 +10,8 @@ Nothing here is inherited on trust: each entry names the file, and a line where 
 
 Entries are written when the defect is found and rewritten when it changes, so they do not share one
 verification date. What is shared is a sweep — every remaining entry was re-checked against `main` on
-**2026-09-07**, which is what the line references below reflect. Line numbers are the first thing to go
-stale here; re-run the sweep rather than trusting them.
+**2026-10-23**, which is what the line references below reflect: one had drifted, by the eight lines PR #67
+added above it. Line numbers are the first thing to go stale here; re-run the sweep rather than trusting them.
 
 ## Security
 
@@ -34,6 +34,14 @@ A browser session cannot survive there — the session cookie is `CookieSecurePo
 a login form posted to that port still carries the credentials in clear. Binding `127.0.0.1:7120` would make the alias
 the only way in; whether anything depends on the direct port, and whether `adwh.sc` should keep offering it for
 forwarding, is to be checked before changing it.
+
+### Low: a failed login logs the submitted username verbatim
+
+`Ui/Services/AuthenticationService.cs:36,44` call `LoginFailed(login)`, EventId 1000001 at Warning:
+`"Login failed for user: {Login}"`. Warning passes every production filter, so the raw string a user typed
+is persisted in the log archive — including a password typed into the username field by mistake. Logging
+the attempted account is common practice for auditing, which is why this is low; masking or truncating it
+would be the change if the trade is judged otherwise.
 
 ## Reliability
 
@@ -224,6 +232,83 @@ culture, and the first `Accept-Language` tag is compared as a whole against two-
 does not. It only decides the server-rendered `lang`/`dir` until the client sets its own
 (`Ui.Client/Services/CultureManager.cs`). How often real installs run with `def` has not been measured.
 
+### A localized string still reaches a logger at autostart
+
+`Ui/Services/WebSiteHostingService.cs:368`. `StartEligibleSitesAsync` logs `SitesFailedToStart` (EventId
+1800014, Warning) with `String.Join(", ", failures.Select(f => f.Message))`, and those messages are built
+by the `localizer` — `LK.Error.SiteNotFound`, `LK.Error.OperationFailed` and the lifecycle manager's own.
+PR #60 moved the one call it found off a localized string and said the class was closed; this one was
+missed. Not measured on a NAS: whether the hosted service's thread carries the DSM culture at that point,
+and so whether the line is actually written in French.
+
+### `application.log` is truncated on every start
+
+`spk-project/scripts/start-stop-status:64` starts the host with `> "$APP_LOG_FILE"`, so the console
+output captured in `var/logs/application.log` is overwritten at each start. Whatever the process printed
+before Serilog was up — an unhandled startup exception, for instance — survives only until the next start,
+and a host that fails to boot produces no downloadable archive at all. Appending (`>>`) with a size bound
+would keep it.
+
+## Tooling and dependencies
+
+### `compare-logs.sh` cannot see most of what reading a log by hand found
+
+`src/scripts/compare-logs.sh` has still not run on a real archive. It was measured on 2026-09-27 against
+synthetic archives in the production format — `appsettings.json`'s template and filters, the
+`LogDownloadService` layout — each result reproduced by a second agent trying to refute it:
+
+| Hand-found defect | What the script shows |
+|---|---|
+| #57 update failing on a sync scope disposal | lead only: section 3 lists the ERR id, never the exception |
+| #60 §1 ACL success line naming the wrong path | invisible, unless the ids happen to be new |
+| #60 §2 cache hit indistinguishable from a DSM call | invisible, unless the ids happen to be new |
+| #60 §3 warning in French | lead only: section 3 lists the WRN id, never the text |
+| #68 release lookup refused 50 ms after its first connection | lead only: no timestamp or exception text |
+| #38 logout call shape | surfaced: a new id in section 1 |
+| #39 validation cache resetting every request | invisible in its real condition, defect on both sides |
+
+The mechanics behind that, each checked against the script:
+
+- **Section 4 never finds the application's boot in production.** It brackets on the literal
+  `Application started`, which `Microsoft.Hosting.Lifetime` writes at Information and `Microsoft: Warning`
+  filters out. The only such text left is a hosted site's own stdout relayed as 2500002, so the section
+  brackets site boots. The application's boot runs from 2800006 `ResolvingConfigPath` to 1800010
+  `HostingServiceStarted`.
+- **Section 5 times DSM calls, not requests.** Production logs no request duration. The `Nms` pattern
+  catches 2000004 `ApiRequest`, the 1600019 timeout setting and relayed site output, and `cut -c1-150` cuts
+  each line before the API name and the duration. The comment saying PR #39 "looked exactly like this" is
+  false.
+- **Section 2 drops rows silently** past `head -12`, ranked by absolute delta, so a 0 → 1 error sinks under
+  high-volume noise. An id that disappeared prints with no name: `name_of_id` reads only the new log.
+- **Section 3 drops** WRN/ERR/FTL lines with no numeric id, and matches the level text anywhere in the
+  line, so a hosted site relaying `[ERR]` is counted under 2500002, while that site's own errors arrive as
+  2500002 at Information and are never counted.
+- **`collect()` reads only `*.txt`**: `install.log`, `service.log`, `application.log` and the debug log are
+  never read. Paths with spaces break its `xargs`.
+- **The no-argument mode orders by modification time**, which a plain `cp` resets, and ignores the timestamp
+  the archive name carries; it skips directories although its comment says "whatever their form".
+
+Until those are fixed, a real review needs by hand: the 2800006 → 1800010 block of each archive; each
+section-3 id opened with its exception and the lines before it; WRN/ERR lines without an id; 2500002 lines
+carrying `fail:` or `warn:`; the arguments of log lines checked against reality; and `package-logs/`.
+
+### `update-nuget.sh` raises every major, and the analyzer's compiler with them
+
+`src/scripts/update-nuget.sh` runs `dotnet outdated -u` with no version lock. Run on 2026-10-23, it took
+FluentUI to 5.x — an API rewrite the client does not compile against — and `Microsoft.CodeAnalysis` in the
+analyzer project to the newest Roslyn, which must stay at or below the compiler of the SDK CI installs:
+above it, the analyzer is refused with CS9057, a warning, and no ADWH rule applies (comment in
+`Askyl.Dsm.WebHosting.Analyzers.csproj`). Both were put back by hand in PR #72. `--version-lock Major` and an
+exclusion for the analyzer's Roslyn packages would make the script safe to run unattended. The file also has
+no execute bit, so it runs as `sh ./src/scripts/update-nuget.sh`.
+
+### FluentUI is held on 4.x
+
+`Microsoft.FluentUI.AspNetCore.Components` 5.0.1 removes `IToastService`, `IDialogContentComponent`,
+`DialogParameters` and `TextFieldType`, makes `FluentSelect` require `TValue` and changes `FluentTab`: the
+client failed with 16 errors. PR #72 kept 4.14.5, the last 4.x. Moving to 5 is a migration of its own, to
+be planned against the upstream migration guide, not a version bump.
+
 ## Test coverage
 
 `ProcessHandle`, `ProcessTerminator`, `DownloaderService`, `RequestTrackingMiddleware` and the six
@@ -260,7 +345,7 @@ Why none of it is currently exploitable:
    gets to write into the legitimate `runtimes/` tree, which supplies the `dotnet` host binary this
    application executes. The escape is strictly weaker than the sanctioned write it guards, so it grants
    an attacker nothing they do not already have.
-3. There is one caller, `FrameworkManagementService.cs:34`, fed by `DownloaderService` from Microsoft over
+3. There is one caller, `FrameworkManagementService.cs:42`, fed by `DownloaderService` from Microsoft over
    HTTPS with certificate validation and no bypass anywhere in the solution.
 
 **When this changes:** the README roadmap includes *"Deployment Pipelines: Support direct application

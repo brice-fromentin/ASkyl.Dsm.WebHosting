@@ -176,6 +176,10 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 **Target:** `net10.0` (DevelopmentDependency, no build output)
 
+**Roslyn ceiling:** `Microsoft.CodeAnalysis.*` stays at or below the compiler of the SDK CI installs (`setup-dotnet`
+`10.0.x`; 10.0.402 ships Roslyn 5.9.0). Built against a newer Roslyn, the analyzer is refused with CS9057 — a warning
+— and no ADWH rule applies, while the build stays green.
+
 | Analyzer | ID | Severity | Purpose | Code Fix |
 |----------|-----|----------|---------|----------|
 | `BlankLineAnalyzer` | ADWH01001/01002 | Error | Missing blank line before/after control flow | ✅ |
