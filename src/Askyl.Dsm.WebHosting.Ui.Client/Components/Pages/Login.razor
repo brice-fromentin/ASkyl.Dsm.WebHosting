@@ -3,14 +3,12 @@
 @inherits WorkingStateBase
 
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
-@using System.Runtime.InteropServices
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Data.Domain.Authentication
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
 
 @inject IAuthenticationService authService
-@inject IDialogService DialogsService
 @inject IToastService ToastService
 @inject NavigationManager navigation
 @inject ILocalizer localizer
@@ -45,11 +43,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-        {
-            DialogsService.ShowError(localizer[LK.Error.PlatformNotSupported]);
-        }
-
         var isAuthenticatedResult = await authService.IsAuthenticatedAsync();
         if (isAuthenticatedResult.Success && isAuthenticatedResult.Value == true)
         {

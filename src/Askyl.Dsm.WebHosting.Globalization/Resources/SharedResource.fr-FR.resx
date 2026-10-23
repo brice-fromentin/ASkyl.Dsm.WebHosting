@@ -361,9 +361,6 @@
   </data>
 
   <!-- Error -->
-  <data name="Error_PlatformNotSupported" xml:space="preserve">
-    <value>L'application ne peut fonctionner que sur Linux ou MacOS</value>
-  </data>
   <data name="Error_AuthenticationFailed" xml:space="preserve">
     <value>Échec de l'authentification</value>
   </data>
