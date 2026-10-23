@@ -47,7 +47,7 @@
                     <TemplateColumn TGridItem="AspNetRelease" ColumnId="@nameof(AspNetRelease.IsSecurity)" Title="@localizer[LK.AspNetReleases.GridColumnSecurity]" Align="DataGridCellAlignment.Center">
                         @(context.IsSecurity ? localizer[LK.Common.WarningIcon] : String.Empty)
                     </TemplateColumn>
-                    <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" ColumnId="@nameof(AspNetRelease.ReleaseDate)" Title="@localizer[LK.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="d" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="DataGridSortDirection.Descending" />
+                    <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" ColumnId="@nameof(AspNetRelease.ReleaseDate)" Title="@localizer[LK.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="d" Align="DataGridCellAlignment.End" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="DataGridSortDirection.Descending" />
                 </ChildContent>
             </AutoDataGrid>
         </div>

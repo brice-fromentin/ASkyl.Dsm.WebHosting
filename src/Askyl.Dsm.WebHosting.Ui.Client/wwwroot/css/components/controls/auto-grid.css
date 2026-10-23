@@ -12,6 +12,11 @@
     min-height: 0;
 }
 
+/* Proportional digits gave ten-character dates widths from 72px to 77px, so no alignment lined them up */
+.auto-data-grid-area td {
+    font-variant-numeric: tabular-nums;
+}
+
 .auto-data-grid-area td.empty-content-row.empty-content-cell {
     border: 0;
 }
