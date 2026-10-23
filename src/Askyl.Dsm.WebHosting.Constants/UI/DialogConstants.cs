@@ -21,8 +21,8 @@ public static class DialogConstants
     public const string WidthLarge = "80%";
 
     /// <summary>
-    /// Width that holds the ASP.NET releases grid: its 580px of columns, the dialog's 48px of padding and a
-    /// vertical scrollbar. FluentUI 4 sized this dialog to its content; FluentUI 5 would clip the last column.
+    /// Width of the ASP.NET releases dialog, wide enough for full version numbers beside its fixed columns.
+    /// FluentUI 4 sized this dialog to its content; at FluentUI 5's default 600px the versions were truncated.
     /// </summary>
     public const string WidthReleases = "680px";
 }

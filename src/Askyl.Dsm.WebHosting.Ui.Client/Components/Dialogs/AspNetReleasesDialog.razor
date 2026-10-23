@@ -38,7 +38,7 @@
         </FluentStack>
 
         <div class="dialog-grid-container">
-            <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="240px 120px 100px 120px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
+            <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="1fr 120px 100px 120px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
                 <ChildContent>
                     <PropertyColumn TGridItem="AspNetRelease" TProp="string" ColumnId="@nameof(AspNetRelease.Version)" Title="@localizer[LK.AspNetReleases.GridColumnVersion]" Property="@(r => r.Version)" Sortable="true" />
                     <TemplateColumn TGridItem="AspNetRelease" ColumnId="@nameof(AspNetRelease.IsInstalled)" Title="@localizer[LK.AspNetReleases.GridColumnInstalled]" Align="DataGridCellAlignment.Center">
