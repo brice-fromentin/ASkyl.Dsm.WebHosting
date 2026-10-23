@@ -39,7 +39,8 @@
         </FluentStack>
 
         <div class="dialog-grid-container">
-            <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="1fr 120px 100px 120px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
+            @* The last column is 150px: at 120px the right-aligned French header "Publication" and its sort arrow lost their first letters *@
+            <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="1fr 120px 100px 150px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
                 <ChildContent>
                     <PropertyColumn TGridItem="AspNetRelease" TProp="string" ColumnId="@nameof(AspNetRelease.Version)" Title="@localizer[LK.AspNetReleases.GridColumnVersion]" Property="@(r => r.Version)" Sortable="true" />
                     <TemplateColumn TGridItem="AspNetRelease" ColumnId="@nameof(AspNetRelease.IsInstalled)" Title="@localizer[LK.AspNetReleases.GridColumnInstalled]" Align="DataGridCellAlignment.Center">
