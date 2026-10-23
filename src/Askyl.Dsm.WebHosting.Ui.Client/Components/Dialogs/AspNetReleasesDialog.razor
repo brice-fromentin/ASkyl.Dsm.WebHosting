@@ -21,7 +21,8 @@
         <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Class="toolbar full-width">
             <FluentLabel>@localizer[LK.AspNetReleases.ChannelLabel]</FluentLabel>
 
-            <FluentSelect TOption="AspNetCoreReleaseInfo" TValue="AspNetCoreReleaseInfo" Items="@Channels" Value="@SelectedChannel" ValueChanged="OnChannelChanged" Width="140px" Disabled="@IsWorking" />
+            @* No Width: it sizes only the field around the dropdown, which keeps its own 160px and overlapped the button *@
+            <FluentSelect TOption="AspNetCoreReleaseInfo" TValue="AspNetCoreReleaseInfo" Items="@Channels" Value="@SelectedChannel" ValueChanged="OnChannelChanged" Disabled="@IsWorking" />
 
             <FluentButton OnClick="Refresh" Appearance="ButtonAppearance.Outline" IconOnly="true" Title="@localizer[LK.Common.Refresh]" Disabled="@IsWorking">
                 <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
