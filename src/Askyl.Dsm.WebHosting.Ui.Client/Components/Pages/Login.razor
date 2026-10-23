@@ -20,29 +20,24 @@
 
 <LoadingOverlay WorkingState="@this" />
 
+@* A page, not a modal dialog: a modal overlay blocked everything outside it, the header included *@
+<FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Class="full-height">
+    <FluentCard Class="login-card">
+        <EditForm Model="@Model" OnValidSubmit="Authenticate">
+            <FluentValidator />
 
-    <FluentDialog Modal="true" TrapFocus="true" PreventScroll="true" Open="true">
-    <EditForm Model="@Model" OnValidSubmit="Authenticate">
-        <FluentValidator />
-
-        <FluentDialogHeader>
-            <h2>@localizer[LK.Login.DialogTitle]</h2>
-        </FluentDialogHeader>
-
-        <FluentStack Orientation="Orientation.Vertical">
-            <RealTimeTextField @bind-Value="Model.Login" Label="@localizer[LK.Login.LoginLabel]" Class="full-size" Autofocus="true" Name="username" />
-            <FluentValidationMessage For="(() => Model.Login)" />
-            <RealTimeTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Label="@localizer[LK.Login.PasswordLabel]" Class="full-size" Name="password" />
-            <FluentValidationMessage For="(() => Model.Password)" />
-            <RealTimeTextField @bind-Value="Model.OtpCode" Label="@localizer[LK.Login.OTPLabel]" Class="full-size" Name="otp" />
-        </FluentStack>
-
-        <FluentDialogFooter>
-            <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Fill="Fill.Horizontal">@localizer[LK.Common.OK]</FluentButton>
-        </FluentDialogFooter>
-    </EditForm>
-</FluentDialog>
-
+            <FluentStack Orientation="Orientation.Vertical">
+                <h2>@localizer[LK.Login.DialogTitle]</h2>
+                <RealTimeTextField @bind-Value="Model.Login" Label="@localizer[LK.Login.LoginLabel]" Class="full-size" Autofocus="true" Name="username" />
+                <FluentValidationMessage For="(() => Model.Login)" />
+                <RealTimeTextField @bind-Value="Model.Password" TextFieldType="TextFieldType.Password" Label="@localizer[LK.Login.PasswordLabel]" Class="full-size" Name="password" />
+                <FluentValidationMessage For="(() => Model.Password)" />
+                <RealTimeTextField @bind-Value="Model.OtpCode" Label="@localizer[LK.Login.OTPLabel]" Class="full-size" Name="otp" />
+                <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Fill="Fill.Horizontal">@localizer[LK.Common.OK]</FluentButton>
+            </FluentStack>
+        </EditForm>
+    </FluentCard>
+</FluentStack>
 
 @code
 {

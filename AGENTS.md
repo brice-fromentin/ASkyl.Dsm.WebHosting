@@ -94,7 +94,8 @@ Single test: append `--filter "FullyQualifiedName~<TestClassOrMethod>"` to the t
 
 - Markdown changes: `markdownlint <file-path>` verbatim (config in `.markdownlint.yaml`)
 - SPK package build: `./src/scripts/build-spk.sh` (output lands in `dist/`)
-- Version bump: `./src/scripts/update-version.sh` (syncs `src/Directory.Build.props` and `src/spk-project/INFO`)
+- Version bump: `./src/scripts/update-version.sh [x.y.z]` (syncs `src/Directory.Build.props` and
+  `src/spk-project/INFO`; with the argument it runs unattended)
 - Deployment log review: `./src/scripts/compare-logs.sh` (see §13, and the `📊 Logs` task in VS Code)
 - NuGet update: `sh ./src/scripts/update-nuget.sh` (no execute bit). It raises every major: put FluentUI
   back on 4.x, and keep the analyzer's Roslyn at or below the compiler of the SDK CI installs (comment in
@@ -445,6 +446,11 @@ checkpoint. Encoded in `.claude/settings.json`, which allows `git add`, `git com
   review since has been caught in a branch of one to three. If a second purpose appears while working,
   say so and let the maintainer decide whether to split
 - ✅ Say what was committed and why, after the fact, in a line or two
+- ✅ Bump the version in every pull request that changes the shipped package — application code,
+  configuration, SPK scripts — with `./src/scripts/update-version.sh x.y.z`: patch for a fix, minor for
+  a feature. Docs-, CI- or test-only pull requests leave it alone, since the package does not change.
+  Without it two different builds install under one number and nothing tells which one runs: 0.6.0
+  covered 49 commits
 - ❌ Never commit on `main`, and never merge a PR, without explicit authorization
 - ❌ Never commit a red build, a failing test, or an unformatted tree
 

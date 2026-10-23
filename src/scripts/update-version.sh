@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Usage: update-version.sh [x.x.x]
+# With a version argument the script runs unattended: no prompt, no confirmation. Without one it asks for both.
+
 set -e
 
 # Color codes for output
@@ -46,26 +49,35 @@ CURRENT_SPK_VERSION=$(grep 'version=' "$PROJECT_ROOT/src/spk-project/INFO" | sed
 print_info "  Directory.Build.props: $CURRENT_VERSION"
 print_info "  SPK INFO file: $CURRENT_SPK_VERSION"
 
-# Prompt for version number
-while true; do
-    echo
-    read -p "Enter the new version number (x.x.x format): " NEW_VERSION
+# Take the version from the argument, or prompt for it
+if [[ $# -gt 0 ]]; then
+    NEW_VERSION=$1
 
-    if validate_version "$NEW_VERSION"; then
-        break
-    fi
-done
+    # An invalid argument cannot be asked again, so it fails instead of looping
+    validate_version "$NEW_VERSION" || exit 1
+else
+    while true; do
+        echo
+        read -p "Enter the new version number (x.x.x format): " NEW_VERSION
+
+        if validate_version "$NEW_VERSION"; then
+            break
+        fi
+    done
+fi
 
 echo
 print_info "New version will be: $NEW_VERSION"
 
-# Confirm update
-echo
-read -p "Do you want to proceed with the version update? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    print_warning "Version update cancelled."
-    exit 0
+# Confirm update, unless the version was passed as an argument: passing it is the confirmation
+if [[ $# -eq 0 ]]; then
+    echo
+    read -p "Do you want to proceed with the version update? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_warning "Version update cancelled."
+        exit 0
+    fi
 fi
 
 # Update Directory.Build.props

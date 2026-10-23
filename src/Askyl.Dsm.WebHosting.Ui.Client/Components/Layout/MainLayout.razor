@@ -1,7 +1,7 @@
 ﻿@inherits LayoutComponentBase
 
-@using System.Reflection
 @using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Tools.Diagnostics
 
 @inject ILocalizer localizer
 
@@ -15,7 +15,11 @@
 
 <FluentMainLayout class="full-size">
     <Header>
-        @localizer[LK.Common.ApplicationTitle] @Assembly.GetExecutingAssembly().GetName().Version
+        @localizer[LK.Common.ApplicationTitle] @ApplicationVersion.Number
+        @if (ApplicationVersion.Commit.Length > 0)
+        {
+            <sup><a class="build-commit" href="@ApplicationVersion.CommitUrl" target="_blank" rel="noopener noreferrer" title="@ApplicationVersion.Commit">@ApplicationVersion.ShortCommit</a></sup>
+        }
     </Header>
 
     <Body>
