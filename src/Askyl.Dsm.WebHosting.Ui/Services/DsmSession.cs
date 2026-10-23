@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
@@ -24,6 +26,7 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// </summary>
 public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpContextAccessor, IMemoryCache validationCache, ILogger<ILogDsmSession> logger) : IDsmSession, IAsyncDisposable
 {
+    private readonly HttpContext _httpContext = httpContextAccessor.HttpContext!;
     private readonly ISession _session = httpContextAccessor.HttpContext!.Session;
     private readonly DsmApiClient _client = client;
     private readonly SemaphoreSlim _validationLock = new(1, 1);
@@ -38,6 +41,12 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     {
         get => _session.GetString(ApplicationConstants.DsmUsernameKey);
         set => UpdateSessionValue(ApplicationConstants.DsmUsernameKey, value);
+    }
+
+    private string? Binding
+    {
+        get => _session.GetString(ApplicationConstants.SessionBindingKey);
+        set => UpdateSessionValue(ApplicationConstants.SessionBindingKey, value);
     }
 
     /// <summary>
@@ -82,7 +91,8 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
 
         // DSM authenticates any user, including non-administrators. Validating here rejects them at
         // login rather than on the next request, and primes the TTL cache so this costs no extra call.
-        if (!await ValidateSessionAsync(cancellationToken))
+        // The binding is not checked: it does not exist until this check passes.
+        if (!await ConfirmWithDsmAsync(sid, model.Login, cancellationToken))
         {
             // The SID is live — DSM authenticated the user, we are refusing them — so revoke it rather
             // than abandoning a usable session on the NAS.
@@ -91,18 +101,16 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
             return new(false, null, ApiErrorCode.Forbidden);
         }
 
+        BindToThisBrowser();
+
         await FetchUserPreferencesAsync(sid, cancellationToken);
 
         return ApiResult.CreateSuccess();
     }
 
     /// <summary>
-    /// Validates whether the current DSM session is still active on the server, and doubles as the
-    /// administrator check: SYNO.Core.User.get is admin-only, so a non-administrator gets a permission
-    /// error and is rejected. Fails closed — anything other than an explicit success invalidates.
-    /// Results are cached per SID in a shared memory cache, so validity outlives the request that
-    /// established it. Instance state cannot do this: IDsmSession is Scoped, so fields reset every
-    /// request and every request would pay a DSM round trip.
+    /// Validates the current session: the request must present the binding issued at login, then DSM must
+    /// confirm the SID. Fails closed — anything other than an explicit success invalidates.
     /// </summary>
     public async Task<bool> ValidateSessionAsync(CancellationToken cancellationToken = default)
     {
@@ -111,7 +119,30 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
             return false;
         }
 
-        var cacheKey = BuildValidationCacheKey(Sid);
+        // Before the cache, which is keyed by SID: a fixated session shares its victim's SID, so a cached
+        // entry would admit it.
+        if (!IsBoundToThisBrowser())
+        {
+            logger.SessionBindingRejected();
+            return false;
+        }
+
+        return await ConfirmWithDsmAsync(Sid, Username, cancellationToken);
+    }
+
+    /// <summary>
+    /// Confirms with DSM that the SID is still active, which doubles as the administrator check:
+    /// SYNO.Core.User.get is admin-only, so a non-administrator gets a permission error and is rejected.
+    /// Results are cached per SID in a shared memory cache, so validity outlives the request that
+    /// established it. Instance state cannot do this: IDsmSession is Scoped, so fields reset every
+    /// request and every request would pay a DSM round trip.
+    /// </summary>
+    /// <param name="sid">The DSM session identifier.</param>
+    /// <param name="username">The DSM user the session belongs to.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    private async Task<bool> ConfirmWithDsmAsync(string sid, string username, CancellationToken cancellationToken)
+    {
+        var cacheKey = BuildValidationCacheKey(sid);
 
         if (validationCache.TryGetValue(cacheKey, out _))
         {
@@ -127,8 +158,8 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
                 return true;
             }
 
-            var parameters = new CoreUserGetParameters(new CoreUserGetEntry(Username));
-            var response = await _client.ExecuteAsync<CoreUserGetResponse>(Sid, parameters, cancellationToken);
+            var parameters = new CoreUserGetParameters(new CoreUserGetEntry(username));
+            var response = await _client.ExecuteAsync<CoreUserGetResponse>(sid, parameters, cancellationToken);
 
             // Fail closed: only an explicit success keeps the session alive. Treating every
             // non-`-4` outcome as valid admitted permission errors — precisely the non-administrator
@@ -166,6 +197,35 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
     /// <param name="sid">The DSM session identifier.</param>
     private static string BuildValidationCacheKey(string sid)
         => ApplicationConstants.SessionValidationCacheKeyPrefix + sid;
+
+    /// <summary>
+    /// Whether the request presents the binding issued at this session's login. The session cookie alone
+    /// proves nothing: ASP.NET Core accepts any validly protected session key, including one an attacker
+    /// planted in the browser before its owner signed in.
+    /// </summary>
+    private bool IsBoundToThisBrowser()
+        => Binding is { Length: > 0 } expected
+            && _httpContext.Request.Cookies[ApplicationConstants.SessionBindingCookieName] is { } presented
+            && CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(presented));
+
+    /// <summary>
+    /// Issues a fresh binding, kept in the session and handed to this browser alone. Replacing it on every
+    /// login is the rotation the session key itself cannot have.
+    /// </summary>
+    private void BindToThisBrowser()
+    {
+        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(ApplicationConstants.SessionBindingTokenBytes));
+
+        Binding = token;
+        _httpContext.Response.Cookies.Append(ApplicationConstants.SessionBindingCookieName, token, BuildBindingCookieOptions());
+    }
+
+    /// <summary>
+    /// Same attributes as the session cookie configured in Program.cs, so the binding travels wherever the
+    /// session does and nowhere else.
+    /// </summary>
+    private static CookieOptions BuildBindingCookieOptions()
+        => new() { HttpOnly = true, Secure = true, SameSite = SameSiteMode.Strict };
 
     /// <summary>
     /// Revokes the session on the NAS, then clears local state. Use this whenever a SID is abandoned
@@ -224,6 +284,8 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
 
         Sid = null;
         Username = null;
+        Binding = null;
+        _httpContext.Response.Cookies.Delete(ApplicationConstants.SessionBindingCookieName, BuildBindingCookieOptions());
 
         UserLanguage = null;
         UserDateFormat = null;

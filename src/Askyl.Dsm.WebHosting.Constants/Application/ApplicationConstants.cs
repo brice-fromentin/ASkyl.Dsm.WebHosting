@@ -114,6 +114,23 @@ public static class ApplicationConstants
     public const string SessionValidationCacheKeyPrefix = "dsm-session-valid:";
 
     /// <summary>
+    /// Session key for the binding token issued at login. ASP.NET Core cannot rotate the session key, so
+    /// the token is what ties a signed-in session to the browser that signed in.
+    /// </summary>
+    public const string SessionBindingKey = "SessionBinding";
+
+    /// <summary>
+    /// Cookie carrying the binding token. A planted session cookie shares the session key, never this value,
+    /// which is issued afresh on every login.
+    /// </summary>
+    public const string SessionBindingCookieName = "ADWH.Binding";
+
+    /// <summary>
+    /// Number of random bytes in a binding token.
+    /// </summary>
+    public const int SessionBindingTokenBytes = 32;
+
+    /// <summary>
     /// Rate limiting policy name for login endpoint throttling.
     /// </summary>
     public const string RateLimitPolicyLogin = "login-throttle";

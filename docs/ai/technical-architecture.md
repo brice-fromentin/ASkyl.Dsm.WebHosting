@@ -197,7 +197,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 
 **Organization by domain:**
 
-- **Application/** — app paths, URLs, HTTP client names, session keys (DsmSid, DsmUsername), security headers,
+- **Application/** — app paths, URLs, HTTP client names, session keys (DsmSid, DsmUsername, SessionBinding), security headers,
   validation limits and path-traversal literals (the messages live in Globalization resources), website lifecycle defaults
 - **DSM/API/** — DSM API names, methods, version ranges, error codes, PHP→.NET format token mappings, serialization formats (Form/Json enum)
 - **DSM/FileStation/** — FileStation listing defaults, sorting, file type enum (File/Directory)
@@ -606,7 +606,15 @@ response is disposed first.
 6. Session persisted in ASP.NET Core session (DsmSid + DsmUsername)
 7. Administrator check (see Session Validation) → non-administrators are refused, and the SID DSM just
    issued them is revoked rather than abandoned
+8. Binding issued → a fresh 32-byte token stored in the session (SessionBinding) and sent as the
+   `ADWH.Binding` cookie (HttpOnly, Secure, SameSite=Strict); replaced on every login, removed on disconnect
 ```
+
+The binding exists because ASP.NET Core cannot rotate a session key: the session middleware accepts any
+cookie that unprotects into a well-formed key, whether or not the server holds data for it, and
+`ISession` has no member that issues a new one. A session cookie planted before its owner signs in would
+otherwise carry their SID afterwards. The binding is issued only once the administrator check passes, so a
+refused login never receives one.
 
 `ConnectAsync` returns an `ApiResult` rather than a bool so the caller can distinguish invalid credentials
 (`ApiErrorCode.Unauthorized`) from a valid non-administrator (`ApiErrorCode.Forbidden`) and localize each.
@@ -616,10 +624,13 @@ response is disposed first.
 `IsAuthenticatedAsync()` validates against DSM server to detect expired/revoked sessions:
 
 1. Check local session keys (DsmSid + DsmUsername) exist
-2. Check 1-minute TTL validation cache
-3. If expired: call `SYNO.Core.User.get` with cached username
-4. Anything other than an explicit success → clear session keys, return false
-5. Cache result for 1 minute
+2. Check the request presents the `ADWH.Binding` cookie matching the session's token (constant-time
+   comparison). This comes before the cache, which is keyed by SID: a fixated session shares its victim's
+   SID, so a cached entry would admit it
+3. Check 1-minute TTL validation cache
+4. If expired: call `SYNO.Core.User.get` with cached username
+5. Anything other than an explicit success → clear session keys, return false
+6. Cache result for 1 minute
 
 **API Choice:** `SYNO.API.Auth` only has `login`/`logout`. `SYNO.Core.User.get` is the lightest API that validates session state.
 
@@ -693,7 +704,8 @@ Dialogs (Overlay)
 ### Authentication & Session Management
 
 1. **Router-Level Navigation Guard** — `AuthenticationNavigationGuard` intercepts all navigation via `<Router OnNavigateAsync>`; async auth check before any component renders; no cached state
-2. **Server-Side Session Storage** — DSM SID in server session (not client); HttpOnly cookies; SameSite=Strict
+2. **Server-Side Session Storage** — DSM SID in server session (not client); HttpOnly cookies; SameSite=Strict;
+   the session is bound to the browser that signed in by a per-login token, since its key cannot be rotated
 3. **Server-Side Session Validation** — `IsAuthenticatedAsync()` validates session keys + calls
    `SYNO.Core.User.get`; 1-minute TTL cache keyed by SID, evicted on disconnect so a signed-out session
    stops passing immediately
