@@ -544,6 +544,12 @@
   <data name="WebSiteConfiguration_ApplicationPathRequired" xml:space="preserve">
     <value>Le chemin de l'application est requis</value>
   </data>
+  <data name="WebSiteConfiguration_InvalidHostName" xml:space="preserve">
+    <value>Format de nom d'hôte invalide. Utilisez des caractères alphanumériques, des tirets et des points (ex. example.com)</value>
+  </data>
+  <data name="WebSiteConfiguration_InvalidPath" xml:space="preserve">
+    <value>Le chemin de l'application doit être un chemin absolu commençant par /</value>
+  </data>
   <data name="WebSiteConfiguration_InternalPortRequired" xml:space="preserve">
     <value>Le port interne est requis</value>
   </data>

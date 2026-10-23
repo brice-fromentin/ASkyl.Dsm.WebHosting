@@ -39,16 +39,19 @@ public class ResourceCompletenessTests
     {
         // Arrange
         var resourceManager = GetResourceManager();
-        var englishCulture = new CultureInfo("en-US");
         var frenchCulture = new CultureInfo("fr-FR");
 
-        // Act — use tryParents=false to prevent fallback masking missing translations
-        var englishKeys = GetResourceKeys(resourceManager, englishCulture, tryParents: false);
+        // Act — English is the neutral resource, not an en-US satellite: reading en-US without parents found nothing,
+        // so this compared an empty set and passed while French lacked translations. tryParents=false keeps the
+        // fallback from masking a missing French entry.
+        var englishKeys = GetResourceKeys(resourceManager, CultureInfo.InvariantCulture, tryParents: false);
         var frenchKeys = GetResourceKeys(resourceManager, frenchCulture, tryParents: false);
 
-        // Assert
+        // Assert — both sets non-empty first: an empty one is the blind spot this test had
+        Assert.NotEmpty(englishKeys);
+        Assert.NotEmpty(frenchKeys);
         var missing = englishKeys.Except(frenchKeys).OrderBy(k => k).ToList();
-        Assert.Empty(missing);
+        Assert.True(missing.Count == 0, String.Join(Environment.NewLine, missing));
     }
 
     #endregion
@@ -151,7 +154,8 @@ public class ResourceCompletenessTests
     private static HashSet<string> GetResourceKeys(ResourceManager resourceManager, CultureInfo culture, bool tryParents)
     {
         var keys = new HashSet<string>();
-        using (var resourceSet = resourceManager.GetResourceSet(culture, tryParents, false))
+        // createIfNotExists: true, or a set no earlier test happened to load comes back null and the test compares nothing
+        using (var resourceSet = resourceManager.GetResourceSet(culture, createIfNotExists: true, tryParents: tryParents))
         {
             if (resourceSet is not null)
             {
