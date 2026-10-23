@@ -14,6 +14,11 @@ A compile spike exists on the **local, unpushed** branch `spike/fluentui-5` (`10
 errors and zero warnings and passes the 592 tests. **It is not mergeable**: it carries the runtime defects
 of §4, and that is the main finding of this analysis.
 
+**Status: executed in 0.8.0.** The gates of §10.1 landed first, on 4.x. The spike was then applied on top of
+them, and every defect of §4 was fixed against a test that failed first. §13 records what that run taught,
+including where this analysis was wrong. What still needs a running application is in §10.3 and in the
+tracker entry *FluentUI 5: what the migration leaves unverified*.
+
 ## 1. Verdict
 
 - **This is a rewrite of every UI file, not a version bump.** All 14 `.razor` files that use FluentUI, the
@@ -91,7 +96,9 @@ no longer exists is rendered as an HTML attribute. Not even a warning. Found in 
 | `Fill` | `FluentButton` | 1 | The login button is no longer full width |
 
 `SelectedOption*` and `Fill` were measured silent in the spike: they compiled and were only caught by
-re-running the audit. `OnSelectedChange` is silent by the same mechanism (inferred: its handler failed to
+re-running the audit. **Correction:** `AriaLabel` and `Fill`, and `Panel1MaxSize` on `FluentSplitter`, were
+already silent on 4.14.5. None of them was ever a parameter there. The audit's first run on `main` found all
+three, so the icon-only buttons have had no accessible name all along. `OnSelectedChange` is silent by the same mechanism (inferred: its handler failed to
 compile for an unrelated reason). Upstream issue #5180 asks for an analyzer for exactly this; none exists.
 
 ## 4. Defects a green build still carries
@@ -111,8 +118,10 @@ neither Linux nor macOS. That check runs in the browser: `RuntimeInformation.IsO
   provider is not available. Every first load of `/login` would fault.
 
 Inferred, and worth checking on 4.x today: after a **logout** the layout is already rendered, the
-provider has subscribed, and a "platform not supported" dialog should appear. The check tests the
-browser, not the NAS, so it can be deleted regardless of the migration.
+provider has subscribed, and a "platform not supported" dialog should appear. **The maintainer reports it
+does not**, so a link in this reasoning is wrong and has not been found: the provider does subscribe to
+`OnShow` (decompiled), and logout does not reload the page. The check tested the browser, not the NAS, and
+was deleted regardless.
 
 ### 4.2 Number fields load a script from unpkg.com — blocking
 
@@ -347,3 +356,26 @@ On the NAS, since only the maintainer runs the application:
 - **Two research claims were refuted by measurement**:
   - "no app component uses the CDN" — `FluentNumberInput` does (§4.2);
   - "the scoped CSS bundle is no longer imported" — it still is (§7).
+
+## 13. What executing the plan taught
+
+- **The detectors died where predicted, and only there.** Applied on top of the gates, the spike failed
+  exactly three tests:
+  - the CDN rule, on `RealTimeNumberField`;
+  - the website dialog, on a recorded `TextMasked` interop call;
+  - the error dialog, with the sanitizer's `InvalidOperationException` on the `JsonException` text.
+
+  §4.3 went from read to measured.
+- **A rendering test can deadlock on the new dialog API.** `InvokeAsync(() => shown = ShowDialogAsync(...))`
+  is a `Func<Task>`, so bUnit awaited a dialog that never closes. `--blame-hang-timeout` named the test. A
+  statement lambda fixes it, and the test comment says why.
+- **Three more silent regressions** turned up while removing the `SPIKE:` notes, all outside any audit
+  until then:
+  - the header bar's accent background;
+  - `FocusOnNavigate`'s `fluent-toolbar` selector;
+  - the dead `fluent-dialog-footer` class.
+
+  The audit now rejects FluentUI 4 tokens and removed element names in `.razor`, `.css` and `.js`.
+- **Every gate was proven by reverting it.** Each one was made to fail by putting back the defect it
+  guards against: an unknown tag, `AriaLabel`, a direct message box call, the unencoded helper, the missing
+  stack gap, and the 4.x stylesheet.

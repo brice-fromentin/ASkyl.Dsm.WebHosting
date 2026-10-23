@@ -384,11 +384,14 @@ load-bearing: nginx terminates TLS, so without it `Request.IsHttps` is false and
 
 - **Components/Controls/** — custom UI controls: `AutoDataGrid` (generic data grid with sorting, reload, row click/double-click),  
   `LoadingOverlay` (full-screen overlay for WorkingState disposable pattern),  
-  `RealTimeNumberField` and `RealTimeTextField` (numeric/text input with real-time validation).
+  `RealTimeNumberField` and `RealTimeTextField` (numeric/text input with real-time validation). Both wrap
+  `FluentTextInput`; the number field deliberately avoids `FluentNumberInput`, which loads IMask from unpkg.com
+  on first render and is refused by the CSP.
 - **Components/Dialogs/** — FluentUI dialog wrappers: AspNetReleases (channel selection, version grid, install/uninstall),  
   DotnetVersions (installed frameworks display), FileSelection (dual-pane file browser with lazy loading),  
   Licenses (tabbed viewer with parallel HTTP fetches), WebSiteConfiguration (add/edit website form).
-- **Components/Layout/** — `MainLayout`: FluentMainLayout with global providers (Toast, Dialog, Tooltip).
+- **Components/Layout/** — `MainLayout`: `FluentLayout` with header and content `FluentLayoutItem`s, and the
+  global providers (Toast, Dialog, Tooltip).
 - **Components/Pages/** — Home (dashboard with website grid), Login (authentication form), NotFound (404 handler).
 - **Components/Patterns/WorkingState/** — 3-class system: `WorkingStateBase` (abstract base),  
   `WorkingState` (disposable wrapper for start/stop transitions),  
@@ -396,7 +399,11 @@ load-bearing: nginx terminates TLS, so without it `Request.IsHttps` is false and
 - **Contracts/** — `INavigationGuard`: router navigation guard interface for async auth checks before component render.
 - **Interfaces/** — client-side service interfaces: `ILicenseService` (GetLicensesAsync),  
   `ITreeContentService` (LoadChildDirectoriesAsync for FluentTreeView lazy loading).
-- **Extensions/** — C# 14 scoped extensions on `List<FsEntry>`/`FsEntry` → TreeViewItem conversion with lazy loading.
+- **Extensions/** — C# 14 scoped extensions: `List<FsEntry>`/`FsEntry` → TreeViewItem conversion with lazy loading;
+  `AddFluentUIComponentsWithDefaults()`, the one FluentUI registration (both `Program.cs` and the rendering tests),
+  which restores FluentUI 4's 10px `FluentStack` gap; and the `Show*TextAsync` message boxes. FluentUI 5 renders a
+  message box's text as sanitized HTML and throws on an angle bracket, so the helpers encode it and every call goes
+  through them (enforced by `UiSourceAuditTests`).
 - **Services/** — HTTP client wrappers that call server API endpoints: authentication, file system, framework management,  
   runtime versions, website hosting. Plus `AcceptLanguageHandler` (DelegatingHandler attaches Accept-Language from ICultureManager),  
   `AuthenticationNavigationGuard` (Router OnNavigateAsync guard),  
@@ -574,7 +581,7 @@ response is disposed first.
 |-----------|------------|---------|
 | **Runtime** | .NET 10 | Application framework |
 | **UI Framework** | Blazor Web App (Interactive WebAssembly) | Server-rendered shell, WebAssembly interactivity |
-| **UI Components** | FluentUI Blazor | Modern UI component library |
+| **UI Components** | FluentUI Blazor 5 | Fluent 2 component library (web components v3) |
 | **Logging** | Serilog | Structured logging |
 | **HTTP Client** | Microsoft.Extensions.Http | HttpClient factory |
 | **.NET Releases** | Microsoft.Deployment.DotNet.Releases | Version detection |
@@ -675,14 +682,12 @@ renders statically on the server and does inject server services; the framework 
 ### Component Hierarchy
 
 ```text
-App.razor (Root — server-rendered shell)
-├── FluentDesignTheme (System mode)
-└── FluentLayout
-    └── Routes (InteractiveWebAssembly)
-        └── MainLayout.razor (FluentMainLayout with Header/Body)
-            ├── Home.razor (Dashboard with website grid)
-            ├── Login.razor (Authentication)
-            └── NotFound.razor (404)
+App.razor (Root — server-rendered shell; FluentUI 5 follows the system theme by default)
+└── Routes (InteractiveWebAssembly)
+    └── MainLayout.razor (FluentLayout with Header/Content items)
+        ├── Home.razor (Dashboard with website grid)
+        ├── Login.razor (Authentication)
+        └── NotFound.razor (404)
 
 Dialogs (Overlay)
 ├── WebSiteConfigurationDialog.razor

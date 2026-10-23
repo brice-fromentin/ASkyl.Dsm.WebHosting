@@ -293,26 +293,36 @@ carrying `fail:` or `warn:`; the arguments of log lines checked against reality;
 ### `update-nuget.sh` raises every major, and the analyzer's compiler with them
 
 `src/scripts/update-nuget.sh` runs `dotnet outdated -u` with no version lock. Run on 2026-10-23, it took
-FluentUI to 5.x — an API rewrite the client does not compile against — and `Microsoft.CodeAnalysis` in the
-analyzer project to the newest Roslyn, which must stay at or below the compiler of the SDK CI installs:
-above it, the analyzer is refused with CS9057, a warning, and no ADWH rule applies (comment in
-`Askyl.Dsm.WebHosting.Analyzers.csproj`). Both were put back by hand in PR #72. `--version-lock Major` and an
+FluentUI to 5.x — an API rewrite the client did not then compile against — and `Microsoft.CodeAnalysis` in
+the analyzer project to the newest Roslyn, which must stay at or below the compiler of the SDK CI installs:
+above it, the analyzer is refused with CS9057 and no ADWH rule applies (comment in
+`Askyl.Dsm.WebHosting.Analyzers.csproj`). Both were put back by hand in PR #72. FluentUI has since moved to
+5 on purpose, but the script will take the next major the same way. CS9057 was a warning that let the build
+pass with every ADWH rule disabled; with warnings now fatal it should stop the build instead (inferred, not
+yet observed). `--version-lock Major` and an
 exclusion for the analyzer's Roslyn packages would make the script safe to run unattended. The file also has
 no execute bit, so it runs as `sh ./src/scripts/update-nuget.sh`.
 
-### FluentUI is held on 4.x
+### FluentUI 5: what the migration leaves unverified
 
-PR #72 kept 4.14.5, the last 4.x. The move to 5.0.1 was analysed on 2026-10-23 in
-`docs/ai/fluentui-5-migration.md`, with a compile spike on the local branch `spike/fluentui-5`.
+The UI moved from 4.14.5 to 5.0.1 in 0.8.0 (`docs/ai/fluentui-5-migration.md`). The build now fails on any
+warning, so a removed component (RZ10012) stops it. `UiSourceAuditTests` and `ComponentRenderingTests`
+cover what the build cannot see: silent parameters, CDN-backed components, stale FluentUI 4 tokens and
+elements, message boxes fed raw text, the stack gap, and the login and website dialog rendering. What none
+of them can see is left here:
 
-The "16 errors" first recorded here were only the first wave, out of 66. The build is blind to most of
-the change:
-
-- removed components are warnings only, and CI does not fail on warnings;
-- removed parameters produce no diagnostic at all;
-- a fully green spike still throws on the login page and loads a script from a CDN the CSP refuses.
-
-The analysis lists the gates to land first and the decisions that are the maintainer's.
+- **Appearance as a whole.** The heading sizes, the selected-row colours and the header bar are Fluent 2
+  equivalents chosen by name. The icons now take `currentColor` instead of the accent colour, which was left
+  as is on purpose. Only a look at the running application settles these.
+- **`tree-navigation.js`.** v5 still renders `<fluent-tree-item id expanded selected>`, but the chain from
+  `.expanded = true` to the lazy load, and from `.click()` to `OnSelectedChanged`, runs in a browser only.
+- **Browser baseline.** The `FluentSelect` dropdown and tooltips rely on CSS anchor positioning, which needs
+  Chrome 125, Firefox 147 or Safari 26, or a polyfill the application does not ship.
+- **Upstream #5516.** `FluentDataGrid` never unregisters its key listener, and the file and releases dialogs
+  create and dispose a grid on every opening.
+- **Built-in strings are English.** v5 routes them through `IFluentLocalizer` (confirmation buttons, "This
+  field is required", the grid's empty state) but ships English only. v4 hardcoded the same English text, so
+  nothing regressed, but nothing is translated either.
 
 ### No release has ever been published
 
@@ -334,7 +344,9 @@ is not. Comparing against the current `<Version>`, which the script already prin
 `ProcessHandle`, `ProcessTerminator`, `DownloaderService`, `RequestTrackingMiddleware` and the six
 controllers have no tests. `AuthorizeSessionAttribute` gained them alongside its status code fix — the
 pass-through, both refusal paths and the cancellation token it forwards. The two FluentValidation validators are exercised indirectly through service tests but not
-directly. `ProcessRunner` and `ErrorEndpoints` gained tests in PRs #32 and #33.
+directly. `ProcessRunner` and `ErrorEndpoints` gained tests in PRs #32 and #33. Component rendering tests exist since
+the FluentUI 5 migration (`ComponentRenderingTests`, with bUnit): Login, Home, NotFound and two dialogs. The
+other dialogs, FileSelection included, are not rendered by any test.
 
 `ResourceCompletenessTests` hardcodes `fr-FR`, so a newly added culture would be silently untested for key
 parity — which undercuts the "drop in a `.resx`, zero code changes" story.
