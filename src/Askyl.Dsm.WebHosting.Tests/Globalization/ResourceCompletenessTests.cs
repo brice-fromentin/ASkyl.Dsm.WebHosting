@@ -3,6 +3,8 @@ using System.Globalization;
 using System.Reflection;
 using System.Resources;
 using System.Runtime.Versioning;
+using Askyl.Dsm.WebHosting.Constants.Globalization;
+using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Askyl.Dsm.WebHosting.Tests.Globalization;
 
@@ -120,14 +122,31 @@ public class ResourceCompletenessTests
         var keysType = typeof(WebHosting.Globalization.LK);
         var localizationKeys = CollectLocalizationKeys(keysType);
 
+        // FluentUILocalizer reads FluentUI_<key> entries under FluentUI's own key: referenced when FluentUI has that key
+        var fluentUIKeys = resxKeys.Where(key => key.StartsWith(GlobalizationConstants.FluentUIResourcePrefix, StringComparison.Ordinal)
+            && IsFluentUIKey(key[GlobalizationConstants.FluentUIResourcePrefix.Length..]));
+
         // Assert — every key in .resx should be referenced by LK.cs (no orphaned translations)
-        var orphaned = resxKeys.Except(localizationKeys).OrderBy(k => k).ToList();
+        var orphaned = resxKeys.Except(localizationKeys).Except(fluentUIKeys).OrderBy(k => k).ToList();
         Assert.Empty(orphaned);
     }
 
     #endregion
 
     #region Helpers
+
+    static bool IsFluentUIKey(string key)
+    {
+        try
+        {
+            IFluentLocalizer.GetDefault(key);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
 
     private static HashSet<string> GetResourceKeys(ResourceManager resourceManager, CultureInfo culture, bool tryParents)
     {

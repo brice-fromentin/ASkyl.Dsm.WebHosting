@@ -624,4 +624,18 @@
     <value>Fichier</value>
   </data>
 
+  <!-- FluentUI: its built-in strings, served by FluentUILocalizer -->
+  <data name="FluentUI_MessageBox_ButtonOk" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="FluentUI_MessageBox_Confirmation" xml:space="preserve">
+    <value>Confirmation</value>
+  </data>
+  <data name="FluentUI_MessageBox_Error" xml:space="preserve">
+    <value>Erreur</value>
+  </data>
+  <data name="FluentUI_MessageBox_Information" xml:space="preserve">
+    <value>Information</value>
+  </data>
+
 </root>

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Askyl.Dsm.WebHosting.Constants.Globalization;
 using Askyl.Dsm.WebHosting.Constants.UI;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
@@ -9,6 +10,7 @@ using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Dialogs;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Pages;
 using Askyl.Dsm.WebHosting.Ui.Client.Extensions;
+using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Bunit;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,6 +54,11 @@ public class ComponentRenderingTests : IAsyncLifetime
     const string ColumnHeaderSelector = "th, [role=columnheader]";
 
     const string EnglishCulture = "en-US";
+
+    /// <summary>
+    /// FluentUI's key for the title of an error message box.
+    /// </summary>
+    const string MessageBoxErrorKey = "MessageBox_Error";
 
     const string FrenchCulture = "fr-FR";
 
@@ -175,6 +182,96 @@ public class ComponentRenderingTests : IAsyncLifetime
 
         Assert.False(shown!.IsFaulted, shown.Exception?.ToString());
         cut.WaitForAssertion(() => Assert.Equal([confirm, cancel], cut.FindAll("fluent-button").Select(button => button.TextContent.Trim()).Where(text => text.Length > 0)));
+    }
+
+    [Fact]
+    public async Task EveryFluentUIStringTheScreensAskFor_HasAFrenchTranslation()
+    {
+        // FluentUI 5 ships English only: a key it asks for that the resources lack shows English in a French UI
+        var recorder = new RecordingFluentLocalizer();
+        _ctx.Services.GetRequiredService<LibraryConfiguration>().Localizer = recorder;
+
+        _ctx.Render<Login>();
+        _ctx.Render<NotFound>();
+        var home = _ctx.Render<Home>();
+        home.WaitForAssertion(() => Assert.Contains(SiteName, home.Markup, StringComparison.Ordinal));
+
+        var provider = _ctx.Render<FluentDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+
+        await provider.InvokeAsync(() =>
+        {
+            _ = dialogService.ShowErrorTextAsync(SiteName);
+            _ = dialogService.ShowInfoTextAsync(SiteName);
+            _ = dialogService.ShowConfirmationTextAsync(SiteName, _localizer[LK.Common.OK], _localizer[LK.Common.Cancel]);
+            _ = dialogService.ShowDialogAsync<WebSiteConfigurationDialog>(options => options.Parameters[nameof(WebSiteConfigurationDialog.Content)] = new WebSiteInstance());
+        });
+
+        provider.WaitForAssertion(() => Assert.Contains(_localizer[LK.WebsiteConfig.InternalPortLabel], provider.Markup, StringComparison.Ordinal));
+
+        var french = Localizer.SharedResource.GetResourceSet(CultureInfo.GetCultureInfo(FrenchCulture), createIfNotExists: true, tryParents: false)!;
+        string[] untranslated = [.. recorder.Keys.Where(key => french.GetString(GlobalizationConstants.FluentUIResourcePrefix + key) is null).Order(StringComparer.Ordinal)];
+
+        // Guard: a recorder that was never called would pass in green
+        Assert.NotEmpty(recorder.Keys);
+        Assert.True(untranslated.Length == 0, String.Join(Environment.NewLine, untranslated));
+    }
+
+    [Fact]
+    public async Task ErrorDialog_TitleFollowsTheUICulture()
+    {
+        var original = CultureInfo.CurrentUICulture;
+
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(FrenchCulture);
+            var expected = Localizer.SharedResource.GetString(GlobalizationConstants.FluentUIResourcePrefix + MessageBoxErrorKey, CultureInfo.CurrentUICulture);
+
+            var cut = _ctx.Render<FluentDialogProvider>();
+            var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+            await cut.InvokeAsync(() => { _ = dialogService.ShowErrorTextAsync(SiteName); });
+
+            Assert.NotNull(expected);
+            cut.WaitForAssertion(() => Assert.Contains(expected, cut.Markup, StringComparison.Ordinal));
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
+    }
+
+    /// <summary>
+    /// Records every FluentUI string key a render asks for, and answers with the application's localizer.
+    /// </summary>
+    sealed class RecordingFluentLocalizer : IFluentLocalizer
+    {
+        readonly FluentUILocalizer _inner = new();
+        readonly Lock _lock = new();
+        readonly HashSet<string> _keys = [];
+
+        public IReadOnlyCollection<string> Keys
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return [.. _keys];
+                }
+            }
+        }
+
+        public string this[string key, params object[] arguments]
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    _keys.Add(key);
+                }
+
+                return _inner[key, arguments];
+            }
+        }
     }
 
     [Fact]
