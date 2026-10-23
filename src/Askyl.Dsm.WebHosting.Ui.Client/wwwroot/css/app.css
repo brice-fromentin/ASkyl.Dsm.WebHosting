@@ -45,3 +45,8 @@ fluent-tab-panel {
     height: 100%;
     overflow-y: auto;
 }
+
+/* The header text color: a default link color is unreadable on the accent background */
+.build-commit {
+    color: inherit;
+}
