@@ -15,12 +15,6 @@ added above it. Line numbers are the first thing to go stale here; re-run the sw
 
 ## Security
 
-### Session identifier is not rotated on login
-
-`Ui/Services/DsmSession.cs`. No rotation exists anywhere — no regeneration, no clear-and-reissue. Risk is
-low because the cookie is HttpOnly, Secure and SameSite=Strict, and nothing of value is stored
-pre-authentication, but fixation remains theoretically possible.
-
 ### The application listens on every IPv4 interface, not only behind nginx
 
 `spk-project/scripts/start-stop-status:9` exports `ASPNETCORE_URLS="http://0.0.0.0:7120"`, and

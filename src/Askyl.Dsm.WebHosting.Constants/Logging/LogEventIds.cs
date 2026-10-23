@@ -125,7 +125,7 @@ static class LogEventIds
 
     /// <summary>DsmSession.</summary>
     public const int DsmSessionBase = 2900000;
-    public const int DsmSessionLast = 2900012;
+    public const int DsmSessionLast = 2900013;
 
     #endregion
 
