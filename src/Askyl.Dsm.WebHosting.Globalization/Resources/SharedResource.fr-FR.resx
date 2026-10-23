@@ -308,7 +308,7 @@
     <value>Erreur d'installation : {0}</value>
   </data>
   <data name="AspNetReleases_UninstallConfirmation" xml:space="preserve">
-    <value>Cliquez sur OK pour procéder à la désinstallation d'ASP.NET Core {0}</value>
+    <value>Voulez-vous désinstaller ASP.NET Core {0} ?</value>
   </data>
   <data name="AspNetReleases_UninstallationError" xml:space="preserve">
     <value>Erreur de désinstallation : {0}</value>
@@ -627,6 +627,12 @@
   <!-- FluentUI: its built-in strings, served by FluentUILocalizer -->
   <data name="FluentUI_MessageBox_ButtonOk" xml:space="preserve">
     <value>OK</value>
+  </data>
+  <data name="FluentUI_MessageBox_ButtonNo" xml:space="preserve">
+    <value>Non</value>
+  </data>
+  <data name="FluentUI_MessageBox_ButtonYes" xml:space="preserve">
+    <value>Oui</value>
   </data>
   <data name="FluentUI_MessageBox_Confirmation" xml:space="preserve">
     <value>Confirmation</value>

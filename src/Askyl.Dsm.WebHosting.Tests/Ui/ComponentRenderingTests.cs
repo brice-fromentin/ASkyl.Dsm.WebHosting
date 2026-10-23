@@ -60,6 +60,10 @@ public class ComponentRenderingTests : IAsyncLifetime
     /// </summary>
     const string MessageBoxErrorKey = "MessageBox_Error";
 
+    const string MessageBoxYesKey = "MessageBox_ButtonYes";
+
+    const string MessageBoxNoKey = "MessageBox_ButtonNo";
+
     const string FrenchCulture = "fr-FR";
 
     readonly BunitContext _ctx = new();
@@ -169,19 +173,30 @@ public class ComponentRenderingTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Confirmation_ShowsTheLocalizedButtonsItsTextRefersTo()
+    public async Task Confirmation_ButtonsFollowTheUICulture()
     {
-        // FluentUI's default buttons are an English "Yes" and "No", under a French text asking to click OK
-        var cut = _ctx.Render<FluentDialogProvider>();
-        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
-        var confirm = _localizer[LK.Common.OK];
-        var cancel = _localizer[LK.Common.Cancel];
+        // FluentUI's default buttons are an English "Yes" and "No"; FluentUILocalizer translates them
+        var original = CultureInfo.CurrentUICulture;
 
-        Task<DialogResult>? shown = null;
-        await cut.InvokeAsync(() => { shown = dialogService.ShowConfirmationTextAsync(SiteName, confirm, cancel); });
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(FrenchCulture);
+            string?[] expected = [.. new[] { MessageBoxYesKey, MessageBoxNoKey }.Select(key => Localizer.SharedResource.GetString(GlobalizationConstants.FluentUIResourcePrefix + key, CultureInfo.CurrentUICulture))];
 
-        Assert.False(shown!.IsFaulted, shown.Exception?.ToString());
-        cut.WaitForAssertion(() => Assert.Equal([confirm, cancel], cut.FindAll("fluent-button").Select(button => button.TextContent.Trim()).Where(text => text.Length > 0)));
+            var cut = _ctx.Render<FluentDialogProvider>();
+            var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+
+            Task<DialogResult>? shown = null;
+            await cut.InvokeAsync(() => { shown = dialogService.ShowConfirmationTextAsync(SiteName); });
+
+            Assert.False(shown!.IsFaulted, shown.Exception?.ToString());
+            Assert.All(expected, Assert.NotNull);
+            cut.WaitForAssertion(() => Assert.Equal(expected, cut.FindAll("fluent-button").Select(button => button.TextContent.Trim()).Where(text => text.Length > 0)));
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
     }
 
     [Fact]
@@ -203,7 +218,7 @@ public class ComponentRenderingTests : IAsyncLifetime
         {
             _ = dialogService.ShowErrorTextAsync(SiteName);
             _ = dialogService.ShowInfoTextAsync(SiteName);
-            _ = dialogService.ShowConfirmationTextAsync(SiteName, _localizer[LK.Common.OK], _localizer[LK.Common.Cancel]);
+            _ = dialogService.ShowConfirmationTextAsync(SiteName);
             _ = dialogService.ShowDialogAsync<WebSiteConfigurationDialog>(options => options.Parameters[nameof(WebSiteConfigurationDialog.Content)] = new WebSiteInstance());
         });
 

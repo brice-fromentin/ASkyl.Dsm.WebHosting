@@ -167,7 +167,7 @@
             if (!String.IsNullOrEmpty(result.Message) && result.Value?.RequiredFramework is string channel)
             {
                 var confirmMessage = localizer[LK.WebsiteConfig.FrameworkNotInstalled, channel];
-                var confirmResult = await DialogService.ShowConfirmationTextAsync(confirmMessage, localizer[LK.Common.OK], localizer[LK.Common.Cancel]);
+                var confirmResult = await DialogService.ShowConfirmationTextAsync(confirmMessage);
 
                 if (!confirmResult.Cancelled)
                 {
