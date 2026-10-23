@@ -188,7 +188,7 @@
 
     private async Task ShowAspNetReleasesDialogAsync(string channel)
     {
-        var options = new DialogOptions { Modal = true, Header = { CloseAction = { Visible = true } } };
+        var options = new DialogOptions { Width = DialogConstants.WidthReleases, Modal = true, Header = { CloseAction = { Visible = true } } };
         options.Parameters[nameof(AspNetReleasesDialog.Content)] = channel;
         // Returns when the releases dialog closes, so this one stays open behind it until then
         await DialogService.ShowDialogAsync<AspNetReleasesDialog>(options);
