@@ -1,7 +1,7 @@
 ﻿@inherits LayoutComponentBase
 
-@using System.Reflection
 @using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Tools.Diagnostics
 
 @inject ILocalizer localizer
 
@@ -15,7 +15,7 @@
 
 <FluentMainLayout class="full-size">
     <Header>
-        @localizer[LK.Common.ApplicationTitle] @Assembly.GetExecutingAssembly().GetName().Version
+        @localizer[LK.Common.ApplicationTitle] @ApplicationVersion.Current
     </Header>
 
     <Body>

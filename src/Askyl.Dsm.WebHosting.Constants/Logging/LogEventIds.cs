@@ -129,6 +129,14 @@ static class LogEventIds
 
     #endregion
 
+    #region Application host — 3000000–3000999
+
+    /// <summary>Program (startup).</summary>
+    public const int ApplicationBase = 3000000;
+    public const int ApplicationLast = 3000001;
+
+    #endregion
+
     #region Client-side (WASM) — 7000000–7900000
 
     /// <summary>LicenseService (client).</summary>

@@ -921,7 +921,15 @@ Dual sources of truth require manual synchronization:
 - **`Directory.Build.props`:** Controls .NET assembly version and informational version
 - **`spk-project/INFO`:** Controls SPK package version displayed in Package Center
 
-Use `scripts/update-version.sh` to synchronize both simultaneously.
+Use `scripts/update-version.sh` to synchronize both simultaneously; `update-version.sh x.y.z` runs it
+unattended. Every pull request that changes the shipped package bumps it (AGENTS.md §12).
+
+The number alone names every build made between two bumps, so the application reports the full informational
+version instead: the SDK appends the commit it was built from (`0.7.0+<sha>`, Source Link default).
+`Tools/Diagnostics/ApplicationVersion.Current` reads it once, the `MainLayout` header shows it, and `Program.cs`
+logs it at startup (`ApplicationStarting`, EventId 3000001), so every log archive names the build that wrote it.
+`ApplicationVersionTests` fails if the commit ever stops being appended. A build from a tree with uncommitted
+changes still reports the last commit.
 
 ---
 

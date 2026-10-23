@@ -4,6 +4,7 @@ using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Globalization.Extensions;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
@@ -135,6 +136,8 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+app.Services.GetRequiredService<ILogger<ILogApplication>>().ApplicationStarting(ApplicationVersion.Current);
 
 // Wire system culture from DSM settings (no auth needed)
 app.ApplyDsmSystemCulture();
