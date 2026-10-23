@@ -34,10 +34,10 @@
         @localizer[LK.Common.Delete]
     </FluentButton>
     <FluentDivider Vertical="true" />
-    <FluentButton Appearance="ButtonAppearance.Default" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance" aria-label="@localizer[LK.Home.StartButton]">
+    <FluentButton Appearance="ButtonAppearance.Default" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance" IconOnly="true" aria-label="@localizer[LK.Home.StartButton]">
         <FluentIcon Value="@(new IconsRegular20.Play())" Color="Color.Success" />
     </FluentButton>
-    <FluentButton Appearance="ButtonAppearance.Default" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="StopSelectedInstance" aria-label="@localizer[LK.Home.StopButton]">
+    <FluentButton Appearance="ButtonAppearance.Default" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="StopSelectedInstance" IconOnly="true" aria-label="@localizer[LK.Home.StopButton]">
         <FluentIcon Value="@(new IconsRegular20.Stop())" Color="Color.Error" />
     </FluentButton>
     <FluentSpacer />
@@ -61,13 +61,13 @@
 
 <AutoDataGrid TItem="WebSiteInstance" Items="@GridInstances" OnReload="LoadInstancesAsync" OnRowClick="HandleInstanceSelected" OnRowDoubleClick="HandleInstanceDoubleClicked" GridTemplateColumns="1fr 2fr 1fr 1fr 1fr">
     <ChildContent>
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnName]" Property="@(i => i.Configuration.Name)" Sortable="true" />
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" Title="@localizer[LK.Home.GridColumnPath]" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
-        <TemplateColumn TGridItem="WebSiteInstance" Title="@localizer[LK.Home.GridColumnFramework]">
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" ColumnId="@nameof(WebSiteConfiguration.Name)" Title="@localizer[LK.Home.GridColumnName]" Property="@(i => i.Configuration.Name)" Sortable="true" />
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="string" ColumnId="@nameof(WebSiteConfiguration.ApplicationPath)" Title="@localizer[LK.Home.GridColumnPath]" Property="@(i => i.Configuration.ApplicationPath)" Sortable="true" />
+        <TemplateColumn TGridItem="WebSiteInstance" ColumnId="@nameof(WebSiteInstance.RequiredFramework)" Title="@localizer[LK.Home.GridColumnFramework]">
             @(GetFrameworkDisplay(context))
         </TemplateColumn>
-        <PropertyColumn TGridItem="WebSiteInstance" TProp="int" Title="@localizer[LK.Home.GridColumnInternalPort]" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
-        <TemplateColumn TGridItem="WebSiteInstance" Title="@localizer[LK.Home.GridColumnState]">
+        <PropertyColumn TGridItem="WebSiteInstance" TProp="int" ColumnId="@nameof(WebSiteConfiguration.InternalPort)" Title="@localizer[LK.Home.GridColumnInternalPort]" Property="@(i => i.Configuration.InternalPort)" Sortable="true" />
+        <TemplateColumn TGridItem="WebSiteInstance" ColumnId="@nameof(WebSiteInstance.IsRunning)" Title="@localizer[LK.Home.GridColumnState]">
             @(context.IsRunning ? localizer[LK.Home.StateRunning] : localizer[LK.Home.StateStopped])
         </TemplateColumn>
     </ChildContent>
@@ -256,9 +256,9 @@
         }
     }
 
-    private async Task ShowDotnetVersionsDialog() => await ShowDialogAsync<DotnetVersionsDialog>(DialogConstants.WidthAuto);
+    private async Task ShowDotnetVersionsDialog() => await ShowDialogAsync<DotnetVersionsDialog>(null);
 
-    private async Task ShowAspNetReleasesDialog() => await ShowDialogAsync<AspNetReleasesDialog>(DialogConstants.WidthAuto);
+    private async Task ShowAspNetReleasesDialog() => await ShowDialogAsync<AspNetReleasesDialog>(null);
 
     private async Task ShowLicensesDialog() => await ShowDialogAsync<LicensesDialog>(DialogConstants.WidthSmall);
 
@@ -306,12 +306,13 @@
 
     #region Dialog Helpers
 
-    private async Task ShowDialogAsync<TComponent>(string width) where TComponent : ComponentBase
+    private async Task ShowDialogAsync<TComponent>(string? width) where TComponent : ComponentBase
         => await DialogService.ShowDialogAsync<TComponent>(CreateDialogOptions(width));
 
     // Modal = true renders type="alert", which ignores overlay clicks (v4 PreventDismissOnOverlayClick).
     // v4 TrapFocus = false and PreventScroll = true have no v5 option: the native dialog always traps focus.
-    private static DialogOptions CreateDialogOptions(string width) => new()
+    // No width keeps FluentUI 5's 600px: a width of "auto" filled the screen, the dialog being position: fixed
+    private static DialogOptions CreateDialogOptions(string? width) => new()
     {
         Width = width,
         Modal = true,

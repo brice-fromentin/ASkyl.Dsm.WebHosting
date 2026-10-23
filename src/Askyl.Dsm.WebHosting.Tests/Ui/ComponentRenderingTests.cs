@@ -1,3 +1,4 @@
+using System.Globalization;
 using Askyl.Dsm.WebHosting.Constants.UI;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
@@ -44,6 +45,15 @@ public class ComponentRenderingTests : IAsyncLifetime
     const string MessageBoxTextSelector = ".fluent-message-box .message";
 
     const string SiteName = "alpha-site";
+
+    /// <summary>
+    /// FluentDataGrid's header cells, whichever of its display modes rendered them.
+    /// </summary>
+    const string ColumnHeaderSelector = "th, [role=columnheader]";
+
+    const string EnglishCulture = "en-US";
+
+    const string FrenchCulture = "fr-FR";
 
     readonly BunitContext _ctx = new();
     readonly Mock<IAuthenticationService> _authService = new();
@@ -105,6 +115,35 @@ public class ComponentRenderingTests : IAsyncLifetime
 
         Assert.Contains(_localizer[LK.Home.StartButton], names);
         Assert.Contains(_localizer[LK.Home.StopButton], names);
+    }
+
+    [Fact]
+    public void HomeGrid_KeepsItsColumnOrderWhenTheCultureChanges()
+    {
+        // FluentUI 5 remembers column order by key, and a column without ColumnId is keyed by its title: once the
+        // titles were translated, only "Framework" still matched its old key and jumped to the front. Seen in a
+        // browser after the login culture (en-US) gave way to the system one (fr-FR).
+        string[] keys = [LK.Home.GridColumnName, LK.Home.GridColumnPath, LK.Home.GridColumnFramework, LK.Home.GridColumnInternalPort, LK.Home.GridColumnState];
+        var original = CultureInfo.CurrentUICulture;
+
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(EnglishCulture);
+            var cut = _ctx.Render<Home>();
+            cut.WaitForAssertion(() => Assert.Contains(SiteName, cut.Markup, StringComparison.Ordinal));
+
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(FrenchCulture);
+            cut.Render();
+
+            string[] expected = [.. keys.Select(key => _localizer[key])];
+            string[] headers = [.. cut.FindAll(ColumnHeaderSelector).Select(header => header.TextContent.Trim())];
+
+            Assert.Equal(expected, headers);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = original;
+        }
     }
 
     [Fact]

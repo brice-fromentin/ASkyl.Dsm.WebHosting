@@ -294,6 +294,31 @@ public partial class UiSourceAuditTests
         AssertNone(stale);
     }
 
+    static bool IsGridColumn(Type component)
+    {
+        for (var type = component; type is not null; type = type.BaseType)
+        {
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ColumnBase<>))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    [Fact]
+    public void EveryGridColumn_HasAKeyThatSurvivesTranslation()
+    {
+        // FluentUI 5 restores column order by key, and without ColumnId the key is the localized title: when the
+        // culture changed, the one title that reads the same in both languages jumped to the front
+        string[] unkeyed = [.. Tags()
+            .Where(tag => tag.Component is not null && IsGridColumn(tag.Component) && !tag.Attributes.Contains(nameof(ColumnBase<object>.ColumnId), StringComparer.Ordinal))
+            .Select(tag => $"{tag.Location} <{tag.Name}>")];
+
+        AssertNone(unkeyed);
+    }
+
     /// <summary>
     /// Lists every finding in full; <c>Assert.Empty</c> truncates each entry before the part that matters.
     /// </summary>

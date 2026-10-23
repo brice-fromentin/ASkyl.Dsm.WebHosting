@@ -47,7 +47,7 @@
             @if (OnReload.HasDelegate)
             {
                 <FluentDivider Vertical="true" />
-                <FluentButton Appearance="ButtonAppearance.Default" OnClick="@HandleReloadClick" Disabled="@(!OnReload.HasDelegate)" aria-label="@localizer[LK.Common.Refresh]">
+                <FluentButton Appearance="ButtonAppearance.Default" OnClick="@HandleReloadClick" Disabled="@(!OnReload.HasDelegate)" IconOnly="true" aria-label="@localizer[LK.Common.Refresh]">
                     <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
                 </FluentButton>
             }

@@ -227,6 +227,21 @@ culture, and the first `Accept-Language` tag is compared as a whole against two-
 does not. It only decides the server-rendered `lang`/`dir` until the client sets its own
 (`Ui.Client/Services/CultureManager.cs`). How often real installs run with `def` has not been measured.
 
+### The UI language changes between the login and the next click
+
+Seen in a browser on 2026-10-23, with the FluentUI 5 branch, though none of the culture code differs from
+`main`:
+
+- **Right after login**, the UI renders in the DSM account's language. The console logs "Culture resolved
+  from login response: en-US".
+- **At the next click**, the labels switch back to the system language (fr-FR) without a reload.
+- **Meanwhile**, `<html lang>` stays `en-US`.
+
+Suspected, not verified: `CultureManager.InitializeFromLogin` sets the culture inside the login handler's
+async flow, while Blazor runs each later event under its own captured context. Whether 4.x behaved the same
+was not measured. Under FluentUI 5, the switch also reordered the home grid's columns until every column got
+a `ColumnId` (`UiSourceAuditTests` now requires one).
+
 ### A localized string still reaches a logger at autostart
 
 `Ui/Services/WebSiteHostingService.cs:368`. `StartEligibleSitesAsync` logs `SitesFailedToStart` (EventId
@@ -314,8 +329,6 @@ of them can see is left here:
 - **Appearance as a whole.** The heading sizes, the selected-row colours and the header bar are Fluent 2
   equivalents chosen by name. The icons now take `currentColor` instead of the accent colour, which was left
   as is on purpose. Only a look at the running application settles these.
-- **`tree-navigation.js`.** v5 still renders `<fluent-tree-item id expanded selected>`, but the chain from
-  `.expanded = true` to the lazy load, and from `.click()` to `OnSelectedChanged`, runs in a browser only.
 - **Browser baseline.** The `FluentSelect` dropdown and tooltips rely on CSS anchor positioning, which needs
   Chrome 125, Firefox 147 or Safari 26, or a polyfill the application does not ship.
 - **Upstream #5516.** `FluentDataGrid` never unregisters its key listener, and the file and releases dialogs

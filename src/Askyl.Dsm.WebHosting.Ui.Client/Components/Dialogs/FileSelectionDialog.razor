@@ -32,7 +32,7 @@
             <FluentMultiSplitterPane>
                 <AutoDataGrid TItem="FsEntry" Items="@_files" GridTemplateColumns="1fr auto auto auto" OnRowClick="@OnFileClick" OnRowDoubleClick="@OnFileDoubleClick" OnReload="@ReloadCurrentDirectory">
                     <ChildContent>
-                        <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Home.GridColumnName]" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Name)" InitialSortDirection="DataGridSortDirection.Ascending">
+                        <TemplateColumn TGridItem="FsEntry" ColumnId="@nameof(FsEntry.Name)" Title="@localizer[LK.Home.GridColumnName]" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Name)" InitialSortDirection="DataGridSortDirection.Ascending">
                             <ChildContent Context="file">
                                 <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
                                     <FluentIcon Value="@GetFileIcon(file)" />
@@ -40,13 +40,13 @@
                                 </FluentStack>
                             </ChildContent>
                         </TemplateColumn>
-                        <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Common.Size]" Align="DataGridCellAlignment.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
+                        <TemplateColumn TGridItem="FsEntry" ColumnId="@nameof(FsEntry.Size)" Title="@localizer[LK.Common.Size]" Align="DataGridCellAlignment.End" Sortable="true" SortBy="GridSort<FsEntry>.ByAscending(f => f.Size ?? 0)">
                             @(GetFileSize(context, localizer))
                         </TemplateColumn>
-                        <TemplateColumn TGridItem="FsEntry" Title="@localizer[LK.Common.Type]" Align="DataGridCellAlignment.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="DataGridSortDirection.Ascending">
+                        <TemplateColumn TGridItem="FsEntry" ColumnId="@nameof(FsEntry.IsDirectory)" Title="@localizer[LK.Common.Type]" Align="DataGridCellAlignment.Center" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="DataGridSortDirection.Ascending">
                             @(GetFileType(context, localizer))
                         </TemplateColumn>
-                        <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" Title="@localizer[LK.Common.Modified]" Property="@(f => f.Modified)" Format="g" Align="DataGridCellAlignment.Center" Sortable="true" />
+                        <PropertyColumn TGridItem="FsEntry" TProp="DateTime?" ColumnId="@nameof(FsEntry.Modified)" Title="@localizer[LK.Common.Modified]" Property="@(f => f.Modified)" Format="g" Align="DataGridCellAlignment.Center" Sortable="true" />
                     </ChildContent>
 
                     <EmptyContent>

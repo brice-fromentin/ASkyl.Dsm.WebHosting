@@ -390,3 +390,19 @@ On the NAS, since only the maintainer runs the application:
   failed on the stale tree, listing the six FluentUI assemblies, and passed after `dotnet clean`. The publish
   path (`obj/Release/.../webcil/publish`, which `build-spk.sh` uses) has the same flaw, and this test does not
   cover it.
+- **Measured in a browser, then fixed:**
+  - **Toolbars 84px tall.** A vertical `fluent-divider` has `min-height: 84px`, and its empty-divider rule
+    `:host([orientation='vertical']):empty` can never match, a selector bug in web components 3 as shipped by
+    5.0.1. The app's CSS now sets `min-height` too.
+  - **Icon-only buttons 96px wide.** A child `<FluentIcon>` turns icon-only off; `IconOnly` restores it.
+  - **Dialogs filling the screen.** `Width = "auto"` reaches a `position: fixed` `<dialog>` as `width: auto`.
+    Without a width, FluentUI 5 uses 600px.
+  - **License tab names thousands of pixels down.** The tab list stretched to the length of the license.
+  - **Grid columns reordered after a language change.** FluentUI 5 restores column order by key, and the key
+    of a column without `ColumnId` is its localized title. Reproduced in `ComponentRenderingTests`, fixed with a
+    `ColumnId` on every column, and required by `UiSourceAuditTests`.
+- **Verified in a browser:**
+  - `tree-navigation.js`: a double-click on a grid folder selects it in the tree;
+  - lazy loading in the tree;
+  - the login page, which no longer shows the platform error;
+  - toasts.

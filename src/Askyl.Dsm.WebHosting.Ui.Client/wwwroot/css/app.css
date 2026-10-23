@@ -37,9 +37,32 @@ body {
     flex-direction: column;
 }
 
+/* FluentToolbar padded its items; the FluentStack that replaced it does not */
+.toolbar {
+    padding: var(--spacingHorizontalXS);
+}
+
+/* A vertical fluent-divider has min-height: 84px, which stretched every toolbar to 84px. Its empty-divider
+   rule, :host([orientation='vertical']):empty, can never match (web components 3 in FluentUI 5.0.1).
+   FluentUI 5 has no --type-ramp tokens; --lineHeightBase300 is the Fluent 2 body line height */
 .toolbar fluent-divider {
-    /* FluentUI 5 has no --type-ramp tokens; --lineHeightBase300 is the Fluent 2 body line height */
     height: var(--lineHeightBase300);
+    min-height: var(--lineHeightBase300);
+}
+
+/* FluentUI 5 renders a validation message with nothing to say as an empty element, and a stack still spaces it */
+.fluent-validation-message:empty {
+    display: none;
+}
+
+/* Without a bounded height the tab list stretched to the length of the longest license, and the tab names
+   ended up thousands of pixels below the fold */
+.licenses-tabs {
+    height: 60vh;
+}
+
+.licenses-tabs fluent-tablist {
+    align-self: flex-start;
 }
 
 /* v5 renders tab panels as plain divs with role="tabpanel" instead of a fluent-tab-panel element */
@@ -48,7 +71,7 @@ body {
     overflow-y: auto;
 }
 
-/* FluentUI 4's FluentHeader: a 50px bar in the accent colour. FluentUI 5's layout items paint nothing */
+/* The error UI's bar, in the look FluentUI 5 gives the layout header and FluentUI 4's FluentHeader had */
 .app-header {
     display: flex;
     height: 50px;

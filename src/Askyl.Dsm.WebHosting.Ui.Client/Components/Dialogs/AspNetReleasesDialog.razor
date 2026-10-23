@@ -23,7 +23,7 @@
 
             <FluentSelect TOption="AspNetCoreReleaseInfo" TValue="AspNetCoreReleaseInfo" Items="@Channels" Value="@SelectedChannel" ValueChanged="OnChannelChanged" Width="140px" Disabled="@IsWorking" />
 
-            <FluentButton OnClick="Refresh" Appearance="ButtonAppearance.Outline" Title="@localizer[LK.Common.Refresh]" Disabled="@IsWorking">
+            <FluentButton OnClick="Refresh" Appearance="ButtonAppearance.Outline" IconOnly="true" Title="@localizer[LK.Common.Refresh]" Disabled="@IsWorking">
                 <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
             </FluentButton>
 
@@ -40,14 +40,14 @@
         <div class="dialog-grid-container">
             <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="240px 120px 100px 120px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
                 <ChildContent>
-                    <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="@localizer[LK.AspNetReleases.GridColumnVersion]" Property="@(r => r.Version)" Sortable="true" />
-                    <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[LK.AspNetReleases.GridColumnInstalled]" Align="DataGridCellAlignment.Center">
+                    <PropertyColumn TGridItem="AspNetRelease" TProp="string" ColumnId="@nameof(AspNetRelease.Version)" Title="@localizer[LK.AspNetReleases.GridColumnVersion]" Property="@(r => r.Version)" Sortable="true" />
+                    <TemplateColumn TGridItem="AspNetRelease" ColumnId="@nameof(AspNetRelease.IsInstalled)" Title="@localizer[LK.AspNetReleases.GridColumnInstalled]" Align="DataGridCellAlignment.Center">
                         @(context.IsInstalled ? localizer[LK.Common.CheckMark] : String.Empty)
                     </TemplateColumn>
-                    <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[LK.AspNetReleases.GridColumnSecurity]" Align="DataGridCellAlignment.Center">
+                    <TemplateColumn TGridItem="AspNetRelease" ColumnId="@nameof(AspNetRelease.IsSecurity)" Title="@localizer[LK.AspNetReleases.GridColumnSecurity]" Align="DataGridCellAlignment.Center">
                         @(context.IsSecurity ? localizer[LK.Common.WarningIcon] : String.Empty)
                     </TemplateColumn>
-                    <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="@localizer[LK.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="d" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="DataGridSortDirection.Descending" />
+                    <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" ColumnId="@nameof(AspNetRelease.ReleaseDate)" Title="@localizer[LK.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="d" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="DataGridSortDirection.Descending" />
                 </ChildContent>
             </AutoDataGrid>
         </div>

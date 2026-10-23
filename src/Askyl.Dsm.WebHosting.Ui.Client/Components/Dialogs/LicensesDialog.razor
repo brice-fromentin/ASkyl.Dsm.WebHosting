@@ -16,7 +16,7 @@
     <ChildContent>
         @if (_licenses is not null)
         {
-            <FluentTabs Orientation="Orientation.Vertical" Class="full-size">
+            <FluentTabs Orientation="Orientation.Vertical" Class="licenses-tabs">
                 @foreach (var license in _licenses)
                 {
                     <FluentTab Header="@license.Name">

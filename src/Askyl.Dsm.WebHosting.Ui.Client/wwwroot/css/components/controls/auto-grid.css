@@ -29,7 +29,3 @@
 .auto-data-grid-infos-area .toolbar {
     width: 100%;
 }
-
-.auto-data-grid-infos-area fluent-divider {
-    height: var(--lineHeightBase300);
-}

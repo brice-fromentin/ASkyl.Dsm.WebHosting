@@ -6,11 +6,6 @@ namespace Askyl.Dsm.WebHosting.Constants.UI;
 public static class DialogConstants
 {
     /// <summary>
-    /// Width value for auto-sizing dialogs based on content.
-    /// </summary>
-    public const string WidthAuto = "auto";
-
-    /// <summary>
     /// Width for small dialogs (60% of container).
     /// </summary>
     public const string WidthSmall = "60%";
