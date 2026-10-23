@@ -34,10 +34,10 @@
         @localizer[LK.Common.Delete]
     </FluentButton>
     <FluentDivider Role="DividerRole.Separator" Orientation="Orientation.Vertical" />
-    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance" AriaLabel="@localizer[LK.Home.StartButton]">
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning == true)" OnClick="StartSelectedInstance" aria-label="@localizer[LK.Home.StartButton]">
         <FluentIcon Value="@(new IconsRegular20.Play())" Color="Color.Success" />
     </FluentButton>
-    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="StopSelectedInstance" AriaLabel="@localizer[LK.Home.StopButton]">
+    <FluentButton Appearance="Appearance.Neutral" Disabled="@(SelectedInstance?.IsRunning != true)" OnClick="StopSelectedInstance" aria-label="@localizer[LK.Home.StopButton]">
         <FluentIcon Value="@(new IconsRegular20.Stop())" Color="Color.Error" />
     </FluentButton>
     <FluentSpacer />
