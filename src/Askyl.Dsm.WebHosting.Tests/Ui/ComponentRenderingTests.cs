@@ -10,6 +10,7 @@ using Askyl.Dsm.WebHosting.Globalization.Resources;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Dialogs;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Pages;
 using Askyl.Dsm.WebHosting.Ui.Client.Extensions;
+using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Bunit;
 using FluentValidation;
@@ -69,6 +70,7 @@ public class ComponentRenderingTests : IAsyncLifetime
     readonly BunitContext _ctx = new();
     readonly Mock<IAuthenticationService> _authService = new();
     readonly Mock<IWebSiteHostingService> _hostingService = new();
+    readonly Mock<ILicenseService> _licenseService = new();
     readonly ILocalizer _localizer;
 
     public ComponentRenderingTests()
@@ -79,6 +81,7 @@ public class ComponentRenderingTests : IAsyncLifetime
         _ctx.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
         _ctx.Services.AddSingleton(_authService.Object);
         _ctx.Services.AddSingleton(_hostingService.Object);
+        _ctx.Services.AddSingleton(_licenseService.Object);
         _ctx.Services.AddSingleton(Mock.Of<ICultureManager>());
 
         _authService.Setup(service => service.IsAuthenticatedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(ApiResultBool.CreateSuccess(false));
@@ -145,6 +148,21 @@ public class ComponentRenderingTests : IAsyncLifetime
         var cut = _ctx.Render<Home>();
 
         Assert.Contains("var(--colorNeutralForeground1)", cut.Find("fluent-overlay fluent-text").GetAttribute("style"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LicenseTabs_GiveFluentUITheirLabel()
+    {
+        // fluent-tab reads its label before Blazor inserts it, so its bold-width reserve stayed empty and selecting the
+        // widest license name shifted the license text sideways
+        _licenseService.Setup(service => service.GetLicensesAsync()).ReturnsAsync([new(SiteName, SiteName)]);
+
+        var provider = _ctx.Render<FluentDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+
+        await provider.InvokeAsync(() => { _ = dialogService.ShowDialogAsync<LicensesDialog>(options => { }); });
+
+        provider.WaitForAssertion(() => Assert.Contains($"{LayoutConstants.TabLabelProperty}: '{SiteName}'", provider.Find("fluent-tab").GetAttribute("style"), StringComparison.Ordinal));
     }
 
     [Fact]

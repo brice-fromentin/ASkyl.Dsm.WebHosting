@@ -1,3 +1,4 @@
+@using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Data.Domain.Licensing
 @using Askyl.Dsm.WebHosting.Globalization
 
@@ -19,7 +20,8 @@
             <FluentTabs Orientation="Orientation.Vertical" Class="licenses-tabs">
                 @foreach (var license in _licenses)
                 {
-                    <FluentTab Header="@license.Name">
+                    @* Per-tab data, so inline: the value fluent-tab misses, see LayoutConstants.TabLabelProperty *@
+                    <FluentTab Header="@license.Name" HeaderStyle="@($"{LayoutConstants.TabLabelProperty}: '{license.Name}'")">
                         <pre>@license.Content</pre>
                     </FluentTab>
                 }

@@ -206,7 +206,7 @@ What the spike applied, per component we use. **G** marks a guess to verify visu
 | `FluentSelect` ×2 / `FluentOption` | `FluentSelect<TOption,TValue>` | `SelectedOption*` → `@bind-Value` |
 | `FluentTextField` | `FluentTextInput` | `TextFieldType` → `TextInputType` |
 | `FluentNumberField` | `FluentNumberInput<int>` | **Do not**: §4.2 |
-| `FluentTabs/FluentTab` | kept | `<Header>` fragment → `Header` string |
+| `FluentTabs/FluentTab` | kept | `<Header>` fragment → `Header` string; `--textContent` set per tab, which `fluent-tab` reads before Blazor inserts the label (the widest selected tab shifted the panel) |
 | `FluentSplitter` | `FluentMultiSplitter` + 2 panes | Upstream a11y issues #5503 and #5505 are open on it |
 | `FluentTreeView` | kept | `OnSelectedChange` → `OnSelectedChanged`; `TreeViewItem.LoadingTreeViewItems` became a method |
 | `FluentDataGrid`, `PropertyColumn`, `TemplateColumn` | kept | Enum renames only: `Align`, `SortDirection`, `GenerateHeaderOption` |
