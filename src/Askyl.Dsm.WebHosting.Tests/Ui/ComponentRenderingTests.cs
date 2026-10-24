@@ -25,8 +25,8 @@ namespace Askyl.Dsm.WebHosting.Tests.Ui;
 /// </summary>
 /// <remarks>
 /// The FluentUI 5 compile spike built clean and passed every test while its login page threw on load, its
-/// number fields fetched a script from a CDN and its error dialogs threw on an angle bracket
-/// (docs/ai/fluentui-5-migration.md §4). None of that was visible without rendering; these tests render.
+/// number fields fetched a script from a CDN and its error dialogs threw on an angle bracket. None of that
+/// was visible without rendering; these tests render.
 /// JavaScript interop runs in loose mode, so it returns defaults, but every call is recorded.
 /// </remarks>
 public class ComponentRenderingTests : IAsyncLifetime

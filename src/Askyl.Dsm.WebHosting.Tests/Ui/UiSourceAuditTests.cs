@@ -16,8 +16,8 @@ namespace Askyl.Dsm.WebHosting.Tests.Ui;
 /// FluentUI components capture unmatched attributes, so a parameter the library removed still compiles and
 /// renders as a stray HTML attribute: no error, no warning. The FluentUI 5 compile spike measured it twice —
 /// <c>SelectedOption</c> on <c>FluentSelect</c> and <c>Fill</c> on <c>FluentButton</c> — both green until an
-/// audit script found them, and its first run here found three more already on 4.14.5
-/// (docs/ai/fluentui-5-migration.md §3). Stylesheets and selectors fail the same way, silently.
+/// audit script found them, and its first run here found three more already on 4.14.5. Stylesheets and
+/// selectors fail the same way, silently.
 /// </remarks>
 public partial class UiSourceAuditTests
 {
@@ -45,7 +45,7 @@ public partial class UiSourceAuditTests
 
     /// <summary>
     /// Components that fetch a script from a public CDN at runtime, which the CSP refuses: FluentNumberInput
-    /// loads IMask on first render, FluentSortableList loads Sortable (docs/ai/fluentui-5-migration.md §4.2).
+    /// loads IMask from unpkg.com on first render, FluentSortableList loads Sortable.
     /// </summary>
     static readonly string[] CdnBackedComponents = ["FluentNumberInput", "FluentSortableList"];
 

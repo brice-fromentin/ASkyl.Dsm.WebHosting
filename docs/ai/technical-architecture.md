@@ -118,13 +118,23 @@ AngleSharp. Analyzer testing via Microsoft.CodeAnalysis.Analyzer.Testing ecosyst
 Tests mirror source structure: Analyzers (blank lines, logger calls, string/static pattern), Data/Domain (model classes),
 Data/Results (result types + serialization), Globalization (culture management, localization, validators),
 Tools (converters, diagnostics, extensions, infrastructure services, network client, runtime detection, threading),
-Ui (startup), Ui/Authorization, Ui/Endpoints, Ui/Infrastructure, and Ui/Services (server services — DSM session,
+Ui (startup, component rendering, the UI source audit, the WebAssembly output check), Ui/Authorization, Ui/Endpoints, Ui/Infrastructure, and Ui/Services (server services — DSM session,
 authentication, file system, website hosting, configuration and lifecycle, framework and version management, log
 download, reverse proxy — plus the client-side license, tree-content and navigation-guard services). `LogEventIdRegistryTests` sits at
 the project root.
 
 **Design:** controllers are thin routing wrappers with no business logic — all behavior delegated to services which are tested directly.  
-bunit is referenced for `BunitContext` usage in navigation guard tests; no Blazor component rendering tests currently exist.
+Three UI test classes cover what the build cannot see (see [FluentUI 5 Notes](#fluentui-5-notes)):
+
+- `ComponentRenderingTests` renders the pages, the website and licenses dialogs and the message boxes with bUnit and
+  the real FluentUI services. The other dialogs are not rendered by any test.
+- `UiSourceAuditTests` reads the `.razor`, `.css` and `.js` sources and rejects:
+  - an attribute that is not a parameter of its component;
+  - a CDN-backed component;
+  - a message box shown without the plain-text helpers;
+  - a FluentUI 4 token or element;
+  - a grid column without a `ColumnId`.
+- `WebAssemblyOutputTests` compares every webcil assembly with the DLL the client compiled against.
 
 ### Build Configuration
 
@@ -135,6 +145,7 @@ All projects share common build settings from `Directory.Build.props`:
 <AnalysisLevel>latest</AnalysisLevel>
 <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+<TreatWarningsAsErrors>true</TreatWarningsAsErrors>  <!-- a removed FluentUI component is only warning RZ10012 -->
 <EnablePreviewFeatures>true</EnablePreviewFeatures>  <!-- C# 14 scoped extension keyword -->
 ```
 
@@ -702,6 +713,50 @@ Dialogs (Overlay)
 
 - **Server:** ASP.NET Core Session (DSM SID), `WebSiteHostingService` singleton, `WebSitesConfigurationService`
 - **Client:** HTTP client wrappers, local component state, FluentUI Dialog state, WorkingStateBase/WorkingState disposable pattern (no interface — abstract base class + disposable wrapper)
+
+### FluentUI 5 Notes
+
+The UI moved from FluentUI 4.14.5 to 5.0.1 in 0.8.0. Version 5 is a rewrite, and most of what it changed
+compiles. What the move established, for whoever touches the UI or the next major:
+
+- **The build cannot tell.** A removed component compiles to an inert element with warning RZ10012, fatal
+  only because warnings are. A removed parameter is captured as an HTML attribute with no diagnostic at
+  all. `UiSourceAuditTests` checks every attribute against the component's parameters.
+- **Trust the assembly, not the migration guide.** The guide disagreed with 5.0.1 in several places.
+- **CDN loaders.** `FluentNumberInput`, `FluentTextInput` with `MaskPattern`, and `FluentSortableList` load
+  IMask or Sortable from unpkg.com at runtime. The CSP refuses them, so `RealTimeNumberField` wraps
+  `FluentTextInput` instead.
+- **Message boxes** render their text as sanitized HTML and throw on a stray `<`. Use the `Show*TextAsync`
+  helpers.
+- **Defaults that changed.** These are restored in `AddFluentUIComponentsWithDefaults()`, the CSS or the markup:
+  - `FluentStack` has no gap of its own.
+  - A vertical `fluent-divider` is 84px tall, because its empty-divider rule never matches.
+  - A `FluentButton` with a child `FluentIcon` needs `IconOnly`.
+  - Icons take `currentColor` instead of the accent colour. That one was kept on purpose.
+- **Dialogs.**
+  - A `Width` of `"auto"` makes a dialog fill the screen; without a width it is 600px. Fixed widths live in
+    `DialogConstants`.
+  - `ShowDialogAsync` completes when the dialog closes. In bUnit, start it from a statement lambda, or the
+    test awaits a dialog that never closes.
+- **Overlay.** Without `FullScreen`, `FluentOverlay` centres its content on its parent, which inside a dialog
+  is a 0x0 box in a corner of the screen. Its content sits in a native `<dialog>` that gives text the
+  browser's own colour, so `LoadingOverlay` sets `Color.Default`.
+- **Tabs.** `fluent-tab` reserves the width of its bold label from `--textContent`. It reads that value
+  before Blazor inserts the label, so the dialog sets it through `HeaderStyle`
+  (`LayoutConstants.TabLabelProperty`).
+- **Grid.** `FluentDataGrid` restores its column order by key. A column without `ColumnId` is keyed by its
+  localized title, so changing the language reordered the columns.
+- **Built-in strings** (confirmation buttons, validation, grid states) ship in English only.
+  `FluentUILocalizer` translates them from `FluentUI_*` resource entries. A test requires a French entry for
+  every key the rendered screens ask for; strings no test renders, such as the grid's column menu, may still
+  show in English.
+- **A package upgrade can serve the old assembly to the browser.** The SDK reconverts a DLL to webcil only
+  when the DLL is newer than the previous output. Run `dotnet clean` after an upgrade.
+  `WebAssemblyOutputTests` catches this for Debug only; `build-spk.sh` publishes Release without cleaning.
+- **CSP.** `style-src 'unsafe-inline'` is still required: `FluentLayout` emits a `<style>` element. The v5
+  bundle has no `eval`, and `default-fuib.css` loads from `_content/` at runtime.
+- **Browser baseline.** The `FluentSelect` dropdown and tooltips use CSS anchor positioning, which needs
+  Chrome 125, Firefox 147 or Safari 26.
 
 ---
 

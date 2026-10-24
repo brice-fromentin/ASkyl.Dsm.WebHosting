@@ -323,17 +323,12 @@ yet observed). `--version-lock Major` and an
 exclusion for the analyzer's Roslyn packages would make the script safe to run unattended. The file also has
 no execute bit, so it runs as `sh ./src/scripts/update-nuget.sh`.
 
-### FluentUI 5: what the migration leaves unverified
+### FluentUI 5: what the tests cannot see
 
-The UI moved from 4.14.5 to 5.0.1 in 0.8.0 (`docs/ai/fluentui-5-migration.md`). The build now fails on any
-warning, so a removed component (RZ10012) stops it. `UiSourceAuditTests` and `ComponentRenderingTests`
-cover what the build cannot see: silent parameters, CDN-backed components, stale FluentUI 4 tokens and
-elements, message boxes fed raw text, the stack gap, and the login and website dialog rendering. What none
-of them can see is left here:
+The UI moved from 4.14.5 to 5.0.1 in 0.8.0. What the move taught is in `technical-architecture.md`,
+*FluentUI 5 Notes*. The maintainer looked over the running application, locally and on the NAS, on
+2026-10-24. Neither that nor the tests settle these:
 
-- **Appearance as a whole.** The heading sizes, the selected-row colours and the header bar are Fluent 2
-  equivalents chosen by name. The icons now take `currentColor` instead of the accent colour, which was left
-  as is on purpose. Only a look at the running application settles these.
 - **Browser baseline.** The `FluentSelect` dropdown and tooltips rely on CSS anchor positioning, which needs
   Chrome 125, Firefox 147 or Safari 26, or a polyfill the application does not ship.
 - **Upstream #5516.** `FluentDataGrid` never unregisters its key listener, and the file and releases dialogs
@@ -342,9 +337,10 @@ of them can see is left here:
   than the previous output, so a package upgrade can leave the old version in `obj/Release/.../webcil/publish`.
   `build-spk.sh` publishes from that folder without cleaning it. `WebAssemblyOutputTests` covers the Debug
   build only. CI release builds start from a clean checkout and are not affected.
-- **Built-in strings are English.** v5 routes them through `IFluentLocalizer` (confirmation buttons, "This
-  field is required", the grid's empty state) but ships English only. v4 hardcoded the same English text, so
-  nothing regressed, but nothing is translated either.
+- **Built-in strings no test renders.** `FluentUILocalizer` translates FluentUI's strings, and
+  `EveryFluentUIStringTheScreensAskFor_HasAFrenchTranslation` requires a French entry for every key the
+  rendered screens ask for. A string only a screen without a rendering test asks for, such as the grid's
+  column menu, can still show in English.
 
 ### No release has ever been published
 
@@ -367,8 +363,9 @@ is not. Comparing against the current `<Version>`, which the script already prin
 controllers have no tests. `AuthorizeSessionAttribute` gained them alongside its status code fix — the
 pass-through, both refusal paths and the cancellation token it forwards. The two FluentValidation validators are exercised indirectly through service tests but not
 directly. `ProcessRunner` and `ErrorEndpoints` gained tests in PRs #32 and #33. Component rendering tests exist since
-the FluentUI 5 migration (`ComponentRenderingTests`, with bUnit): Login, Home, NotFound and two dialogs. The
-other dialogs, FileSelection included, are not rendered by any test.
+the FluentUI 5 migration (`ComponentRenderingTests`, with bUnit): Login, Home, NotFound, the website and
+licenses dialogs, and the message boxes. FileSelection, DotnetVersions and AspNetReleases are not rendered by
+any test.
 
 `ResourceCompletenessTests` hardcodes `fr-FR`, so a newly added culture would be silently untested for key
 parity — which undercuts the "drop in a `.resx`, zero code changes" story.
