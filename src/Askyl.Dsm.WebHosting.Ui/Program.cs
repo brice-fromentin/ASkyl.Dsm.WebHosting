@@ -17,7 +17,6 @@ using Askyl.Dsm.WebHosting.Ui.Middleware;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
