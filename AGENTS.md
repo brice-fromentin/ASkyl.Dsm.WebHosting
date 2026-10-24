@@ -322,7 +322,7 @@ logger.LogWarning("Login failed");   // ❌ direct ILogger call
 After EVERY code modification:
 
 1. **Format** → **Build** → **Fix issues** (including analyzer errors)
-2. **Manual checks** — magic strings/numbers, target-typed `new`
+2. **Manual checks** — magic strings/numbers
 
 ---
 
