@@ -14,7 +14,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
     public const string ExtraBeforeElseId = "ADWH01003";
     public const string ExtraBeforeCatchId = "ADWH01004";
 
-    static readonly DiagnosticDescriptor _missingBeforeRule = new(
+    static readonly DiagnosticDescriptor MissingBeforeRule = new(
         id: MissingBeforeId,
         title: Resources.ADWH01001_Title,
         messageFormat: Resources.ADWH01001_Message,
@@ -23,7 +23,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: Resources.ADWH01001_Description);
 
-    static readonly DiagnosticDescriptor _missingAfterRule = new(
+    static readonly DiagnosticDescriptor MissingAfterRule = new(
         id: MissingAfterId,
         title: Resources.ADWH01002_Title,
         messageFormat: Resources.ADWH01002_Message,
@@ -32,7 +32,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: Resources.ADWH01002_Description);
 
-    static readonly DiagnosticDescriptor _extraBeforeElseRule = new(
+    static readonly DiagnosticDescriptor ExtraBeforeElseRule = new(
         id: ExtraBeforeElseId,
         title: Resources.ADWH01003_Title,
         messageFormat: Resources.ADWH01003_Message,
@@ -41,7 +41,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: Resources.ADWH01003_Description);
 
-    static readonly DiagnosticDescriptor _extraBeforeCatchRule = new(
+    static readonly DiagnosticDescriptor ExtraBeforeCatchRule = new(
         id: ExtraBeforeCatchId,
         title: Resources.ADWH01004_Title,
         messageFormat: Resources.ADWH01004_Message,
@@ -51,7 +51,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         description: Resources.ADWH01004_Description);
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [_missingBeforeRule, _missingAfterRule, _extraBeforeElseRule, _extraBeforeCatchRule];
+        [MissingBeforeRule, MissingAfterRule, ExtraBeforeElseRule, ExtraBeforeCatchRule];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -125,7 +125,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         var keyword = GetKeywordName(node);
         var location = GetKeywordLocation(node);
 
-        var diagnostic = Diagnostic.Create(_missingBeforeRule, location, keyword);
+        var diagnostic = Diagnostic.Create(MissingBeforeRule, location, keyword);
         context.ReportDiagnostic(diagnostic);
     }
 
@@ -153,7 +153,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         var keyword = GetKeywordName(node);
         var location = GetKeywordLocation(node);
 
-        var diagnostic = Diagnostic.Create(_missingAfterRule, location, keyword);
+        var diagnostic = Diagnostic.Create(MissingAfterRule, location, keyword);
         context.ReportDiagnostic(diagnostic);
     }
 
@@ -173,7 +173,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var diagnostic = Diagnostic.Create(_extraBeforeElseRule, elseKeyword.GetLocation());
+        var diagnostic = Diagnostic.Create(ExtraBeforeElseRule, elseKeyword.GetLocation());
         context.ReportDiagnostic(diagnostic);
     }
 
@@ -189,7 +189,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         // Check blank line between try block and first catch
         if (HasBlankLineBetween(tryStmt.Block, catches[0].CatchKeyword))
         {
-            var diagnostic = Diagnostic.Create(_extraBeforeCatchRule, catches[0].CatchKeyword.GetLocation());
+            var diagnostic = Diagnostic.Create(ExtraBeforeCatchRule, catches[0].CatchKeyword.GetLocation());
             context.ReportDiagnostic(diagnostic);
         }
 
@@ -201,7 +201,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
 
             if (HasBlankLineBetween(previousCatch.Block, currentCatch.CatchKeyword))
             {
-                var diagnostic = Diagnostic.Create(_extraBeforeCatchRule, currentCatch.CatchKeyword.GetLocation());
+                var diagnostic = Diagnostic.Create(ExtraBeforeCatchRule, currentCatch.CatchKeyword.GetLocation());
                 context.ReportDiagnostic(diagnostic);
             }
         }
@@ -213,7 +213,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
 
             if (HasBlankLineBetween(lastCatch.Block, tryStmt.Finally.FinallyKeyword))
             {
-                var diagnostic = Diagnostic.Create(_extraBeforeCatchRule, tryStmt.Finally.FinallyKeyword.GetLocation());
+                var diagnostic = Diagnostic.Create(ExtraBeforeCatchRule, tryStmt.Finally.FinallyKeyword.GetLocation());
                 context.ReportDiagnostic(diagnostic);
             }
         }
@@ -221,7 +221,7 @@ public class BlankLineAnalyzer : DiagnosticAnalyzer
         {
             if (HasBlankLineBetween(tryStmt.Block, tryStmt.Finally.FinallyKeyword))
             {
-                var diagnostic = Diagnostic.Create(_extraBeforeCatchRule, tryStmt.Finally.FinallyKeyword.GetLocation());
+                var diagnostic = Diagnostic.Create(ExtraBeforeCatchRule, tryStmt.Finally.FinallyKeyword.GetLocation());
                 context.ReportDiagnostic(diagnostic);
             }
         }
