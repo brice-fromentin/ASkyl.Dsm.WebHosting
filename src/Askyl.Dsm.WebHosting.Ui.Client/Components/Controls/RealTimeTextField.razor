@@ -1,6 +1,4 @@
-<FluentTextField Value="@BoundValue" @oninput="HandleInput" @onchange="HandleChange" Label="@Label" Class="@Class" Autofocus="@Autofocus" TextFieldType="@TextFieldType" Name="@Name">
-    @ChildContent
-</FluentTextField>
+<FluentTextInput Value="@BoundValue" @oninput="HandleInput" @onchange="HandleChange" Label="@Label" Class="@Class" Autofocus="@Autofocus" TextInputType="@TextInputType" Name="@Name" />
 
 @code
 {
@@ -47,19 +45,13 @@
     /// Type of text field (e.g., Password).
     /// </summary>
     [Parameter]
-    public TextFieldType TextFieldType { get; set; } = TextFieldType.Text;
+    public TextInputType TextInputType { get; set; } = TextInputType.Text;
 
     /// <summary>
     /// Name attribute for form submission and browser autofill.
     /// </summary>
     [Parameter]
     public string? Name { get; set; }
-
-    /// <summary>
-    /// Child content for the text field (e.g., placeholder text).
-    /// </summary>
-    [Parameter]
-    public RenderFragment? ChildContent { get; set; }
 
     #endregion
 

@@ -139,8 +139,8 @@ public class FrameworkManagementServiceTests : IDisposable
 
         // Assert
         Assert.True(result.Success);
-        // InstallationResult.CreateSuccess takes (version, message) but the service passes localized message as first param
-        Assert.Equal("Installation completed successfully.", result.Message);
+        Assert.Equal("Installation completed", result.Message);
+        Assert.Equal("8.0.5", result.Version);
         _downloader.Verify(d => d.DownloadVersionToAsync("8.0.5", "8.0", true, It.IsAny<CancellationToken>()), Times.Once);
         _archiveExtractor.Verify(a => a.Decompress("/tmp/dotnet-8.0.5.tar.gz"), Times.Once);
         _dotnetVersionService.Verify(d => d.RefreshCacheAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -216,8 +216,8 @@ public class FrameworkManagementServiceTests : IDisposable
 
         // Assert
         Assert.True(result.Success);
-        // InstallationResult.CreateSuccess takes (version, message) but the service passes localized message as first param
-        Assert.Equal("Installation completed successfully.", result.Message);
+        Assert.Equal("Uninstallation completed", result.Message);
+        Assert.Equal("8.0.3", result.Version);
         _fileManager.Verify(f => f.DeleteDirectory($"host/fxr/8.0.3"), Times.Once);
         _fileManager.Verify(f => f.DeleteDirectory($"shared/Microsoft.AspNetCore.App/8.0.3"), Times.Once);
         _fileManager.Verify(f => f.DeleteDirectory($"shared/Microsoft.NETCore.App/8.0.3"), Times.Once);

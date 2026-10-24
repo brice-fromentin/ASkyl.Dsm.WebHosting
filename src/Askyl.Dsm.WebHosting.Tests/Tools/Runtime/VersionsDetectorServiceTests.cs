@@ -16,6 +16,21 @@ public class VersionsDetectorServiceTests
         _service = new(logger.Object);
     }
 
+    [Fact]
+    public async Task RefreshCache_LooksForDotnetBesideTheApplication()
+    {
+        // Installs land in AppContext.BaseDirectory/../runtimes. Detection resolved the same relative path against
+        // the working directory, which only matched on the NAS, where the start script changes into admin-ui.
+        var logger = new CapturingLogger<ILogVersionsDetectorService>();
+        var expected = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, ApplicationConstants.RuntimesRootPath, WebSiteConstants.DotnetExecutable));
+
+        Assert.False(File.Exists(expected), $"This test needs no runtime beside the test binaries: {expected}");
+
+        await new VersionsDetectorService(logger).RefreshCacheAsync();
+
+        Assert.Contains(logger.Messages, message => message.Contains(expected, StringComparison.Ordinal));
+    }
+
     #region ParseDotnetInfo - Section Detection
 
     [Fact]

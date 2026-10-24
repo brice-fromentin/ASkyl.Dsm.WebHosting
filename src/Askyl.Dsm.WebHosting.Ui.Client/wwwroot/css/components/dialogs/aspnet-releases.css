@@ -1,6 +1,6 @@
+/* No max-width: inside the fixed-width dialog it only left the scrollbar sitting on the last column */
 .dialog-grid-container {
     width: 100%;
-    max-width: 580px;
     height: 364px;
     max-height: 60vh;
     overflow: hidden;

@@ -1,8 +1,8 @@
+@using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Data.Domain.Licensing
 @using Askyl.Dsm.WebHosting.Globalization
 
 @inherits WorkingStateBase
-@implements IDialogContentComponent
 
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @inject ILicenseService LicenseService
@@ -10,42 +10,37 @@
 
 <LoadingOverlay WorkingState="@this" />
 
-
-<FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">@localizer[LK.Licenses.DialogTitle]</FluentLabel>
-</FluentDialogHeader>
-
-<FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Class="flex-full-width">@localizer[LK.Common.Close]</FluentButton>
-</FluentDialogFooter>
-
 <FluentDialogBody>
-    @if (_licenses is not null)
-    {
-        <FluentTabs Orientation="Orientation.Vertical" Class="full-size">
-            @foreach (var license in _licenses)
-            {
-                <FluentTab>
-                    <Header>@license.Name</Header>
-                    <ChildContent>
+    <TitleTemplate>
+        <FluentText As="TextTag.H2" Size="TextSize.Size600" Weight="TextWeight.Semibold">@localizer[LK.Licenses.DialogTitle]</FluentText>
+    </TitleTemplate>
+    <ChildContent>
+        @if (_licenses is not null)
+        {
+            <FluentTabs Orientation="Orientation.Vertical" Class="licenses-tabs">
+                @foreach (var license in _licenses)
+                {
+                    @* Per-tab data, so inline: the value fluent-tab misses, see LayoutConstants.TabLabelProperty *@
+                    <FluentTab Header="@license.Name" HeaderStyle="@($"{LayoutConstants.TabLabelProperty}: '{license.Name}'")">
                         <pre>@license.Content</pre>
-                    </ChildContent>
-                </FluentTab>
-            }
-        </FluentTabs>
-    }
-    else
-    {
-        <FluentProgressRing />
-    }
+                    </FluentTab>
+                }
+            </FluentTabs>
+        }
+        else
+        {
+            <FluentSpinner />
+        }
+    </ChildContent>
+    <ActionTemplate>
+        <FluentButton OnClick="CancelAsync" Appearance="ButtonAppearance.Primary" Class="flex-full-width">@localizer[LK.Common.Close]</FluentButton>
+    </ActionTemplate>
 </FluentDialogBody>
-
-
 
 @code
 {
     [CascadingParameter]
-    public FluentDialog Dialog { get; set; } = default!;
+    public IDialogInstance Dialog { get; set; } = default!;
 
     private IReadOnlyList<LicenseInfo>? _licenses;
 

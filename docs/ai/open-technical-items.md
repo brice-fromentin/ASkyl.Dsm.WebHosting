@@ -160,9 +160,14 @@ that method in the name of symmetry with install.** It is the first of two thing
 
 Measured, both layers:
 
-- `IsValidVersionFormat` is `^\d+\.\d+(\.\d+)?$`. It accepts `10.0` and `10.0.1`, and rejects `..`,
-  `../../etc`, `10.0/../..`, an embedded newline, a trailing space, and anything carrying shell
-  punctuation.
+- `IsValidVersionFormat` is `RuntimeConstants.VersionPattern`, shared by server and client since 0.8.0.
+  - **Accepts** `10.0`, `10.0.1` and a prerelease suffix of dot-separated `[0-9A-Za-z-]` identifiers. The
+    previous `^\d+\.\d+(\.\d+)?$` refused previews and release candidates, which made them impossible to
+    install since #67 and to uninstall ever.
+  - **Rejects** `..`, `../../etc`, `10.0/../..`, a slash, dot-only or empty identifier inside the suffix,
+    whitespace and shell punctuation (theory tests in `DotnetVersionServiceTests`).
+  - **It ends in `\z`.** The old `$` also matched before a final newline, so `"10.0\n"` passed. That was
+    measured when the tests were written, and it contradicts what this entry used to claim.
 - `DeleteDirectory` calls `SanitizeSubdirectoryPath` before doing anything: it splits on both separator
   kinds, throws on a `.` or `..` segment, and only then combines with the normalized root.
 
@@ -226,6 +231,21 @@ culture, and the first `Accept-Language` tag is compared as a whole against two-
 `fr-FR` does not, and the page falls back to `en-US`. The comment there says it takes "the first 2 chars"; the code
 does not. It only decides the server-rendered `lang`/`dir` until the client sets its own
 (`Ui.Client/Services/CultureManager.cs`). How often real installs run with `def` has not been measured.
+
+### The UI language changes between the login and the next click
+
+Seen in a browser on 2026-10-23, with the FluentUI 5 branch, though none of the culture code differs from
+`main`:
+
+- **Right after login**, the UI renders in the DSM account's language. The console logs "Culture resolved
+  from login response: en-US".
+- **At the next click**, the labels switch back to the system language (fr-FR) without a reload.
+- **Meanwhile**, `<html lang>` stays `en-US`.
+
+Suspected, not verified: `CultureManager.InitializeFromLogin` sets the culture inside the login handler's
+async flow, while Blazor runs each later event under its own captured context. Whether 4.x behaved the same
+was not measured. Under FluentUI 5, the switch also reordered the home grid's columns until every column got
+a `ColumnId` (`UiSourceAuditTests` now requires one).
 
 ### A localized string still reaches a logger at autostart
 
@@ -293,19 +313,34 @@ carrying `fail:` or `warn:`; the arguments of log lines checked against reality;
 ### `update-nuget.sh` raises every major, and the analyzer's compiler with them
 
 `src/scripts/update-nuget.sh` runs `dotnet outdated -u` with no version lock. Run on 2026-10-23, it took
-FluentUI to 5.x — an API rewrite the client does not compile against — and `Microsoft.CodeAnalysis` in the
-analyzer project to the newest Roslyn, which must stay at or below the compiler of the SDK CI installs:
-above it, the analyzer is refused with CS9057, a warning, and no ADWH rule applies (comment in
-`Askyl.Dsm.WebHosting.Analyzers.csproj`). Both were put back by hand in PR #72. `--version-lock Major` and an
+FluentUI to 5.x — an API rewrite the client did not then compile against — and `Microsoft.CodeAnalysis` in
+the analyzer project to the newest Roslyn, which must stay at or below the compiler of the SDK CI installs:
+above it, the analyzer is refused with CS9057 and no ADWH rule applies (comment in
+`Askyl.Dsm.WebHosting.Analyzers.csproj`). Both were put back by hand in PR #72. FluentUI has since moved to
+5 on purpose, but the script will take the next major the same way. CS9057 was a warning that let the build
+pass with every ADWH rule disabled; with warnings now fatal it should stop the build instead (inferred, not
+yet observed). `--version-lock Major` and an
 exclusion for the analyzer's Roslyn packages would make the script safe to run unattended. The file also has
 no execute bit, so it runs as `sh ./src/scripts/update-nuget.sh`.
 
-### FluentUI is held on 4.x
+### FluentUI 5: what the tests cannot see
 
-`Microsoft.FluentUI.AspNetCore.Components` 5.0.1 removes `IToastService`, `IDialogContentComponent`,
-`DialogParameters` and `TextFieldType`, makes `FluentSelect` require `TValue` and changes `FluentTab`: the
-client failed with 16 errors. PR #72 kept 4.14.5, the last 4.x. Moving to 5 is a migration of its own, to
-be planned against the upstream migration guide, not a version bump.
+The UI moved from 4.14.5 to 5.0.1 in 0.8.0. What the move taught is in `technical-architecture.md`,
+*FluentUI 5 Notes*. The maintainer looked over the running application, locally and on the NAS, on
+2026-10-24. Neither that nor the tests settle these:
+
+- **Browser baseline.** The `FluentSelect` dropdown and tooltips rely on CSS anchor positioning, which needs
+  Chrome 125, Firefox 147 or Safari 26, or a polyfill the application does not ship.
+- **Upstream #5516.** `FluentDataGrid` never unregisters its key listener, and the file and releases dialogs
+  create and dispose a grid on every opening.
+- **A locally built SPK can ship a stale FluentUI.** The SDK reconverts a DLL to webcil only when the DLL is newer
+  than the previous output, so a package upgrade can leave the old version in `obj/Release/.../webcil/publish`.
+  `build-spk.sh` publishes from that folder without cleaning it. `WebAssemblyOutputTests` covers the Debug
+  build only. CI release builds start from a clean checkout and are not affected.
+- **Built-in strings no test renders.** `FluentUILocalizer` translates FluentUI's strings, and
+  `EveryFluentUIStringTheScreensAskFor_HasAFrenchTranslation` requires a French entry for every key the
+  rendered screens ask for. A string only a screen without a rendering test asks for, such as the grid's
+  column menu, can still show in English.
 
 ### No release has ever been published
 
@@ -327,7 +362,10 @@ is not. Comparing against the current `<Version>`, which the script already prin
 `ProcessHandle`, `ProcessTerminator`, `DownloaderService`, `RequestTrackingMiddleware` and the six
 controllers have no tests. `AuthorizeSessionAttribute` gained them alongside its status code fix — the
 pass-through, both refusal paths and the cancellation token it forwards. The two FluentValidation validators are exercised indirectly through service tests but not
-directly. `ProcessRunner` and `ErrorEndpoints` gained tests in PRs #32 and #33.
+directly. `ProcessRunner` and `ErrorEndpoints` gained tests in PRs #32 and #33. Component rendering tests exist since
+the FluentUI 5 migration (`ComponentRenderingTests`, with bUnit): Login, Home, NotFound, the website and
+licenses dialogs, and the message boxes. FileSelection, DotnetVersions and AspNetReleases are not rendered by
+any test.
 
 `ResourceCompletenessTests` hardcodes `fr-FR`, so a newly added culture would be silently untested for key
 parity — which undercuts the "drop in a `.resx`, zero code changes" story.

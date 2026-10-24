@@ -124,10 +124,11 @@ public class ResultTypesTests
     public void InstallationResult_CreateSuccess_SetsVersionAndInstalledAt()
     {
         // Act
-        var result = InstallationResult.CreateSuccess("8.0.1");
+        var result = InstallationResult.CreateSuccess("8.0.1", "Installed");
 
         // Assert
         Assert.True(result.Success);
+        Assert.Equal("Installed", result.Message);
         Assert.Equal("8.0.1", result.Version);
         Assert.NotNull(result.InstalledAt);
         Assert.Equal(ApiErrorCode.None, result.ErrorCode);

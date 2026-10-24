@@ -95,7 +95,8 @@ public sealed partial class VersionsDetectorService(ILogger<ILogVersionsDetector
 
         try
         {
-            var dotnetPath = Path.Combine(ApplicationConstants.RuntimesRootPath, "dotnet");
+            // From the application directory, where installs land; the working directory matched it only on the NAS
+            var dotnetPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, ApplicationConstants.RuntimesRootPath, WebSiteConstants.DotnetExecutable));
 
             if (!File.Exists(dotnetPath))
             {

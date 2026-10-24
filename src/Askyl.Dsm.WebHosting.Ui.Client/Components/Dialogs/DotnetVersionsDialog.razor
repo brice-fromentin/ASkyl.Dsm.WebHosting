@@ -4,67 +4,65 @@
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
 
-@implements IDialogContentComponent
-
 @inject IDotnetVersionService DotnetVersionService
-@inject IToastService ToastService
+@inject INotificationService ToastService
 @inject ILocalizer localizer
 
-<FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">@localizer[LK.DotnetVersions.DialogTitle]</FluentLabel>
-</FluentDialogHeader>
-
-<FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent">@localizer[LK.Common.Close]</FluentButton>
-</FluentDialogFooter>
-
 <FluentDialogBody>
-    @if (IsLoading)
-    {
-        <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center">
-            <FluentProgressRing />
-            <FluentLabel>@localizer[LK.DotnetVersions.Searching]</FluentLabel>
-        </FluentStack>
-    }
-    else if (DotnetVersions is { Count: > 0 })
-    {
-        <FluentCard>
-            <FluentStack Orientation="Orientation.Vertical">
-                @foreach (var framework in DotnetVersions)
-                {
-                    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                        <FluentIcon Value="@GetFrameworkIcon(framework.Type)" />
-                        <FluentLabel Typo="Typography.Body" Weight="FontWeight.Bold">@framework.Type:</FluentLabel>
-                        <FluentLabel Typo="Typography.Body">@framework.Version</FluentLabel>
-                    </FluentStack>
-                }
+    <TitleTemplate>
+        <FluentText As="TextTag.H2" Size="TextSize.Size600" Weight="TextWeight.Semibold">@localizer[LK.DotnetVersions.DialogTitle]</FluentText>
+    </TitleTemplate>
+    <ChildContent>
+        @if (IsLoading)
+        {
+            <FluentStack Orientation="Orientation.Horizontal" HorizontalAlignment="HorizontalAlignment.Center">
+                <FluentSpinner />
+                <FluentLabel>@localizer[LK.DotnetVersions.Searching]</FluentLabel>
             </FluentStack>
-        </FluentCard>
-    }
-    else if (ErrorMessage != null)
-    {
-        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-            <FluentIcon Value="@(new IconsRegular24.Warning())" Color="Color.Error" />
-            <FluentLabel Typo="Typography.Body" Color="Color.Error">
-                @ErrorMessage
-            </FluentLabel>
-        </FluentStack>
-    }
-    else
-    {
-        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-            <FluentIcon Value="@(new IconsRegular24.Info())" Color="Color.Warning" />
-            <FluentLabel Typo="Typography.Body">
-                @localizer[LK.DotnetVersions.NotFound]
-            </FluentLabel>
-        </FluentStack>
-    }
+        }
+        else if (DotnetVersions is { Count: > 0 })
+        {
+            <FluentCard>
+                <FluentStack Orientation="Orientation.Vertical">
+                    @foreach (var framework in DotnetVersions)
+                    {
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                            <FluentIcon Value="@GetFrameworkIcon(framework.Type)" />
+                            <FluentText Weight="TextWeight.Bold">@framework.Type:</FluentText>
+                            <FluentText>@framework.Version</FluentText>
+                        </FluentStack>
+                    }
+                </FluentStack>
+            </FluentCard>
+        }
+        else if (ErrorMessage != null)
+        {
+            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(new IconsRegular24.Warning())" Color="Color.Error" />
+                <FluentText Color="Color.Error">
+                    @ErrorMessage
+                </FluentText>
+            </FluentStack>
+        }
+        else
+        {
+            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                <FluentIcon Value="@(new IconsRegular24.Info())" Color="Color.Warning" />
+                <FluentText>
+                    @localizer[LK.DotnetVersions.NotFound]
+                </FluentText>
+            </FluentStack>
+        }
+    </ChildContent>
+    <ActionTemplate>
+        <FluentButton OnClick="CancelAsync" Appearance="ButtonAppearance.Primary">@localizer[LK.Common.Close]</FluentButton>
+    </ActionTemplate>
 </FluentDialogBody>
 
 @code
 {
     [CascadingParameter]
-    public FluentDialog Dialog { get; set; } = default!;
+    public IDialogInstance Dialog { get; set; } = default!;
 
     private bool IsLoading { get; set; } = false;
     private List<FrameworkInfo>? DotnetVersions { get; set; }

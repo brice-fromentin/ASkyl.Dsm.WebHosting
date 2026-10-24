@@ -174,7 +174,6 @@ public static class LK
     /// <summary>Error messages displayed to the user (toasts, dialogs, API responses).</summary>
     public static class Error
     {
-        public const string PlatformNotSupported = "Error_PlatformNotSupported";
         public const string AuthenticationFailed = "Error_AuthenticationFailed";
         public const string AdministratorRequired = "Error_AdministratorRequired";
         public const string OperationFailed = "Error_OperationFailed";

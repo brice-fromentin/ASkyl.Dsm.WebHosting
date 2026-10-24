@@ -90,4 +90,19 @@ public static class RuntimeConstants
     public const string NoReleaseFileForRuntimeIdentifierErrorMessage = "No release file found for runtime identifier {0}.";
 
     #endregion
+
+    #region Version Format
+
+    /// <summary>
+    /// A framework version: major.minor[.patch], with an optional prerelease suffix such as
+    /// <c>-preview.7.26381.103</c> or <c>-rc.2.26504.105</c>.
+    /// </summary>
+    /// <remarks>
+    /// It also guards the three recursive deletes on uninstall, which build paths from the version. A suffix is
+    /// dot-separated identifiers of [0-9A-Za-z-] only, so no separator, dot-only segment or whitespace gets through.
+    /// <c>\z</c>, not <c>$</c>: in .NET, <c>$</c> also matches before a final newline, so "10.0\n" passed.
+    /// </remarks>
+    public const string VersionPattern = @"^\d+\.\d+(\.\d+)?(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?\z";
+
+    #endregion
 }

@@ -10,8 +10,8 @@
 
 <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Class="full-height">
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center">
-        <FluentLabel Typo="Typography.H1">@localizer[LK.NotFound.Content]</FluentLabel>
-        <FluentButton Appearance="Appearance.Accent" IconStart="@(new IconsRegular20.Home())" OnClick="GoHome">
+        <FluentText As="TextTag.H1" Size="TextSize.Size800" Weight="TextWeight.Semibold">@localizer[LK.NotFound.Content]</FluentText>
+        <FluentButton Appearance="ButtonAppearance.Primary" IconStart="@(new IconsRegular20.Home())" OnClick="GoHome">
             @localizer[LK.NotFound.GoHome]
         </FluentButton>
     </FluentStack>

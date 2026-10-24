@@ -308,7 +308,7 @@
     <value>Installation error: {0}</value>
   </data>
   <data name="AspNetReleases_UninstallConfirmation" xml:space="preserve">
-    <value>Click OK if you want to proceed with uninstalling ASP.NET Core {0}</value>
+    <value>Do you want to uninstall ASP.NET Core {0}?</value>
   </data>
   <data name="AspNetReleases_UninstallationError" xml:space="preserve">
     <value>Uninstallation error: {0}</value>
@@ -361,9 +361,6 @@
   </data>
 
   <!-- Error -->
-  <data name="Error_PlatformNotSupported" xml:space="preserve">
-    <value>The application can only run on Linux or MacOS</value>
-  </data>
   <data name="Error_AuthenticationFailed" xml:space="preserve">
     <value>Authentication failed</value>
   </data>
@@ -631,6 +628,26 @@
   </data>
   <data name="FileSelection_File" xml:space="preserve">
     <value>File</value>
+  </data>
+
+  <!-- FluentUI: its built-in strings, served by FluentUILocalizer -->
+  <data name="FluentUI_MessageBox_ButtonOk" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="FluentUI_MessageBox_ButtonNo" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="FluentUI_MessageBox_ButtonYes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="FluentUI_MessageBox_Confirmation" xml:space="preserve">
+    <value>Confirmation</value>
+  </data>
+  <data name="FluentUI_MessageBox_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="FluentUI_MessageBox_Information" xml:space="preserve">
+    <value>Information</value>
   </data>
 
 </root>

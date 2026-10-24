@@ -1,6 +1,7 @@
-<FluentNumberField Value="@BoundValue" @oninput="HandleInput" @onchange="HandleChange" Label="@Label" Class="@Class" Name="@Name">
-    @ChildContent
-</FluentNumberField>
+@using System.Globalization
+
+@* Not FluentNumberInput: it loads IMask from unpkg.com on first render, which the CSP refuses *@
+<FluentTextInput Value="@BoundValue" @oninput="HandleInput" @onchange="HandleChange" Label="@Label" Class="@Class" TextInputType="TextInputType.Number" Name="@Name" />
 
 @code
 {
@@ -43,17 +44,11 @@
     [Parameter]
     public string? Name { get; set; }
 
-    /// <summary>
-    /// Child content for the number field.
-    /// </summary>
-    [Parameter]
-    public RenderFragment? ChildContent { get; set; }
-
     #endregion
 
     #region Properties
 
-    private int BoundValue => Value;
+    private string BoundValue => Value.ToString(CultureInfo.InvariantCulture);
 
     #endregion
 

@@ -299,6 +299,38 @@ public class DotnetVersionServiceTests
         Assert.False(result);
     }
 
+    // Previews and release candidates are listed in the releases dialog and must install and uninstall
+    [Theory]
+    [InlineData("11.0.0-preview.7.26381.103")]
+    [InlineData("11.0.0-rc.2.26504.105")]
+    public void IsValidVersionFormat_Prerelease_ReturnsTrue(string version)
+    {
+        Assert.True(CreateService().IsValidVersionFormat(version));
+    }
+
+    // The check guards the three recursive deletes on uninstall: whatever the prerelease suffix allows, no input
+    // may carry a separator, a dot-only segment, whitespace or a trailing newline into those paths
+    [Theory]
+    [InlineData("..")]
+    [InlineData("../../etc")]
+    [InlineData("10.0/../..")]
+    [InlineData("10.0.0-preview/../../etc")]
+    [InlineData("10.0.0-..")]
+    [InlineData("10.0.0-preview..1")]
+    [InlineData("10.0.0-.preview")]
+    [InlineData("10.0.0-preview.")]
+    [InlineData("10.0.0-")]
+    [InlineData("10.0.0-pre view")]
+    [InlineData("10.0.0-rc;rm")]
+    [InlineData("10.0 ")]
+    [InlineData("10.0\n")]
+    [InlineData("10.0.0-rc.1\n")]
+    [InlineData("10.0\n.1")]
+    public void IsValidVersionFormat_PathOrShellLikeInput_ReturnsFalse(string version)
+    {
+        Assert.False(CreateService().IsValidVersionFormat(version));
+    }
+
     #endregion
 
     #region GetChannelsAsync

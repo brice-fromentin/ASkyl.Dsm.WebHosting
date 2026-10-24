@@ -80,7 +80,7 @@ public class ResultSerializationTests
     public void InstallationResult_RoundTrip_DeserializesCorrectly()
     {
         // Arrange
-        var result = InstallationResult.CreateSuccess("8.0.1");
+        var result = InstallationResult.CreateSuccess("8.0.1", "Installed");
         var json = JsonSerializer.Serialize(result, JsonOptions);
 
         // Act

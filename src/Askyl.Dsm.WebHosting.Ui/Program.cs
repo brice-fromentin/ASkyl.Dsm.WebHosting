@@ -8,6 +8,7 @@ using Askyl.Dsm.WebHosting.Tools.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Runtime;
+using Askyl.Dsm.WebHosting.Ui.Client.Extensions;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Askyl.Dsm.WebHosting.Ui.Endpoints;
 using Askyl.Dsm.WebHosting.Ui.Extensions;
@@ -16,7 +17,6 @@ using Askyl.Dsm.WebHosting.Ui.Middleware;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.FluentUI.AspNetCore.Components;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,7 +40,7 @@ builder.Services.AddSession(options =>
 });
 
 builder.Services.AddHttpClient();
-builder.Services.AddFluentUIComponents();
+builder.Services.AddFluentUIComponentsWithDefaults();
 
 // Add globalization/localization services
 builder.Services.AddGlobalization();

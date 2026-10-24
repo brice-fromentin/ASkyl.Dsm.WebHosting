@@ -97,9 +97,11 @@ Single test: append `--filter "FullyQualifiedName~<TestClassOrMethod>"` to the t
 - Version bump: `./src/scripts/update-version.sh [x.y.z]` (syncs `src/Directory.Build.props` and
   `src/spk-project/INFO`; with the argument it runs unattended)
 - Deployment log review: `./src/scripts/compare-logs.sh` (see §13, and the `📊 Logs` task in VS Code)
-- NuGet update: `sh ./src/scripts/update-nuget.sh` (no execute bit). It raises every major: put FluentUI
-  back on 4.x, and keep the analyzer's Roslyn at or below the compiler of the SDK CI installs (comment in
-  `Askyl.Dsm.WebHosting.Analyzers.csproj`; above it, CS9057 silently disables every ADWH rule)
+- NuGet update: `sh ./src/scripts/update-nuget.sh` (no execute bit). It raises every major: put a new
+  FluentUI major back and treat it as a migration of its own (4 → 5 rewrote every UI file, see
+  `technical-architecture.md`, *FluentUI 5 Notes*), and keep the analyzer's Roslyn at or below the
+  compiler of the SDK CI installs (comment in `Askyl.Dsm.WebHosting.Analyzers.csproj`; above it, CS9057
+  silently disables every ADWH rule)
 
 The CI lint gate is `dotnet format --verify-no-changes` — a formatting slip fails the build, not just the review.
 
@@ -307,6 +309,10 @@ logger.LogWarning("Login failed");   // ❌ direct ILogger call
 - **String/String Pattern** (ADWH02001): `StringStaticMemberAnalyzer` with auto-fix
 - **Logger Call Compliance** (ADWH03001): `LoggerDirectCallAnalyzer`
 - **Control Flow Blank Lines** (ADWH01001-01004): `BlankLineAnalyzer` with auto-fix
+- **Warnings**: `TreatWarningsAsErrors` in `src/Directory.Build.props`, so a removed FluentUI component fails the build
+- **FluentUI usage** (`UiSourceAuditTests`): no attribute a component does not declare, no CDN-backed
+  component, message boxes only through the `Show*TextAsync` helpers, no FluentUI 4 token, a `ColumnId` on
+  every grid column
 
 ### Manual Checks Required
 
