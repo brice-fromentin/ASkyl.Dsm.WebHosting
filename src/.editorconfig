@@ -1,7 +1,7 @@
 # C# code style for Askyl.Dsm.WebHosting, enforced at build (EnforceCodeStyleInBuild) and by dotnet format.
 #
-# Options never carry a ":severity" suffix: several options feed one rule, and conflicting suffixes silently
-# disable it. Each rule's severity is set once, as dotnet_diagnostic.<id>.severity.
+# Options never carry a ":severity" suffix: several options feed one rule, and two suffixes on them would
+# disagree about its severity. Each rule's severity is set once, as dotnet_diagnostic.<id>.severity.
 # Nothing validates these keys: an unknown key or rule id is ignored without a word, which is how this file
 # once enforced none of its rules. Make a new rule fire on a known violation before relying on it.
 # IDE0005 and IDE0049 need XML documentation to run at build, which the projects do not generate: they fire
