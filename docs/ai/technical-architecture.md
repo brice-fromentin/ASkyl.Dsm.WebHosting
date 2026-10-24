@@ -144,17 +144,29 @@ All projects share common build settings from `Directory.Build.props`:
 - **Roslynator.Formatting.Analyzers** - Formatting rules
 - **Askyl.Dsm.WebHosting.Analyzers** - Custom analyzers (ADWH01001-01004, 02001, 03001)
 
-**.editorconfig Rule Severities:**
+**.editorconfig rules** (`src/.editorconfig`; severities set as `dotnet_diagnostic.<id>.severity`):
 
-| Category | Rule ID | Severity | Purpose |
-|----------|---------|----------|---------|
-| Collection Expression | dotnet_style_prefer_collection_expression | error | Prefer `[..]` over `.ToList()`/`.ToArray()` |
-| String/String Pattern | IDE0049 (+ ADWH02001) | error | IDE0049 enforces `string` for types; `String.` for static members comes from the custom ADWH02001 analyzer |
-| Primary Constructors | IDE0290, dotnet_style_primary_constructors | warning | MANDATORY for classes with parameters |
-| Magic String Prevention | IDE0280 | warning | Use `nameof()` instead of string literals |
-| Var Usage | dotnet_style_var_for_built_in_types | error | Use explicit types for built-in types |
-| Var When Apparent | dotnet_style_var_when_type_is_apparent | warning | Use `var` when type is obvious |
-| Cleanup | IDE0005 | warning | Remove unnecessary using directives |
+| Rule | Severity | Runs in | Purpose |
+|------|----------|---------|---------|
+| IDE1006 | warning | build | Naming: PascalCase types, members, constants and static readonly fields; `_camelCase` private fields; camelCase parameters and locals; `I` on interfaces |
+| IDE0011 | warning | build | Braces on every control-flow statement |
+| IDE0028, IDE0300–IDE0305 | error | build | Collection expressions |
+| IDE0290 | warning | build | Primary constructors |
+| IDE0090 | warning | build | Target-typed `new()` |
+| IDE0048 | warning | build | Parentheses for clarity in arithmetic and relational expressions |
+| IDE0016 | warning | build | Throw expressions; silent on a nullable parameter, by design |
+| IDE0055 | warning | build | Formatting |
+| IDE0280 | warning | build | `nameof` for parameter names in attribute arguments |
+| CA1303, CA1309, CA1826 | warning | build | Literals passed as localizable text, ordinal string comparison, indexer over LINQ |
+| IDE0049 (+ ADWH02001) | warning | dotnet format | `string` for types, `String.` (and `Int32.`) for static members |
+| IDE0005 | warning | dotnet format | Unused usings |
+
+Every row was made to fire on a known violation on 2026-10-24. Until then the file declared its rules as
+`IDE0005 = warning`, a key Roslyn does not read, and enforced none of them. IDE0005 and IDE0049 need
+XML documentation files to run at build, which the projects do not generate: the mandatory `dotnet format` fixes
+them and the CI lint gate rejects them. `NoWarn` silences `EnableGenerateDocumentationFile`, the warning saying
+so. Deliberately not enforced, as measured at the end of the file: `var`, accessibility modifiers, and the `T`
+prefix on type parameters.
 
 ### Nullable Reference Types
 

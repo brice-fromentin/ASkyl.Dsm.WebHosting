@@ -1,7 +1,7 @@
 # Root EditorConfig file for Askyl.Dsm.WebHosting
 # See https://docs.microsoft.com/dotnet/fundamentals/code-analysis/configuration-options
 
-is_root = true
+root = true
 
 # Global settings for all files in the repository
 [*]

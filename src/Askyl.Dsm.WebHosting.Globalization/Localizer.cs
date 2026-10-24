@@ -19,7 +19,7 @@ public interface ILocalizer
 /// Wraps <see cref="ResourceManager"/> behind <see cref="ILocalizer"/>.
 /// Uses <see cref="ResourceManager"/> directly (not <see cref="Microsoft.Extensions.Localization.IStringLocalizer{T}"/>)
 /// because the latter caches culture at construction time in WASM — culture changes after login are ignored.
-/// <see cref="ResourceManager.GetString(string, CultureInfo)"/> always reads <see cref="CultureInfo.CurrentUICulture"/>
+/// <see cref="ResourceManager.GetString(String, CultureInfo)"/> always reads <see cref="CultureInfo.CurrentUICulture"/>
 /// at call time, so culture switches work correctly without re-rendering.
 /// </summary>
 public sealed class Localizer : ILocalizer

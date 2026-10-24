@@ -352,16 +352,16 @@ public class WebSitesConfigurationServiceTests : IDisposable
         // The file is the only copy of the truth. Answering an unreadable one with an empty
         // configuration stopped every site without saying so, and the next successful write then
         // persisted that emptiness — the bytes needed to repair it having already been renamed away.
-        const string Damaged = "{ this is not json";
+        const string damaged = "{ this is not json";
 
-        File.WriteAllText(_configFilePath, Damaged);
+        File.WriteAllText(_configFilePath, damaged);
 
         var service = CreateService();
 
         await Assert.ThrowsAnyAsync<Exception>(() => service.GetAllSitesAsync());
 
         // Untouched: nothing renamed aside, nothing to hunt for, the bytes still there to be fixed.
-        Assert.Equal(Damaged, File.ReadAllText(_configFilePath));
+        Assert.Equal(damaged, File.ReadAllText(_configFilePath));
         Assert.Empty(Directory.GetFiles(_tempDir, "*.bak"));
     }
 
@@ -369,16 +369,16 @@ public class WebSitesConfigurationServiceTests : IDisposable
     public async Task AddSiteAsync_WhenTheFileIsCorrupted_RefusesToWriteOverIt()
     {
         // The destructive half: a load that answers "empty" makes the next write look legitimate.
-        const string Damaged = "{ this is not json";
+        const string damaged = "{ this is not json";
 
-        File.WriteAllText(_configFilePath, Damaged);
+        File.WriteAllText(_configFilePath, damaged);
 
         var service = CreateService();
 
         await Assert.ThrowsAnyAsync<Exception>(
             () => service.AddSiteAsync(new WebSiteConfiguration { Name = "New", ApplicationPath = _tempDir, InternalPort = 5001, HostName = "new.local" }));
 
-        Assert.Equal(Damaged, File.ReadAllText(_configFilePath));
+        Assert.Equal(damaged, File.ReadAllText(_configFilePath));
     }
 
     #endregion

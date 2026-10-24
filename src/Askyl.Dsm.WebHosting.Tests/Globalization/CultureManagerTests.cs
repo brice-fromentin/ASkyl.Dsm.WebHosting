@@ -1,6 +1,5 @@
 using System.Globalization;
 using Askyl.Dsm.WebHosting.Logging;
-using Askyl.Dsm.WebHosting.Tests;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;

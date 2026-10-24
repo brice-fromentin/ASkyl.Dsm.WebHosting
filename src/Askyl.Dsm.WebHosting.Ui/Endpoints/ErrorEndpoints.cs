@@ -44,7 +44,7 @@ public static class ErrorEndpoints
 
     internal static IResult HandleStatusCode(HttpContext context)
     {
-        var statusCode = int.TryParse(context.Request.Query[ApplicationConstants.NotFoundPageStatusParameter], out var code) ? code : StatusCodes.Status404NotFound;
+        var statusCode = Int32.TryParse(context.Request.Query[ApplicationConstants.NotFoundPageStatusParameter], out var code) ? code : StatusCodes.Status404NotFound;
         var originalPath = context.Features.Get<IStatusCodeReExecuteFeature>()?.OriginalPath ?? context.Request.Path;
 
         if (RequestAcceptsJson(context))

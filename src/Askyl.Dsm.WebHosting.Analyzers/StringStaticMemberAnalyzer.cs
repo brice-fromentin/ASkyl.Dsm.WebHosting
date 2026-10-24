@@ -11,7 +11,7 @@ public class StringStaticMemberAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "ADWH02001";
 
-    static readonly DiagnosticDescriptor s_rule = new(
+    static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: Resources.ADWH02001_Title,
         messageFormat: Resources.ADWH02001_Message,
@@ -21,7 +21,7 @@ public class StringStaticMemberAnalyzer : DiagnosticAnalyzer
         description: Resources.ADWH02001_Description);
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [s_rule];
+        [Rule];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -67,6 +67,6 @@ public class StringStaticMemberAnalyzer : DiagnosticAnalyzer
         }
 
         var memberName = memberAccess.Name.Identifier.Text;
-        context.ReportDiagnostic(Diagnostic.Create(s_rule, memberAccess.Name.GetLocation(), memberName));
+        context.ReportDiagnostic(Diagnostic.Create(Rule, memberAccess.Name.GetLocation(), memberName));
     }
 }

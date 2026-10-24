@@ -127,9 +127,12 @@ hosted sites both shipped through a fully green build.
 - ✅ **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()` (only when target type is inferable — `var` takes precedence)
 - ✅ **Braces**: Always use `{}` for control flow statements
 - ✅ **Blank lines**: After `#region`, before `#endregion`
-- ✅ **Naming conventions**: PascalCase for properties/methods, camelCase for parameters/locals
+- ✅ **Naming conventions**: PascalCase for types, members and constants, `_camelCase` for private fields,
+  camelCase for parameters/locals
+- ✅ **Target-typed `new()`** when the type is apparent
 - ✅ **Nullable reference types**: Enabled and enforced
-- ✅ **All IDE0xxx/RCS0xxx/CAxxxx rules**
+- ✅ **The rules in `src/.editorconfig`**, each made to fire on a known violation. An unknown key or rule id
+  is ignored without a word, which is how the file once enforced none of them: prove a new rule fires first
 
 ---
 
@@ -302,6 +305,7 @@ logger.LogWarning("Login failed");   // ❌ direct ILogger call
 ### Tooling-Enforced (No Manual Check Required)
 
 - **Using directives**: System first, alphabetical; unused removed
+- **Target-typed `new`** (IDE0090) and **naming** (IDE1006): `src/.editorconfig`
 - **Primary constructors**: Mandatory for classes with constructor parameters
 - **Collection expressions**: `[..]` over `.ToList()`, `.ToArray()` (when inferable)
 - **String/String Pattern** (ADWH02001): `StringStaticMemberAnalyzer` with auto-fix
@@ -311,8 +315,7 @@ logger.LogWarning("Login failed");   // ❌ direct ILogger call
 ### Manual Checks Required
 
 1. **Magic Strings and Numbers** — replace ALL hardcoded strings/numbers with constants
-2. **Target-Typed `new`** — use `new()` when type inferable (exception: variable name already includes type)
-3. **Markdown Validation** — run `markdownlint <file-path>`, fix ALL errors
+2. **Markdown Validation** — run `markdownlint <file-path>`, fix ALL errors
 
 ### Non-Negotiable Enforcement
 

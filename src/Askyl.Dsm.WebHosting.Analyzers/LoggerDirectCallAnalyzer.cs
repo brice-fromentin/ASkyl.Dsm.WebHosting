@@ -11,7 +11,7 @@ public class LoggerDirectCallAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "ADWH03001";
 
-    static readonly DiagnosticDescriptor s_rule = new(
+    static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: Resources.ADWH03001_Title,
         messageFormat: Resources.ADWH03001_Message,
@@ -21,7 +21,7 @@ public class LoggerDirectCallAnalyzer : DiagnosticAnalyzer
         description: Resources.ADWH03001_Description);
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        [s_rule];
+        [Rule];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -35,7 +35,9 @@ public class LoggerDirectCallAnalyzer : DiagnosticAnalyzer
         var invocation = (InvocationExpressionSyntax)context.Node;
 
         if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+        {
             return;
+        }
 
         var methodName = memberAccess.Name.Identifier.Text;
 
@@ -59,7 +61,7 @@ public class LoggerDirectCallAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var diagnostic = Diagnostic.Create(s_rule, memberAccess.Name.GetLocation(), methodName);
+        var diagnostic = Diagnostic.Create(Rule, memberAccess.Name.GetLocation(), methodName);
         context.ReportDiagnostic(diagnostic);
     }
 }

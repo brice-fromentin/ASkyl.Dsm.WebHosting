@@ -5,6 +5,8 @@
     <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
     <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Without documentation files IDE0005 cannot run at build, and says so in this warning; dotnet format runs it -->
+    <NoWarn>$(NoWarn);EnableGenerateDocumentationFile</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
