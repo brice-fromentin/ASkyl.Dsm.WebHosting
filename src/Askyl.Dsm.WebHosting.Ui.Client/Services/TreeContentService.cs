@@ -34,7 +34,9 @@ public class TreeContentService(IFileSystemService fileSystemService, ILocalizer
             }
 
             // All items are already directories - no filtering needed!
-            return [.. contents.Select(f => CreateTreeViewItemWithLazyLoading(f.Path, f.Name, loadChildrenAsync))];
+            var loadingMessage = localizer[LK.Loading.DirectoryContents];
+
+            return [.. contents.Select(f => CreateTreeViewItemWithLazyLoading(f.Path, f.Name, loadChildrenAsync, loadingMessage))];
         }
         catch (Exception ex)
         {
@@ -44,14 +46,14 @@ public class TreeContentService(IFileSystemService fileSystemService, ILocalizer
         }
     }
 
-    private static TreeViewItem CreateTreeViewItemWithLazyLoading(string path, string name, Func<string, Task<List<TreeViewItem>>> loadChildrenAsync)
+    private static TreeViewItem CreateTreeViewItemWithLazyLoading(string path, string name, Func<string, Task<List<TreeViewItem>>> loadChildrenAsync, string loadingMessage)
     {
-        return new(path, name, TreeViewItem.LoadingTreeViewItems)
+        return new(path, name, TreeViewItem.LoadingTreeViewItems(loadingMessage))
         {
             OnExpandedAsync = async args =>
             {
                 var result = await loadChildrenAsync(args.CurrentItem.Id);
-                args.CurrentItem.Items = result ?? TreeViewItem.LoadingTreeViewItems;
+                args.CurrentItem.Items = result ?? TreeViewItem.LoadingTreeViewItems(loadingMessage);
             }
         };
     }

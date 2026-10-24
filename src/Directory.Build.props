@@ -11,11 +11,11 @@
 
   <PropertyGroup>
     <!-- Centralized versioning -->
-    <Version>0.7.1</Version>
-    <AssemblyVersion>0.7.1.0</AssemblyVersion>
-    <FileVersion>0.7.1.0</FileVersion>
-    <InformationalVersion>0.7.1</InformationalVersion>
-    <PackageVersion>0.7.1</PackageVersion>
+    <Version>0.8.0</Version>
+    <AssemblyVersion>0.8.0.0</AssemblyVersion>
+    <FileVersion>0.8.0.0</FileVersion>
+    <InformationalVersion>0.8.0</InformationalVersion>
+    <PackageVersion>0.8.0</PackageVersion>
   </PropertyGroup>
   
   <PropertyGroup>
@@ -25,6 +25,8 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
+    <!-- A removed Razor component is only warning RZ10012, and CI does not fail on warnings -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup>

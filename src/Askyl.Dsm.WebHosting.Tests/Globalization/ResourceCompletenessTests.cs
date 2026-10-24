@@ -3,6 +3,8 @@ using System.Globalization;
 using System.Reflection;
 using System.Resources;
 using System.Runtime.Versioning;
+using Askyl.Dsm.WebHosting.Constants.Globalization;
+using Microsoft.FluentUI.AspNetCore.Components;
 
 namespace Askyl.Dsm.WebHosting.Tests.Globalization;
 
@@ -37,16 +39,19 @@ public class ResourceCompletenessTests
     {
         // Arrange
         var resourceManager = GetResourceManager();
-        var englishCulture = new CultureInfo("en-US");
         var frenchCulture = new CultureInfo("fr-FR");
 
-        // Act — use tryParents=false to prevent fallback masking missing translations
-        var englishKeys = GetResourceKeys(resourceManager, englishCulture, tryParents: false);
+        // Act — English is the neutral resource, not an en-US satellite: reading en-US without parents found nothing,
+        // so this compared an empty set and passed while French lacked translations. tryParents=false keeps the
+        // fallback from masking a missing French entry.
+        var englishKeys = GetResourceKeys(resourceManager, CultureInfo.InvariantCulture, tryParents: false);
         var frenchKeys = GetResourceKeys(resourceManager, frenchCulture, tryParents: false);
 
-        // Assert
+        // Assert — both sets non-empty first: an empty one is the blind spot this test had
+        Assert.NotEmpty(englishKeys);
+        Assert.NotEmpty(frenchKeys);
         var missing = englishKeys.Except(frenchKeys).OrderBy(k => k).ToList();
-        Assert.Empty(missing);
+        Assert.True(missing.Count == 0, String.Join(Environment.NewLine, missing));
     }
 
     #endregion
@@ -120,8 +125,12 @@ public class ResourceCompletenessTests
         var keysType = typeof(WebHosting.Globalization.LK);
         var localizationKeys = CollectLocalizationKeys(keysType);
 
+        // FluentUILocalizer reads FluentUI_<key> entries under FluentUI's own key: referenced when FluentUI has that key
+        var fluentUIKeys = resxKeys.Where(key => key.StartsWith(GlobalizationConstants.FluentUIResourcePrefix, StringComparison.Ordinal)
+            && IsFluentUIKey(key[GlobalizationConstants.FluentUIResourcePrefix.Length..]));
+
         // Assert — every key in .resx should be referenced by LK.cs (no orphaned translations)
-        var orphaned = resxKeys.Except(localizationKeys).OrderBy(k => k).ToList();
+        var orphaned = resxKeys.Except(localizationKeys).Except(fluentUIKeys).OrderBy(k => k).ToList();
         Assert.Empty(orphaned);
     }
 
@@ -129,10 +138,24 @@ public class ResourceCompletenessTests
 
     #region Helpers
 
+    static bool IsFluentUIKey(string key)
+    {
+        try
+        {
+            IFluentLocalizer.GetDefault(key);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
+
     private static HashSet<string> GetResourceKeys(ResourceManager resourceManager, CultureInfo culture, bool tryParents)
     {
         var keys = new HashSet<string>();
-        using (var resourceSet = resourceManager.GetResourceSet(culture, tryParents, false))
+        // createIfNotExists: true, or a set no earlier test happened to load comes back null and the test compares nothing
+        using (var resourceSet = resourceManager.GetResourceSet(culture, createIfNotExists: true, tryParents: tryParents))
         {
             if (resourceSet is not null)
             {

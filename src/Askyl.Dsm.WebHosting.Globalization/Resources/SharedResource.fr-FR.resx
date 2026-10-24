@@ -308,7 +308,7 @@
     <value>Erreur d'installation : {0}</value>
   </data>
   <data name="AspNetReleases_UninstallConfirmation" xml:space="preserve">
-    <value>Cliquez sur OK pour procéder à la désinstallation d'ASP.NET Core {0}</value>
+    <value>Voulez-vous désinstaller ASP.NET Core {0} ?</value>
   </data>
   <data name="AspNetReleases_UninstallationError" xml:space="preserve">
     <value>Erreur de désinstallation : {0}</value>
@@ -361,9 +361,6 @@
   </data>
 
   <!-- Error -->
-  <data name="Error_PlatformNotSupported" xml:space="preserve">
-    <value>L'application ne peut fonctionner que sur Linux ou MacOS</value>
-  </data>
   <data name="Error_AuthenticationFailed" xml:space="preserve">
     <value>Échec de l'authentification</value>
   </data>
@@ -547,6 +544,12 @@
   <data name="WebSiteConfiguration_ApplicationPathRequired" xml:space="preserve">
     <value>Le chemin de l'application est requis</value>
   </data>
+  <data name="WebSiteConfiguration_InvalidHostName" xml:space="preserve">
+    <value>Format de nom d'hôte invalide. Utilisez des caractères alphanumériques, des tirets et des points (ex. example.com)</value>
+  </data>
+  <data name="WebSiteConfiguration_InvalidPath" xml:space="preserve">
+    <value>Le chemin de l'application doit être un chemin absolu commençant par /</value>
+  </data>
   <data name="WebSiteConfiguration_InternalPortRequired" xml:space="preserve">
     <value>Le port interne est requis</value>
   </data>
@@ -625,6 +628,26 @@
   </data>
   <data name="FileSelection_File" xml:space="preserve">
     <value>Fichier</value>
+  </data>
+
+  <!-- FluentUI: its built-in strings, served by FluentUILocalizer -->
+  <data name="FluentUI_MessageBox_ButtonOk" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="FluentUI_MessageBox_ButtonNo" xml:space="preserve">
+    <value>Non</value>
+  </data>
+  <data name="FluentUI_MessageBox_ButtonYes" xml:space="preserve">
+    <value>Oui</value>
+  </data>
+  <data name="FluentUI_MessageBox_Confirmation" xml:space="preserve">
+    <value>Confirmation</value>
+  </data>
+  <data name="FluentUI_MessageBox_Error" xml:space="preserve">
+    <value>Erreur</value>
+  </data>
+  <data name="FluentUI_MessageBox_Information" xml:space="preserve">
+    <value>Information</value>
   </data>
 
 </root>

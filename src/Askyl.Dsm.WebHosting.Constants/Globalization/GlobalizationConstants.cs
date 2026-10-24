@@ -21,6 +21,16 @@ public static class GlobalizationConstants
 
     #endregion
 
+    #region FluentUI
+
+    /// <summary>
+    /// Prefix of the SharedResource entries that translate FluentUI's own strings: <c>FluentUI_MessageBox_Error</c>
+    /// translates FluentUI's <c>MessageBox_Error</c>.
+    /// </summary>
+    public const string FluentUIResourcePrefix = "FluentUI_";
+
+    #endregion
+
     #region Text Direction
 
     /// <summary>

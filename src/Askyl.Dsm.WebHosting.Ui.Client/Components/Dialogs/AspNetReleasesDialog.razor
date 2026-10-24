@@ -3,68 +3,66 @@
 @using Askyl.Dsm.WebHosting.Globalization
 
 @inherits WorkingStateBase
-@implements IDialogContentComponent
 
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @inject IDialogService DialogService
 @inject IDotnetVersionService DotnetVersionService
 @inject IFrameworkManagementService ManagementService
-@inject IToastService ToastService
+@inject INotificationService ToastService
 @inject ILocalizer localizer
 
 <LoadingOverlay WorkingState="@this" />
 
-
-<FluentDialogHeader ShowDismiss="true">
-    <FluentLabel Typo="Typography.H2">@localizer[LK.AspNetReleases.DialogTitle]</FluentLabel>
-</FluentDialogHeader>
-
-<FluentDialogFooter>
-    <FluentButton OnClick="CancelAsync" Appearance="Appearance.Accent" Disabled="@IsWorking" Class="flex-full-width">@localizer[LK.Common.Close]</FluentButton>
-</FluentDialogFooter>
-
 <FluentDialogBody>
-    <FluentToolbar Class="full-width">
-        <FluentLabel>@localizer[LK.AspNetReleases.ChannelLabel]</FluentLabel>
+    <TitleTemplate>
+        <FluentText As="TextTag.H2" Size="TextSize.Size600" Weight="TextWeight.Semibold">@localizer[LK.AspNetReleases.DialogTitle]</FluentText>
+    </TitleTemplate>
+    <ChildContent>
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Class="toolbar full-width">
+            <FluentLabel>@localizer[LK.AspNetReleases.ChannelLabel]</FluentLabel>
 
-        <FluentSelect TOption="AspNetCoreReleaseInfo" Items="@Channels" SelectedOption="@SelectedChannel" SelectedOptionChanged="OnChannelChanged" Width="140px" Disabled="@IsWorking" />
+            @* No Width: it sizes only the field around the dropdown, which keeps its own 160px and overlapped the button *@
+            <FluentSelect TOption="AspNetCoreReleaseInfo" TValue="AspNetCoreReleaseInfo" Items="@Channels" Value="@SelectedChannel" ValueChanged="OnChannelChanged" Disabled="@IsWorking" />
 
-        <FluentButton OnClick="Refresh" Appearance="Appearance.Outline" Title="@localizer[LK.Common.Refresh]" Disabled="@IsWorking">
-            <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
-        </FluentButton>
+            <FluentButton OnClick="Refresh" Appearance="ButtonAppearance.Outline" IconOnly="true" Title="@localizer[LK.Common.Refresh]" Disabled="@IsWorking">
+                <FluentIcon Value="@(new IconsRegular16.ArrowClockwise())" />
+            </FluentButton>
 
-        <FluentButton OnClick="@(IsSelectedVersionInstalled ? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="Appearance.Accent" Disabled="@(!CanProcessSelected || IsWorking)" Class="flex-full-width">
-            <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
-                <FluentIcon Value="@(IsSelectedVersionInstalled ? (Icon)new IconsRegular16.Delete() : new IconsRegular16.CloudArrowDown())" Color="Color.Fill" />
-                <FluentLabel Color="Color.Fill">
-                    @GetActionButtonText()
-                </FluentLabel>
-            </FluentStack>
-        </FluentButton>
-    </FluentToolbar>
+            <FluentButton OnClick="@(IsSelectedVersionInstalled ? UninstallSelectedFramework : InstallSelectedFramework)" Appearance="ButtonAppearance.Primary" Disabled="@(!CanProcessSelected || IsWorking)" Class="flex-full-width">
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+                    <FluentIcon Value="@(IsSelectedVersionInstalled ? (Icon)new IconsRegular16.Delete() : new IconsRegular16.CloudArrowDown())" />
+                    <FluentText>
+                        @GetActionButtonText()
+                    </FluentText>
+                </FluentStack>
+            </FluentButton>
+        </FluentStack>
 
-    <div class="dialog-grid-container">
-        <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="240px 120px 100px 120px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
-            <ChildContent>
-                <PropertyColumn TGridItem="AspNetRelease" TProp="string" Title="@localizer[LK.AspNetReleases.GridColumnVersion]" Property="@(r => r.Version)" Sortable="true" />
-                <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[LK.AspNetReleases.GridColumnInstalled]" Align="Align.Center">
-                    @(context.IsInstalled ? localizer[LK.Common.CheckMark] : String.Empty)
-                </TemplateColumn>
-                <TemplateColumn TGridItem="AspNetRelease" Title="@localizer[LK.AspNetReleases.GridColumnSecurity]" Align="Align.Center">
-                    @(context.IsSecurity ? localizer[LK.Common.WarningIcon] : String.Empty)
-                </TemplateColumn>
-                <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" Title="@localizer[LK.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="d" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending" />
-            </ChildContent>
-        </AutoDataGrid>
-    </div>
+        <div class="dialog-grid-container">
+            @* The last column is 150px: at 120px the right-aligned French header "Publication" and its sort arrow lost their first letters *@
+            <AutoDataGrid TItem="AspNetRelease" Items="@Releases" GridTemplateColumns="1fr 120px 100px 150px" OnRowClick="@OnReleaseSelected" OnReload="@ReloadReleases">
+                <ChildContent>
+                    <PropertyColumn TGridItem="AspNetRelease" TProp="string" ColumnId="@nameof(AspNetRelease.Version)" Title="@localizer[LK.AspNetReleases.GridColumnVersion]" Property="@(r => r.Version)" Sortable="true" />
+                    <TemplateColumn TGridItem="AspNetRelease" ColumnId="@nameof(AspNetRelease.IsInstalled)" Title="@localizer[LK.AspNetReleases.GridColumnInstalled]" Align="DataGridCellAlignment.Center">
+                        @(context.IsInstalled ? localizer[LK.Common.CheckMark] : String.Empty)
+                    </TemplateColumn>
+                    <TemplateColumn TGridItem="AspNetRelease" ColumnId="@nameof(AspNetRelease.IsSecurity)" Title="@localizer[LK.AspNetReleases.GridColumnSecurity]" Align="DataGridCellAlignment.Center">
+                        @(context.IsSecurity ? localizer[LK.Common.WarningIcon] : String.Empty)
+                    </TemplateColumn>
+                    <PropertyColumn TGridItem="AspNetRelease" TProp="DateTimeOffset?" ColumnId="@nameof(AspNetRelease.ReleaseDate)" Title="@localizer[LK.AspNetReleases.GridColumnRelease]" Property="@(r => r.ReleaseDate)" Format="d" Align="DataGridCellAlignment.End" Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="DataGridSortDirection.Descending" />
+                </ChildContent>
+            </AutoDataGrid>
+        </div>
+    </ChildContent>
+    <ActionTemplate>
+        <FluentButton OnClick="CancelAsync" Appearance="ButtonAppearance.Primary" Disabled="@IsWorking" Class="flex-full-width">@localizer[LK.Common.Close]</FluentButton>
+    </ActionTemplate>
 </FluentDialogBody>
-
-
 
 @code
 {
     [CascadingParameter]
-    public FluentDialog Dialog { get; set; } = default!;
+    public IDialogInstance Dialog { get; set; } = default!;
 
     /// <summary>
     /// Gets or sets the product version of the channel to pre-select (e.g., "9.0").
@@ -202,7 +200,7 @@
 
     private async Task ReloadReleases() => await LoadReleasesAsync(SelectedChannel);
 
-    private async Task ShowErrorAsync(string error) => await DialogService.ShowErrorAsync(error);
+    private async Task ShowErrorAsync(string error) => await DialogService.ShowErrorTextAsync(error);
 
     private async Task InstallSelectedFramework()
     {
@@ -219,17 +217,17 @@
 
             if (result.Success)
             {
-                await DialogService.ShowInfoAsync(result.Message ?? localizer[LK.Success.InstallationCompleted]);
+                await DialogService.ShowInfoTextAsync(result.Message ?? localizer[LK.Success.InstallationCompleted]);
                 await Refresh();
             }
             else
             {
-                await DialogService.ShowErrorAsync(result.Message ?? localizer[LK.Error.InstallationFailed]);
+                await DialogService.ShowErrorTextAsync(result.Message ?? localizer[LK.Error.InstallationFailed]);
             }
         }
         catch (Exception ex)
         {
-            await DialogService.ShowErrorAsync(localizer[LK.AspNetReleases.InstallationError, ex.Message]);
+            await DialogService.ShowErrorTextAsync(localizer[LK.AspNetReleases.InstallationError, ex.Message]);
         }
     }
 
@@ -241,10 +239,9 @@
         }
 
         var confirmationMessage = localizer[LK.AspNetReleases.UninstallConfirmation, SelectedItem.Version];
-        var confirmation = await DialogService.ShowConfirmationAsync(confirmationMessage);
-        var result = await confirmation.Result;
+        var result = await DialogService.ShowConfirmationTextAsync(confirmationMessage);
 
-        if (result == null || result.Cancelled)
+        if (result.Cancelled)
         {
             return;
         }
@@ -257,17 +254,17 @@
 
             if (uninstallResult.Success)
             {
-                await DialogService.ShowInfoAsync(uninstallResult.Message ?? localizer[LK.Success.UninstallationCompleted]);
+                await DialogService.ShowInfoTextAsync(uninstallResult.Message ?? localizer[LK.Success.UninstallationCompleted]);
                 await Refresh();
             }
             else
             {
-                await DialogService.ShowErrorAsync(uninstallResult.Message ?? localizer[LK.Error.UninstallationFailed]);
+                await DialogService.ShowErrorTextAsync(uninstallResult.Message ?? localizer[LK.Error.UninstallationFailed]);
             }
         }
         catch (Exception ex)
         {
-            await DialogService.ShowErrorAsync(localizer[LK.AspNetReleases.UninstallationError, ex.Message]);
+            await DialogService.ShowErrorTextAsync(localizer[LK.AspNetReleases.UninstallationError, ex.Message]);
         }
     }
 }

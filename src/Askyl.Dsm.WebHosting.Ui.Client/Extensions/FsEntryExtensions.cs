@@ -15,9 +15,10 @@ public static class FsEntryExtensions
         /// Each item is configured for lazy loading of child directories.
         /// </summary>
         /// <param name="loadChildrenAsync">Callback to load child directories when folder is expanded.</param>
+        /// <param name="loadingMessage">Text of the placeholder item shown until the children are loaded.</param>
         /// <returns>A list of TreeViewItem objects ready for UI binding with lazy loading enabled.</returns>
-        public List<TreeViewItem> ToTreeViewItems(Func<string, Task<List<TreeViewItem>>> loadChildrenAsync)
-            => [.. items.Select(f => f.ToTreeViewItemWithLazyLoading(loadChildrenAsync))];
+        public List<TreeViewItem> ToTreeViewItems(Func<string, Task<List<TreeViewItem>>> loadChildrenAsync, string loadingMessage)
+            => [.. items.Select(f => f.ToTreeViewItemWithLazyLoading(loadChildrenAsync, loadingMessage))];
     }
 
     extension(FsEntry item)
@@ -26,9 +27,10 @@ public static class FsEntryExtensions
         /// Converts a single FsEntry to a TreeViewItem configured for lazy loading.
         /// </summary>
         /// <param name="loadChildrenAsync">Callback to load child directories when folder is expanded.</param>
+        /// <param name="loadingMessage">Text of the placeholder item shown until the children are loaded.</param>
         /// <returns>A TreeViewItem configured with lazy loading support.</returns>
-        public TreeViewItem ToTreeViewItemWithLazyLoading(Func<string, Task<List<TreeViewItem>>> loadChildrenAsync)
-            => new(item.Path, item.Name, TreeViewItem.LoadingTreeViewItems)
+        public TreeViewItem ToTreeViewItemWithLazyLoading(Func<string, Task<List<TreeViewItem>>> loadChildrenAsync, string loadingMessage)
+            => new(item.Path, item.Name, TreeViewItem.LoadingTreeViewItems(loadingMessage))
             {
                 OnExpandedAsync = async args =>
                 {
