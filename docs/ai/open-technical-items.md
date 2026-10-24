@@ -264,6 +264,52 @@ before Serilog was up — an unhandled startup exception, for instance — survi
 and a host that fails to boot produces no downloadable archive at all. Appending (`>>`) with a size bound
 would keep it.
 
+### The package needs a DSM hostname and a matching certificate, and says so nowhere
+
+The application reaches its own DSM at `https://{external_host_ip}:{external_port_dsm_https}`
+(`Data/DsmApi/Parameters/ApiParametersBase.cs:58`, called from `Tools/Network/DsmApiClient.cs:45,88`), through
+the default `HttpClient` (`Ui/Program.cs:42`), so with full certificate validation. That works only if DSM has a
+hostname under *External Access*, its certificate covers that name, the name resolves from the NAS itself, and
+the external port reaches DSM from inside. The README names none of it, and each missing link fails differently:
+
+- **No hostname: the package does not start.** `Ui/Program.cs:143` applies the DSM culture before `app.Run()`,
+  which resolves `DsmSettingsService`, whose constructor throws (`Tools/Infrastructure/DsmSettingsService.cs:82`).
+  The reason reaches only the log, and `application.log` is truncated at the next start (entry above).
+  Confirmed by the maintainer on 2026-10-24; what Package Center shows the user was not checked.
+- **A name the certificate does not cover** — an IP, or DSM's default self-signed certificate, issued to
+  `synology` — lets the host start and fails every DSM call. Measured on a Virtual DSM on 2026-10-24: a fresh
+  instance has no `external_host_ip` at all and serves that default certificate. What the login page then shows
+  was not checked.
+- **The last two links are inferred, not tried**: resolution from the NAS, and an external port that differs
+  from DSM's own.
+- **Any later change in DSM needs a package restart**: `DsmSettingsService` is a Singleton that reads
+  `synoinfo.conf` once.
+
+Loopback does not remove the constraint by itself. From inside the Virtual DSM, `http://127.0.0.1:5000` answers
+and `https://127.0.0.1:5001` fails strict validation, since no DSM certificate names `127.0.0.1` or `localhost`.
+Plain HTTP or a loopback-only certificate bypass would both drop the rule that nothing bypasses validation.
+
+**Decided with the maintainer on 2026-10-24**, as two changes in this order:
+
+1. **Diagnose instead of crashing.** The host starts whatever the settings say and, in place of the login, lists
+   each link checked live — hostname set, name resolves, port answers, certificate covers the name (showing the
+   names it does cover and its issuer), `SYNO.API.Info` answers — each with its remedy, plus a re-check that
+   re-reads `synoinfo.conf` without a restart.
+2. **Discover the name from DSM's own certificate.** Read the certificate DSM presents on loopback, take an exact
+   name from its SAN, then connect to that name with full validation. A self-signed or wildcard-only certificate
+   falls back to the diagnostic. Nothing bypasses validation.
+
+Open for the design of step 2: connecting to `127.0.0.1` through `SocketsHttpHandler.ConnectCallback` while the
+URL keeps the name would validate against the name and drop the resolution and port links. Not yet verified:
+that the TLS target name still comes from the URL. Applying it when a hostname *is* set would also change a
+path that works today.
+
+Not chosen: calling the host the browser used. The `Host` header is client-controlled, and calling it would send
+the DSM password wherever a forged request points. It may appear on the diagnostic page as a suggestion only.
+
+The Virtual DSM stays in its current state until step 1 lands: it is exactly the case to diagnose. A trusted
+certificate goes on it afterwards, for the positive path of step 2.
+
 ## Tooling and dependencies
 
 ### `compare-logs.sh` cannot see most of what reading a log by hand found
