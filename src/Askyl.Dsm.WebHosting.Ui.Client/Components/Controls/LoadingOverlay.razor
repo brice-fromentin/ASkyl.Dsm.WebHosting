@@ -2,8 +2,9 @@
 <FluentOverlay Visible="@WorkingState.IsWorking" Opacity="@Opacity" FullScreen="true">
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
         <FluentSpinner />
-        @* Size400 approximates FluentUI 4's Typography.Header, an h5 *@
-        <FluentText As="TextTag.H5" Size="TextSize.Size400" Weight="TextWeight.Semibold" Class="full-size">
+        @* Size400 approximates FluentUI 4's Typography.Header, an h5; Color.Default because the overlay's native
+           dialog would otherwise give the text the browser's own colour, black on the dark theme *@
+        <FluentText As="TextTag.H5" Size="TextSize.Size400" Weight="TextWeight.Semibold" Color="Color.Default" Class="full-size">
             @WorkingState.Message
         </FluentText>
     </FluentStack>

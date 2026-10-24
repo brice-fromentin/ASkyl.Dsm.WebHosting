@@ -139,6 +139,15 @@ public class ComponentRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public void LoadingOverlay_TextTakesTheThemeForeground()
+    {
+        // The overlay's native dialog sets the browser's own text colour, black on the dark theme, unless the text sets one
+        var cut = _ctx.Render<Home>();
+
+        Assert.Contains("var(--colorNeutralForeground1)", cut.Find("fluent-overlay fluent-text").GetAttribute("style"), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void HomeGrid_KeepsItsColumnOrderWhenTheCultureChanges()
     {
         // FluentUI 5 remembers column order by key, and a column without ColumnId is keyed by its title: once the
