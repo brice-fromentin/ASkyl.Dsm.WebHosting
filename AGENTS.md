@@ -518,16 +518,32 @@ PR #70 merged green and `main` went red in `vulnerable` (run #115) on advisories
 ## 13. APPLICATION LAUNCH RESTRICTIONS
 
 **An assistant never launches the application without the maintainer's explicit approval for that run.**
-The local mock names the real NAS by design, so every local run reaches production; approval for one run
-does not extend to the next.
+The local mock may name the real NAS by design, so a local run can reach production; approval for one run
+does not extend to the next. The disposable vDSM below is the only exception.
 
 - Local runs read DSM settings from the development mock (`src/Askyl.Dsm.WebHosting.Ui/dev-mock/`),
   which supplies `synoinfo.conf` through the configurable `DsmSettings:ConfigPath`
 - The tests never read it: `ApplicationHostFactory` runs the host as `Testing` and points `ConfigPath` at
   a synthetic file, so the mandatory sequence needs no approval
-- An assistant never handles DSM credentials — logging in is the maintainer's
+- An assistant never handles DSM credentials — logging in is the maintainer's, except on the vDSM
 - Always stop what you started — never leave a listener running between tasks
 - Everything else still goes through the standardized build/clean commands
+
+### The Disposable vDSM
+
+The maintainer runs a Virtual DSM reserved for the assistant: production's DSM version, no real data, a
+throwaway administrator account. Its host, ports and credentials live in the gitignored
+`dev-mock/vdsm.env`, the only place an assistant reads them from. While the mock names that host, an
+assistant may launch the application without asking, sign in with that account, and use SSH and `sudo` on
+the instance. The mock is local state and can point back at production at any time, so check before every
+such run — a non-zero exit means §13 applies as written:
+
+```bash
+. src/Askyl.Dsm.WebHosting.Ui/dev-mock/vdsm.env && grep -qx "external_host_ip=\"$VDSM_HOST\"" src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf
+```
+
+Its values are local infrastructure exactly as production's are: §3 applies in full, and
+`.git/forbidden-patterns` must cover them.
 
 ### Standardized Run Commands
 
