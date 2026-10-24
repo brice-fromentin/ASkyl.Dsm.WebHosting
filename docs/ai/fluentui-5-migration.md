@@ -210,7 +210,7 @@ What the spike applied, per component we use. **G** marks a guess to verify visu
 | `FluentSplitter` | `FluentMultiSplitter` + 2 panes | Upstream a11y issues #5503 and #5505 are open on it |
 | `FluentTreeView` | kept | `OnSelectedChange` → `OnSelectedChanged`; `TreeViewItem.LoadingTreeViewItems` became a method |
 | `FluentDataGrid`, `PropertyColumn`, `TemplateColumn` | kept | Enum renames only: `Align`, `SortDirection`, `GenerateHeaderOption` |
-| `FluentOverlay` | kept | `Opacity` 0.4 → 40 (int percent) |
+| `FluentOverlay` | kept | `Opacity` 0.4 → 40 (int percent); `FullScreen="true"`, since v5 centres a non-full-screen overlay on its parent, a 0x0 box inside a dialog |
 | `FluentMainLayout`, `FluentHeader` | removed | `FluentLayout` + `FluentLayoutItem Area=Header/Content`; accent header bar not reproduced **G** |
 | `FluentLayout` in server `App.razor` | moved | Became a plain `div`; the layout now lives in `MainLayout` |
 | `FluentDesignTheme Mode=System` | removed | v5 follows the system theme by default (upstream; also read in the bundle) |

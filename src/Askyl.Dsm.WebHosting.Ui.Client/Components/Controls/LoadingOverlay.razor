@@ -1,4 +1,5 @@
-<FluentOverlay Visible="@WorkingState.IsWorking" Opacity="@Opacity">
+@* Without FullScreen, FluentUI 5 centres the content on the overlay's parent, a 0x0 box inside a dialog *@
+<FluentOverlay Visible="@WorkingState.IsWorking" Opacity="@Opacity" FullScreen="true">
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
         <FluentSpinner />
         @* Size400 approximates FluentUI 4's Typography.Header, an h5 *@

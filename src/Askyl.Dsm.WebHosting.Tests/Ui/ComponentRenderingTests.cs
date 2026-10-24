@@ -129,6 +129,16 @@ public class ComponentRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public void LoadingOverlay_IsFullScreen()
+    {
+        // Otherwise FluentUI 5 positions the loader from its parent's box, which inside a dialog is 0x0 at the
+        // bottom-left of the viewport: the loader showed in a corner of the screen
+        var cut = _ctx.Render<Home>();
+
+        Assert.True(cut.Find("fluent-overlay").HasAttribute("fullscreen"));
+    }
+
+    [Fact]
     public void HomeGrid_KeepsItsColumnOrderWhenTheCultureChanges()
     {
         // FluentUI 5 remembers column order by key, and a column without ColumnId is keyed by its title: once the
