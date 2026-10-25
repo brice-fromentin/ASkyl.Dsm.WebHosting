@@ -38,6 +38,17 @@ public class DsmSettingsServiceTests
     #region Valid Configuration File
 
     [Fact]
+    public void Constructor_HostWithSurroundingSpaces_IsTrimmed()
+    {
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath)).Returns(["external_host_ip=\" 10.0.0.7 \""]);
+
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+
+        Assert.Equal("10.0.0.7", service.Server);
+    }
+
+    [Fact]
     public void Constructor_ValidConfig_ReturnsParsedSettings()
     {
         // Arrange

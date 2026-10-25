@@ -56,15 +56,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // The overlay covers the form until the report is known, so it cannot flash under a user who started typing
+        using var worker = this.CreateWorkingState(localizer[LK.Diagnostic.Checking]);
+
         var isAuthenticatedResult = await authService.IsAuthenticatedAsync();
         if (isAuthenticatedResult.Success && isAuthenticatedResult.Value == true)
         {
             navigation.NavigateTo(ApplicationConstants.HomePagePath);
             return;
         }
-
-        // The form is not rendered until the report is known, so it cannot flash under a user who started typing
-        using var worker = this.CreateWorkingState(localizer[LK.Diagnostic.Checking]);
 
         Report = (await diagnosticService.GetReportAsync()).Value;
     }

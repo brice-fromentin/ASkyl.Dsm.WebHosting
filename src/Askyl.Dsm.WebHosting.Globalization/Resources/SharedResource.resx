@@ -186,13 +186,13 @@
     <value>The DSM settings file cannot be read. The application log says why.</value>
   </data>
   <data name="Diagnostic_FailureNameNotFound" xml:space="preserve">
-    <value>{0} does not resolve from the NAS. Correct Hostname or static IP in Control Panel &gt; External Access &gt; Advanced, or add the name to your DNS.</value>
+    <value>The name {0} does not resolve from the NAS. Correct Hostname or static IP in Control Panel &gt; External Access &gt; Advanced, or add the name to your DNS.</value>
   </data>
   <data name="Diagnostic_FailurePortRefused" xml:space="preserve">
-    <value>{0} refuses connections on port {1}. Check the DSM HTTPS port under Router Port in Control Panel &gt; External Access &gt; Advanced.</value>
+    <value>Port {1} on {0} refuses connections. Check the DSM HTTPS port under Router Port in Control Panel &gt; External Access &gt; Advanced.</value>
   </data>
   <data name="Diagnostic_FailurePortTimedOut" xml:space="preserve">
-    <value>{0} did not answer on port {1}. Check that no firewall blocks it, and the DSM HTTPS port under Router Port in Control Panel &gt; External Access &gt; Advanced.</value>
+    <value>Port {1} on {0} did not answer. Check that no firewall blocks it, and the DSM HTTPS port under Router Port in Control Panel &gt; External Access &gt; Advanced.</value>
   </data>
   <data name="Diagnostic_FailureCertificateNameMismatch" xml:space="preserve">
     <value>DSM's certificate does not cover {0}. In Control Panel &gt; Security &gt; Certificate, add a certificate for that name, then use Set as default certificate.</value>
@@ -204,7 +204,7 @@
     <value>DSM's certificate is outside its validity period: it has expired, or the NAS clock is wrong. Check the clock, then renew the certificate in Control Panel &gt; Security &gt; Certificate.</value>
   </data>
   <data name="Diagnostic_FailureHandshakeFailed" xml:space="preserve">
-    <value>{0}:{1} accepted the connection but did not complete a TLS handshake. Check that this port serves DSM over HTTPS.</value>
+    <value>Port {1} on {0} accepted the connection but did not complete a TLS handshake. Check that this port serves DSM over HTTPS.</value>
   </data>
   <data name="Diagnostic_FailureUnexpectedResponse" xml:space="preserve">
     <value>The DSM API answered HTTP {0} instead of its API list. Check that this port serves DSM itself.</value>

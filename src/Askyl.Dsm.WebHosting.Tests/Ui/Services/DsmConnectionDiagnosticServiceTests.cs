@@ -173,6 +173,8 @@ public class DsmConnectionDiagnosticServiceTests
     [Theory]
     [InlineData("192.0.2.10")]
     [InlineData("::1")]
+    [InlineData("192.0.2.10.")]
+    [InlineData(" 192.0.2.10 ")]
     public void ForAnonymousVisitor_AnIpAddressHost_IsNeverShown(string address)
     {
         DsmConnectionCheckResult[] checks = [new(DsmConnectionCheck.HostnameConfigured, DsmCheckStatus.Passed), new(DsmConnectionCheck.NameResolves, DsmCheckStatus.Failed, DsmCheckFailure.NameNotFound)];

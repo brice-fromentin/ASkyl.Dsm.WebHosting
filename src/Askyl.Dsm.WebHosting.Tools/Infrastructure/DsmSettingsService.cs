@@ -61,7 +61,7 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
             logger.ConfigurationLoaded(settings.Count);
 
             // Left null rather than thrown: the connection diagnostic names what is missing
-            var server = settings.TryGetValue(SystemDefaults.KeyExternalHostIp, out var host) && host.Length > 0 ? host : null;
+            var server = settings.TryGetValue(SystemDefaults.KeyExternalHostIp, out var host) && host.Trim() is { Length: > 0 } trimmed ? trimmed : null;
 
             if (server is null)
             {

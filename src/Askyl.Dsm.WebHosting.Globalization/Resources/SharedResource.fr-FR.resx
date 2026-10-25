@@ -186,13 +186,13 @@
     <value>Le fichier de réglages de DSM est illisible. Le journal de l'application en donne la raison.</value>
   </data>
   <data name="Diagnostic_FailureNameNotFound" xml:space="preserve">
-    <value>{0} ne se résout pas depuis le NAS. Corrigez Nom d’hôte ou IP statique dans Panneau de configuration &gt; Accès externe &gt; Avancé, ou ajoutez le nom à votre DNS.</value>
+    <value>Le nom {0} ne se résout pas depuis le NAS. Corrigez Nom d’hôte ou IP statique dans Panneau de configuration &gt; Accès externe &gt; Avancé, ou ajoutez le nom à votre DNS.</value>
   </data>
   <data name="Diagnostic_FailurePortRefused" xml:space="preserve">
-    <value>{0} refuse les connexions sur le port {1}. Vérifiez le port HTTPS de DSM sous Port du routeur dans Panneau de configuration &gt; Accès externe &gt; Avancé.</value>
+    <value>Le port {1} de {0} refuse les connexions. Vérifiez le port HTTPS de DSM sous Port du routeur dans Panneau de configuration &gt; Accès externe &gt; Avancé.</value>
   </data>
   <data name="Diagnostic_FailurePortTimedOut" xml:space="preserve">
-    <value>{0} n'a pas répondu sur le port {1}. Vérifiez qu'aucun pare-feu ne le bloque, ainsi que le port HTTPS de DSM sous Port du routeur dans Panneau de configuration &gt; Accès externe &gt; Avancé.</value>
+    <value>Le port {1} de {0} n'a pas répondu. Vérifiez qu'aucun pare-feu ne le bloque, ainsi que le port HTTPS de DSM sous Port du routeur dans Panneau de configuration &gt; Accès externe &gt; Avancé.</value>
   </data>
   <data name="Diagnostic_FailureCertificateNameMismatch" xml:space="preserve">
     <value>Le certificat de DSM ne couvre pas {0}. Dans Panneau de configuration &gt; Sécurité &gt; Certificat, ajoutez un certificat pour ce nom, puis utilisez Configurer comme certificat par défaut.</value>
@@ -204,7 +204,7 @@
     <value>Le certificat de DSM est hors de sa période de validité : il a expiré, ou l'horloge du NAS est fausse. Vérifiez l'horloge, puis renouvelez le certificat dans Panneau de configuration &gt; Sécurité &gt; Certificat.</value>
   </data>
   <data name="Diagnostic_FailureHandshakeFailed" xml:space="preserve">
-    <value>{0}:{1} a accepté la connexion sans terminer la négociation TLS. Vérifiez que ce port sert DSM en HTTPS.</value>
+    <value>Le port {1} de {0} a accepté la connexion sans terminer la négociation TLS. Vérifiez que ce port sert DSM en HTTPS.</value>
   </data>
   <data name="Diagnostic_FailureUnexpectedResponse" xml:space="preserve">
     <value>L'API de DSM a répondu HTTP {0} au lieu de sa liste d'API. Vérifiez que ce port sert bien DSM.</value>

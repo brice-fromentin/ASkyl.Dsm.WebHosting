@@ -73,7 +73,6 @@ builder.Services.AddSingleton<IDsmSettingsService, DsmSettingsService>();
 
 // Register DSM API client and authentication facade
 builder.Services.AddSingleton<DsmApiClient>();
-
 builder.Services.AddScoped<IDsmSession, DsmSession>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 

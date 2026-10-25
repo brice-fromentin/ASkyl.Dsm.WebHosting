@@ -105,7 +105,6 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
         Assert.NotEqual(HttpStatusCode.TooManyRequests, login.StatusCode);
     }
 
-
     [Fact]
     public async Task Application_Starts_AndServesTheRootPage()
     {
