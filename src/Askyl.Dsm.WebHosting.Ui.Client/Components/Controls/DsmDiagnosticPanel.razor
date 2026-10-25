@@ -1,0 +1,104 @@
+@using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics
+@using Askyl.Dsm.WebHosting.Globalization
+
+@inject ILocalizer localizer
+
+<FluentStack Orientation="Orientation.Vertical">
+    <FluentText As="TextTag.H2" Size="TextSize.Size600" Weight="TextWeight.Semibold">@localizer[LK.Diagnostic.Title]</FluentText>
+    <FluentText>@localizer[LK.Diagnostic.Intro]</FluentText>
+
+    @if (Report.Host is { } host)
+    {
+        <FluentLabel>@localizer[LK.Diagnostic.Target, host, Report.Port]</FluentLabel>
+    }
+
+    @foreach (var check in Report.Checks)
+    {
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@StatusIcon(check.Status)" Title="@localizer[StatusKey(check.Status)]" />
+            <FluentLabel>@localizer[CheckKey(check.Check)]</FluentLabel>
+        </FluentStack>
+
+        @if (check.Status == DsmCheckStatus.Failed)
+        {
+            <FluentMessageBar Intent="MessageBarIntent.Error">
+                <FluentStack Orientation="Orientation.Vertical">
+                    <FluentText>@FailureText(check)</FluentText>
+
+                    @if (check.Certificate is { } certificate)
+                    {
+                        @if (certificate.Names.Count > 0)
+                        {
+                            <FluentText>@localizer[LK.Diagnostic.CertificateNames, String.Join(", ", certificate.Names)]</FluentText>
+                        }
+
+                        @if (certificate.Issuer.Length > 0)
+                        {
+                            <FluentText>@localizer[LK.Diagnostic.CertificateIssuer, certificate.Issuer]</FluentText>
+                        }
+
+                        <FluentText>@localizer[LK.Diagnostic.CertificateExpiry, certificate.NotAfter.ToLocalTime()]</FluentText>
+                    }
+                </FluentStack>
+            </FluentMessageBar>
+        }
+    }
+
+    <FluentLabel>@localizer[LK.Diagnostic.CheckedAt, Report.CheckedAt.ToLocalTime()]</FluentLabel>
+    <FluentButton Appearance="ButtonAppearance.Primary" OnClick="OnRecheck">@localizer[LK.Diagnostic.Recheck]</FluentButton>
+</FluentStack>
+
+@code
+{
+    /// <summary>The report to show; the panel is only rendered for an unhealthy one.</summary>
+    [Parameter, EditorRequired]
+    public DsmConnectionReport Report { get; set; } = new();
+
+    /// <summary>Raised by the re-check button.</summary>
+    [Parameter]
+    public EventCallback OnRecheck { get; set; }
+
+    private static Icon StatusIcon(DsmCheckStatus status) => status switch
+    {
+        DsmCheckStatus.Passed => new IconsRegular20.CheckmarkCircle().WithColor(Color.Success),
+        DsmCheckStatus.Failed => new IconsRegular20.DismissCircle().WithColor(Color.Error),
+        _ => new IconsRegular20.Circle().WithColor(Color.Disabled)
+    };
+
+    private static string StatusKey(DsmCheckStatus status) => status switch
+    {
+        DsmCheckStatus.Passed => LK.Diagnostic.StatusPassed,
+        DsmCheckStatus.Failed => LK.Diagnostic.StatusFailed,
+        _ => LK.Diagnostic.StatusSkipped
+    };
+
+    private static string CheckKey(DsmConnectionCheck check) => check switch
+    {
+        DsmConnectionCheck.HostnameConfigured => LK.Diagnostic.CheckHostnameConfigured,
+        DsmConnectionCheck.NameResolves => LK.Diagnostic.CheckNameResolves,
+        DsmConnectionCheck.PortAnswers => LK.Diagnostic.CheckPortAnswers,
+        DsmConnectionCheck.CertificateCoversName => LK.Diagnostic.CheckCertificateCoversName,
+        _ => LK.Diagnostic.CheckApiAnswers
+    };
+
+    private string FailureText(DsmConnectionCheckResult check)
+    {
+        var host = Report.Host ?? String.Empty;
+
+        return check.Failure switch
+        {
+            DsmCheckFailure.HostnameMissing => localizer[LK.Diagnostic.FailureHostnameMissing],
+            DsmCheckFailure.SettingsUnreadable => localizer[LK.Diagnostic.FailureSettingsUnreadable],
+            DsmCheckFailure.NameNotFound => localizer[LK.Diagnostic.FailureNameNotFound, host],
+            DsmCheckFailure.PortRefused => localizer[LK.Diagnostic.FailurePortRefused, host, Report.Port],
+            DsmCheckFailure.PortTimedOut => localizer[LK.Diagnostic.FailurePortTimedOut, host, Report.Port],
+            DsmCheckFailure.CertificateNameMismatch => localizer[LK.Diagnostic.FailureCertificateNameMismatch, host],
+            DsmCheckFailure.CertificateUntrusted => localizer[LK.Diagnostic.FailureCertificateUntrusted],
+            DsmCheckFailure.CertificateExpired => localizer[LK.Diagnostic.FailureCertificateExpired],
+            DsmCheckFailure.HandshakeFailed => localizer[LK.Diagnostic.FailureHandshakeFailed, host, Report.Port],
+            DsmCheckFailure.UnexpectedResponse when check.HttpStatus is { } status => localizer[LK.Diagnostic.FailureUnexpectedResponse, status],
+            DsmCheckFailure.Unexpected => localizer[LK.Diagnostic.FailureUnexpected],
+            _ => localizer[LK.Diagnostic.FailureNoResponse]
+        };
+    }
+}

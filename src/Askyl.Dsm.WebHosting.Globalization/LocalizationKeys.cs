@@ -43,6 +43,35 @@ public static class LK
     {
         public const string Unavailable = "Diagnostic_Unavailable";
         public const string DsmUnreachable = "Diagnostic_DsmUnreachable";
+        public const string Title = "Diagnostic_Title";
+        public const string Intro = "Diagnostic_Intro";
+        public const string Target = "Diagnostic_Target";
+        public const string CheckedAt = "Diagnostic_CheckedAt";
+        public const string Recheck = "Diagnostic_Recheck";
+        public const string Checking = "Diagnostic_Checking";
+        public const string StatusPassed = "Diagnostic_StatusPassed";
+        public const string StatusFailed = "Diagnostic_StatusFailed";
+        public const string StatusSkipped = "Diagnostic_StatusSkipped";
+        public const string CheckHostnameConfigured = "Diagnostic_CheckHostnameConfigured";
+        public const string CheckNameResolves = "Diagnostic_CheckNameResolves";
+        public const string CheckPortAnswers = "Diagnostic_CheckPortAnswers";
+        public const string CheckCertificateCoversName = "Diagnostic_CheckCertificateCoversName";
+        public const string CheckApiAnswers = "Diagnostic_CheckApiAnswers";
+        public const string FailureHostnameMissing = "Diagnostic_FailureHostnameMissing";
+        public const string FailureSettingsUnreadable = "Diagnostic_FailureSettingsUnreadable";
+        public const string FailureNameNotFound = "Diagnostic_FailureNameNotFound";
+        public const string FailurePortRefused = "Diagnostic_FailurePortRefused";
+        public const string FailurePortTimedOut = "Diagnostic_FailurePortTimedOut";
+        public const string FailureCertificateNameMismatch = "Diagnostic_FailureCertificateNameMismatch";
+        public const string FailureCertificateUntrusted = "Diagnostic_FailureCertificateUntrusted";
+        public const string FailureCertificateExpired = "Diagnostic_FailureCertificateExpired";
+        public const string FailureHandshakeFailed = "Diagnostic_FailureHandshakeFailed";
+        public const string FailureUnexpectedResponse = "Diagnostic_FailureUnexpectedResponse";
+        public const string FailureNoResponse = "Diagnostic_FailureNoResponse";
+        public const string FailureUnexpected = "Diagnostic_FailureUnexpected";
+        public const string CertificateNames = "Diagnostic_CertificateNames";
+        public const string CertificateIssuer = "Diagnostic_CertificateIssuer";
+        public const string CertificateExpiry = "Diagnostic_CertificateExpiry";
     }
 
     /// <summary>Home page strings (toolbar, grid columns, toasts).</summary>

@@ -1,12 +1,15 @@
 using System.Globalization;
+using System.Net;
 using Askyl.Dsm.WebHosting.Constants.Globalization;
 using Askyl.Dsm.WebHosting.Constants.UI;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Extensions;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
+using Askyl.Dsm.WebHosting.Ui.Client.Components.Controls;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Dialogs;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Pages;
 using Askyl.Dsm.WebHosting.Ui.Client.Extensions;
@@ -71,6 +74,7 @@ public class ComponentRenderingTests : IAsyncLifetime
     readonly Mock<IAuthenticationService> _authService = new();
     readonly Mock<IWebSiteHostingService> _hostingService = new();
     readonly Mock<ILicenseService> _licenseService = new();
+    readonly Mock<IDsmConnectionDiagnosticService> _diagnosticService = new();
     readonly ILocalizer _localizer;
 
     public ComponentRenderingTests()
@@ -82,9 +86,11 @@ public class ComponentRenderingTests : IAsyncLifetime
         _ctx.Services.AddSingleton(_authService.Object);
         _ctx.Services.AddSingleton(_hostingService.Object);
         _ctx.Services.AddSingleton(_licenseService.Object);
+        _ctx.Services.AddSingleton(_diagnosticService.Object);
         _ctx.Services.AddSingleton(Mock.Of<ICultureManager>());
 
         _authService.Setup(service => service.IsAuthenticatedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(ApiResultBool.CreateSuccess(false));
+        _diagnosticService.Setup(service => service.GetReportAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: true));
         _hostingService.Setup(service => service.GetAllWebsitesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(WebSiteInstancesResult.CreateSuccess([new() { Configuration = new() { Name = SiteName } }]));
 
@@ -117,6 +123,59 @@ public class ComponentRenderingTests : IAsyncLifetime
         Assert.Single(cut.FindAll("[name=password]"));
         Assert.Single(cut.FindAll("[name=otp]"));
     }
+
+    [Fact]
+    public void Login_ShowsTheDiagnostic_InsteadOfTheForm_WhenDsmIsUnreachable()
+    {
+        _diagnosticService.Setup(service => service.GetReportAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: false));
+
+        var cut = _ctx.Render<Login>();
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Diagnostic.FailureHostnameMissing], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll("[name=username]"));
+    }
+
+    [Fact]
+    public void DsmDiagnosticPanel_ReCheck_RaisesTheCallback()
+    {
+        var rechecked = false;
+
+        var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters
+            .Add(panel => panel.Report, Report(isHealthy: false).Value!)
+            .Add(panel => panel.OnRecheck, () => rechecked = true));
+
+        // The message bar's dismiss button is a fluent-button too; the re-check one is the primary
+        cut.Find("fluent-button[appearance=primary]").Click();
+
+        Assert.True(rechecked);
+    }
+
+    [Fact]
+    public void DsmDiagnosticPanel_OmitsTheCertificateLines_ThatHaveNoValue()
+    {
+        var report = new DsmConnectionReport(false, DateTimeOffset.UtcNow, "nas.example", 5001,
+        [
+            new(DsmConnectionCheck.CertificateCoversName, DsmCheckStatus.Failed, DsmCheckFailure.CertificateUntrusted, new DsmCertificateSummary([], String.Empty, DateTimeOffset.UtcNow))
+        ]);
+
+        var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters.Add(panel => panel.Report, report));
+
+        // Decoded, since the markup writes > as &gt;
+        var text = WebUtility.HtmlDecode(cut.Markup);
+
+        Assert.Contains(_localizer[LK.Diagnostic.FailureCertificateUntrusted], text, StringComparison.Ordinal);
+        Assert.DoesNotContain(_localizer[LK.Diagnostic.CertificateNames, String.Empty], text, StringComparison.Ordinal);
+        Assert.DoesNotContain(_localizer[LK.Diagnostic.CertificateIssuer, String.Empty], text, StringComparison.Ordinal);
+    }
+
+    static DsmConnectionReportResult Report(bool isHealthy)
+        => DsmConnectionReportResult.CreateSuccess(isHealthy
+            ? new DsmConnectionReport(true, DateTimeOffset.UtcNow, null, 0, [])
+            : new DsmConnectionReport(false, DateTimeOffset.UtcNow, null, 5001,
+            [
+                new(DsmConnectionCheck.HostnameConfigured, DsmCheckStatus.Failed, DsmCheckFailure.HostnameMissing),
+                .. Enum.GetValues<DsmConnectionCheck>().Skip(1).Select(check => new DsmConnectionCheckResult(check, DsmCheckStatus.Skipped))
+            ]));
 
     [Fact]
     public void Home_ListsTheWebsitesAndNamesItsIconOnlyButtons()
