@@ -110,6 +110,41 @@ public class DsmConnectionDiagnosticServiceTests
 
     #endregion
 
+    #region Coalescing
+
+    [Fact]
+    public async Task RecheckAsync_CallsArrivingDuringARun_ShareOneFollowUpRun()
+    {
+        using var entered = new ManualResetEventSlim();
+        using var gate = new ManualResetEventSlim();
+        var reloads = 0;
+
+        _settings.Setup(s => s.Reload()).Callback(() =>
+        {
+            if (Interlocked.Increment(ref reloads) == 1)
+            {
+                entered.Set();
+                Assert.True(gate.Wait(TimeSpan.FromSeconds(5)));
+            }
+        });
+
+        var service = CreateService();
+        var first = Task.Run(() => service.GetReportAsync());
+
+        Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
+
+        // Each call captures the run counter synchronously, before it waits for the lock
+        var second = service.RecheckAsync();
+        var third = service.RecheckAsync();
+
+        gate.Set();
+        await Task.WhenAll(first, second, third).WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(2, reloads);
+    }
+
+    #endregion
+
     #region Exposure
 
     [Fact]
@@ -133,6 +168,22 @@ public class DsmConnectionDiagnosticServiceTests
         var unhealthy = new DsmConnectionReport(false, DateTimeOffset.UtcNow, UnresolvableHost, DsmPort, []);
 
         Assert.Same(unhealthy, DsmConnectionDiagnosticService.ForAnonymousVisitor(unhealthy));
+    }
+
+    [Theory]
+    [InlineData("192.0.2.10")]
+    [InlineData("::1")]
+    public void ForAnonymousVisitor_AnIpAddressHost_IsNeverShown(string address)
+    {
+        DsmConnectionCheckResult[] checks = [new(DsmConnectionCheck.HostnameConfigured, DsmCheckStatus.Passed), new(DsmConnectionCheck.NameResolves, DsmCheckStatus.Failed, DsmCheckFailure.NameNotFound)];
+        var unhealthy = new DsmConnectionReport(false, DateTimeOffset.UtcNow, address, DsmPort, checks);
+
+        var visible = DsmConnectionDiagnosticService.ForAnonymousVisitor(unhealthy);
+
+        Assert.Null(visible.Host);
+        Assert.True(visible.HostIsIpAddress);
+        Assert.Equal(DsmPort, visible.Port);
+        Assert.Equal(checks, visible.Checks);
     }
 
     #endregion

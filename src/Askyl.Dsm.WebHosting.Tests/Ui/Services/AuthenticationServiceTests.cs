@@ -78,6 +78,7 @@ public class AuthenticationServiceTests
     public async Task LoginAsync_CancelledByTheCaller_PropagatesWithoutADiagnostic()
     {
         // Arrange — cancelled during the DSM call, not before, so validation cannot be what throws
+        DiagnosticReports(isHealthy: true);
         using var cancellation = new CancellationTokenSource();
         _dsmSession.Setup(s => s.ConnectAsync(It.IsAny<LoginCredentials>(), It.IsAny<CancellationToken>()))
             .Returns(() =>

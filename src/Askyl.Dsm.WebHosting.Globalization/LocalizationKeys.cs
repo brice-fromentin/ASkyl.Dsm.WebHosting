@@ -46,6 +46,8 @@ public static class LK
         public const string Title = "Diagnostic_Title";
         public const string Intro = "Diagnostic_Intro";
         public const string Target = "Diagnostic_Target";
+        public const string HostIsIpAddress = "Diagnostic_HostIsIpAddress";
+        public const string ConfiguredAddress = "Diagnostic_ConfiguredAddress";
         public const string CheckedAt = "Diagnostic_CheckedAt";
         public const string Recheck = "Diagnostic_Recheck";
         public const string Checking = "Diagnostic_Checking";

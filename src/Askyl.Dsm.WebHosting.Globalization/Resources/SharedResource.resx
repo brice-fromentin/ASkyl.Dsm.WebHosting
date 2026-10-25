@@ -140,8 +140,14 @@
   <data name="Diagnostic_Target" xml:space="preserve">
     <value>Configured DSM address: {0}:{1}</value>
   </data>
+  <data name="Diagnostic_HostIsIpAddress" xml:space="preserve">
+    <value>DSM's address is set to an IP address, which this page does not display. A certificate is issued for a name: in Control Panel &gt; External Access &gt; Advanced, enter the NAS's name in Hostname or static IP, then re-check.</value>
+  </data>
+  <data name="Diagnostic_ConfiguredAddress" xml:space="preserve">
+    <value>the configured address</value>
+  </data>
   <data name="Diagnostic_CheckedAt" xml:space="preserve">
-    <value>Checked at {0:T}</value>
+    <value>Checked {0:g}</value>
   </data>
   <data name="Diagnostic_Recheck" xml:space="preserve">
     <value>Re-check</value>
@@ -204,7 +210,7 @@
     <value>The DSM API answered HTTP {0} instead of its API list. Check that this port serves DSM itself.</value>
   </data>
   <data name="Diagnostic_FailureNoResponse" xml:space="preserve">
-    <value>The DSM API did not answer in time.</value>
+    <value>The DSM API did not answer.</value>
   </data>
   <data name="Diagnostic_FailureUnexpected" xml:space="preserve">
     <value>This check failed in a way the application does not recognize. The application log has the details.</value>

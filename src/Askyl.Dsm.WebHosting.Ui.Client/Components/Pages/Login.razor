@@ -63,6 +63,9 @@
             return;
         }
 
+        // The form is not rendered until the report is known, so it cannot flash under a user who started typing
+        using var worker = this.CreateWorkingState(localizer[LK.Diagnostic.Checking]);
+
         Report = (await diagnosticService.GetReportAsync()).Value;
     }
 

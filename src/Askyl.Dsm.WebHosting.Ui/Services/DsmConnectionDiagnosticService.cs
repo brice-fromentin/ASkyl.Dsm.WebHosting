@@ -38,10 +38,13 @@ public sealed class DsmConnectionDiagnosticService(IDsmSettingsService settings,
         => DsmConnectionReportResult.CreateSuccess(ForAnonymousVisitor(await RunAsync(reuseAnyReport: false)));
 
     /// <summary>
-    /// A healthy DSM needs no explanation, so an anonymous visitor learns nothing about it.
+    /// A healthy DSM needs no explanation, so an anonymous visitor learns nothing about it. An unhealthy one
+    /// shows its configured hostname, but never an IP address, which would disclose the NAS's network position.
     /// </summary>
     internal static DsmConnectionReport ForAnonymousVisitor(DsmConnectionReport report)
-        => report.IsHealthy ? new(true, report.CheckedAt, null, 0, []) : report;
+        => report.IsHealthy ? new(true, report.CheckedAt, null, 0, [])
+         : report.Host is { } host && IPAddress.TryParse(host, out _) ? report with { Host = null, HostIsIpAddress = true }
+         : report;
 
     async Task<DsmConnectionReport> RunAsync(bool reuseAnyReport)
     {
@@ -70,12 +73,14 @@ public sealed class DsmConnectionDiagnosticService(IDsmSettingsService settings,
     async Task<DsmConnectionReport> RunChecksAsync()
     {
         var checkedAt = DateTimeOffset.UtcNow;
-        var results = new List<DsmConnectionCheckResult> { Result(DsmConnectionCheck.HostnameConfigured, ReloadSettings()) };
+        var results = new List<DsmConnectionCheckResult>();
 
         var port = 0;
 
         try
         {
+            results.Add(Result(DsmConnectionCheck.HostnameConfigured, ReloadSettings()));
+
             // Empty only when the first check failed, and then nothing below runs
             var host = settings.Server ?? String.Empty;
 

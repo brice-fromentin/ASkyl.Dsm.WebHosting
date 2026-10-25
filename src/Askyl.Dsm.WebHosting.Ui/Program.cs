@@ -74,10 +74,11 @@ builder.Services.AddSingleton<IDsmSettingsService, DsmSettingsService>();
 // Register DSM API client and authentication facade
 builder.Services.AddSingleton<DsmApiClient>();
 
-// Register the DSM connection diagnostic (singleton - caches the latest report for every visitor)
-builder.Services.AddSingleton<IDsmConnectionDiagnosticService, DsmConnectionDiagnosticService>();
 builder.Services.AddScoped<IDsmSession, DsmSession>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+
+// Register the DSM connection diagnostic (singleton - caches the latest report for every visitor)
+builder.Services.AddSingleton<IDsmConnectionDiagnosticService, DsmConnectionDiagnosticService>();
 
 // Register platform info service (singleton - platform detection happens once at startup)
 builder.Services.AddSingleton<PlatformInfoService>();
@@ -130,7 +131,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Add(IPAddress.IPv6Loopback);
 });
 
-// Rate limiting for login endpoint (brute-force protection), partitioned per client address
+// Rate limiting for the login and diagnostic re-check throttles (brute-force protection), partitioned per client address
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;

@@ -136,6 +136,42 @@ public class ComponentRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public void Login_SwitchesToTheDiagnostic_WhenTheLoginFindsDsmUnreachable()
+    {
+        _diagnosticService.SetupSequence(service => service.GetReportAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Report(isHealthy: true))
+            .ReturnsAsync(Report(isHealthy: false));
+        _authService.Setup(service => service.LoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(AuthenticationResult.CreateDsmUnreachable("unreachable"));
+
+        var cut = _ctx.Render<Login>();
+
+        cut.Find("[name=username]").Input("admin");
+        cut.Find("[name=password]").Input("password123");
+        cut.Find("form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Diagnostic.FailureHostnameMissing], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll("[name=username]"));
+        _authService.Verify(service => service.LoginAsync("admin", "password123", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void DsmDiagnosticPanel_AnIpAddressHost_IsExplainedAndNeverNamed()
+    {
+        var report = new DsmConnectionReport(false, DateTimeOffset.UtcNow, null, 5001,
+        [
+            new(DsmConnectionCheck.CertificateCoversName, DsmCheckStatus.Failed, DsmCheckFailure.CertificateNameMismatch)
+        ], HostIsIpAddress: true);
+
+        var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters.Add(panel => panel.Report, report));
+
+        var text = WebUtility.HtmlDecode(cut.Markup);
+
+        Assert.Contains(_localizer[LK.Diagnostic.HostIsIpAddress], text, StringComparison.Ordinal);
+        Assert.Contains(_localizer[LK.Diagnostic.FailureCertificateNameMismatch, _localizer[LK.Diagnostic.ConfiguredAddress]], text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DsmDiagnosticPanel_ReCheck_RaisesTheCallback()
     {
         var rechecked = false;

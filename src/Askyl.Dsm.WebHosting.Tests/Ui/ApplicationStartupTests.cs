@@ -40,6 +40,12 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
 
     const string HostnamelessSettingsFileName = "synoinfo-without-hostname.conf";
 
+    static readonly string DiagnosticReportRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, DsmDiagnosticRoutes.ReportFullRoute);
+
+    static readonly string DiagnosticRecheckRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, DsmDiagnosticRoutes.RecheckFullRoute);
+
+    static readonly string LoginRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, AuthenticationRoutes.LoginFullRoute);
+
     [Fact]
     public async Task Application_StartsWithoutADsmHostname()
     {
@@ -66,11 +72,6 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
         return factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration(configuration => configuration.AddInMemoryCollection(
             new Dictionary<string, string?> { [ApplicationHostFactory.ConfigPathSettingKey] = settingsPath })));
     }
-    static readonly string DiagnosticReportRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, DsmDiagnosticRoutes.ReportFullRoute);
-
-    static readonly string DiagnosticRecheckRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, DsmDiagnosticRoutes.RecheckFullRoute);
-
-    static readonly string LoginRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, AuthenticationRoutes.LoginFullRoute);
 
     [Fact]
     public async Task DsmDiagnostic_AnswersAnonymously_NamingTheMissingHostname()

@@ -52,9 +52,10 @@ internal static class DsmConnectionChecks
         {
             return DsmCheckFailure.PortTimedOut;
         }
-        catch (SocketException)
+        catch (SocketException ex)
         {
-            return DsmCheckFailure.PortRefused;
+            // A host or network that cannot be reached is a firewall-shaped problem, which the timeout remedy names
+            return ex.SocketErrorCode == SocketError.ConnectionRefused ? DsmCheckFailure.PortRefused : DsmCheckFailure.PortTimedOut;
         }
     }
 

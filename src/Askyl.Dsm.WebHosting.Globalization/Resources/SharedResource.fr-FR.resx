@@ -140,8 +140,14 @@
   <data name="Diagnostic_Target" xml:space="preserve">
     <value>Adresse DSM configurée : {0}:{1}</value>
   </data>
+  <data name="Diagnostic_HostIsIpAddress" xml:space="preserve">
+    <value>L'adresse de DSM est une adresse IP, que cette page n'affiche pas. Un certificat est émis pour un nom : dans Panneau de configuration &gt; Accès externe &gt; Avancé, saisissez le nom du NAS dans Nom d’hôte ou IP statique, puis revérifiez.</value>
+  </data>
+  <data name="Diagnostic_ConfiguredAddress" xml:space="preserve">
+    <value>l'adresse configurée</value>
+  </data>
   <data name="Diagnostic_CheckedAt" xml:space="preserve">
-    <value>Vérifié à {0:T}</value>
+    <value>Vérifié le {0:g}</value>
   </data>
   <data name="Diagnostic_Recheck" xml:space="preserve">
     <value>Revérifier</value>
@@ -204,7 +210,7 @@
     <value>L'API de DSM a répondu HTTP {0} au lieu de sa liste d'API. Vérifiez que ce port sert bien DSM.</value>
   </data>
   <data name="Diagnostic_FailureNoResponse" xml:space="preserve">
-    <value>L'API de DSM n'a pas répondu à temps.</value>
+    <value>L'API de DSM n'a pas répondu.</value>
   </data>
   <data name="Diagnostic_FailureUnexpected" xml:space="preserve">
     <value>Ce contrôle a échoué d'une façon que l'application ne reconnaît pas. Le journal de l'application en donne le détail.</value>

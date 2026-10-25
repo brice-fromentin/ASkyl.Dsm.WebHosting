@@ -7,6 +7,11 @@
     <FluentText As="TextTag.H2" Size="TextSize.Size600" Weight="TextWeight.Semibold">@localizer[LK.Diagnostic.Title]</FluentText>
     <FluentText>@localizer[LK.Diagnostic.Intro]</FluentText>
 
+    @if (Report.HostIsIpAddress)
+    {
+        <FluentText>@localizer[LK.Diagnostic.HostIsIpAddress]</FluentText>
+    }
+
     @if (Report.Host is { } host)
     {
         <FluentLabel>@localizer[LK.Diagnostic.Target, host, Report.Port]</FluentLabel>
@@ -83,7 +88,7 @@
 
     private string FailureText(DsmConnectionCheckResult check)
     {
-        var host = Report.Host ?? String.Empty;
+        var host = Report.Host ?? localizer[LK.Diagnostic.ConfiguredAddress];
 
         return check.Failure switch
         {
