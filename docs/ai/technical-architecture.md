@@ -711,7 +711,8 @@ answers, certificate covers the name, `SYNO.API.Info` answers. The checks themse
 - **Triggers:** the first login-page visit computes the report; the re-check endpoint and a failed login recompute it.
 - **What anonymous visitors see:** a healthy report reaches them as nothing but `IsHealthy` and `CheckedAt`.
   `Login.razor` shows `DsmDiagnosticPanel` (a non-dismissible error bar whose remedies name DSM 7.4's own menus, in
-  English and French) in place of the form while the report is unhealthy.
+  English and French) in place of the form while the report is unhealthy. An unhealthy report never carries an
+  IP-shaped configured host: the host is dropped and `HostIsIpAddress` is set instead.
 
 #### FileStation Operations
 
