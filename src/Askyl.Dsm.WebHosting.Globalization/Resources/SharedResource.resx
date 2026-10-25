@@ -128,6 +128,9 @@
   <data name="Diagnostic_Unavailable" xml:space="preserve">
     <value>The DSM connection check is unavailable.</value>
   </data>
+  <data name="Diagnostic_DsmUnreachable" xml:space="preserve">
+    <value>DSM cannot be reached.</value>
+  </data>
 
   <!-- Home -->
   <data name="Home_PageTitle" xml:space="preserve">

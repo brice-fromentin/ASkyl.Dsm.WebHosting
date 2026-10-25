@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
+using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Validators;
@@ -15,6 +16,7 @@ public class AuthenticationServiceTests
     readonly Mock<IDsmSession> _dsmSession;
     readonly Mock<ILogger<ILogAuthenticationService>> _logger;
     readonly Mock<ILocalizer> _localizer;
+    readonly Mock<IDsmConnectionDiagnosticService> _diagnostic = new();
 
     public AuthenticationServiceTests()
     {
@@ -25,12 +27,71 @@ public class AuthenticationServiceTests
         _localizer.Setup(l => l[LK.Error.AdministratorRequired]).Returns("Administrators only");
         _localizer.Setup(l => l[LK.Success.LogoutSuccessful]).Returns("Logout successful");
         _localizer.Setup(l => l[LK.Error.SessionExpired]).Returns("Session expired");
+        _localizer.Setup(l => l[LK.Diagnostic.DsmUnreachable]).Returns("DSM cannot be reached");
     }
 
     AuthenticationService CreateService()
     {
-        return new AuthenticationService(_dsmSession.Object, new LoginCredentialsValidator(), _logger.Object, _localizer.Object);
+        return new AuthenticationService(_dsmSession.Object, _diagnostic.Object, new LoginCredentialsValidator(), _logger.Object, _localizer.Object);
     }
+
+    #region LoginAsync — DSM Unreachable
+
+    void DiagnosticReports(bool isHealthy)
+        => _diagnostic.Setup(d => d.RecheckAsync(It.IsAny<CancellationToken>()))
+                      .ReturnsAsync(DsmConnectionReportResult.CreateSuccess(new DsmConnectionReport(isHealthy, DateTimeOffset.UtcNow, null, 0, [])));
+
+    [Fact]
+    public async Task LoginAsync_WhenDsmCannotBeReached_SaysSoInsteadOfThrowing()
+    {
+        // Arrange — a TLS failure surfaced as an unhandled 500 and a generic toast
+        _dsmSession.Setup(s => s.ConnectAsync(It.IsAny<LoginCredentials>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("TLS failure"));
+        DiagnosticReports(isHealthy: false);
+
+        // Act
+        var result = await CreateService().LoginAsync("admin", "password123", null);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(ApiErrorCode.DsmUnreachable, result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenTheDiagnosticFindsDsmHealthy_FailsAsBefore()
+    {
+        // Arrange — the diagnostic decides; a healthy DSM means the failure lies elsewhere
+        _dsmSession.Setup(s => s.ConnectAsync(It.IsAny<LoginCredentials>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("transient"));
+        DiagnosticReports(isHealthy: true);
+
+        // Act
+        var result = await CreateService().LoginAsync("admin", "password123", null);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(ApiErrorCode.Failure, result.ErrorCode);
+        Assert.Equal("Authentication failed", result.Message);
+    }
+
+    [Fact]
+    public async Task LoginAsync_CancelledByTheCaller_PropagatesWithoutADiagnostic()
+    {
+        // Arrange — cancelled during the DSM call, not before, so validation cannot be what throws
+        using var cancellation = new CancellationTokenSource();
+        _dsmSession.Setup(s => s.ConnectAsync(It.IsAny<LoginCredentials>(), It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                cancellation.Cancel();
+                return Task.FromException<ApiResult>(new OperationCanceledException(cancellation.Token));
+            });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<OperationCanceledException>(() => CreateService().LoginAsync("admin", "password123", null, cancellation.Token));
+        _diagnostic.Verify(d => d.RecheckAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    #endregion
 
     #region LoginAsync
 

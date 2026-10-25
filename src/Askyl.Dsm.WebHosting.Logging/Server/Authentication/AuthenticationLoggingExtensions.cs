@@ -51,4 +51,10 @@ public static partial class AuthenticationLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1000007, Level = LogLevel.Information, Message = "Invalid DSM session detected — cleared from local session")]
     public static partial void SessionInvalidated(this ILogger<ILogAuthenticationService> logger);
+
+    /// <summary>
+    /// Logs a login that failed before DSM answered.
+    /// </summary>
+    [LoggerMessage(EventId = 1000008, Level = LogLevel.Warning, Message = "Login for user {Login} failed before DSM answered")]
+    public static partial void LoginTransportFailed(this ILogger<ILogAuthenticationService> logger, string login, Exception exception);
 }

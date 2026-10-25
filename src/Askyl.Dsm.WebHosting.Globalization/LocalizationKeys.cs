@@ -42,6 +42,7 @@ public static class LK
     public static class Diagnostic
     {
         public const string Unavailable = "Diagnostic_Unavailable";
+        public const string DsmUnreachable = "Diagnostic_DsmUnreachable";
     }
 
     /// <summary>Home page strings (toolbar, grid columns, toasts).</summary>

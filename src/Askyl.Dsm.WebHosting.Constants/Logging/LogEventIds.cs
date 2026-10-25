@@ -13,7 +13,7 @@ static class LogEventIds
 
     /// <summary>Authentication service.</summary>
     public const int AuthenticationBase = 1000000;
-    public const int AuthenticationLast = 1000007;
+    public const int AuthenticationLast = 1000008;
 
     #endregion
 

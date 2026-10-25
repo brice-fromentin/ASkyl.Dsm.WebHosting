@@ -13,10 +13,12 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// Implementation of IAuthenticationService that wraps DsmSession.
 /// </summary>
 /// <param name="dsmSession">The DSM session for making authentication calls.</param>
+/// <param name="diagnosticService">Decides whether a failed login means DSM is unreachable.</param>
 /// <param name="logger">Logger for tracking authentication operations.</param>
 /// <param name="localizer">Localizer for user-facing strings.</param>
 public class AuthenticationService(
     IDsmSession dsmSession,
+    IDsmConnectionDiagnosticService diagnosticService,
     IValidator<LoginCredentials> credentialsValidator,
     ILogger<ILogAuthenticationService> logger,
     ILocalizer localizer) : IAuthenticationService
@@ -36,7 +38,23 @@ public class AuthenticationService(
             return AuthenticationResult.CreateNotAuthenticated(validation.ToMessage());
         }
 
-        var connection = await dsmSession.ConnectAsync(model, cancellationToken);
+        ApiResult connection;
+
+        try
+        {
+            connection = await dsmSession.ConnectAsync(model, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            // Whatever broke on the way to DSM, the diagnostic decides whether DSM itself is the problem
+            logger.LoginTransportFailed(login, ex);
+
+            var report = await diagnosticService.RecheckAsync(CancellationToken.None);
+
+            return report.Value is { IsHealthy: false }
+                ? AuthenticationResult.CreateDsmUnreachable(localizer[LK.Diagnostic.DsmUnreachable])
+                : AuthenticationResult.CreateNotAuthenticated(localizer[LK.Error.AuthenticationFailed]);
+        }
 
         if (!connection.Success)
         {
