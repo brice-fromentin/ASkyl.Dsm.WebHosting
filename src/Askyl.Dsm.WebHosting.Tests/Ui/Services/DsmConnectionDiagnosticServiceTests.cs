@@ -74,6 +74,23 @@ public class DsmConnectionDiagnosticServiceTests
         Assert.Equal(DsmCheckFailure.NameNotFound, report.Checks[1].Failure);
     }
 
+    [Fact]
+    public async Task GetReportAsync_WhenACheckThrows_ReportsItAsUnexpectedAndCachesTheReport()
+    {
+        // A port a typo can leave in synoinfo.conf: TcpClient.ConnectAsync throws instead of failing
+        _settings.SetupGet(s => s.Server).Returns("127.0.0.1");
+        _settings.SetupGet(s => s.Port).Returns(70000);
+
+        var service = CreateService();
+        var report = (await service.GetReportAsync()).Value;
+        await service.GetReportAsync();
+
+        Assert.NotNull(report);
+        Assert.Equal(new DsmConnectionCheckResult(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.Unexpected), report.Checks[2]);
+        Assert.All(report.Checks.Skip(3), check => Assert.Equal(DsmCheckStatus.Skipped, check.Status));
+        _settings.Verify(s => s.Reload(), Times.Once);
+    }
+
     #endregion
 
     #region Caching

@@ -72,33 +72,47 @@ public sealed class DsmConnectionDiagnosticService(IDsmSettingsService settings,
         var checkedAt = DateTimeOffset.UtcNow;
         var results = new List<DsmConnectionCheckResult> { Result(DsmConnectionCheck.HostnameConfigured, ReloadSettings()) };
 
-        // Empty only when the first check failed, and then nothing below runs
-        var host = settings.Server ?? String.Empty;
-        var port = settings.Port;
-        IPAddress[] addresses = [];
+        var port = 0;
 
-        if (LastPassed(results))
+        try
         {
-            var (resolution, resolved) = await DsmConnectionChecks.ResolveAsync(host, StepTimeout);
+            // Empty only when the first check failed, and then nothing below runs
+            var host = settings.Server ?? String.Empty;
 
-            addresses = resolved;
-            results.Add(Result(DsmConnectionCheck.NameResolves, resolution));
+            port = settings.Port;
+            IPAddress[] addresses = [];
+
+            if (LastPassed(results))
+            {
+                var (resolution, resolved) = await DsmConnectionChecks.ResolveAsync(host, StepTimeout);
+
+                addresses = resolved;
+                results.Add(Result(DsmConnectionCheck.NameResolves, resolution));
+            }
+
+            if (LastPassed(results))
+            {
+                results.Add(Result(DsmConnectionCheck.PortAnswers, await DsmConnectionChecks.ConnectAsync(addresses, port, StepTimeout)));
+            }
+
+            if (LastPassed(results))
+            {
+                var (failure, certificate) = await DsmConnectionChecks.InspectCertificateAsync(host, addresses, port, StepTimeout);
+                results.Add(Result(DsmConnectionCheck.CertificateCoversName, failure) with { Certificate = certificate });
+            }
+
+            if (LastPassed(results))
+            {
+                results.Add(await ProbeApiAsync());
+            }
         }
-
-        if (LastPassed(results))
+        catch (Exception ex)
         {
-            results.Add(Result(DsmConnectionCheck.PortAnswers, await DsmConnectionChecks.ConnectAsync(addresses, port, StepTimeout)));
-        }
+            // Whatever a check fails to classify still ends in a report, never an error page
+            var running = Enum.GetValues<DsmConnectionCheck>()[results.Count];
 
-        if (LastPassed(results))
-        {
-            var (failure, certificate) = await DsmConnectionChecks.InspectCertificateAsync(host, addresses, port, StepTimeout);
-            results.Add(Result(DsmConnectionCheck.CertificateCoversName, failure) with { Certificate = certificate });
-        }
-
-        if (LastPassed(results))
-        {
-            results.Add(await ProbeApiAsync());
+            logger.DsmConnectionCheckThrew(running.ToString(), ex);
+            results.Add(new(running, DsmCheckStatus.Failed, DsmCheckFailure.Unexpected));
         }
 
         results.AddRange(Enum.GetValues<DsmConnectionCheck>().Skip(results.Count).Select(check => new DsmConnectionCheckResult(check, DsmCheckStatus.Skipped)));

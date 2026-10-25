@@ -36,5 +36,8 @@ public enum DsmCheckFailure
     HandshakeFailed,
 
     /// <summary>SYNO.API.Info did not answer with the API list.</summary>
-    UnexpectedResponse
+    UnexpectedResponse,
+
+    /// <summary>The check failed in a way it does not classify; the application log has the exception.</summary>
+    Unexpected
 }

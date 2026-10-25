@@ -21,4 +21,10 @@ public static partial class DsmConnectionDiagnosticLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 3100002, Level = LogLevel.Warning, Message = "DSM connection check {Check} failed ({Failure}) for {Host}:{Port}")]
     public static partial void DsmConnectionFailed(this ILogger<ILogDsmConnectionDiagnosticService> logger, string check, string failure, string host, int port);
+
+    /// <summary>
+    /// Logs a check that threw instead of reporting a failure.
+    /// </summary>
+    [LoggerMessage(EventId = 3100003, Level = LogLevel.Error, Message = "DSM connection check {Check} threw")]
+    public static partial void DsmConnectionCheckThrew(this ILogger<ILogDsmConnectionDiagnosticService> logger, string check, Exception exception);
 }
