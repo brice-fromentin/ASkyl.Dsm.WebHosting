@@ -216,7 +216,7 @@
     <value>Émis par : {0}</value>
   </data>
   <data name="Diagnostic_CertificateExpiry" xml:space="preserve">
-    <value>Expire le : {0:d}</value>
+    <value>Expire le {0:d}</value>
   </data>
 
   <!-- Home -->

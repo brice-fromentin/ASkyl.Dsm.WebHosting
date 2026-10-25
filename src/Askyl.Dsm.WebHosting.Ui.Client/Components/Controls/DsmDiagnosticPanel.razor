@@ -21,7 +21,7 @@
 
         @if (check.Status == DsmCheckStatus.Failed)
         {
-            <FluentMessageBar Intent="MessageBarIntent.Error">
+            <FluentMessageBar Intent="MessageBarIntent.Error" AllowDismiss="false">
                 <FluentStack Orientation="Orientation.Vertical">
                     <FluentText>@FailureText(check)</FluentText>
 

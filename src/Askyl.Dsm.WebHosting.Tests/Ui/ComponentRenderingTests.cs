@@ -168,6 +168,17 @@ public class ComponentRenderingTests : IAsyncLifetime
         Assert.DoesNotContain(_localizer[LK.Diagnostic.CertificateIssuer, String.Empty], text, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void DsmDiagnosticPanel_FailureBar_CannotBeDismissed()
+    {
+        // The bar holds the only remedy on the page; FluentMessageBar offers a dismiss button by default
+        var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters.Add(panel => panel.Report, Report(isHealthy: false).Value!));
+
+        Assert.Single(cut.FindAll("fluent-message-bar"));
+        Assert.Empty(cut.FindAll("fluent-message-bar fluent-button"));
+        Assert.Single(cut.FindAll("fluent-button[appearance=primary]"));
+    }
+
     static DsmConnectionReportResult Report(bool isHealthy)
         => DsmConnectionReportResult.CreateSuccess(isHealthy
             ? new DsmConnectionReport(true, DateTimeOffset.UtcNow, null, 0, [])
