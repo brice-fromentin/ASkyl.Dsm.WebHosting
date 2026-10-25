@@ -137,6 +137,14 @@ static class LogEventIds
 
     #endregion
 
+    #region DSM connection diagnostic — 3100000–3100999
+
+    /// <summary>DsmConnectionDiagnosticService.</summary>
+    public const int DsmConnectionDiagnosticBase = 3100000;
+    public const int DsmConnectionDiagnosticLast = 3100002;
+
+    #endregion
+
     #region Client-side (WASM) — 7000000–7900000
 
     /// <summary>LicenseService (client).</summary>

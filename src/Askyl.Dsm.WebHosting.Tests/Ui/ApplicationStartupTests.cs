@@ -1,9 +1,14 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using AngleSharp.Html.Parser;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
+using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Constants.WebApi;
+using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
+using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
+using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Microsoft.AspNetCore.Hosting;
@@ -61,6 +66,44 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
         return factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration(configuration => configuration.AddInMemoryCollection(
             new Dictionary<string, string?> { [ApplicationHostFactory.ConfigPathSettingKey] = settingsPath })));
     }
+    static readonly string DiagnosticReportRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, DsmDiagnosticRoutes.ReportFullRoute);
+
+    static readonly string DiagnosticRecheckRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, DsmDiagnosticRoutes.RecheckFullRoute);
+
+    static readonly string LoginRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, AuthenticationRoutes.LoginFullRoute);
+
+    [Fact]
+    public async Task DsmDiagnostic_AnswersAnonymously_NamingTheMissingHostname()
+    {
+        using var hostnameless = WithoutDsmHostname();
+
+        var result = await hostnameless.CreateClient().GetFromJsonAsync<DsmConnectionReportResult>(DiagnosticReportRoute, JsonOptionsCache.Options);
+
+        Assert.NotNull(result?.Value);
+        Assert.False(result.Value.IsHealthy);
+        Assert.Equal(new DsmConnectionCheckResult(DsmConnectionCheck.HostnameConfigured, DsmCheckStatus.Failed, DsmCheckFailure.HostnameMissing), result.Value.Checks[0]);
+    }
+
+    [Fact]
+    public async Task DsmDiagnosticRecheck_IsThrottled_WithoutSpendingLoginAttempts()
+    {
+        using var hostnameless = WithoutDsmHostname();
+        var client = hostnameless.CreateClient();
+
+        for (var attempt = 0; attempt < ApplicationConstants.LoginRateLimitPermitLimit; attempt++)
+        {
+            Assert.Equal(HttpStatusCode.OK, (await client.PostAsync(DiagnosticRecheckRoute, null)).StatusCode);
+        }
+
+        var throttled = await client.PostAsync(DiagnosticRecheckRoute, null);
+
+        // Empty credentials fail validation before any DSM call, so only the throttle can refuse them
+        var login = await client.PostAsJsonAsync(LoginRoute, new LoginCredentials(String.Empty, String.Empty, null));
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, throttled.StatusCode);
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, login.StatusCode);
+    }
+
 
     [Fact]
     public async Task Application_Starts_AndServesTheRootPage()

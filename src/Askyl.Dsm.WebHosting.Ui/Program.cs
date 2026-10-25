@@ -68,11 +68,14 @@ builder.Services.AddRazorComponents()
 // Register file reader abstraction (singleton - stateless file system wrapper)
 builder.Services.AddSingleton<IFileReader, SystemFileReader>();
 
-// Register DSM settings service (singleton - reads /etc/synoinfo.conf once at startup)
+// Register DSM settings service (singleton - reads /etc/synoinfo.conf at startup, again on each diagnostic run)
 builder.Services.AddSingleton<IDsmSettingsService, DsmSettingsService>();
 
 // Register DSM API client and authentication facade
 builder.Services.AddSingleton<DsmApiClient>();
+
+// Register the DSM connection diagnostic (singleton - caches the latest report for every visitor)
+builder.Services.AddSingleton<IDsmConnectionDiagnosticService, DsmConnectionDiagnosticService>();
 builder.Services.AddScoped<IDsmSession, DsmSession>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
@@ -133,6 +136,9 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
     options.AddPolicy(ApplicationConstants.RateLimitPolicyLogin, LoginRateLimitPolicy.Partition);
+
+    // Its own bucket, so re-checking the DSM connection never spends a login attempt
+    options.AddPolicy(ApplicationConstants.RateLimitPolicyDiagnostic, LoginRateLimitPolicy.Partition);
 });
 
 var app = builder.Build();

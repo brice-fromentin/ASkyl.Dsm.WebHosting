@@ -125,6 +125,9 @@
   <data name="Login_Authenticating" xml:space="preserve">
     <value>Authentification...</value>
   </data>
+  <data name="Diagnostic_Unavailable" xml:space="preserve">
+    <value>Le diagnostic de connexion à DSM est indisponible.</value>
+  </data>
 
   <!-- Home -->
   <data name="Home_PageTitle" xml:space="preserve">

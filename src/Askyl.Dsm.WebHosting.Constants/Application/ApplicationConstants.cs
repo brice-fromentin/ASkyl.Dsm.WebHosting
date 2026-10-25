@@ -142,6 +142,12 @@ public static class ApplicationConstants
     public const string RateLimitPolicyLogin = "login-throttle";
 
     /// <summary>
+    /// Rate limiting policy name for re-running the DSM connection diagnostic. Its own bucket, with the login
+    /// partitioning, so a re-check never spends a login attempt.
+    /// </summary>
+    public const string RateLimitPolicyDiagnostic = "diagnostic-throttle";
+
+    /// <summary>
     /// Login attempts allowed per client within <see cref="LoginRateLimitWindowMinutes"/>.
     /// </summary>
     public const int LoginRateLimitPermitLimit = 5;

@@ -56,6 +56,7 @@ builder.Services.AddScoped<IFrameworkManagementService, FrameworkManagementServi
 builder.Services.AddScoped<IWebSiteHostingService, WebSiteHostingService>();
 builder.Services.AddScoped<ILicenseService, LicenseService>();
 builder.Services.AddScoped<IFileSystemService, FileSystemService>();
+builder.Services.AddScoped<IDsmConnectionDiagnosticService, DsmConnectionDiagnosticService>();
 
 // Register tree content service for directory expansion
 builder.Services.AddScoped<ITreeContentService, TreeContentService>();

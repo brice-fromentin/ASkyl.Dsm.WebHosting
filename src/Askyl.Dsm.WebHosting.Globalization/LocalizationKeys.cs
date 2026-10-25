@@ -38,6 +38,12 @@ public static class LK
         public const string Authenticating = "Login_Authenticating";
     }
 
+    /// <summary>DSM connection diagnostic strings.</summary>
+    public static class Diagnostic
+    {
+        public const string Unavailable = "Diagnostic_Unavailable";
+    }
+
     /// <summary>Home page strings (toolbar, grid columns, toasts).</summary>
     public static class Home
     {
