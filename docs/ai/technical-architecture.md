@@ -266,7 +266,7 @@ and **ITreeContentService** (`LoadChildDirectoriesAsync()`), both implemented in
 
 **Structure:**
 
-- **Contracts/** — service interfaces shared between server and WASM client. 16 interfaces defining the boundary
+- **Contracts/** — service interfaces shared between server and WASM client. 17 interfaces defining the boundary
   between Data (contracts) and Ui/Tools (implementations). The table above lists each interface's key methods; the
   interfaces themselves hold the full signatures.
 - **Domain/** — model classes organized by subsystem: Authentication (login credentials), FileSystem (FsEntry),
@@ -383,7 +383,7 @@ both redirects, so the drain must run for every hosted site.
 - **Infrastructure/** — `GlobalizationSettings`: discovers supported cultures from satellite assemblies at construction (server-only; avoids WASM file system API crashes).
 - **Middleware/** — `RequestTrackingMiddleware`: echoes the caller's `X-Request-ID`, or a generated one, on every response.
   It also stores the value in `HttpContext.Items`, where nothing reads it.
-- **Services/** — business logic implementations of Data.Contracts interfaces: authentication façade, file system operations,  
+- **Services/** — business logic implementations of Data.Contracts interfaces: authentication façade, connection diagnostic, file system operations,  
   framework management, reverse proxy CRUD, website hosting orchestrator (BackgroundService with ConcurrentDictionary),  
   per-site lifecycle manager (Channel-based command queue, SIGTERM graceful shutdown),  
   DSM session management (per-user, 1-min TTL cache).
@@ -429,7 +429,7 @@ load-bearing: nginx terminates TLS, so without it `Request.IsHttps` is false and
   which restores FluentUI 4's 10px `FluentStack` gap; and the `Show*TextAsync` message boxes. FluentUI 5 renders a
   message box's text as sanitized HTML and throws on an angle bracket, so the helpers encode it and every call goes
   through them (enforced by `UiSourceAuditTests`).
-- **Services/** — HTTP client wrappers that call server API endpoints: authentication, file system, framework management,  
+- **Services/** — HTTP client wrappers that call server API endpoints: authentication, connection diagnostic, file system, framework management,  
   runtime versions, website hosting. Plus `AcceptLanguageHandler` (DelegatingHandler attaches Accept-Language from ICultureManager),  
   `AuthenticationNavigationGuard` (Router OnNavigateAsync guard),  
   `CultureManager` (resolves culture at login, clones with date/time formats),
@@ -523,6 +523,7 @@ Singleton
 ├── PlatformInfoService
 ├── VersionsDetectorService (smart caching)
 ├── AssemblyRuntimeDetector
+├── DsmConnectionDiagnosticService
 └── WebSiteHostingService (BackgroundService)
     └── SiteLifecycleManager (per-instance)
 
