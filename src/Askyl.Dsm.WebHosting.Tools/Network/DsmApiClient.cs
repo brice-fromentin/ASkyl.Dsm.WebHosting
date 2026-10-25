@@ -62,6 +62,38 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
     public async Task<ApiResponseBase<object>?> ExecuteSimpleAsync(string? sid, IApiParameters parameters, CancellationToken cancellationToken = default)
         => await ExecuteAsync<ApiResponseBase<object>>(sid, parameters, cancellationToken);
 
+    /// <summary>
+    /// Sends the SYNO.API.Info request for the connection diagnostic, leaving the handshake cache alone.
+    /// </summary>
+    /// <returns>Whether DSM answered with its API list, and the HTTP status it answered with.</returns>
+    public async Task<(bool Answered, int StatusCode)> ProbeAsync(CancellationToken cancellationToken)
+    {
+        var parameters = new InformationsQueryParameters();
+        var url = parameters.BuildUrl(RequireServer(), settingsService.Port, ApiConstants.Handshake);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = parameters.ToForm() };
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        var statusCode = (int)response.StatusCode;
+
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            return (false, statusCode);
+        }
+
+        try
+        {
+            var result = JsonSerializer.Deserialize<ApiInformationResponse>(await response.Content.ReadAsStringAsync(cancellationToken));
+
+            return (result is { Success: true, Data.Count: > 0 }, statusCode);
+        }
+        catch (JsonException)
+        {
+            // Something other than DSM answered on that port
+            return (false, statusCode);
+        }
+    }
+
     private async Task EnsureInitializedAsync()
     {
         if (ApiInformations.Get(ApiConstants.Auth) is not null)

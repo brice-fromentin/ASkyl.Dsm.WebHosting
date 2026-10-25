@@ -340,6 +340,57 @@ public class DsmApiClientTests : IDisposable
 
     #endregion
 
+    #region Probe
+
+    const string ApiInformationJson = """{"success":true,"data":{"SYNO.API.Auth":{"path":"entry.cgi","minVersion":1,"maxVersion":7}}}""";
+
+    DsmApiClient CreateClientWithEmptyCache(HttpStatusCode status, string body)
+    {
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => new HttpResponseMessage(status) { Content = new StringContent(body) });
+
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
+
+        return new DsmApiClient(factory.Object, _settingsService, _logger.Object);
+    }
+
+    [Fact]
+    public async Task ProbeAsync_WhenDsmAnswers_ReportsItWithoutTouchingTheCache()
+    {
+        var client = CreateClientWithEmptyCache(HttpStatusCode.OK, ApiInformationJson);
+
+        var (answered, statusCode) = await client.ProbeAsync(CancellationToken.None);
+
+        Assert.True(answered);
+        Assert.Equal((int)HttpStatusCode.OK, statusCode);
+        Assert.Null(client.ApiInformations.Get(ApiConstants.Auth));
+    }
+
+    [Fact]
+    public async Task ProbeAsync_WhenSomethingElseAnswers_ReportsItsStatus()
+    {
+        var client = CreateClientWithEmptyCache(HttpStatusCode.BadGateway, String.Empty);
+
+        var (answered, statusCode) = await client.ProbeAsync(CancellationToken.None);
+
+        Assert.False(answered);
+        Assert.Equal((int)HttpStatusCode.BadGateway, statusCode);
+    }
+
+    [Fact]
+    public async Task ProbeAsync_WhenAPageAnswers_ReportsNotDsm()
+    {
+        var client = CreateClientWithEmptyCache(HttpStatusCode.OK, "<html></html>");
+
+        var (answered, _) = await client.ProbeAsync(CancellationToken.None);
+
+        Assert.False(answered);
+    }
+
+    #endregion
+
     #region Test Helpers
 
     sealed class TestFormParameters : IApiParameters

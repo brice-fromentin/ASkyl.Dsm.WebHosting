@@ -37,6 +37,12 @@ public static class ApplicationConstants
     /// </summary>
     public const int HttpClientTimeoutSeconds = 15;
 
+    /// <summary>
+    /// Time allowed to each network step of the DSM connection diagnostic. Four such steps run in sequence,
+    /// and together they must fit inside <see cref="HttpClientTimeoutSeconds"/>, the client's wait for the result.
+    /// </summary>
+    public const int DsmDiagnosticStepTimeoutSeconds = 3;
+
     #endregion
 
     #region Runtime Path
