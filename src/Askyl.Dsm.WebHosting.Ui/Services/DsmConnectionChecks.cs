@@ -8,41 +8,43 @@ using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
 /// <summary>
-/// The network checks of the DSM connection diagnostic. Stateless; each is bounded by its timeout and
-/// reports a failure kind instead of throwing.
+/// The network checks of the DSM connection diagnostic. Stateless; each reports a failure kind instead
+/// of throwing, and each await stops at its timeout. A name lookup cannot be interrupted on Linux, so it is
+/// resolved once, here, and every later step connects to the addresses it returned.
 /// </summary>
 internal static class DsmConnectionChecks
 {
     /// <summary>
     /// Resolves the hostname. An IP literal passes without a lookup.
     /// </summary>
-    internal static async Task<DsmCheckFailure> ResolveAsync(string host, TimeSpan timeout)
+    internal static async Task<(DsmCheckFailure Failure, IPAddress[] Addresses)> ResolveAsync(string host, TimeSpan timeout)
     {
         using var cancellation = new CancellationTokenSource(timeout);
 
         try
         {
-            var addresses = await Dns.GetHostAddressesAsync(host, cancellation.Token);
+            // WaitAsync stops the await at the limit; the abandoned lookup finishes on its own
+            var addresses = await Dns.GetHostAddressesAsync(host, cancellation.Token).WaitAsync(cancellation.Token);
 
-            return addresses.Length > 0 ? DsmCheckFailure.None : DsmCheckFailure.NameNotFound;
+            return addresses.Length > 0 ? (DsmCheckFailure.None, addresses) : (DsmCheckFailure.NameNotFound, []);
         }
         catch (Exception ex) when (ex is SocketException or OperationCanceledException)
         {
-            return DsmCheckFailure.NameNotFound;
+            return (DsmCheckFailure.NameNotFound, []);
         }
     }
 
     /// <summary>
     /// Opens a TCP connection to the port.
     /// </summary>
-    internal static async Task<DsmCheckFailure> ConnectAsync(string host, int port, TimeSpan timeout)
+    internal static async Task<DsmCheckFailure> ConnectAsync(IPAddress[] addresses, int port, TimeSpan timeout)
     {
         using var cancellation = new CancellationTokenSource(timeout);
         using var client = new TcpClient();
 
         try
         {
-            await client.ConnectAsync(host, port, cancellation.Token);
+            await client.ConnectAsync(addresses, port, cancellation.Token);
 
             return DsmCheckFailure.None;
         }
@@ -59,7 +61,7 @@ internal static class DsmConnectionChecks
     /// <summary>
     /// Runs a TLS handshake against the hostname with default validation, recording what DSM presented.
     /// </summary>
-    internal static async Task<(DsmCheckFailure Failure, DsmCertificateSummary? Certificate)> InspectCertificateAsync(string host, int port, TimeSpan timeout)
+    internal static async Task<(DsmCheckFailure Failure, DsmCertificateSummary? Certificate)> InspectCertificateAsync(string host, IPAddress[] addresses, int port, TimeSpan timeout)
     {
         using var cancellation = new CancellationTokenSource(timeout);
 
@@ -84,7 +86,7 @@ internal static class DsmConnectionChecks
         try
         {
             using var client = new TcpClient();
-            await client.ConnectAsync(host, port, cancellation.Token);
+            await client.ConnectAsync(addresses, port, cancellation.Token);
 
             await using var stream = new SslStream(client.GetStream());
             await stream.AuthenticateAsClientAsync(options, cancellation.Token);
@@ -126,6 +128,10 @@ internal static class DsmConnectionChecks
             names.Add(certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: false));
         }
 
-        return new(names, certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: true), new DateTimeOffset(certificate.NotAfter.ToUniversalTime()));
+        // Generators sometimes write IP text as a name, and an IP certificate's CN and issuer are the IP
+        names.RemoveAll(name => IPAddress.TryParse(name, out _));
+        var issuer = certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: true);
+
+        return new(names, IPAddress.TryParse(issuer, out _) ? String.Empty : issuer, new DateTimeOffset(certificate.NotAfter.ToUniversalTime()));
     }
 }

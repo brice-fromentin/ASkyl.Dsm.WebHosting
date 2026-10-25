@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -27,11 +28,11 @@ public class DsmConnectionChecksTests
 
     [Fact]
     public async Task ResolveAsync_AnUnresolvableName_ReportsNameNotFound()
-        => Assert.Equal(DsmCheckFailure.NameNotFound, await DsmConnectionChecks.ResolveAsync(UnresolvableHost, Timeout));
+        => Assert.Equal(DsmCheckFailure.NameNotFound, (await DsmConnectionChecks.ResolveAsync(UnresolvableHost, Timeout)).Failure);
 
     [Fact]
     public async Task ResolveAsync_AnIpLiteral_Passes()
-        => Assert.Equal(DsmCheckFailure.None, await DsmConnectionChecks.ResolveAsync(LoopbackAddress, Timeout));
+        => Assert.Equal(DsmCheckFailure.None, (await DsmConnectionChecks.ResolveAsync(LoopbackAddress, Timeout)).Failure);
 
     #endregion
 
@@ -46,7 +47,7 @@ public class DsmConnectionChecksTests
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
 
-        Assert.Equal(DsmCheckFailure.PortRefused, await DsmConnectionChecks.ConnectAsync(LoopbackAddress, port, Timeout));
+        Assert.Equal(DsmCheckFailure.PortRefused, await DsmConnectionChecks.ConnectAsync([IPAddress.Loopback], port, Timeout));
     }
 
     #endregion
@@ -59,7 +60,7 @@ public class DsmConnectionChecksTests
         // The guarantee that the check observes validation instead of bypassing it
         await using var server = LocalTlsServer.Start(CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1)));
 
-        var (failure, certificate) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, server.Port, Timeout);
+        var (failure, certificate) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, [IPAddress.Loopback], server.Port, Timeout);
 
         Assert.Equal(DsmCheckFailure.CertificateUntrusted, failure);
         Assert.NotNull(certificate);
@@ -71,7 +72,7 @@ public class DsmConnectionChecksTests
     {
         await using var server = LocalTlsServer.Start(CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1)));
 
-        var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, server.Port, Timeout);
+        var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, [IPAddress.Loopback], server.Port, Timeout);
 
         Assert.Equal(DsmCheckFailure.CertificateNameMismatch, failure);
     }
@@ -81,9 +82,43 @@ public class DsmConnectionChecksTests
     {
         await using var server = LocalTlsServer.Start(CreateCertificate(DateTimeOffset.UtcNow.AddDays(-2), DateTimeOffset.UtcNow.AddDays(-1)));
 
-        var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, server.Port, Timeout);
+        var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, [IPAddress.Loopback], server.Port, Timeout);
 
         Assert.Equal(DsmCheckFailure.CertificateExpired, failure);
+    }
+
+    [Fact]
+    public async Task InspectCertificateAsync_AnIpCertificate_ShowsNoIpAddress()
+    {
+        await using var server = LocalTlsServer.Start(CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1), "CN=" + LoopbackAddress, IPAddress.Loopback));
+
+        var (_, certificate) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, [IPAddress.Loopback], server.Port, Timeout);
+
+        Assert.NotNull(certificate);
+        Assert.DoesNotContain(certificate.Names, name => IPAddress.TryParse(name, out _));
+        Assert.Equal(String.Empty, certificate.Issuer);
+    }
+
+    [Fact]
+    public async Task InspectCertificateAsync_AServerThatNeverSpeaksTls_IsBoundedByTheTimeout()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+
+        try
+        {
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var stopwatch = Stopwatch.StartNew();
+
+            var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, [IPAddress.Loopback], port, TimeSpan.FromMilliseconds(300));
+
+            Assert.Equal(DsmCheckFailure.HandshakeFailed, failure);
+            Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            listener.Stop();
+        }
     }
 
     [Theory]
@@ -96,12 +131,21 @@ public class DsmConnectionChecksTests
 
     #region Helpers
 
-    static X509Certificate2 CreateCertificate(DateTimeOffset notBefore, DateTimeOffset notAfter)
+    static X509Certificate2 CreateCertificate(DateTimeOffset notBefore, DateTimeOffset notAfter, string subject = CertificateSubject, IPAddress? ipName = null)
     {
         using var key = RSA.Create();
-        var request = new CertificateRequest(CertificateSubject, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest(subject, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         var names = new SubjectAlternativeNameBuilder();
-        names.AddDnsName(NetworkConstants.Localhost);
+
+        if (ipName is null)
+        {
+            names.AddDnsName(NetworkConstants.Localhost);
+        }
+        else
+        {
+            names.AddIpAddress(ipName);
+        }
+
         request.CertificateExtensions.Add(names.Build());
 
         using var ephemeral = request.CreateSelfSigned(notBefore, notAfter);
