@@ -38,7 +38,7 @@ public sealed class ApplicationHostFactory : WebApplicationFactory<App>
     /// </summary>
     const string TestingEnvironmentName = "Testing";
 
-    const string ConfigPathSettingKey = "DsmSettings:ConfigPath";
+    internal const string ConfigPathSettingKey = "DsmSettings:ConfigPath";
 
     #endregion
 
@@ -49,6 +49,11 @@ public sealed class ApplicationHostFactory : WebApplicationFactory<App>
     #endregion
 
     #region Properties
+
+    /// <summary>
+    /// The throwaway directory holding every file this factory writes; deleted with the factory.
+    /// </summary>
+    public string StateDirectory => _stateDirectory;
 
     /// <summary>
     /// Absolute path of the synthetic DSM settings file this factory writes for the host to read.

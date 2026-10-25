@@ -4,18 +4,18 @@ namespace Askyl.Dsm.WebHosting.Data.Domain.DsmSystem;
 /// System-level DSM preferences extracted from /etc/synoinfo.conf.
 /// Contains raw DSM codes (language) before conversion to .NET format.
 /// </summary>
-/// <param name="server">External host IP from configuration.</param>
+/// <param name="server">External hostname from configuration; null when DSM has none.</param>
 /// <param name="port">External HTTPS port from configuration.</param>
 /// <param name="language">System language (e.g. "def" for default browser language, or a specific code).</param>
 public sealed class DsmSystemPreferences(
-    string server,
+    string? server,
     int port,
     string language)
 {
     /// <summary>
     /// External host IP address from /etc/synoinfo.conf.
     /// </summary>
-    public string Server { get; init; } = server;
+    public string? Server { get; init; } = server;
 
     /// <summary>
     /// External HTTPS port from /etc/synoinfo.conf.

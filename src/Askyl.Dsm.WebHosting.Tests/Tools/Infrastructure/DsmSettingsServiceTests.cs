@@ -124,25 +124,28 @@ public class DsmSettingsServiceTests
 
     #endregion
 
-    #region Missing Mandatory Settings
+    #region Missing Hostname
 
     [Fact]
-    public void Constructor_MissingServerIp_ThrowsInvalidOperationException()
+    public void Constructor_MissingServerIp_LeavesServerNull()
     {
-        // Arrange
+        // Arrange — a fresh DSM has no external_host_ip until External Access is configured
         _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
         _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
                    .Returns([
                        "external_port_dsm_https=5001",
                    ]);
 
-        // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration));
-        Assert.Contains(SystemDefaults.KeyExternalHostIp, ex.Message);
+        // Act
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+
+        // Assert — the host must start, so the diagnostic can say what is missing
+        Assert.Null(service.Server);
+        Assert.Equal(5001, service.Port);
     }
 
     [Fact]
-    public void Constructor_EmptyServerIp_ThrowsInvalidOperationException()
+    public void Constructor_EmptyServerIp_LeavesServerNull()
     {
         // Arrange
         _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
@@ -152,9 +155,51 @@ public class DsmSettingsServiceTests
                        "external_port_dsm_https=5001",
                    ]);
 
+        // Act
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+
+        // Assert
+        Assert.Null(service.Server);
+    }
+
+    #endregion
+
+    #region Reload
+
+    [Fact]
+    public void Reload_PicksUpAChangedFile()
+    {
+        // Arrange — the hostname is set in DSM after the package started
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.SetupSequence(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Returns(["external_port_dsm_https=5001"])
+                   .Returns(["external_host_ip=10.0.0.9", "external_port_dsm_https=8443"]);
+
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+
+        // Act
+        service.Reload();
+
+        // Assert
+        Assert.Equal("10.0.0.9", service.Server);
+        Assert.Equal(8443, service.Port);
+    }
+
+    [Fact]
+    public void Reload_WhenTheFileIsGone_ThrowsAndKeepsThePreviousValues()
+    {
+        // Arrange
+        _fileReader.SetupSequence(f => f.FileExists(SystemDefaults.SynoInfoConfPath))
+                   .Returns(true)
+                   .Returns(false);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Returns(["external_host_ip=10.0.0.1"]);
+
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration));
-        Assert.Contains(SystemDefaults.KeyExternalHostIp, ex.Message);
+        Assert.Throws<InvalidOperationException>(service.Reload);
+        Assert.Equal("10.0.0.1", service.Server);
     }
 
     #endregion

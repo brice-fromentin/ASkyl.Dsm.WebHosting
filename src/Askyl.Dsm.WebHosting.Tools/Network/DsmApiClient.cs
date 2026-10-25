@@ -42,7 +42,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
             : ApiInformations.Get(parameters.Name)?.Path
                 ?? throw new InvalidOperationException($"Unknown API: {parameters.Name}");
 
-        var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, path);
+        var url = parameters.BuildUrl(RequireServer(), settingsService.Port, path);
 
         var result = parameters.SerializationFormat switch
         {
@@ -85,7 +85,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
     private async Task<bool> HandShakeAsync()
     {
         var parameters = new InformationsQueryParameters();
-        var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, ApiConstants.Handshake);
+        var url = parameters.BuildUrl(RequireServer(), settingsService.Port, ApiConstants.Handshake);
 
         var result = await ExecuteFormAsync<ApiInformationResponse>(null, url, parameters, CancellationToken.None);
 
@@ -104,6 +104,10 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
     #endregion
 
     #region HTTP Helpers
+
+    // Fails before building "https://:5001/…", so a missing hostname surfaces as itself
+    private string RequireServer()
+        => settingsService.Server ?? throw new InvalidOperationException("DSM hostname is not configured");
 
     private static void LogApiErrorIfFailed<R>(R? result, ILogger<ILogDsmApiClient> logger)
         where R : IApiResponse

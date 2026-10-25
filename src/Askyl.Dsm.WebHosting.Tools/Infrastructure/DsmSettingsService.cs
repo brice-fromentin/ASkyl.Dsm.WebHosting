@@ -8,21 +8,24 @@ using Microsoft.Extensions.Logging;
 namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 /// <summary>
-/// Reads DSM system preferences from /etc/synoinfo.conf once at startup.
-/// Throws if the configuration file is missing or malformed.
+/// Reads DSM system preferences from /etc/synoinfo.conf at startup and again on <see cref="Reload"/>.
+/// Throws if the file is missing or unreadable; a missing hostname leaves <see cref="Server"/> null.
 /// </summary>
 /// <param name="logger">Logger instance.</param>
 /// <param name="fileReader">File system abstraction for reading configuration files.</param>
 /// <param name="configuration">Application configuration for resolving the settings file path.</param>
 public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, IFileReader fileReader, IConfiguration configuration) : IDsmSettingsService
 {
-    private readonly DsmSystemPreferences _preferences = ReadSettings(logger, fileReader, configuration);
+    // Swapped whole by Reload, so a reader sees one file's values, never a mix of two
+    private volatile DsmSystemPreferences _preferences = ReadSettings(logger, fileReader, configuration);
 
-    public string Server => _preferences.Server;
+    public string? Server => _preferences.Server;
 
     public int Port => _preferences.Port;
 
     public string Language => _preferences.Language;
+
+    public void Reload() => _preferences = ReadSettings(logger, fileReader, configuration);
 
     static string ResolveAndValidateConfigPath(ILogger<ILogDsmSettingsService> logger, IFileReader fileReader, IConfiguration configuration)
     {
@@ -57,31 +60,23 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
 
             logger.ConfigurationLoaded(settings.Count);
 
-            var server = GetMandatorySetting(settings, SystemDefaults.KeyExternalHostIp, configPath, logger);
+            // Left null rather than thrown: the connection diagnostic names what is missing
+            var server = settings.TryGetValue(SystemDefaults.KeyExternalHostIp, out var host) && host.Length > 0 ? host : null;
+
+            if (server is null)
+            {
+                logger.MandatorySettingMissing(SystemDefaults.KeyExternalHostIp);
+            }
+
             var language = settings.TryGetValue(SystemDefaults.KeyLanguage, out var lang) && lang.Length > 0 ? lang : SystemDefaults.DefaultLanguage;
             var port = Int32.TryParse(settings.TryGetValue(SystemDefaults.KeyExternalHttpsPort, out var p) ? p : null, out var parsedPort) ? parsedPort : SystemDefaults.DefaultHttpsPort;
 
             return new DsmSystemPreferences(server, port, language);
         }
-        catch (InvalidOperationException)
-        {
-            throw;
-        }
-        catch (Exception ex) when (!(ex is InvalidOperationException))
+        catch (Exception ex)
         {
             logger.SettingsReadFailed(ex);
             throw new InvalidOperationException($"Failed to read DSM settings from '{configPath}'.", ex);
         }
-    }
-
-    static string GetMandatorySetting(Dictionary<string, string> settings, string key, string configPath, ILogger<ILogDsmSettingsService> logger)
-    {
-        if (!settings.TryGetValue(key, out var value) || value.Length == 0)
-        {
-            logger.MandatorySettingMissing(key);
-            throw new InvalidOperationException($"Mandatory setting '{key}' is missing from '{configPath}'.");
-        }
-
-        return value;
     }
 }

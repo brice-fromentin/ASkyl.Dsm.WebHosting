@@ -2,9 +2,14 @@ using System.Net;
 using System.Text.RegularExpressions;
 using AngleSharp.Html.Parser;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.WebApi;
+using Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
+using Askyl.Dsm.WebHosting.Ui.Components;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Net.Http.Headers;
 
 namespace Askyl.Dsm.WebHosting.Tests.Ui;
@@ -27,6 +32,35 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
     const string ProxiedBaseAddress = "http://nas.example.test";
 
     static readonly string ProtectedRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, FileManagementRoutes.SharedFoldersFullRoute);
+
+    const string HostnamelessSettingsFileName = "synoinfo-without-hostname.conf";
+
+    [Fact]
+    public async Task Application_StartsWithoutADsmHostname()
+    {
+        // A fresh DSM has no external_host_ip. The host used to die resolving DsmSettingsService at startup,
+        // with the reason only in a log the next start truncates.
+        using var hostnameless = WithoutDsmHostname();
+
+        var response = await hostnameless.CreateClient().GetAsync(ApplicationConstants.ApplicationUrlSubPath);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>
+    /// A host reading a synoinfo.conf without external_host_ip. Its configuration is added after the
+    /// factory's own, so it wins.
+    /// </summary>
+    WebApplicationFactory<App> WithoutDsmHostname()
+    {
+        var settingsPath = Path.Combine(factory.StateDirectory, HostnamelessSettingsFileName);
+
+        Directory.CreateDirectory(factory.StateDirectory);
+        File.WriteAllLines(settingsPath, [$"{SystemDefaults.KeyExternalHttpsPort}=\"{FakeDsmSettings.Port}\""]);
+
+        return factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration(configuration => configuration.AddInMemoryCollection(
+            new Dictionary<string, string?> { [ApplicationHostFactory.ConfigPathSettingKey] = settingsPath })));
+    }
 
     [Fact]
     public async Task Application_Starts_AndServesTheRootPage()
