@@ -258,7 +258,8 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | **IVersionsDetectorService** | GetInstalledVersionsAsync(), RefreshCacheAsync(), IsChannelInstalled(), IsVersionInstalled() | Tools.Runtime (Singleton) |
 | **IAssemblyRuntimeDetector** | Detect() | Tools.Runtime (Singleton) |
 | **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), DisconnectAsync(), Disconnect(); properties: HasSession, UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
-| **IDsmSettingsService** | Server, Port, Language | Tools.Infrastructure |
+| **IDsmSettingsService** | Server (nullable), Port, Language, Reload() | Tools.Infrastructure |
+| **IDsmConnectionDiagnosticService** | GetReportAsync(), RecheckAsync() | Ui.Services (Singleton) |
 
 Two client-only interfaces live in `Ui.Client/Interfaces/`, not in Data: **ILicenseService** (`GetLicensesAsync()`)
 and **ITreeContentService** (`LoadChildDirectoriesAsync()`), both implemented in `Ui.Client.Services`.
@@ -348,7 +349,7 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 | **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info (implements `ISemaphoreOwner` for the cache lock) | ILogger |
 | **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes, drains their redirected output | ILogger, ILoggerFactory |
 | **SystemProcessHandle** | `IProcessHandle` | Not registered | Wraps `Process`; created per process by `SystemProcessRunner` | ILogger<ILogSystemProcessHandle> |
-| **DsmSettingsService** | `IDsmSettingsService` | Singleton | Reads /etc/synoinfo.conf via IFileReader | ILogger, IFileReader |
+| **DsmSettingsService** | `IDsmSettingsService` | Singleton | Reads /etc/synoinfo.conf via IFileReader at startup and on Reload(); a missing hostname leaves Server null | ILogger, IFileReader |
 
 **DsmApiClient Key Features:**
 
@@ -356,6 +357,7 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 - `ExecuteAsync<R>` with compile-time `where R : IApiResponse` constraint (no reflection)
 - Strategy pattern for Form vs JSON serialization
 - Structured logging: request timing, auth failures, API errors via `[LoggerMessage]` extensions
+- `ProbeAsync` sends `SYNO.API.Info` for the connection diagnostic without touching the handshake cache; every call fails fast when no hostname is configured
 
 **Process Lifecycle:** `SystemProcessRunner` requires `ILoggerFactory` to create correctly-typed child loggers for `SystemProcessHandle` instances (distinct closed generic types cannot be cast).
 
@@ -373,9 +375,9 @@ both redirects, so the drain must run for every hosted site.
 **Structure:**
 
 - **Authorization/** — `[AuthorizeSession]` attribute: session-based authorization for API controllers; validates against DSM server with 1-minute TTL cache.
-- **Controllers/** — thin routing wrappers (Authentication, FileManagement, FrameworkManagement, LogDownload,  
+- **Controllers/** — thin routing wrappers (Authentication, DsmDiagnostic, FileManagement, FrameworkManagement, LogDownload,  
   RuntimeManagement, WebsiteHosting). No business logic — all delegated to services.  
-  Protected by `[AuthorizeSession]` except AuthenticationController.
+  Protected by `[AuthorizeSession]` except AuthenticationController and DsmDiagnosticController.
 - **Endpoints/** — minimal API endpoints: `MapErrorEndpoints()` maps `/Error` and `/not-found` with JSON vs HTML content negotiation.
 - **Extensions/** — server-side globalization extensions: `ApplyDsmSystemCulture()`, `UseGlobalizationRequestLocalization()`.
 - **Infrastructure/** — `GlobalizationSettings`: discovers supported cultures from satellite assemblies at construction (server-only; avoids WASM file system API crashes).
@@ -629,8 +631,9 @@ response is disposed first.
 
 ```text
 1. Client → LoginCredentials { Login, Password, [OtpCode] }
-2. DsmSettingsService → settings read once per process from DsmSettings:ConfigPath (default /etc/synoinfo.conf);
-   a missing file or host key throws, only the language and HTTPS port fall back to defaults
+2. DsmSettingsService → settings read at startup and again on each diagnostic run, from DsmSettings:ConfigPath
+   (default /etc/synoinfo.conf); a missing file throws, a missing hostname leaves `Server` null; only the
+   language and HTTPS port fall back to defaults
 3. DsmApiClient.EnsureInitializedAsync() → SYNO.API.Info query (lazy-init, SemaphoreLock)
 4. DsmSession.AuthenticateAsync() → auth.login API call
 5. Response: SID stored per-request via HttpRequestMessage cookie header
@@ -646,6 +649,10 @@ cookie that unprotects into a well-formed key, whether or not the server holds d
 `ISession` has no member that issues a new one. A session cookie planted before its owner signs in would
 otherwise carry their SID afterwards. The binding is issued only once the administrator check passes, so a
 refused login never receives one.
+
+A login that throws before DSM answers re-runs the connection diagnostic; when DSM is unreachable the result
+carries `ApiErrorCode.DsmUnreachable` and the login page shows the diagnostic. `AuthenticationService` catches
+anything from `ConnectAsync` except the caller's own cancellation.
 
 `ConnectAsync` returns an `ApiResult` rather than a bool so the caller can distinguish invalid credentials
 (`ApiErrorCode.Unauthorized`) from a valid non-administrator (`ApiErrorCode.Forbidden`) and localize each.
@@ -679,6 +686,31 @@ the DSM Core APIs are undocumented, so the log is the evidence.
 administrator gate — a non-administrator receives a permission error and is rejected. An earlier version
 accepted every outcome except error `-4`, which admitted exactly those users. `ConnectAsync` runs the same
 check at login so non-administrators are refused there rather than on their next request.
+
+#### Connection Diagnostic
+
+Design: `docs/ai/specs/2026-10-25-dsm-connection-diagnostic-design.md`. `DsmConnectionDiagnosticService` (Singleton,
+`Ui/Services/`) runs five checks in order and stops at the first failure: hostname configured, name resolves, port
+answers, certificate covers the name, `SYNO.API.Info` answers. The checks themselves are stateless
+(`DsmConnectionChecks`).
+
+- **Bounded steps:** each network step is bounded by `DsmDiagnosticStepTimeoutSeconds` (3). The await itself is
+  bounded with `WaitAsync`, since a DNS lookup ignores its token on Linux and macOS; the `SYNO.API.Info` probe is
+  bounded the same way.
+- **Resolve once:** the port and certificate checks connect to the addresses already resolved, with no second
+  lookup.
+- **Observe, never bypass:** the certificate check runs a real handshake and records what DSM presents. Its callback
+  returns exactly `policyErrors == SslPolicyErrors.None`, so it never accepts a certificate the application would
+  refuse. The summary drops every name and issuer that parses as an IP address.
+- **Cached, serialized, coalesced:** every run starts with `Reload()` of `synoinfo.conf`. Runs are serialized, and a
+  caller that queued behind a run started after it asked reuses that run. Runs ignore the caller's token, so a
+  cancelled request cannot poison the shared result.
+- **Always a report:** a catch-all turns anything a check does not classify into `DsmCheckFailure.Unexpected`
+  (event 3100003), so a run ends in a cached report, never an error.
+- **Triggers:** the first login-page visit computes the report; the re-check endpoint and a failed login recompute it.
+- **What anonymous visitors see:** a healthy report reaches them as nothing but `IsHealthy` and `CheckedAt`.
+  `Login.razor` shows `DsmDiagnosticPanel` (a non-dismissible error bar whose remedies name DSM 7.4's own menus, in
+  English and French) in place of the form while the report is unhealthy.
 
 #### FileStation Operations
 
@@ -793,9 +825,9 @@ compiles. What the move established, for whoever touches the UI or the next majo
 
 ### API Security
 
-1. **Authorization Coverage** — `[AuthorizeSession]` on all API controllers; `AuthenticationController` intentionally public
+1. **Authorization Coverage** — `[AuthorizeSession]` on all API controllers; `AuthenticationController` intentionally public; `DsmDiagnosticController` is public by design and takes no input
 2. **Input Validation** — Path traversal prevention (`IsPathValid()` rejects `..`), version format validation, environment variable limits (256 key, 4096 value)
-3. **Rate Limiting** — Login: 5 attempts/minute/IP
+3. **Rate Limiting** — Login: 5 attempts/minute/IP. Diagnostic re-check: 5/minute/IP, a separate bucket (`diagnostic-throttle`, partitioned like login)
 4. **Error Handling** — Generic messages to clients; full details server-side via `[LoggerMessage]`.
    Deliberate exception: a login refused for lack of administrator rights returns a distinct localized
    message, since the user must be told the application is admin-only rather than retry valid credentials.
@@ -1093,7 +1125,7 @@ Standard .NET configuration layering applies: `appsettings.json` → `appsetting
 ### A. API Routes
 
 All routes prefixed `/api/v1/`. Controllers: `Authentication`, `WebsiteHosting`, `FileManagement`,
-`FrameworkManagement`, `RuntimeManagement`, `LogDownload`. See controller source for exact endpoints and HTTP methods.
+`FrameworkManagement`, `RuntimeManagement`, `LogDownload`, `DsmDiagnostic` (public; GET report, POST `recheck`). See controller source for exact endpoints and HTTP methods.
 
 ### B. DSM API Reference
 

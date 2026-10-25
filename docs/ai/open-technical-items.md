@@ -272,18 +272,15 @@ the default `HttpClient` (`Ui/Program.cs:42`), so with full certificate validati
 hostname under *External Access*, its certificate covers that name, the name resolves from the NAS itself, and
 the external port reaches DSM from inside. The README names none of it, and each missing link fails differently:
 
-- **No hostname: the package does not start.** `Ui/Program.cs:143` applies the DSM culture before `app.Run()`,
-  which resolves `DsmSettingsService`, whose constructor throws (`Tools/Infrastructure/DsmSettingsService.cs:82`).
-  The reason reaches only the log, and `application.log` is truncated at the next start (entry above).
-  Confirmed by the maintainer on 2026-10-24; what Package Center shows the user was not checked.
+- **No hostname** used to stop the package at startup. Since 0.8.1 the host starts and the login page shows the
+  diagnostic.
 - **A name the certificate does not cover** — an IP, or DSM's default self-signed certificate, issued to
   `synology` — lets the host start and fails every DSM call. Measured on a Virtual DSM on 2026-10-24: a fresh
   instance has no `external_host_ip` at all and serves that default certificate. What the login page then shows
   was not checked.
 - **The last two links are inferred, not tried**: resolution from the NAS, and an external port that differs
   from DSM's own.
-- **Any later change in DSM needs a package restart**: `DsmSettingsService` is a Singleton that reads
-  `synoinfo.conf` once.
+- **A later change in DSM** applies on the diagnostic's re-check, which reloads `synoinfo.conf`.
 
 Loopback does not remove the constraint by itself. From inside the Virtual DSM, `http://127.0.0.1:5000` answers
 and `https://127.0.0.1:5001` fails strict validation, since no DSM certificate names `127.0.0.1` or `localhost`.
@@ -306,6 +303,8 @@ path that works today.
 
 Not chosen: calling the host the browser used. The `Host` header is client-controlled, and calling it would send
 the DSM password wherever a forged request points. It may appear on the diagnostic page as a suggestion only.
+
+**Step 1 landed in 0.8.1** (PR #82). Step 2 remains open.
 
 The Virtual DSM stays in its current state until step 1 lands: it is exactly the case to diagnose. A trusted
 certificate goes on it afterwards, for the positive path of step 2.
