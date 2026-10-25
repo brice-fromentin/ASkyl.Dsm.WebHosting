@@ -1,6 +1,6 @@
 # DSM Connection Diagnostic — Design
 
-Status: approved in conversation on 2026-10-25, not yet implemented. Ships as **0.8.1**.
+Status: implemented in 0.8.1 (PR #82). Ships as **0.8.1**.
 
 Implements step 1 of the decided fix in `open-technical-items.md`, *The package needs a DSM hostname and a
 matching certificate, and says so nowhere*: **diagnose instead of crashing**. Step 2, discovering the name
@@ -38,7 +38,8 @@ Out of scope:
 ## The Checks
 
 Five checks run in order. The first failure stops the run; the remaining checks are reported `Skipped`.
-Each network step is bounded by one timeout constant (about 5 s).
+Each network step is bounded by one timeout constant (about 5 s; the implementation uses 3 s so the four network
+steps fit the client's 15 s).
 
 | # | Check | How | Failure kinds |
 |---|-------|-----|---------------|

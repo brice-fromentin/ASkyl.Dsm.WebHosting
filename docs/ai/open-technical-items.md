@@ -216,6 +216,16 @@ A fresh install from such a package starts with that site list; an upgrade resto
 not carry it, but none has ever been published (see *No release has ever been published*), so every SPK
 installed so far was built locally. Excluding it from publish in the `.csproj`, or deleting it in `build-spk.sh`, closes it.
 
+### A fresh install does not reload nginx, so `/adwh/` answers DSM's 404
+
+Measured on the Virtual DSM 7.4.1 on 2026-10-25: after `synopkg install` and `start`, the package's
+`dsm.pkg-static.*.conf` link was in nginx's `conf.d`, but the nginx workers predated the install and `/adwh/`
+answered 404 from DSM's own handler (`/usr/syno/synoman/adwh/index.cgi is not found`).
+`synosystemctl reload nginx` fixed it. An uninstall the day before had reloaded nginx.
+
+Not yet known: whether Package Center's GUI install behaves differently from `synopkg`, and whether an upgrade
+reloads. Fix candidates: reload nginx from `postinst`, or find the resource key DSM honours for it.
+
 ### Cosmetic: packaging leaves precompressed development settings behind
 
 `build-spk.sh` deletes `*Development.json` from the publish output, which misses the client's
@@ -267,7 +277,7 @@ would keep it.
 ### The package needs a DSM hostname and a matching certificate, and says so nowhere
 
 The application reaches its own DSM at `https://{external_host_ip}:{external_port_dsm_https}`
-(`Data/DsmApi/Parameters/ApiParametersBase.cs:58`, called from `Tools/Network/DsmApiClient.cs:45,88`), through
+(`Data/DsmApi/Parameters/ApiParametersBase.cs:58`, called from `Tools/Network/DsmApiClient.cs:45,120`), through
 the default `HttpClient` (`Ui/Program.cs:42`), so with full certificate validation. That works only if DSM has a
 hostname under *External Access*, its certificate covers that name, the name resolves from the NAS itself, and
 the external port reaches DSM from inside. The README names none of it, and each missing link fails differently:
@@ -276,8 +286,9 @@ the external port reaches DSM from inside. The README names none of it, and each
   diagnostic.
 - **A name the certificate does not cover** — an IP, or DSM's default self-signed certificate, issued to
   `synology` — lets the host start and fails every DSM call. Measured on a Virtual DSM on 2026-10-24: a fresh
-  instance has no `external_host_ip` at all and serves that default certificate. What the login page then shows
-  was not checked.
+  instance has no `external_host_ip` at all and serves that default certificate. Acceptance on the Virtual DSM
+  on 2026-10-25 measured the result: the login page shows the diagnostic with check 4 failing on DSM's default
+  certificate (names `synology`), and a real login answers HTTP 200 with `DsmUnreachable` instead of a 500.
 - **The last two links are inferred, not tried**: resolution from the NAS, and an external port that differs
   from DSM's own.
 - **A later change in DSM** applies on the diagnostic's re-check, which reloads `synoinfo.conf`.
@@ -306,8 +317,16 @@ the DSM password wherever a forged request points. It may appear on the diagnost
 
 **Step 1 landed in 0.8.1** (PR #82). Step 2 remains open.
 
-The Virtual DSM stays in its current state until step 1 lands: it is exactly the case to diagnose. A trusted
-certificate goes on it afterwards, for the positive path of step 2.
+The Virtual DSM now has a hostname set (through DSM's own External Access setting) and still serves the default
+self-signed certificate. A trusted certificate is the next prerequisite, for the positive path of step 2.
+
+Known behaviour of step 1:
+
+- An unhealthy report stays cached, so one transient failure during a login keeps the diagnostic in front of
+  every visitor until someone presses Re-check. By design: the report is computed on demand, never on a timer.
+- The server's DSM calls use the default 100 s `HttpClient` timeout while the WebAssembly client gives up after
+  15 s, so a DSM that times out during a login never shows `DsmUnreachable` in the browser. The diagnostic's
+  budget covers only its own steps.
 
 ## Tooling and dependencies
 
