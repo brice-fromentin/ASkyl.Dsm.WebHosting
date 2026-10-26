@@ -23,12 +23,6 @@ public static partial class DsmApiLoggingExtensions
     public static partial void ConfigurationLoaded(this ILogger<ILogDsmApiClient> logger, int count);
 
     /// <summary>
-    /// Logs that a mandatory configuration setting is missing or empty (critical).
-    /// </summary>
-    [LoggerMessage(EventId = 2000003, Level = LogLevel.Critical, Message = "Mandatory configuration setting \"{SettingKey}\" is missing or empty.")]
-    public static partial void MandatorySettingMissing(this ILogger<ILogDsmApiClient> logger, string settingKey);
-
-    /// <summary>
     /// Logs a DSM API request with method, URL, and duration.
     /// </summary>
     [LoggerMessage(EventId = 2000004, Level = LogLevel.Debug, Message = "DSM API request: {Method} {Url} - Status {StatusCode} ({Duration}ms)")]

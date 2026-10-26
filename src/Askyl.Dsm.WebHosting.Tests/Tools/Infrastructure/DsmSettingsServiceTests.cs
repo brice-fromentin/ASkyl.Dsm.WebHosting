@@ -146,6 +146,10 @@ public class DsmSettingsServiceTests
     }
 
     [Fact]
+    public void Constructor_DsmUrlWithAnInternationalisedName_GivesItsPunycode()
+        => Assert.Equal("dsm.xn--bcher-kva.test", Create("https://dsm.bücher.test:5443").Server);
+
+    [Fact]
     public void Constructor_DsmUrlWithAnIpv6Literal_BuildsAValidApiUrl()
     {
         var service = Create("https://[::1]:5443");

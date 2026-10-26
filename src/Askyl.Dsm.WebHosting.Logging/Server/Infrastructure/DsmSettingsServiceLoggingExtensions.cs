@@ -29,12 +29,6 @@ public static partial class DsmSettingsServiceLoggingExtensions
     public static partial void SettingsReadFailed(this ILogger<ILogDsmSettingsService> logger, Exception exception);
 
     /// <summary>
-    /// Logs that default values are being used for DSM settings.
-    /// </summary>
-    [LoggerMessage(EventId = 2800005, Level = LogLevel.Warning, Message = "Using default DSM settings")]
-    public static partial void UsingDefaults(this ILogger<ILogDsmSettingsService> logger);
-
-    /// <summary>
     /// Logs the resolved configuration file path for debugging local development setup.
     /// </summary>
     [LoggerMessage(EventId = 2800006, Level = LogLevel.Debug, Message = "Resolving DSM settings from: {ConfigPath} (configured: {HasConfigurationOverride})")]

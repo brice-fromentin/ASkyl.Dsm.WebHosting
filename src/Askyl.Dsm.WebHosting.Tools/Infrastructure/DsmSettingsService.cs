@@ -44,10 +44,12 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
                 throw new InvalidOperationException($"{ApplicationConstants.DsmUrlEnvironmentVariable} must be an absolute https URL, such as https://nas.example:5001.");
             }
 
-            logger.ReachingDsmFromUrl(dsm.Host, dsm.Port);
+            // Punycode, as the HTTP client sends it; an IPv6 literal keeps the brackets a URL needs, which the certificate policy strips
+            var host = dsm.HostNameType == UriHostNameType.IPv6 ? dsm.Host : dsm.IdnHost;
 
-            // Uri.Host keeps an IPv6 literal in brackets, the form a URL needs; the certificate policy strips them
-            return new(dsm.Host, dsm.Port, language);
+            logger.ReachingDsmFromUrl(host, dsm.Port);
+
+            return new(host, dsm.Port, language);
         }
 
         var port = ReadLoopbackPort(logger, fileReader, configuration);
