@@ -1,3 +1,4 @@
+using System.Net.Security;
 using Microsoft.Extensions.Logging;
 
 namespace Askyl.Dsm.WebHosting.Logging;
@@ -27,4 +28,10 @@ public static partial class DsmConnectionDiagnosticLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 3100003, Level = LogLevel.Error, Message = "DSM connection check {Check} threw")]
     public static partial void DsmConnectionCheckThrew(this ILogger<ILogDsmConnectionDiagnosticService> logger, string check, Exception exception);
+
+    /// <summary>
+    /// Logs why the certificate policy refused DSM's connection, which the report itself does not carry.
+    /// </summary>
+    [LoggerMessage(EventId = 3100004, Level = LogLevel.Warning, Message = "DSM connection not trusted on {Host}:{Port}: {SslPolicyErrors}")]
+    public static partial void DsmConnectionNotTrusted(this ILogger<ILogDsmConnectionDiagnosticService> logger, string host, int port, SslPolicyErrors sslPolicyErrors);
 }

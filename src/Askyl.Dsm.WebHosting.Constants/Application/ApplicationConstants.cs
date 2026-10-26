@@ -43,7 +43,7 @@ public static class ApplicationConstants
     public const int HttpClientTimeoutSeconds = 15;
 
     /// <summary>
-    /// Time allowed to each network step of the DSM connection diagnostic. Four such steps run in sequence,
+    /// Time allowed to each network step of the DSM connection diagnostic. Three such steps run in sequence,
     /// and together they must fit inside <see cref="HttpClientTimeoutSeconds"/>, the client's wait for the result.
     /// </summary>
     public const int DsmDiagnosticStepTimeoutSeconds = 3;
@@ -223,6 +223,12 @@ public static class ApplicationConstants
     /// Environment variable name for DSM's HTTPS port passed from server to WASM client via <c>Blazor.start()</c>.
     /// </summary>
     public const string DsmHttpsPortEnvironmentVariable = "ADWH_DSM_HTTPS_PORT";
+
+    /// <summary>
+    /// Environment variable naming DSM's URL (e.g. https://nas.example:5001) for local debugging. Unset on the
+    /// NAS, where DSM is reached over loopback.
+    /// </summary>
+    public const string DsmUrlEnvironmentVariable = "ADWH_DSM_URL";
 
     #endregion
 }

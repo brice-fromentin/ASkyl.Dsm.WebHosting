@@ -8,31 +8,19 @@ public enum DsmCheckFailure
     /// <summary>No failure.</summary>
     None,
 
-    /// <summary>synoinfo.conf has no external_host_ip.</summary>
-    HostnameMissing,
-
-    /// <summary>synoinfo.conf could not be read.</summary>
-    SettingsUnreadable,
-
-    /// <summary>The hostname does not resolve.</summary>
-    NameNotFound,
-
     /// <summary>The port refused the connection.</summary>
     PortRefused,
 
     /// <summary>The port did not answer in time.</summary>
     PortTimedOut,
 
-    /// <summary>The certificate does not cover the hostname.</summary>
-    CertificateNameMismatch,
+    /// <summary>
+    /// The certificate policy refused the connection: on the NAS, DSM does not hold the loopback port; from a
+    /// developer machine, DSM's certificate does not pass validation.
+    /// </summary>
+    NotTrusted,
 
-    /// <summary>The certificate does not chain to a trusted authority.</summary>
-    CertificateUntrusted,
-
-    /// <summary>The certificate is outside its validity period.</summary>
-    CertificateExpired,
-
-    /// <summary>The TLS handshake failed without a certificate to blame.</summary>
+    /// <summary>The TLS handshake failed without the policy refusing it.</summary>
     HandshakeFailed,
 
     /// <summary>SYNO.API.Info did not answer with the API list.</summary>

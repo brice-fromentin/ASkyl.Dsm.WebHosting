@@ -16,21 +16,13 @@ internal static class TestCertificates
 {
     internal const string Subject = "CN=localhost";
 
-    internal static X509Certificate2 CreateCertificate(DateTimeOffset notBefore, DateTimeOffset notAfter, string subject = Subject, IPAddress? ipName = null)
+    internal static X509Certificate2 CreateCertificate(DateTimeOffset notBefore, DateTimeOffset notAfter)
     {
         using var key = RSA.Create();
-        var request = new CertificateRequest(subject, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        var request = new CertificateRequest(Subject, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         var names = new SubjectAlternativeNameBuilder();
 
-        if (ipName is null)
-        {
-            names.AddDnsName(NetworkConstants.Localhost);
-        }
-        else
-        {
-            names.AddIpAddress(ipName);
-        }
-
+        names.AddDnsName(NetworkConstants.Localhost);
         request.CertificateExtensions.Add(names.Build());
 
         using var ephemeral = request.CreateSelfSigned(notBefore, notAfter);

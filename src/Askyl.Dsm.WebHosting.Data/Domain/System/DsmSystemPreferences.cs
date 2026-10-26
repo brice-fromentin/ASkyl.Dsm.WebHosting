@@ -1,24 +1,23 @@
 namespace Askyl.Dsm.WebHosting.Data.Domain.DsmSystem;
 
 /// <summary>
-/// System-level DSM preferences extracted from /etc/synoinfo.conf.
-/// Contains raw DSM codes (language) before conversion to .NET format.
+/// The DSM endpoint the application uses, and the system language in raw DSM format before conversion to .NET format.
 /// </summary>
-/// <param name="server">External hostname from configuration; null when DSM has none.</param>
-/// <param name="port">External HTTPS port from configuration.</param>
+/// <param name="server">The address the application connects to.</param>
+/// <param name="port">DSM's HTTPS port at that address.</param>
 /// <param name="language">System language (e.g. "def" for default browser language, or a specific code).</param>
 public sealed class DsmSystemPreferences(
-    string? server,
+    string server,
     int port,
     string language)
 {
     /// <summary>
-    /// External host IP address from /etc/synoinfo.conf.
+    /// The address the application connects to: 127.0.0.1 on the NAS, the host of ADWH_DSM_URL on a developer machine.
     /// </summary>
-    public string? Server { get; init; } = server;
+    public string Server { get; init; } = server;
 
     /// <summary>
-    /// External HTTPS port from /etc/synoinfo.conf.
+    /// DSM's HTTPS port at <see cref="Server"/>.
     /// </summary>
     public int Port { get; init; } = port;
 

@@ -1,8 +1,6 @@
-using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
 using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Network;
 
@@ -10,42 +8,22 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 
 /// <summary>
 /// The network checks of the DSM connection diagnostic. Stateless; each reports a failure kind instead
-/// of throwing, and each await stops at its timeout. A name lookup cannot be interrupted on Linux, so it is
-/// resolved once, here, and every later step connects to the addresses it returned.
+/// of throwing, and each await stops at its timeout — WaitAsync included, because a name lookup (only with
+/// ADWH_DSM_URL) ignores its token on Linux and macOS.
 /// </summary>
 internal static class DsmConnectionChecks
 {
     /// <summary>
-    /// Resolves the hostname. An IP literal passes without a lookup.
-    /// </summary>
-    internal static async Task<(DsmCheckFailure Failure, IPAddress[] Addresses)> ResolveAsync(string host, TimeSpan timeout)
-    {
-        using var cancellation = new CancellationTokenSource(timeout);
-
-        try
-        {
-            // WaitAsync stops the await at the limit; the abandoned lookup finishes on its own
-            var addresses = await Dns.GetHostAddressesAsync(host, cancellation.Token).WaitAsync(cancellation.Token);
-
-            return addresses.Length > 0 ? (DsmCheckFailure.None, addresses) : (DsmCheckFailure.NameNotFound, []);
-        }
-        catch (Exception ex) when (ex is SocketException or OperationCanceledException)
-        {
-            return (DsmCheckFailure.NameNotFound, []);
-        }
-    }
-
-    /// <summary>
     /// Opens a TCP connection to the port.
     /// </summary>
-    internal static async Task<DsmCheckFailure> ConnectAsync(IPAddress[] addresses, int port, TimeSpan timeout)
+    internal static async Task<DsmCheckFailure> ConnectAsync(string host, int port, TimeSpan timeout)
     {
         using var cancellation = new CancellationTokenSource(timeout);
         using var client = new TcpClient();
 
         try
         {
-            await client.ConnectAsync(addresses, port, cancellation.Token);
+            await client.ConnectAsync(host, port, cancellation.Token).AsTask().WaitAsync(cancellation.Token);
 
             return DsmCheckFailure.None;
         }
@@ -61,80 +39,44 @@ internal static class DsmConnectionChecks
     }
 
     /// <summary>
-    /// Runs a TLS handshake against the hostname under the application's own certificate policy (default validation everywhere except a loopback IP literal with a root-owned listener), recording what DSM presented.
+    /// Runs a TLS handshake under the application's own certificate policy (default validation everywhere
+    /// except a loopback IP literal with a root-owned listener).
     /// </summary>
-    internal static async Task<(DsmCheckFailure Failure, DsmCertificateSummary? Certificate)> InspectCertificateAsync(
-        string host, IPAddress[] addresses, int port, DsmCertificatePolicy policy, TimeSpan timeout)
+    /// <returns>The failure, and the certificate errors the policy saw, for the log.</returns>
+    internal static async Task<(DsmCheckFailure Failure, SslPolicyErrors Errors)> InspectCertificateAsync(string host, int port, DsmCertificatePolicy policy, TimeSpan timeout)
     {
         using var cancellation = new CancellationTokenSource(timeout);
 
-        DsmCertificateSummary? summary = null;
         var errors = SslPolicyErrors.None;
-        var chainStatus = X509ChainStatusFlags.NoError;
+        var refused = false;
 
         var options = new SslClientAuthenticationOptions
         {
             TargetHost = host,
-            RemoteCertificateValidationCallback = (_, certificate, chain, policyErrors) =>
+            RemoteCertificateValidationCallback = (_, _, _, policyErrors) =>
             {
-                summary = certificate is X509Certificate2 presented ? Summarize(presented) : null;
                 errors = policyErrors;
-                chainStatus = chain?.ChainStatus.Aggregate(X509ChainStatusFlags.NoError, (all, status) => all | status.Status) ?? X509ChainStatusFlags.NoError;
 
                 // The same policy as the HttpClient that calls DSM, so the checklist matches reality
-                return policy.Accepts(host, port, policyErrors);
+                refused = !policy.Accepts(host, port, policyErrors);
+
+                return !refused;
             }
         };
 
         try
         {
             using var client = new TcpClient();
-            await client.ConnectAsync(addresses, port, cancellation.Token);
+            await client.ConnectAsync(host, port, cancellation.Token).AsTask().WaitAsync(cancellation.Token);
 
             await using var stream = new SslStream(client.GetStream());
-            await stream.AuthenticateAsClientAsync(options, cancellation.Token);
+            await stream.AuthenticateAsClientAsync(options, cancellation.Token).WaitAsync(cancellation.Token);
 
-            return (DsmCheckFailure.None, summary);
+            return (DsmCheckFailure.None, errors);
         }
         catch (Exception ex) when (ex is AuthenticationException or IOException or SocketException or OperationCanceledException)
         {
-            return (ClassifyCertificateErrors(errors, chainStatus), summary);
+            return (refused ? DsmCheckFailure.NotTrusted : DsmCheckFailure.HandshakeFailed, errors);
         }
-    }
-
-    /// <summary>
-    /// Names what a failed handshake reported. Called only after a failure, so no error at all means the
-    /// handshake broke for a reason other than the certificate.
-    /// </summary>
-    internal static DsmCheckFailure ClassifyCertificateErrors(SslPolicyErrors errors, X509ChainStatusFlags chainStatus)
-    {
-        if (errors == SslPolicyErrors.None || errors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable))
-        {
-            return DsmCheckFailure.HandshakeFailed;
-        }
-
-        if (errors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch))
-        {
-            return DsmCheckFailure.CertificateNameMismatch;
-        }
-
-        return chainStatus.HasFlag(X509ChainStatusFlags.NotTimeValid) ? DsmCheckFailure.CertificateExpired : DsmCheckFailure.CertificateUntrusted;
-    }
-
-    static DsmCertificateSummary Summarize(X509Certificate2 certificate)
-    {
-        // DNS names only: the report never carries an IP address
-        List<string> names = [.. certificate.Extensions.OfType<X509SubjectAlternativeNameExtension>().SelectMany(extension => extension.EnumerateDnsNames())];
-
-        if (names.Count == 0)
-        {
-            names.Add(certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: false));
-        }
-
-        // Generators sometimes write IP text as a name, and an IP certificate's CN and issuer are the IP
-        names.RemoveAll(name => IPAddress.TryParse(name, out _));
-        var issuer = certificate.GetNameInfo(X509NameType.SimpleName, forIssuer: true);
-
-        return new(names, IPAddress.TryParse(issuer, out _) ? String.Empty : issuer, new DateTimeOffset(certificate.NotAfter.ToUniversalTime()));
     }
 }

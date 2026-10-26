@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
 using Askyl.Dsm.WebHosting.Logging;
@@ -10,23 +12,25 @@ namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 
 public class DsmConnectionDiagnosticServiceTests
 {
-    /// <summary>
-    /// Reserved by RFC 6761: never resolves.
-    /// </summary>
-    const string UnresolvableHost = "dsm.invalid";
-
     const int DsmPort = 5001;
 
     readonly Mock<IDsmSettingsService> _settings = new();
 
     public DsmConnectionDiagnosticServiceTests()
     {
-        _settings.SetupGet(s => s.Port).Returns(DsmPort);
+        // A port nothing listens on: every run stops at the first check, quickly
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var closedPort = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+
+        _settings.SetupGet(s => s.Server).Returns(IPAddress.Loopback.ToString());
+        _settings.SetupGet(s => s.Port).Returns(closedPort);
     }
 
     DsmConnectionDiagnosticService CreateService()
     {
-        // The API probe is never reached by these tests: every one stops at an earlier check
+        // The API probe is never reached by these tests: every one stops at the first check
         var apiClient = new DsmApiClient(Mock.Of<IHttpClientFactory>(), _settings.Object, Mock.Of<ILogger<ILogDsmApiClient>>());
 
         return new DsmConnectionDiagnosticService(_settings.Object, apiClient, new DsmCertificatePolicy(Mock.Of<IRootListenerProbe>()), Mock.Of<ILogger<ILogDsmConnectionDiagnosticService>>());
@@ -35,50 +39,40 @@ public class DsmConnectionDiagnosticServiceTests
     #region Ordering
 
     [Fact]
-    public async Task GetReportAsync_WithoutAHostname_FailsTheFirstCheckAndSkipsTheRest()
+    public async Task GetReportAsync_AClosedPort_FailsTheFirstCheckAndSkipsTheRest()
     {
         var report = (await CreateService().GetReportAsync()).Value;
 
         Assert.NotNull(report);
         Assert.False(report.IsHealthy);
-        Assert.Null(report.Host);
-        Assert.Equal(new DsmConnectionCheckResult(DsmConnectionCheck.HostnameConfigured, DsmCheckStatus.Failed, DsmCheckFailure.HostnameMissing), report.Checks[0]);
-        Assert.Equal(Enum.GetValues<DsmConnectionCheck>().Skip(1), report.Checks.Skip(1).Select(check => check.Check));
-        Assert.All(report.Checks.Skip(1), check => Assert.Equal(DsmCheckStatus.Skipped, check.Status));
-    }
-
-    [Fact]
-    public async Task GetReportAsync_WhenTheSettingsCannotBeRead_SaysSo()
-    {
-        _settings.Setup(s => s.Reload()).Throws(new InvalidOperationException("unreadable"));
-
-        var report = (await CreateService().GetReportAsync()).Value;
-
-        Assert.NotNull(report);
-        Assert.Equal(DsmCheckFailure.SettingsUnreadable, report.Checks[0].Failure);
-    }
-
-    [Fact]
-    public async Task GetReportAsync_AnUnresolvableHost_StopsAtResolution()
-    {
-        _settings.SetupGet(s => s.Server).Returns(UnresolvableHost);
-
-        var report = (await CreateService().GetReportAsync()).Value;
-
-        Assert.NotNull(report);
-        Assert.Equal(UnresolvableHost, report.Host);
-        Assert.Equal(DsmPort, report.Port);
+        Assert.Equal(IPAddress.Loopback.ToString(), report.Host);
+        Assert.Equal(_settings.Object.Port, report.Port);
         Assert.Equal(
-            [DsmCheckStatus.Passed, DsmCheckStatus.Failed, DsmCheckStatus.Skipped, DsmCheckStatus.Skipped, DsmCheckStatus.Skipped],
-            report.Checks.Select(check => check.Status));
-        Assert.Equal(DsmCheckFailure.NameNotFound, report.Checks[1].Failure);
+            [
+                new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.PortRefused),
+                new(DsmConnectionCheck.ConnectionTrusted, DsmCheckStatus.Skipped),
+                new DsmConnectionCheckResult(DsmConnectionCheck.ApiAnswers, DsmCheckStatus.Skipped)
+            ],
+            report.Checks);
+    }
+
+    [Fact]
+    public async Task GetReportAsync_WhenTheSettingsCannotBeReloaded_ReportsItAsUnexpected()
+    {
+        // A bad ADWH_DSM_URL is caught at startup; one that appears later must still end in a report
+        _settings.Setup(s => s.Reload()).Throws(new InvalidOperationException("bad URL"));
+
+        var report = (await CreateService().GetReportAsync()).Value;
+
+        Assert.NotNull(report);
+        Assert.Equal(new DsmConnectionCheckResult(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.Unexpected), report.Checks[0]);
+        Assert.All(report.Checks.Skip(1), check => Assert.Equal(DsmCheckStatus.Skipped, check.Status));
     }
 
     [Fact]
     public async Task GetReportAsync_WhenACheckThrows_ReportsItAsUnexpectedAndCachesTheReport()
     {
-        // A port a typo can leave in synoinfo.conf: TcpClient.ConnectAsync throws instead of failing
-        _settings.SetupGet(s => s.Server).Returns("127.0.0.1");
+        // A port out of range: TcpClient.ConnectAsync throws instead of failing
         _settings.SetupGet(s => s.Port).Returns(70000);
 
         var service = CreateService();
@@ -86,8 +80,8 @@ public class DsmConnectionDiagnosticServiceTests
         await service.GetReportAsync();
 
         Assert.NotNull(report);
-        Assert.Equal(new DsmConnectionCheckResult(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.Unexpected), report.Checks[2]);
-        Assert.All(report.Checks.Skip(3), check => Assert.Equal(DsmCheckStatus.Skipped, check.Status));
+        Assert.Equal(new DsmConnectionCheckResult(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.Unexpected), report.Checks[0]);
+        Assert.All(report.Checks.Skip(1), check => Assert.Equal(DsmCheckStatus.Skipped, check.Status));
         _settings.Verify(s => s.Reload(), Times.Once);
     }
 
@@ -151,7 +145,7 @@ public class DsmConnectionDiagnosticServiceTests
     public void ForAnonymousVisitor_AHealthyReport_TellsNothingButThat()
     {
         var checkedAt = DateTimeOffset.UtcNow;
-        var healthy = new DsmConnectionReport(true, checkedAt, UnresolvableHost, DsmPort, [new(DsmConnectionCheck.HostnameConfigured, DsmCheckStatus.Passed)]);
+        var healthy = new DsmConnectionReport(true, checkedAt, IPAddress.Loopback.ToString(), DsmPort, [new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Passed)]);
 
         var visible = DsmConnectionDiagnosticService.ForAnonymousVisitor(healthy);
 
@@ -165,39 +159,9 @@ public class DsmConnectionDiagnosticServiceTests
     [Fact]
     public void ForAnonymousVisitor_AnUnhealthyReport_KeepsItsDetails()
     {
-        var unhealthy = new DsmConnectionReport(false, DateTimeOffset.UtcNow, UnresolvableHost, DsmPort, []);
+        var unhealthy = new DsmConnectionReport(false, DateTimeOffset.UtcNow, IPAddress.Loopback.ToString(), DsmPort, []);
 
         Assert.Same(unhealthy, DsmConnectionDiagnosticService.ForAnonymousVisitor(unhealthy));
-    }
-
-    [Theory]
-    [InlineData("192.0.2.10")]
-    [InlineData("192.0.2.10.")]
-    [InlineData(" 192.0.2.10 ")]
-    public void ForAnonymousVisitor_AnIpAddressHost_IsNeverShown(string address)
-    {
-        DsmConnectionCheckResult[] checks = [new(DsmConnectionCheck.HostnameConfigured, DsmCheckStatus.Passed), new(DsmConnectionCheck.NameResolves, DsmCheckStatus.Failed, DsmCheckFailure.NameNotFound)];
-        var unhealthy = new DsmConnectionReport(false, DateTimeOffset.UtcNow, address, DsmPort, checks);
-
-        var visible = DsmConnectionDiagnosticService.ForAnonymousVisitor(unhealthy);
-
-        Assert.Null(visible.Host);
-        Assert.True(visible.HostIsIpAddress);
-        Assert.Equal(DsmPort, visible.Port);
-        Assert.Equal(checks, visible.Checks);
-    }
-
-    [Theory]
-    [InlineData("127.0.0.1")]
-    [InlineData("::1")]
-    public void ForAnonymousVisitor_ALoopbackHost_IsKept(string address)
-    {
-        var unhealthy = new DsmConnectionReport(false, DateTimeOffset.UtcNow, address, DsmPort, []);
-
-        var visible = DsmConnectionDiagnosticService.ForAnonymousVisitor(unhealthy);
-
-        Assert.Equal(address, visible.Host);
-        Assert.False(visible.HostIsIpAddress);
     }
 
     #endregion

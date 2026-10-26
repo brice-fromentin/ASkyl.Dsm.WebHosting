@@ -23,12 +23,6 @@ public static partial class DsmSettingsServiceLoggingExtensions
     public static partial void ConfigurationLoaded(this ILogger<ILogDsmSettingsService> logger, int count);
 
     /// <summary>
-    /// Logs that a mandatory setting key is missing from the configuration file.
-    /// </summary>
-    [LoggerMessage(EventId = 2800003, Level = LogLevel.Warning, Message = "Mandatory setting missing: {SettingKey}")]
-    public static partial void MandatorySettingMissing(this ILogger<ILogDsmSettingsService> logger, string settingKey);
-
-    /// <summary>
     /// Logs that reading the configuration file failed with an unexpected exception.
     /// </summary>
     [LoggerMessage(EventId = 2800004, Level = LogLevel.Error, Message = "Failed to read DSM settings")]
@@ -53,8 +47,14 @@ public static partial class DsmSettingsServiceLoggingExtensions
     public static partial void ReachingDsmOverLoopback(this ILogger<ILogDsmSettingsService> logger, int port);
 
     /// <summary>
-    /// Logs that DSM's web configuration exists but cannot give a port, so the hostname is used instead.
+    /// Logs that DSM's web configuration is missing or cannot give a port, so DSM's default HTTPS port is used.
     /// </summary>
-    [LoggerMessage(EventId = 2800008, Level = LogLevel.Warning, Message = "DSM web configuration unreadable, falling back to the hostname: {Path}")]
-    public static partial void WebConfigurationUnreadable(this ILogger<ILogDsmSettingsService> logger, string path, Exception? exception);
+    [LoggerMessage(EventId = 2800008, Level = LogLevel.Warning, Message = "DSM web configuration missing or unreadable, using the default port {Port}: {Path}")]
+    public static partial void WebConfigurationUnreadable(this ILogger<ILogDsmSettingsService> logger, int port, string path, Exception? exception);
+
+    /// <summary>
+    /// Logs that DSM is reached at the URL a developer set in ADWH_DSM_URL instead of over loopback.
+    /// </summary>
+    [LoggerMessage(EventId = 2800009, Level = LogLevel.Information, Message = "Reaching DSM at {Host}:{Port} from ADWH_DSM_URL")]
+    public static partial void ReachingDsmFromUrl(this ILogger<ILogDsmSettingsService> logger, string host, int port);
 }

@@ -1,4 +1,3 @@
-using System.Net;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
@@ -40,13 +39,10 @@ public sealed class DsmConnectionDiagnosticService(
         => DsmConnectionReportResult.CreateSuccess(ForAnonymousVisitor(await RunAsync(reuseAnyReport: false)));
 
     /// <summary>
-    /// A healthy DSM needs no explanation, so an anonymous visitor learns nothing about it. An unhealthy one
-    /// shows its configured hostname, but never an IP address, which would disclose the NAS's network position.
+    /// A healthy DSM needs no explanation, so an anonymous visitor learns nothing about it.
     /// </summary>
     internal static DsmConnectionReport ForAnonymousVisitor(DsmConnectionReport report)
-        => report.IsHealthy ? new(true, report.CheckedAt, null, 0, [])
-         : report.Host is { } host && IPAddress.TryParse(host.Trim().TrimEnd('.'), out var address) && !IPAddress.IsLoopback(address) ? report with { Host = null, HostIsIpAddress = true }
-         : report;
+        => report.IsHealthy ? new(true, report.CheckedAt, null, 0, []) : report;
 
     async Task<DsmConnectionReport> RunAsync(bool reuseAnyReport)
     {
@@ -77,35 +73,23 @@ public sealed class DsmConnectionDiagnosticService(
         var checkedAt = DateTimeOffset.UtcNow;
         var results = new List<DsmConnectionCheckResult>();
 
-        var port = 0;
-
         try
         {
-            results.Add(Result(DsmConnectionCheck.HostnameConfigured, ReloadSettings()));
+            // Picks up a port changed in DSM; a throw (a bad ADWH_DSM_URL) lands on the first check below
+            settings.Reload();
 
-            // Empty only when the first check failed, and then nothing below runs
-            var host = settings.Server ?? String.Empty;
-
-            port = settings.Port;
-            IPAddress[] addresses = [];
+            results.Add(Result(DsmConnectionCheck.PortAnswers, await DsmConnectionChecks.ConnectAsync(settings.Server, settings.Port, StepTimeout)));
 
             if (LastPassed(results))
             {
-                var (resolution, resolved) = await DsmConnectionChecks.ResolveAsync(host, StepTimeout);
+                var (failure, errors) = await DsmConnectionChecks.InspectCertificateAsync(settings.Server, settings.Port, certificatePolicy, StepTimeout);
 
-                addresses = resolved;
-                results.Add(Result(DsmConnectionCheck.NameResolves, resolution));
-            }
+                if (failure == DsmCheckFailure.NotTrusted)
+                {
+                    logger.DsmConnectionNotTrusted(settings.Server, settings.Port, errors);
+                }
 
-            if (LastPassed(results))
-            {
-                results.Add(Result(DsmConnectionCheck.PortAnswers, await DsmConnectionChecks.ConnectAsync(addresses, port, StepTimeout)));
-            }
-
-            if (LastPassed(results))
-            {
-                var (failure, certificate) = await DsmConnectionChecks.InspectCertificateAsync(host, addresses, port, certificatePolicy, StepTimeout);
-                results.Add(Result(DsmConnectionCheck.CertificateCoversName, failure) with { Certificate = certificate });
+                results.Add(Result(DsmConnectionCheck.ConnectionTrusted, failure));
             }
 
             if (LastPassed(results))
@@ -124,21 +108,7 @@ public sealed class DsmConnectionDiagnosticService(
 
         results.AddRange(Enum.GetValues<DsmConnectionCheck>().Skip(results.Count).Select(check => new DsmConnectionCheckResult(check, DsmCheckStatus.Skipped)));
 
-        return new(results.TrueForAll(result => result.Status == DsmCheckStatus.Passed), checkedAt, settings.Server, port, results);
-    }
-
-    DsmCheckFailure ReloadSettings()
-    {
-        try
-        {
-            settings.Reload();
-        }
-        catch (InvalidOperationException)
-        {
-            return DsmCheckFailure.SettingsUnreadable;
-        }
-
-        return settings.Server is null ? DsmCheckFailure.HostnameMissing : DsmCheckFailure.None;
+        return new(results.TrueForAll(result => result.Status == DsmCheckStatus.Passed), checkedAt, settings.Server, settings.Port, results);
     }
 
     async Task<DsmConnectionCheckResult> ProbeApiAsync()

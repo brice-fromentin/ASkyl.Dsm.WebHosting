@@ -1,7 +1,6 @@
 using System.Net;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.Network;
-using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
@@ -31,12 +30,12 @@ public class DsmApiClientTests : IDisposable
         _logger = new Mock<ILogger<ILogDsmApiClient>>();
     }
 
-    DsmApiClient CreateClient(IDsmSettingsService? settings = null)
+    DsmApiClient CreateClient()
     {
         var factory = new Mock<IHttpClientFactory>();
         factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
 
-        var client = new DsmApiClient(factory.Object, settings ?? _settingsService, _logger.Object);
+        var client = new DsmApiClient(factory.Object, _settingsService, _logger.Object);
 
         client.ApiInformations.Replace(new Dictionary<string, ApiInformation>
         {
@@ -110,27 +109,6 @@ public class DsmApiClientTests : IDisposable
         // Assert
         Assert.NotNull(receivedRequest);
         Assert.False(receivedRequest.Headers.TryGetValues(NetworkConstants.CookieHeader, out _));
-    }
-
-    #endregion
-
-    #region Missing Hostname
-
-    [Fact]
-    public async Task ExecuteAsync_WithoutAHostname_FailsBeforeSendingAnything()
-    {
-        // Arrange — without the guard the URL would read "https://:5001/…" and fail somewhere less telling
-        var settings = new Mock<IDsmSettingsService>();
-        settings.SetupGet(s => s.Port).Returns(FakeDsmSettings.Port);
-
-        var client = CreateClient(settings.Object);
-
-        // Act
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => client.ExecuteAsync<TestResponse>(null, new TestFormParameters()));
-
-        // Assert
-        Assert.Contains("hostname", ex.Message, StringComparison.Ordinal);
-        _httpHandler.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
     #endregion
@@ -246,7 +224,7 @@ public class DsmApiClientTests : IDisposable
 
         // Assert
         Assert.NotNull(receivedUrl);
-        Assert.Contains(FakeDsmSettings.Server, receivedUrl);
+        Assert.Contains(_settingsService.Server, receivedUrl);
         Assert.Contains(_settingsService.Port.ToString(), receivedUrl);
     }
 

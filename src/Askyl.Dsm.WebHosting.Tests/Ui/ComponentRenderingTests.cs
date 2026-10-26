@@ -71,6 +71,8 @@ public class ComponentRenderingTests : IAsyncLifetime
 
     const string FrenchCulture = "fr-FR";
 
+    const int DsmPort = 5001;
+
     readonly BunitContext _ctx = new();
     readonly Mock<IAuthenticationService> _authService = new();
     readonly Mock<IWebSiteHostingService> _hostingService = new();
@@ -152,7 +154,7 @@ public class ComponentRenderingTests : IAsyncLifetime
 
         var cut = _ctx.Render<Login>();
 
-        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Diagnostic.FailureHostnameMissing], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Diagnostic.FailurePortRefused, DsmPort], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
         Assert.Empty(cut.FindAll("[name=username]"));
     }
 
@@ -171,25 +173,22 @@ public class ComponentRenderingTests : IAsyncLifetime
         cut.Find("[name=password]").Input("password123");
         cut.Find("form").Submit();
 
-        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Diagnostic.FailureHostnameMissing], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Diagnostic.FailurePortRefused, DsmPort], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
         Assert.Empty(cut.FindAll("[name=username]"));
         _authService.Verify(service => service.LoginAsync("admin", "password123", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public void DsmDiagnosticPanel_AnIpAddressHost_IsExplainedAndNeverNamed()
+    public void DsmDiagnosticPanel_ListsTheThreeChecks()
     {
-        var report = new DsmConnectionReport(false, DateTimeOffset.UtcNow, null, 5001,
-        [
-            new(DsmConnectionCheck.CertificateCoversName, DsmCheckStatus.Failed, DsmCheckFailure.CertificateNameMismatch)
-        ], HostIsIpAddress: true);
-
-        var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters.Add(panel => panel.Report, report));
+        var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters.Add(panel => panel.Report, Report(isHealthy: false).Value!));
 
         var text = WebUtility.HtmlDecode(cut.Markup);
+        List<int> positions = [.. new[] { LK.Diagnostic.CheckPortAnswers, LK.Diagnostic.CheckConnectionTrusted, LK.Diagnostic.CheckApiAnswers }
+            .Select(key => text.IndexOf(_localizer[key], StringComparison.Ordinal))];
 
-        Assert.Contains(_localizer[LK.Diagnostic.HostIsIpAddress], text, StringComparison.Ordinal);
-        Assert.Contains(_localizer[LK.Diagnostic.FailureCertificateNameMismatch, _localizer[LK.Diagnostic.ConfiguredAddress]], text, StringComparison.Ordinal);
+        Assert.DoesNotContain(-1, positions);
+        Assert.Equal(positions.Order(), positions);
     }
 
     [Fact]
@@ -208,21 +207,19 @@ public class ComponentRenderingTests : IAsyncLifetime
     }
 
     [Fact]
-    public void DsmDiagnosticPanel_OmitsTheCertificateLines_ThatHaveNoValue()
+    public void DsmDiagnosticPanel_AnUntrustedConnection_NamesThePort()
     {
-        var report = new DsmConnectionReport(false, DateTimeOffset.UtcNow, "nas.example", 5001,
+        var report = new DsmConnectionReport(false, DateTimeOffset.UtcNow, "127.0.0.1", DsmPort,
         [
-            new(DsmConnectionCheck.CertificateCoversName, DsmCheckStatus.Failed, DsmCheckFailure.CertificateUntrusted, new DsmCertificateSummary([], String.Empty, DateTimeOffset.UtcNow))
+            new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Passed),
+            new(DsmConnectionCheck.ConnectionTrusted, DsmCheckStatus.Failed, DsmCheckFailure.NotTrusted),
+            new(DsmConnectionCheck.ApiAnswers, DsmCheckStatus.Skipped)
         ]);
 
         var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters.Add(panel => panel.Report, report));
 
         // Decoded, since the markup writes > as &gt;
-        var text = WebUtility.HtmlDecode(cut.Markup);
-
-        Assert.Contains(_localizer[LK.Diagnostic.FailureCertificateUntrusted], text, StringComparison.Ordinal);
-        Assert.DoesNotContain(_localizer[LK.Diagnostic.CertificateNames, String.Empty], text, StringComparison.Ordinal);
-        Assert.DoesNotContain(_localizer[LK.Diagnostic.CertificateIssuer, String.Empty], text, StringComparison.Ordinal);
+        Assert.Contains(_localizer[LK.Diagnostic.FailureNotTrusted, DsmPort], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -239,9 +236,9 @@ public class ComponentRenderingTests : IAsyncLifetime
     static DsmConnectionReportResult Report(bool isHealthy)
         => DsmConnectionReportResult.CreateSuccess(isHealthy
             ? new DsmConnectionReport(true, DateTimeOffset.UtcNow, null, 0, [])
-            : new DsmConnectionReport(false, DateTimeOffset.UtcNow, null, 5001,
+            : new DsmConnectionReport(false, DateTimeOffset.UtcNow, "127.0.0.1", DsmPort,
             [
-                new(DsmConnectionCheck.HostnameConfigured, DsmCheckStatus.Failed, DsmCheckFailure.HostnameMissing),
+                new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.PortRefused),
                 .. Enum.GetValues<DsmConnectionCheck>().Skip(1).Select(check => new DsmConnectionCheckResult(check, DsmCheckStatus.Skipped))
             ]));
 

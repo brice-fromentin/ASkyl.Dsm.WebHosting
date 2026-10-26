@@ -149,15 +149,6 @@
   <data name="Diagnostic_Intro" xml:space="preserve">
     <value>Cette application vous connecte via DSM, qu'elle ne parvient pas à joindre. Le premier contrôle en échec ci-dessous indique quoi corriger dans DSM.</value>
   </data>
-  <data name="Diagnostic_Target" xml:space="preserve">
-    <value>Adresse DSM configurée : {0}:{1}</value>
-  </data>
-  <data name="Diagnostic_HostIsIpAddress" xml:space="preserve">
-    <value>L'adresse de DSM est une adresse IP, que cette page n'affiche pas. Un certificat est émis pour un nom : dans Panneau de configuration &gt; Accès externe &gt; Avancé, saisissez le nom du NAS dans Nom d’hôte ou IP statique, puis revérifiez.</value>
-  </data>
-  <data name="Diagnostic_ConfiguredAddress" xml:space="preserve">
-    <value>l'adresse configurée</value>
-  </data>
   <data name="Diagnostic_CheckedAt" xml:space="preserve">
     <value>Vérifié le {0:g}</value>
   </data>
@@ -176,47 +167,26 @@
   <data name="Diagnostic_StatusSkipped" xml:space="preserve">
     <value>Non exécuté</value>
   </data>
-  <data name="Diagnostic_CheckHostnameConfigured" xml:space="preserve">
-    <value>DSM a un nom d'hôte</value>
-  </data>
-  <data name="Diagnostic_CheckNameResolves" xml:space="preserve">
-    <value>Le nom d'hôte se résout</value>
-  </data>
   <data name="Diagnostic_CheckPortAnswers" xml:space="preserve">
     <value>DSM répond sur son port HTTPS</value>
   </data>
-  <data name="Diagnostic_CheckCertificateCoversName" xml:space="preserve">
-    <value>Le certificat de DSM est valide pour ce nom</value>
+  <data name="Diagnostic_CheckConnectionTrusted" xml:space="preserve">
+    <value>La connexion à DSM est de confiance</value>
   </data>
   <data name="Diagnostic_CheckApiAnswers" xml:space="preserve">
     <value>L'API de DSM répond</value>
   </data>
-  <data name="Diagnostic_FailureHostnameMissing" xml:space="preserve">
-    <value>DSM n'a pas de nom d'hôte. Dans DSM, ouvrez Panneau de configuration &gt; Accès externe &gt; Avancé, saisissez le nom du NAS dans Nom d’hôte ou IP statique, puis revérifiez.</value>
-  </data>
-  <data name="Diagnostic_FailureSettingsUnreadable" xml:space="preserve">
-    <value>Le fichier de réglages de DSM est illisible. Le journal de l'application en donne la raison.</value>
-  </data>
-  <data name="Diagnostic_FailureNameNotFound" xml:space="preserve">
-    <value>Le nom {0} ne se résout pas depuis le NAS. Corrigez Nom d’hôte ou IP statique dans Panneau de configuration &gt; Accès externe &gt; Avancé, ou ajoutez le nom à votre DNS.</value>
-  </data>
   <data name="Diagnostic_FailurePortRefused" xml:space="preserve">
-    <value>Le port {1} de {0} refuse les connexions. Vérifiez le port HTTPS de DSM sous Port du routeur dans Panneau de configuration &gt; Accès externe &gt; Avancé.</value>
+    <value>DSM ne répond pas sur le port {0}. Vérifiez que DSM fonctionne, ainsi que son port HTTPS dans Panneau de configuration &gt; Portail de connexion &gt; DSM &gt; Port DSM (HTTPS), puis revérifiez.</value>
   </data>
   <data name="Diagnostic_FailurePortTimedOut" xml:space="preserve">
-    <value>Le port {1} de {0} n'a pas répondu. Vérifiez qu'aucun pare-feu ne le bloque, ainsi que le port HTTPS de DSM sous Port du routeur dans Panneau de configuration &gt; Accès externe &gt; Avancé.</value>
+    <value>DSM n'a pas répondu à temps sur le port {0}. Vérifiez que DSM fonctionne, ainsi que son port HTTPS dans Panneau de configuration &gt; Portail de connexion &gt; DSM &gt; Port DSM (HTTPS), puis revérifiez.</value>
   </data>
-  <data name="Diagnostic_FailureCertificateNameMismatch" xml:space="preserve">
-    <value>Le certificat de DSM ne couvre pas {0}. Dans Panneau de configuration &gt; Sécurité &gt; Certificat, ajoutez un certificat pour ce nom, puis utilisez Configurer comme certificat par défaut.</value>
-  </data>
-  <data name="Diagnostic_FailureCertificateUntrusted" xml:space="preserve">
-    <value>Le certificat de DSM n'est pas approuvé : il est autosigné ou émis par une autorité inconnue. Dans Panneau de configuration &gt; Sécurité &gt; Certificat, ajoutez-en un d'une autorité reconnue, comme Let's Encrypt, puis utilisez Configurer comme certificat par défaut.</value>
-  </data>
-  <data name="Diagnostic_FailureCertificateExpired" xml:space="preserve">
-    <value>Le certificat de DSM est hors de sa période de validité : il a expiré, ou l'horloge du NAS est fausse. Vérifiez l'horloge, puis renouvelez le certificat dans Panneau de configuration &gt; Sécurité &gt; Certificat.</value>
+  <data name="Diagnostic_FailureNotTrusted" xml:space="preserve">
+    <value>Le port {0} n'est pas tenu par DSM : la connexion ne peut pas être considérée comme sûre. Si le port HTTPS de DSM vient d'être modifié, revérifiez dans un instant.</value>
   </data>
   <data name="Diagnostic_FailureHandshakeFailed" xml:space="preserve">
-    <value>Le port {1} de {0} a accepté la connexion sans terminer la négociation TLS. Vérifiez que ce port sert DSM en HTTPS.</value>
+    <value>Le port {0} a accepté la connexion sans terminer la négociation TLS. Vérifiez qu'il s'agit bien du port HTTPS de DSM dans Panneau de configuration &gt; Portail de connexion &gt; DSM &gt; Port DSM (HTTPS).</value>
   </data>
   <data name="Diagnostic_FailureUnexpectedResponse" xml:space="preserve">
     <value>L'API de DSM a répondu HTTP {0} au lieu de sa liste d'API. Vérifiez que ce port sert bien DSM.</value>
@@ -226,15 +196,6 @@
   </data>
   <data name="Diagnostic_FailureUnexpected" xml:space="preserve">
     <value>Ce contrôle a échoué d'une façon que l'application ne reconnaît pas. Le journal de l'application en donne le détail.</value>
-  </data>
-  <data name="Diagnostic_CertificateNames" xml:space="preserve">
-    <value>Noms du certificat : {0}</value>
-  </data>
-  <data name="Diagnostic_CertificateIssuer" xml:space="preserve">
-    <value>Émis par : {0}</value>
-  </data>
-  <data name="Diagnostic_CertificateExpiry" xml:space="preserve">
-    <value>Expire le {0:d}</value>
   </data>
 
   <!-- Home -->

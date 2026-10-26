@@ -121,7 +121,7 @@ static class LogEventIds
 
     /// <summary>DsmSettingsService.</summary>
     public const int DsmSettingsBase = 2800000;
-    public const int DsmSettingsLast = 2800008;
+    public const int DsmSettingsLast = 2800009;
 
     /// <summary>DsmSession.</summary>
     public const int DsmSessionBase = 2900000;
@@ -141,7 +141,7 @@ static class LogEventIds
 
     /// <summary>DsmConnectionDiagnosticService.</summary>
     public const int DsmConnectionDiagnosticBase = 3100000;
-    public const int DsmConnectionDiagnosticLast = 3100003;
+    public const int DsmConnectionDiagnosticLast = 3100004;
 
     #endregion
 

@@ -73,7 +73,7 @@ builder.Services.AddRazorComponents()
 // Register file reader abstraction (singleton - stateless file system wrapper)
 builder.Services.AddSingleton<IFileReader, SystemFileReader>();
 
-// Register DSM settings service (singleton - reads /etc/synoinfo.conf at startup, again on each diagnostic run)
+// Register DSM settings service (singleton - reads DSM's endpoint and language at startup, again on each diagnostic run)
 builder.Services.AddSingleton<IDsmSettingsService, DsmSettingsService>();
 
 // Register DSM API client and authentication facade

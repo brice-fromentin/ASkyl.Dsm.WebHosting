@@ -1,4 +1,6 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Info;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 using Microsoft.Extensions.Configuration;
@@ -9,199 +11,76 @@ namespace Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
 
 public class DsmSettingsServiceTests
 {
-    readonly Mock<ILogger<ILogDsmSettingsService>> _logger;
-    readonly Mock<IFileReader> _fileReader;
-    readonly IConfiguration _configuration;
+    readonly Mock<ILogger<ILogDsmSettingsService>> _logger = new();
+    readonly Mock<IFileReader> _fileReader = new();
 
-    public DsmSettingsServiceTests()
-    {
-        _logger = new Mock<ILogger<ILogDsmSettingsService>>();
-        _fileReader = new Mock<IFileReader>();
-        _configuration = new ConfigurationBuilder().Build();
-    }
+    DsmSettingsService Create(string? dsmUrl = null)
+        => new(_logger.Object, _fileReader.Object, new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [ApplicationConstants.DsmUrlEnvironmentVariable] = dsmUrl })
+            .Build());
 
-    #region Service Construction
-
-    [Fact]
-    public void Constructor_MissingConfigFile_ThrowsInvalidOperationException()
-    {
-        // Arrange — config file doesn't exist
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(false);
-
-        // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration));
-        Assert.Contains(SystemDefaults.SynoInfoConfPath, ex.Message);
-    }
-
-    #endregion
-
-    #region Valid Configuration File
-
-    [Fact]
-    public void Constructor_HostWithSurroundingSpaces_IsTrimmed()
+    void WithSynoInfo(params string[] lines)
     {
         _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath)).Returns(["external_host_ip=\" 10.0.0.7 \""]);
-
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
-
-        Assert.Equal("10.0.0.7", service.Server);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath)).Returns(lines);
     }
 
-    [Fact]
-    public void Constructor_ValidConfig_ReturnsParsedSettings()
+    void WithWebConfig(string json)
     {
-        // Arrange
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                   .Returns([
-                       "external_host_ip=192.168.1.100",
-                       "external_port_dsm_https=9001",
-                       "language=fra",
-                       "other_setting=value",
-                   ]);
-
-        // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
-
-        // Assert
-        Assert.Equal("192.168.1.100", service.Server);
-        Assert.Equal(9001, service.Port);
-        Assert.Equal("fra", service.Language);
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.DsmWebConfigPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.DsmWebConfigPath)).Returns([json]);
     }
 
-    [Fact]
-    public void Constructor_ConfigWithQuotedValues_RemovesQuotes()
-    {
-        // Arrange
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                   .Returns([
-                       $"external_host_ip=\"192.168.1.200\"",
-                       "external_port_dsm_https=443",
-                       "language=\"enu\"",
-                   ]);
-
-        // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
-
-        // Assert
-        Assert.Equal("192.168.1.200", service.Server);
-        Assert.Equal(443, service.Port);
-        Assert.Equal("enu", service.Language);
-    }
-
-    #endregion
-
-    #region Missing Optional Settings
+    #region Language
 
     [Fact]
-    public void Constructor_MissingLanguage_UsesDefault()
+    public void Constructor_MissingSynoInfo_UsesTheDefaultLanguage()
     {
-        // Arrange
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                   .Returns([
-                       "external_host_ip=10.0.0.1",
-                       "external_port_dsm_https=5001",
-                   ]);
+        // A developer machine has no synoinfo.conf; the host used to refuse to start without one
+        var service = Create();
 
-        // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
-
-        // Assert
-        Assert.Equal("10.0.0.1", service.Server);
-        Assert.Equal(5001, service.Port);
         Assert.Equal(SystemDefaults.DefaultLanguage, service.Language);
     }
 
     [Fact]
-    public void Constructor_InvalidPort_UsesDefault()
+    public void Constructor_UnreadableSynoInfo_UsesTheDefaultLanguage()
     {
-        // Arrange
         _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                   .Returns([
-                       "external_host_ip=10.0.0.1",
-                       "external_port_dsm_https=not_a_number",
-                   ]);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath)).Throws(new IOException("Simulated read failure"));
 
-        // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+        var service = Create();
 
-        // Assert
-        Assert.Equal(SystemDefaults.DefaultHttpsPort, service.Port);
+        Assert.Equal(SystemDefaults.DefaultLanguage, service.Language);
+    }
+
+    [Fact]
+    public void Constructor_SynoInfoLanguage_IsReadWithoutQuotes()
+    {
+        WithSynoInfo("no_equals_here", "language=\"fra\"", "other_setting=value");
+
+        Assert.Equal("fra", Create().Language);
+    }
+
+    [Fact]
+    public void Constructor_SynoInfoWithoutLanguage_UsesTheDefaultLanguage()
+    {
+        WithSynoInfo("other_setting=value");
+
+        Assert.Equal(SystemDefaults.DefaultLanguage, Create().Language);
     }
 
     #endregion
 
-    #region Missing Hostname
+    #region Loopback
 
     [Fact]
-    public void Constructor_MissingServerIp_LeavesServerNull()
+    public void Constructor_WebConfigPresent_ReachesDsmOverLoopbackOnItsPort()
     {
-        // Arrange — a fresh DSM has no external_host_ip until External Access is configured
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                   .Returns([
-                       "external_port_dsm_https=5001",
-                   ]);
+        WithSynoInfo("language=fra");
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.DsmWebConfigPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.DsmWebConfigPath)).Returns(["{\"port\":5000,", "\"ssl\":{\"port\":5443}}"]);
 
-        // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
-
-        // Assert — the host must start, so the diagnostic can say what is missing
-        Assert.Null(service.Server);
-        Assert.Equal(5001, service.Port);
-    }
-
-    [Fact]
-    public void Constructor_EmptyServerIp_LeavesServerNull()
-    {
-        // Arrange
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                   .Returns([
-                       "external_host_ip=",
-                       "external_port_dsm_https=5001",
-                   ]);
-
-        // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
-
-        // Assert
-        Assert.Null(service.Server);
-    }
-
-    #endregion
-
-    #region Loopback Mode
-
-    const string WebConfigPath = "/usr/syno/etc/www/DSM.json";
-
-    DsmSettingsService WithWebConfig(string? json)
-    {
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath)).Returns(["external_host_ip=10.0.0.1", "external_port_dsm_https=9001", "language=fra"]);
-
-        if (json is not null)
-        {
-            _fileReader.Setup(f => f.FileExists(SystemDefaults.DsmWebConfigPath)).Returns(true);
-            _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.DsmWebConfigPath)).Returns([json]);
-        }
-
-        return new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
-    }
-
-    [Fact]
-    public void Constructor_WebConfigPresent_ReachesDsmOverLoopback()
-    {
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath)).Returns(["language=fra"]);
-        _fileReader.Setup(f => f.FileExists(WebConfigPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(WebConfigPath)).Returns(["{\"port\":5000,", "\"ssl\":{\"port\":5443}}"]);
-
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+        var service = Create();
 
         Assert.Equal("127.0.0.1", service.Server);
         Assert.Equal(5443, service.Port);
@@ -209,103 +88,84 @@ public class DsmSettingsServiceTests
     }
 
     [Fact]
-    public void Constructor_WebConfigAbsent_UsesTheHostname()
+    public void Constructor_WebConfigAbsent_UsesDsmsDefaultPort()
     {
-        var service = WithWebConfig(null);
+        var service = Create();
 
-        Assert.Equal("10.0.0.1", service.Server);
-        Assert.Equal(9001, service.Port);
+        Assert.Equal("127.0.0.1", service.Server);
+        Assert.Equal(5001, service.Port);
     }
 
     [Theory]
     [InlineData("{")]
+    [InlineData("[]")]
+    [InlineData("{\"ssl\":5443}")]
     [InlineData("{\"ssl\":{\"port\":0}}")]
     [InlineData("{\"ssl\":{\"port\":70000}}")]
     [InlineData("{\"ssl\":{\"port\":\"abc\"}}")]
     [InlineData("{\"port\":5000}")]
-    public void Constructor_UnusableWebConfig_FallsBackToTheHostname(string json)
+    public void Constructor_UnusableWebConfig_UsesDsmsDefaultPort(string json)
     {
-        var service = WithWebConfig(json);
+        WithWebConfig(json);
 
-        Assert.Equal("10.0.0.1", service.Server);
-        Assert.Equal(9001, service.Port);
+        var service = Create();
+
+        Assert.Equal("127.0.0.1", service.Server);
+        Assert.Equal(5001, service.Port);
     }
 
-    #endregion
-
-    #region Reload
-
     [Fact]
-    public void Reload_PicksUpAChangedFile()
+    public void Reload_PicksUpAPortChangedInDsm()
     {
-        // Arrange — the hostname is set in DSM after the package started
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.SetupSequence(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                   .Returns(["external_port_dsm_https=5001"])
-                   .Returns(["external_host_ip=10.0.0.9", "external_port_dsm_https=8443"]);
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.DsmWebConfigPath)).Returns(true);
+        _fileReader.SetupSequence(f => f.ReadAllLines(SystemDefaults.DsmWebConfigPath))
+                   .Returns(["{\"ssl\":{\"port\":5001}}"])
+                   .Returns(["{\"ssl\":{\"port\":5443}}"]);
 
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+        var service = Create();
 
-        // Act
         service.Reload();
 
-        // Assert
-        Assert.Equal("10.0.0.9", service.Server);
-        Assert.Equal(8443, service.Port);
-    }
-
-    [Fact]
-    public void Reload_WhenTheFileIsGone_ThrowsAndKeepsThePreviousValues()
-    {
-        // Arrange
-        _fileReader.SetupSequence(f => f.FileExists(SystemDefaults.SynoInfoConfPath))
-                   .Returns(true)
-                   .Returns(false);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                   .Returns(["external_host_ip=10.0.0.1"]);
-
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
-
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(service.Reload);
-        Assert.Equal("10.0.0.1", service.Server);
+        Assert.Equal(5443, service.Port);
     }
 
     #endregion
 
-    #region Malformed Configuration
+    #region ADWH_DSM_URL
 
     [Fact]
-    public void Constructor_ConfigReadThrowsException_PropagatesException()
+    public void Constructor_DsmUrl_ReachesThatHostAndPort()
     {
-        // Arrange
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                   .Throws(new System.IO.IOException("Simulated read failure"));
+        // The URL wins even on a machine whose DSM.json would give loopback
+        WithWebConfig("{\"ssl\":{\"port\":5001}}");
 
-        // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration));
+        var service = Create("https://dsm.test:5443");
+
+        Assert.Equal("dsm.test", service.Server);
+        Assert.Equal(5443, service.Port);
     }
 
     [Fact]
-    public void Constructor_MalformedLines_IgnoresLinesWithoutEquals()
+    public void Constructor_DsmUrlWithAnIpv6Literal_BuildsAValidApiUrl()
     {
-        // Arrange — lines without = are ignored by the parsing logic
-        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                   .Returns([
-                       "no_equals_here",
-                       "external_host_ip=10.0.0.5",
-                       "another_bad_line",
-                       "external_port_dsm_https=8443",
-                   ]);
+        var service = Create("https://[::1]:5443");
 
-        // Act
-        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+        var url = new Uri(new InformationsQueryParameters().BuildUrl(service.Server, service.Port, "query.cgi"));
 
-        // Assert
-        Assert.Equal("10.0.0.5", service.Server);
-        Assert.Equal(8443, service.Port);
+        Assert.Equal("[::1]", url.Host);
+        Assert.Equal(5443, url.Port);
+    }
+
+    [Theory]
+    [InlineData("http://dsm.test:5000")]
+    [InlineData("dsm.test:5001")]
+    [InlineData("/webapi")]
+    [InlineData("not a url")]
+    public void Constructor_DsmUrlThatIsNotAnAbsoluteHttpsUrl_Throws(string url)
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => Create(url));
+
+        Assert.Contains(ApplicationConstants.DsmUrlEnvironmentVariable, ex.Message, StringComparison.Ordinal);
     }
 
     #endregion

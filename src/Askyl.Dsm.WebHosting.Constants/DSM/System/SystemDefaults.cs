@@ -13,23 +13,13 @@ public static class SystemDefaults
     public const string SynoInfoConfPath = "/etc/synoinfo.conf";
 
     /// <summary>
-    /// Path to DSM's own web server configuration, which holds the HTTPS port (absent off a NAS).
+    /// Path to DSM's own web server configuration, which holds the HTTPS port.
     /// </summary>
     public const string DsmWebConfigPath = "/usr/syno/etc/www/DSM.json";
 
     #endregion
 
     #region Configuration Keys
-
-    /// <summary>
-    /// Key name for external host IP in synoinfo.conf.
-    /// </summary>
-    public const string KeyExternalHostIp = "external_host_ip";
-
-    /// <summary>
-    /// Key name for external HTTPS port in synoinfo.conf.
-    /// </summary>
-    public const string KeyExternalHttpsPort = "external_port_dsm_https";
 
     /// <summary>
     /// Key name for system language in synoinfo.conf (e.g. "def" for default browser language, or a specific code).
@@ -81,7 +71,7 @@ public static class SystemDefaults
     #region Default Values
 
     /// <summary>
-    /// Default DSM HTTPS port when not configured otherwise.
+    /// DSM's documented default HTTPS port, used when its web configuration cannot give one.
     /// </summary>
     public const int DefaultHttpsPort = 5001;
 
