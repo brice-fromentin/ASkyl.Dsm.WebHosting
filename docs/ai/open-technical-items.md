@@ -15,6 +15,20 @@ added above it. Line numbers are the first thing to go stale here; re-run the sw
 
 ## Security
 
+### A hosted site runs as the package user, which owns the admin UI's files
+
+`SiteLifecycleManager.CreateProcessStartInfo` sets no `UserName`, so every hosted site runs as the package user
+(`conf/privilege`, `run-as` `package`), like the admin UI. Measured on the Virtual DSM (7.2.2): the admin UI's
+directory and assembly belong to that user (`755` and `644`), and the kernel has no Yama `ptrace_scope`. A hosted
+site that gets compromised — the part of the package exposed to the internet by design — can therefore replace the
+admin UI's assembly, which then runs at the next start and receives the administrator's DSM password at the next
+sign-in. Without Yama it can presumably also attach to the running admin UI (inferred, not tried).
+
+This bounds the loopback certificate rule: its root-listener check keeps another user's process, or a hosted site
+that happens to listen on DSM's former port, from receiving a login; it cannot stop a hostile hosted site. Separating
+the two needs either a second user for the hosted sites or admin UI files the package user cannot write. Whether
+DSM 7 offers either to a package running as `package` is not checked.
+
 ### The application listens on every IPv4 interface, not only behind nginx
 
 `spk-project/scripts/start-stop-status:9` exports `ASPNETCORE_URLS="http://0.0.0.0:7120"`, and
@@ -319,7 +333,7 @@ How loopback mode works, and what was measured:
   therefore likely to differ from the local port, and 5001 is the better guess.
 - DSM's certificate files are `0400 root`, so the package cannot pin the exact certificate. `DsmCertificatePolicy`
   accepts the certificate only for a loopback IP literal whose port a root-owned listener holds (read from
-  `/proc/net/tcp` and `tcp6`, which any user can read); a name, even `localhost`, keeps full validation. The DSM
+  `/proc/net/tcp`, which any user can read; IPv4 only, since DSM is reached on `127.0.0.1`); a name, even `localhost`, keeps full validation. The DSM
   client uses no proxy (an environment proxy would otherwise read the login body) and follows no redirect.
 - Trust assumption: DSM is whoever root-owns the loopback listener on DSM's port. A stale port after a DSM port
   change fails closed (the diagnostic reloads `DSM.json` on its next run), unless another root-owned listener now
