@@ -292,92 +292,60 @@ before Serilog was up — an unhandled startup exception, for instance — survi
 and a host that fails to boot produces no downloadable archive at all. Appending (`>>`) with a size bound
 would keep it.
 
-### The package needs a DSM hostname and a matching certificate, and says so nowhere
+### Resolved by loopback mode: the package needed a DSM hostname and a matching certificate
 
-The application reaches its own DSM at `https://{external_host_ip}:{external_port_dsm_https}`
-(`Data/DsmApi/Parameters/ApiParametersBase.cs:58`, called from `Tools/Network/DsmApiClient.cs:45,120`), through
-the default `HttpClient` (`Ui/Program.cs:42`), so with full certificate validation. That works only if DSM has a
-hostname under *External Access*, its certificate covers that name, the name resolves from the NAS itself, and
-the external port reaches DSM from inside. The README names none of it, and each missing link fails differently:
+The application used to reach its own DSM at `https://{external_host_ip}:{external_port_dsm_https}` with full
+certificate validation. That worked only if DSM had a hostname under *External Access*, its certificate covered
+that name, the name resolved from the NAS itself, and the external port reached DSM from inside — none of which
+the README said. Measured on a Virtual DSM on 2026-10-24: a fresh instance has no `external_host_ip` at all and
+serves DSM's default self-signed certificate, issued to `synology`. From inside it, `https://127.0.0.1:5001`
+fails strict validation, since no DSM certificate names `127.0.0.1` or `localhost`.
 
-- **No hostname** used to stop the package at startup. Since 0.8.1 the host starts and the login page shows the
-  diagnostic.
-- **A name the certificate does not cover** — an IP, or DSM's default self-signed certificate, issued to
-  `synology` — lets the host start and fails every DSM call. Measured on a Virtual DSM on 2026-10-24: a fresh
-  instance has no `external_host_ip` at all and serves that default certificate. Acceptance on the Virtual DSM
-  on 2026-10-25 measured the result: the login page shows the diagnostic with check 4 failing on DSM's default
-  certificate (names `synology`), and a real login answers HTTP 200 with `DsmUnreachable` instead of a 500.
-  On 2026-10-26, with the hostname set to an IP literal, neither the page nor the JSON carried the address and
-  the page showed the IP remedy; clearing the hostname in DSM brought check 1 back on the next re-check; and the
-  re-check throttle answered 429 through DSM's nginx while the login stayed unthrottled.
-- **Resolution from the NAS was tried**: the Virtual DSM resolves its own name from inside. An external port
-  that differs from DSM's own is still inferred, not tried.
-- **A later change in DSM** applies on the diagnostic's re-check, which reloads `synoinfo.conf`.
+**Decided with the maintainer on 2026-10-26** (PR #82): production reaches DSM over loopback only, and the
+hostname mode is deleted. The earlier two-step plan — diagnose, then discover the name from DSM's certificate —
+is superseded: its first step became the connection diagnostic, now three checks (port, trust, `SYNO.API.Info`),
+and its second is no longer needed. A developer machine names DSM's URL in `ADWH_DSM_URL` instead of a
+`synoinfo.conf` mock.
 
-Loopback does not remove the constraint by itself. From inside the Virtual DSM, `http://127.0.0.1:5000` answers
-and `https://127.0.0.1:5001` fails strict validation, since no DSM certificate names `127.0.0.1` or `localhost`.
-Plain HTTP or a loopback-only certificate bypass would both drop the rule that nothing bypasses validation.
+How loopback mode works, and what was measured:
 
-**Decided with the maintainer on 2026-10-24**, as two changes in this order:
-
-1. **Diagnose instead of crashing.** The host starts whatever the settings say and, in place of the login, lists
-   each link checked live — hostname set, name resolves, port answers, certificate covers the name (showing the
-   names it does cover and its issuer), `SYNO.API.Info` answers — each with its remedy, plus a re-check that
-   re-reads `synoinfo.conf` without a restart.
-2. **Discover the name from DSM's own certificate.** Read the certificate DSM presents on loopback, take an exact
-   name from its SAN, then connect to that name with full validation. A self-signed or wildcard-only certificate
-   falls back to the diagnostic. Nothing bypasses validation.
-
-Open for the design of step 2: connecting to `127.0.0.1` through `SocketsHttpHandler.ConnectCallback` while the
-URL keeps the name would validate against the name and drop the resolution and port links. Not yet verified:
-that the TLS target name still comes from the URL. Applying it when a hostname *is* set would also change a
-path that works today.
+- DSM's HTTPS port is not in `synoinfo.conf`; it is `ssl.port` in `/usr/syno/etc/www/DSM.json`, world-readable,
+  and changing the port in DSM changes exactly that value. When the file cannot give a port, the application
+  uses DSM's default 5001.
+- DSM's certificate files are `0400 root`, so the package cannot pin the exact certificate. `DsmCertificatePolicy`
+  accepts the certificate only for a loopback IP literal whose port a root-owned listener holds (read from
+  `/proc/net/tcp` and `tcp6`, which any user can read); a name, even `localhost`, keeps full validation. The DSM
+  client uses no proxy (an environment proxy would otherwise read the login body) and follows no redirect.
+- Trust assumption: DSM is whoever root-owns the loopback listener on DSM's port. A stale port after a DSM port
+  change fails closed (the diagnostic reloads `DSM.json` on its next run), unless another root-owned listener now
+  holds it, such as a reverse-proxy rule an administrator created: no escalation, since only an administrator can
+  create one. A small time-of-check window remains, because the probe runs in the certificate callback after the
+  TCP connect; `SocketsHttpHandler.ConnectCallback` could close it.
+- Measured end to end on the Virtual DSM 7.4.1 on 2026-10-26, hostname cleared and the default certificate in
+  place: login, `SYNO.Core.User.get` (the admin check) and logout succeed against `127.0.0.1`, the diagnostic is
+  healthy, a real sign-in reaches the home page, and every DSM call in the log goes to `https://127.0.0.1:5001`.
+  After moving DSM's HTTPS port to 5443 without a re-check, the next sign-in failed closed with the generic error
+  and reloaded `DSM.json`; the one after it succeeded over `127.0.0.1:5443`. The port was then moved back.
+- The same facts were measured again on a Virtual DSM rebuilt on DSM 7.2.2 (build 72806; the package's
+  `os_min_ver` is 7.2-64561): `DSM.json` exists with the same structure and is world-readable, `ssl.port` follows
+  a port change, `synoinfo.conf` has no port key, `/proc/net/tcp` shows DSM's listeners as uid 0, and the
+  certificate files are root-only. The SPK installs and runs there, and the loopback sign-in, a healthy diagnostic
+  and the plain-HTTP card all work. The DSM menu labels the remedies quote are identical to 7.4.1's.
+- The re-check throttle answered 429 through DSM's nginx while the login stayed unthrottled (2026-10-26).
 
 Not chosen: calling the host the browser used. The `Host` header is client-controlled, and calling it would send
-the DSM password wherever a forged request points. It may appear on the diagnostic page as a suggestion only.
+the DSM password wherever a forged request points.
 
-**Step 1 landed in 0.8.1** (PR #82). Step 2 remains open.
+Still open:
 
-The Virtual DSM now has a hostname set (through DSM's own External Access setting) and still serves the default
-self-signed certificate. A trusted certificate is the next prerequisite, for the positive path of step 2.
+- **Untested DSM versions**: 7.2.0 and 7.3 were not tested.
+- **Not measured**: DSM's account protection sees every login coming from `127.0.0.1`, as it already saw the
+  NAS's own address before.
+- **`AGENTS.md`** needs the maintainer's amendment: section 9 says "SSL validation enabled", and section 13 still
+  describes the `dev-mock/synoinfo.conf` mock and checks it before a vDSM run, while a local run now reaches
+  whatever `ADWH_DSM_URL` names.
 
-**Prototype on PR #82 (2026-10-26): loopback mode.** Measured on the Virtual DSM 7.4.1:
-
-- Login, `SYNO.Core.User.get` (the admin check) and logout all succeed against `https://127.0.0.1:{port}` from
-  inside the NAS, with DSM's default self-signed certificate and no hostname.
-- DSM's HTTPS port is not in `synoinfo.conf`; it is `ssl.port` in `/usr/syno/etc/www/DSM.json`, world-readable.
-  Changing the port in DSM changed exactly that value. On a developer machine the file does not exist.
-- DSM's certificate files are `0400 root`, so the package cannot pin the exact certificate.
-
-The prototype reads that port and connects to `127.0.0.1`, accepting the certificate only for a loopback IP
-literal (`DsmCertificatePolicy`) whose port is held by a root-owned listener (read from `/proc/net/tcp` and
-`tcp6`, which any user can read); a name, even `localhost`, keeps full validation. The client uses no proxy
-(an environment proxy would otherwise read the login body) and follows no redirect. Trust assumption: DSM is
-whoever root-owns the loopback listener on DSM's port; a stale port after a DSM port change fails closed
-(the diagnostic reloads `DSM.json` on its next run), unless another root-owned listener now holds it, such as a
-reverse-proxy rule an administrator created: no escalation, since only an administrator can create one. A small
-time-of-check window remains, because the probe runs in the certificate callback after the TCP connect;
-`SocketsHttpHandler.ConnectCallback` could close it. A NAS then needs neither a
-hostname nor a trusted certificate, and developer machines (no `DSM.json`) keep hostname mode.
-
-Measured end to end on the Virtual DSM on 2026-10-26, hostname cleared and the default certificate in place: the
-diagnostic is healthy (check 5 passes against DSM for the first time), a real sign-in through the login page
-reaches the home page, and every DSM call in the log goes to `https://127.0.0.1:5001`. After moving DSM's HTTPS
-port to 5443 without a re-check, the next sign-in failed closed with the generic error and reloaded `DSM.json`;
-the one after it succeeded over `127.0.0.1:5443`. The port was then moved back.
-
-The Virtual DSM was then rebuilt on DSM 7.2.2 (build 72806; the package's `os_min_ver` is 7.2-64561) and the same
-facts measured again on 2026-10-26: `DSM.json` exists with the same structure and is world-readable, `ssl.port`
-follows a port change in DSM (5443 and back), `synoinfo.conf` has no port key, `/proc/net/tcp` shows DSM's
-listeners as uid 0, and the certificate files are root-only. The SPK installs and runs there — the first test on
-the minimum line — and the loopback sign-in, a healthy diagnostic and the plain-HTTP card all work. The DSM menu
-labels the remedies quote are identical to 7.4.1's. DSM 7.2.0 and 7.3 were not tested. If adopted it supersedes
-step 2. Not yet done: the loopback-mode remedies on the diagnostic page are not reworded (the port
-lives under Login Portal, not Router Port), and `AGENTS.md` section 9 ("SSL validation enabled") needs the
-maintainer's amendment. Still open and not measured: DSM's account protection sees every login coming from
-`127.0.0.1`, as it already sees the NAS's own address today.
-
-Known behaviour of step 1:
+Known behaviour of the diagnostic:
 
 - An unhealthy report stays cached, so one transient failure during a login keeps the diagnostic in front of
   every visitor until someone presses Re-check. By design: the report is computed on demand, never on a timer.

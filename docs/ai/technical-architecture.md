@@ -258,7 +258,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | **IVersionsDetectorService** | GetInstalledVersionsAsync(), RefreshCacheAsync(), IsChannelInstalled(), IsVersionInstalled() | Tools.Runtime (Singleton) |
 | **IAssemblyRuntimeDetector** | Detect() | Tools.Runtime (Singleton) |
 | **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), DisconnectAsync(), Disconnect(); properties: HasSession, UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
-| **IDsmSettingsService** | Server (nullable), Port, Language, Reload() | Tools.Infrastructure |
+| **IDsmSettingsService** | Server, Port, Language, Reload() | Tools.Infrastructure |
 | **IDsmConnectionDiagnosticService** | GetReportAsync(), RecheckAsync() | Ui.Services (Singleton) |
 
 Two client-only interfaces live in `Ui.Client/Interfaces/`, not in Data: **ILicenseService** (`GetLicensesAsync()`)
@@ -270,7 +270,7 @@ and **ITreeContentService** (`LoadChildDirectoriesAsync()`), both implemented in
   between Data (contracts) and Ui/Tools (implementations). The table above lists each interface's key methods; the
   interfaces themselves hold the full signatures.
 - **Domain/** — model classes organized by subsystem: Authentication (login credentials), FileSystem (FsEntry),
-  Licensing (license info), Runtime (.NET framework/release models), System (DSM preferences from synoinfo.conf),
+  Licensing (license info), Runtime (.NET framework/release models), System (DSM endpoint and language),
   WebSites (website configuration, instances, process state). New domain? Add a subdirectory.
 - **DsmApi/** — DSM API integration layer:
   - **Models/** — immutable C# records with `init` setters for the DSM API payload types, organized by API namespace
@@ -329,7 +329,7 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 - **Infrastructure/** — core utilities: archive extraction (tar.gz), file management with configurable root path,  
   platform detection, process lifecycle (`IProcessRunner`/`IProcessHandle` co-located with implementations for testability),  
   cross-platform termination (SIGTERM on Unix, CloseMainWindow on Windows), file system abstraction (`IFileReader`/`SystemFileReader`),  
-  DSM settings service (reads `/etc/synoinfo.conf`).
+  DSM settings service (DSM endpoint from `DSM.json` or `ADWH_DSM_URL`, language from `/etc/synoinfo.conf`).
 - **Network/** — `DsmApiClient`: centralized HTTP client for all DSM API calls;  
   singleton with lazy-initialized `ApiInformations`,  
   compile-time generic constraints, Form vs JSON serialization strategy.
@@ -349,7 +349,7 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 | **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info (implements `ISemaphoreOwner` for the cache lock) | ILogger |
 | **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes, drains their redirected output | ILogger, ILoggerFactory |
 | **SystemProcessHandle** | `IProcessHandle` | Not registered | Wraps `Process`; created per process by `SystemProcessRunner` | ILogger<ILogSystemProcessHandle> |
-| **DsmSettingsService** | `IDsmSettingsService` | Singleton | Reads /etc/synoinfo.conf (and DSM.json for loopback mode) via IFileReader at startup and on Reload(); a missing hostname leaves Server null | ILogger, IFileReader |
+| **DsmSettingsService** | `IDsmSettingsService` | Singleton | DSM endpoint (loopback on the port of DSM.json, or ADWH_DSM_URL) and language (synoinfo.conf), read via IFileReader at startup and on Reload() | ILogger, IFileReader, IConfiguration |
 
 **DsmApiClient Key Features:**
 
@@ -357,15 +357,16 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 - `ExecuteAsync<R>` with compile-time `where R : IApiResponse` constraint (no reflection)
 - Strategy pattern for Form vs JSON serialization
 - Structured logging: request timing, auth failures, API errors via `[LoggerMessage]` extensions
-- `ProbeAsync` sends `SYNO.API.Info` for the connection diagnostic without touching the handshake cache; every call fails fast when no hostname is configured
+- `ProbeAsync` sends `SYNO.API.Info` for the connection diagnostic without touching the handshake cache
 - Uses its own named client (`DsmHttpClientName`) whose handler (`DsmCertificatePolicy.CreateHandler`) never uses a proxy
   and never follows redirects, and applies `DsmCertificatePolicy`: default validation everywhere except a loopback IP
   literal whose port a root-owned listener holds (`IRootListenerProbe`, reading `/proc/net/tcp*`); a name, even
   `localhost`, never gets the exception
-- Loopback mode: when DSM's web configuration (`/usr/syno/etc/www/DSM.json`, key `DsmSettings:WebConfigPath`)
-  gives `ssl.port`, `DsmSettingsService` targets `127.0.0.1` on that port, so no hostname or trusted
-  certificate is needed; without the file (developer machines) the `external_host_ip` hostname mode applies,
-  and the connection diagnostic uses the same policy
+- Loopback only on the NAS: `DsmSettingsService` targets `127.0.0.1` on the `ssl.port` of DSM's web configuration
+  (`/usr/syno/etc/www/DSM.json`, key `DsmSettings:WebConfigPath`), or DSM's default 5001 when the file cannot give
+  one, so no hostname or trusted certificate is needed and a wrong port fails closed on the root-listener rule. A
+  developer machine sets `ADWH_DSM_URL` instead (see _Direct Configuration Access Pattern_). The connection
+  diagnostic uses the same policy
 
 **Process Lifecycle:** `SystemProcessRunner` requires `ILoggerFactory` to create correctly-typed child loggers for `SystemProcessHandle` instances (distinct closed generic types cannot be cast).
 
@@ -640,9 +641,9 @@ response is disposed first.
 
 ```text
 1. Client → LoginCredentials { Login, Password, [OtpCode] }
-2. DsmSettingsService → settings read at startup and again on each diagnostic run, from DsmSettings:ConfigPath
-   (default /etc/synoinfo.conf); a missing file throws, a missing hostname leaves `Server` null; only the
-   language and HTTPS port fall back to defaults
+2. DsmSettingsService → endpoint and language read at startup and again on each diagnostic run: 127.0.0.1 on
+   the HTTPS port of DSM.json (default 5001), or the host and port of ADWH_DSM_URL when set; the language from
+   DsmSettings:ConfigPath (default /etc/synoinfo.conf), falling back to the default when the file is missing
 3. DsmApiClient.EnsureInitializedAsync() → SYNO.API.Info query (lazy-init, SemaphoreLock)
 4. DsmSession.AuthenticateAsync() → auth.login API call
 5. Response: SID stored per-request via HttpRequestMessage cookie header
@@ -701,29 +702,28 @@ check at login so non-administrators are refused there rather than on their next
 
 #### Connection Diagnostic
 
-Design: `docs/ai/specs/2026-10-25-dsm-connection-diagnostic-design.md`. `DsmConnectionDiagnosticService` (Singleton,
-`Ui/Services/`) runs five checks in order and stops at the first failure: hostname configured, name resolves, port
-answers, certificate covers the name, `SYNO.API.Info` answers. The checks themselves are stateless
-(`DsmConnectionChecks`).
+Design: `docs/ai/specs/2026-10-25-dsm-connection-diagnostic-design.md`, superseded in part on 2026-10-26.
+`DsmConnectionDiagnosticService` (Singleton, `Ui/Services/`) runs three checks in order and stops at the first
+failure: DSM answers on its HTTPS port, the connection is trusted, `SYNO.API.Info` answers. The checks themselves
+are stateless (`DsmConnectionChecks`) and connect to `IDsmSettingsService.Server` and `Port`.
 
 - **Bounded steps:** each network step is bounded by `DsmDiagnosticStepTimeoutSeconds` (3). The await itself is
-  bounded with `WaitAsync`, since a DNS lookup ignores its token on Linux and macOS; the `SYNO.API.Info` probe is
-  bounded the same way.
-- **Resolve once:** the port and certificate checks connect to the addresses already resolved, with no second
-  lookup.
-- **Observe, never bypass:** the certificate check runs a real handshake and records what DSM presents. Its callback
-  returns exactly `policyErrors == SslPolicyErrors.None`, so it never accepts a certificate the application would
-  refuse. The summary drops every name and issuer that parses as an IP address.
-- **Cached, serialized, coalesced:** every run starts with `Reload()` of `synoinfo.conf`. Runs are serialized, and a
-  caller that queued behind a run started after it asked reuses that run. Runs ignore the caller's token, so a
-  cancelled request cannot poison the shared result.
-- **Always a report:** a catch-all turns anything a check does not classify into `DsmCheckFailure.Unexpected`
-  (event 3100003), so a run ends in a cached report, never an error.
+  bounded with `WaitAsync`, since a name lookup (only with `ADWH_DSM_URL`) ignores its token on Linux and macOS;
+  the `SYNO.API.Info` probe is bounded the same way.
+- **Observe, never bypass:** the trust check runs a real handshake under `DsmCertificatePolicy`, the policy of the
+  DSM client, so it accepts exactly what the application would. A refusal is `NotTrusted` — on the NAS, DSM does
+  not hold the loopback port; from a developer machine, the certificate fails validation — and its
+  `SslPolicyErrors` go to the log (event 3100004). A handshake that breaks without a refusal is `HandshakeFailed`.
+- **Cached, serialized, coalesced:** every run starts with `Reload()`, which re-reads `DSM.json`, so a port changed
+  in DSM is picked up. Runs are serialized, and a caller that queued behind a run started after it asked reuses
+  that run. Runs ignore the caller's token, so a cancelled request cannot poison the shared result.
+- **Always a report:** a catch-all turns anything a check does not classify — a `Reload()` that throws included —
+  into `DsmCheckFailure.Unexpected` (event 3100003), so a run ends in a cached report, never an error.
 - **Triggers:** the first login-page visit computes the report; the re-check endpoint and a failed login recompute it.
 - **What anonymous visitors see:** a healthy report reaches them as nothing but `IsHealthy` and `CheckedAt`.
-  `Login.razor` shows `DsmDiagnosticPanel` (a non-dismissible error bar whose remedies name DSM 7.4's own menus, in
-  English and French) in place of the form while the report is unhealthy. An unhealthy report never carries an
-  IP-shaped configured host: the host is dropped and `HostIsIpAddress` is set instead.
+  `Login.razor` shows `DsmDiagnosticPanel` (a non-dismissible error bar whose remedies name the port and DSM's own
+  _Control Panel > Login Portal > DSM_ setting, in English and French) in place of the form while the report is
+  unhealthy. An unhealthy report carries the endpoint checked, `127.0.0.1` and DSM's port in production.
 
 #### FileStation Operations
 
@@ -1118,11 +1118,18 @@ No application setting is bound to an options class; the options pattern appears
 `appsettings.json` with its own `ConfigurationBuilder`, and `DsmSettingsService` reads `DsmSettings:ConfigPath` from
 the injected `IConfiguration`.
 
-**`DsmSettingsService`:** Reads `/etc/synoinfo.conf` for DSM-specific settings (server address, port, language). The
-file path is configurable (`DsmSettings:ConfigPath`) so local runs can read `dev-mock/synoinfo.conf`, a gitignored
-copy of `synoinfo.conf.template` that holds the real NAS settings; the template keeps placeholders because it is
-published. The test host points the path at a synthetic file instead, and `AGENTS.md` §13 requires the maintainer's
-approval before an assistant launches the application.
+**`DsmSettingsService`:** On the NAS, DSM is `127.0.0.1` on the `ssl.port` of `/usr/syno/etc/www/DSM.json`
+(`DsmSettings:WebConfigPath`), or 5001 when that file cannot give one. The language comes from `/etc/synoinfo.conf`
+(`DsmSettings:ConfigPath`), and falls back to the default (`def`, the browser's language) when the file is missing
+or unreadable.
+
+**Local debugging:** a developer machine has neither file, so it names DSM's URL in the `ADWH_DSM_URL` environment
+variable (`ApplicationConstants.DsmUrlEnvironmentVariable`), read through `IConfiguration`, for example
+`https://nas.example:5001`. The application then connects to that URL's host and port under the same certificate
+policy — full validation for a name, the root-listener rule only for a loopback literal — so DSM needs a trusted
+certificate for that name. A value that is not an absolute `https` URL stops the start. The test host hides a
+developer's `ADWH_DSM_URL` (an in-memory `null` overrides the environment) and points both file paths at files it
+controls, and `AGENTS.md` §13 requires the maintainer's approval before an assistant launches the application.
 
 ### Layered Configuration Merge
 

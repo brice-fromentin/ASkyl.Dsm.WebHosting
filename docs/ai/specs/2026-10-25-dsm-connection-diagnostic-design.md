@@ -1,10 +1,30 @@
 # DSM Connection Diagnostic — Design
 
-Status: implemented in 0.8.1 (PR #82). Ships as **0.8.1**.
+Status: implemented in 0.8.1 (PR #82), then superseded in part on 2026-10-26 in the same pull request — see
+*Superseded in Part* below. The rest of this document records the design as first built.
 
 Implements step 1 of the decided fix in `open-technical-items.md`, *The package needs a DSM hostname and a
 matching certificate, and says so nowhere*: **diagnose instead of crashing**. Step 2, discovering the name
 from DSM's own certificate, stays open there and is out of scope here.
+
+## Superseded in Part (2026-10-26)
+
+Decided with the maintainer after the loopback prototype was measured on DSM 7.4.1 and 7.2.2:
+
+- **Production reaches DSM over loopback only**: `127.0.0.1` on the HTTPS port of `/usr/syno/etc/www/DSM.json`
+  (`ssl.port`), or DSM's default 5001 when that file cannot give one. The root-listener rule of
+  `DsmCertificatePolicy` makes a wrong port fail closed. The hostname mode (`external_host_ip`,
+  `external_port_dsm_https`) is deleted, and step 2 of the original plan with it.
+- **Local debugging names DSM in `ADWH_DSM_URL`** (an absolute `https` URL; anything else stops the start). It
+  replaces the `dev-mock/synoinfo.conf` mock; a missing `synoinfo.conf` now means the default language, not a
+  host that cannot start.
+- **Three checks**: DSM answers on its HTTPS port, the connection is trusted (the certificate policy accepts
+  the handshake), `SYNO.API.Info` answers. Name resolution, the certificate summary and the IP redaction are
+  gone, along with the failures that only served them. A refused handshake is `NotTrusted`, and its
+  `SslPolicyErrors` go to the log (event 3100004).
+
+Where this document disagrees with that list, the list wins. The `open-technical-items.md` entry quoted below is
+now titled *Resolved by loopback mode: the package needed a DSM hostname and a matching certificate*.
 
 ## Problem
 
