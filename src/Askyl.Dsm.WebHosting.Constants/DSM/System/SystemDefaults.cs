@@ -57,11 +57,6 @@ public static class SystemDefaults
     public const string ProcNetTcpPath = "/proc/net/tcp";
 
     /// <summary>
-    /// Kernel table of IPv6 TCP sockets, readable by any user.
-    /// </summary>
-    public const string ProcNetTcp6Path = "/proc/net/tcp6";
-
-    /// <summary>
     /// State column of a listening socket in /proc/net/tcp (hexadecimal TCP_LISTEN).
     /// </summary>
     public const string ProcNetListenState = "0A";

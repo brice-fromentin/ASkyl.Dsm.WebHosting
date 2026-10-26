@@ -360,7 +360,7 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 - `ProbeAsync` sends `SYNO.API.Info` for the connection diagnostic without touching the handshake cache
 - Uses its own named client (`DsmHttpClientName`) whose handler (`DsmCertificatePolicy.CreateHandler`) never uses a proxy
   and never follows redirects, and applies `DsmCertificatePolicy`: default validation everywhere except a loopback IP
-  literal whose port a root-owned listener holds (`IRootListenerProbe`, reading `/proc/net/tcp*`); a name, even
+  literal whose port a root-owned listener holds (`IRootListenerProbe`, reading `/proc/net/tcp`, IPv4 only); a name, even
   `localhost`, never gets the exception. For local debugging only, it also accepts the one certificate whose SHA-256
   fingerprint `ADWH_DSM_CERT_SHA256` names
 - Loopback only on the NAS: `DsmSettingsService` targets `127.0.0.1` on the `ssl.port` of DSM's web configuration

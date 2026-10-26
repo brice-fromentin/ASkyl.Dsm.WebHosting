@@ -15,7 +15,7 @@ public class ProcNetTcpRootListenerProbeTests
     static string Row(string local, string state, int uid)
         => $"   0: {local} 00000000:0000 {state} 00000000:00000000 00:00000000 00000000     {uid}        0 12345 1 0000000000000000 100 0 0 10 0";
 
-    static ProcNetTcpRootListenerProbe Probe(string? tcp, string? tcp6 = null)
+    static ProcNetTcpRootListenerProbe Probe(string? tcp)
     {
         var reader = new Mock<IFileReader>();
 
@@ -25,30 +25,16 @@ public class ProcNetTcpRootListenerProbeTests
             reader.Setup(f => f.ReadAllLines(SystemDefaults.ProcNetTcpPath)).Returns([Header, .. tcp.Split('\n')]);
         }
 
-        if (tcp6 is not null)
-        {
-            reader.Setup(f => f.FileExists(SystemDefaults.ProcNetTcp6Path)).Returns(true);
-            reader.Setup(f => f.ReadAllLines(SystemDefaults.ProcNetTcp6Path)).Returns([Header, .. tcp6.Split('\n')]);
-        }
-
         return new(reader.Object);
     }
 
     [Fact]
-    public void IsRootListening_TheMeasuredWildcardRows_IsTrueForBothLoopbacks()
-    {
-        var probe = Probe(Row("00000000:1389", "0A", 0), Row("00000000000000000000000000000000:1389", "0A", 0));
-
-        Assert.True(probe.IsRootListening(IPAddress.Loopback, 5001));
-        Assert.True(probe.IsRootListening(IPAddress.IPv6Loopback, 5001));
-    }
+    public void IsRootListening_TheMeasuredWildcardRow_IsTrue()
+        => Assert.True(Probe(Row("00000000:1389", "0A", 0)).IsRootListening(IPAddress.Loopback, 5001));
 
     [Fact]
     public void IsRootListening_ARootRowOnTheLoopbackAddress_IsTrue()
-    {
-        Assert.True(Probe(Row("0100007F:1389", "0A", 0), Row("00000000000000000000000001000000:1389", "0A", 0)).IsRootListening(IPAddress.IPv6Loopback, 5001));
-        Assert.True(Probe(Row("0100007F:1389", "0A", 0)).IsRootListening(IPAddress.Loopback, 5001));
-    }
+        => Assert.True(Probe(Row("0100007F:1389", "0A", 0)).IsRootListening(IPAddress.Loopback, 5001));
 
     [Fact]
     public void IsRootListening_ANonRootOwner_IsFalse()
@@ -74,11 +60,11 @@ public class ProcNetTcpRootListenerProbeTests
     }
 
     [Fact]
-    public void IsRootListening_AMappedAddress_IsJudgedAgainstTheIpv4Table()
+    public void IsRootListening_AnIpv6Address_IsFalseEvenWhenRootListensOnEveryIpv4Address()
     {
-        var mapped = IPAddress.Loopback.MapToIPv6();
+        var probe = Probe(Row("00000000:1389", "0A", 0));
 
-        Assert.False(Probe(null, Row("00000000000000000000000000000000:1389", "0A", 0)).IsRootListening(mapped, 5001));
-        Assert.True(Probe(Row("00000000:1389", "0A", 0)).IsRootListening(mapped, 5001));
+        Assert.False(probe.IsRootListening(IPAddress.IPv6Loopback, 5001));
+        Assert.False(probe.IsRootListening(IPAddress.Loopback.MapToIPv6(), 5001));
     }
 }
