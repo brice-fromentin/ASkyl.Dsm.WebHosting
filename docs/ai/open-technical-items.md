@@ -333,11 +333,13 @@ How loopback mode works, and what was measured:
   therefore likely to differ from the local port, and 5001 is the better guess.
 - DSM's certificate files are `0400 root`, so the package cannot pin the exact certificate. `DsmCertificatePolicy`
   accepts the certificate only for a loopback IP literal whose port a root-owned listener holds (read from
-  `/proc/net/tcp`, which any user can read; IPv4 only, since DSM is reached on `127.0.0.1`); a name, even `localhost`, keeps full validation. The DSM
-  client uses no proxy (an environment proxy would otherwise read the login body) and follows no redirect.
-- Trust assumption: DSM is whoever root-owns the loopback listener on DSM's port. A stale port after a DSM port
-  change fails closed (the diagnostic reloads `DSM.json` on its next run), unless another root-owned listener now
-  holds it, such as a reverse-proxy rule an administrator created: no escalation, since only an administrator can
+  `/proc/net/tcp`, which any user can read; IPv4 only, since DSM is reached on `127.0.0.1`); a name, even
+  `localhost`, keeps full validation. The DSM client uses no proxy (an environment proxy would otherwise read the
+  login body) and follows no redirect.
+- Trust assumption: DSM is whoever root-owns the loopback listener on DSM's port. `DsmWebConfigurationWatcher`
+  reloads the port when `DSM.json` changes. A port still stale (the watch failed, or the change lands between the
+  file and nginx) fails closed, and the diagnostic reloads `DSM.json` on its next run, unless another root-owned
+  listener now holds it, such as a reverse-proxy rule an administrator created: no escalation, since only an administrator can
   create one. A small time-of-check window remains, because the probe runs in the certificate callback after the
   TCP connect; `SocketsHttpHandler.ConnectCallback` could close it.
 - Measured end to end on the Virtual DSM 7.4.1 on 2026-10-26, hostname cleared and the default certificate in
@@ -367,7 +369,8 @@ DSM's HTTPS port through `SYNO.Core.Web.DSM` (Control Panel's API) only reloads 
 not restarted, listeners moved. The dependency would not follow a port change, and every nginx restart would restart
 the package with its hosted sites (inferred from File Station). A check made once at startup would keep trusting a
 port whose holder can change later — an nginx crash or a reload that moves the port frees it for any process —
-while the check at each handshake reads one small file per new pooled connection.
+while the check at each handshake reads one small file per new pooled connection. `DsmWebConfigurationWatcher`
+watches `DSM.json` instead, so a moved port is picked up without a restart.
 
 Still open:
 

@@ -32,6 +32,11 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
 
     public void Reload() => _preferences = ReadSettings(logger, fileReader, configuration);
 
+    /// <summary>
+    /// The path of DSM's web configuration (DSM.json), or the override in DsmSettings:WebConfigPath.
+    /// </summary>
+    public static string WebConfigPath(IConfiguration configuration) => configuration.GetValue<string>(SystemDefaults.ConfigKeyWebConfigPath) ?? SystemDefaults.DsmWebConfigPath;
+
     static DsmSystemPreferences ReadSettings(ILogger<ILogDsmSettingsService> logger, IFileReader fileReader, IConfiguration configuration)
     {
         var language = ReadLanguage(logger, fileReader, configuration);
@@ -95,7 +100,7 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
     // accepts loopback only where root holds the listener
     static int ReadLoopbackPort(ILogger<ILogDsmSettingsService> logger, IFileReader fileReader, IConfiguration configuration)
     {
-        var path = configuration.GetValue<string>(SystemDefaults.ConfigKeyWebConfigPath) ?? SystemDefaults.DsmWebConfigPath;
+        var path = WebConfigPath(configuration);
         Exception? failure = null;
 
         try

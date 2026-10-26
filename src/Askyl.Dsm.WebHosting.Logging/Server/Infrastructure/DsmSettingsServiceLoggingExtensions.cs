@@ -51,4 +51,10 @@ public static partial class DsmSettingsServiceLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2800009, Level = LogLevel.Information, Message = "Reaching DSM at {Host}:{Port} from ADWH_DSM_URL")]
     public static partial void ReachingDsmFromUrl(this ILogger<ILogDsmSettingsService> logger, string host, int port);
+
+    /// <summary>
+    /// Logs that watching DSM's web configuration failed, so a moved DSM port waits for the next diagnostic run.
+    /// </summary>
+    [LoggerMessage(EventId = 2800010, Level = LogLevel.Warning, Message = "Watching DSM web configuration failed, a moved DSM port waits for the next diagnostic: {Path}")]
+    public static partial void WebConfigurationWatchFailed(this ILogger<ILogDsmSettingsService> logger, string path, Exception? exception);
 }

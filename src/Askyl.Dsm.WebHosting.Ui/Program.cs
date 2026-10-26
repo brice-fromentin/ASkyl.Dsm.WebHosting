@@ -73,8 +73,10 @@ builder.Services.AddRazorComponents()
 // Register file reader abstraction (singleton - stateless file system wrapper)
 builder.Services.AddSingleton<IFileReader, SystemFileReader>();
 
-// Register DSM settings service (singleton - reads DSM's endpoint and language at startup, again on each diagnostic run)
+// Register DSM settings service (singleton - reads DSM's endpoint and language at startup, again on each diagnostic run
+// and whenever DSM's web configuration changes)
 builder.Services.AddSingleton<IDsmSettingsService, DsmSettingsService>();
+builder.Services.AddHostedService<DsmWebConfigurationWatcher>();
 
 // Register DSM API client and authentication facade
 builder.Services.AddSingleton<DsmApiClient>();

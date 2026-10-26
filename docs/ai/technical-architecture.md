@@ -365,8 +365,9 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
   fingerprint `ADWH_DSM_CERT_SHA256` names
 - Loopback only on the NAS: `DsmSettingsService` targets `127.0.0.1` on the `ssl.port` of DSM's web configuration
   (`/usr/syno/etc/www/DSM.json`, key `DsmSettings:WebConfigPath`), or DSM's default 5001 when the file cannot give
-  one, so no hostname or trusted certificate is needed and a wrong port fails closed on the root-listener rule. A
-  developer machine sets `ADWH_DSM_URL` instead (see _Direct Configuration Access Pattern_). The connection
+  one, so no hostname or trusted certificate is needed and a wrong port fails closed on the root-listener rule.
+  `DsmWebConfigurationWatcher` (a hosted service) reloads the settings whenever that file changes, since Control
+  Panel moves DSM's port with an nginx reload that restarts no package. A developer machine sets `ADWH_DSM_URL` instead (see _Direct Configuration Access Pattern_). The connection
   diagnostic uses the same policy
 
 **Process Lifecycle:** `SystemProcessRunner` requires `ILoggerFactory` to create correctly-typed child loggers for `SystemProcessHandle` instances (distinct closed generic types cannot be cast).

@@ -121,7 +121,7 @@ static class LogEventIds
 
     /// <summary>DsmSettingsService.</summary>
     public const int DsmSettingsBase = 2800000;
-    public const int DsmSettingsLast = 2800009;
+    public const int DsmSettingsLast = 2800010;
 
     /// <summary>DsmSession.</summary>
     public const int DsmSessionBase = 2900000;
