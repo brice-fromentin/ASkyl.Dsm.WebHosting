@@ -8,7 +8,10 @@ namespace Askyl.Dsm.WebHosting.Tools.Network;
 /// IP literal whose port is held by a root-owned listener: traffic to 127.0.0.1 never leaves the machine
 /// (the DSM client uses no proxy), an IP literal cannot be redirected by name resolution, and an
 /// unprivileged process cannot impersonate DSM's root-owned listener. A name, even <c>localhost</c>, is
-/// never relaxed. The trust assumption: DSM is whoever root-owns the loopback listener on DSM's port.
+/// never relaxed. The trust assumption: DSM is whoever root-owns the loopback listener on DSM's port. A stale
+/// port fails closed unless another root-owned listener (say a reverse-proxy rule an administrator created)
+/// now holds it, which is no escalation. The probe runs in the certificate callback, after the TCP connect,
+/// so a small time-of-check window remains; <c>SocketsHttpHandler.ConnectCallback</c> could close it.
 /// </summary>
 /// <param name="probe">Tells whether a root-owned socket listens on a loopback address and port.</param>
 public sealed class DsmCertificatePolicy(IRootListenerProbe probe)

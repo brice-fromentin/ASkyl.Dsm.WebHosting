@@ -53,11 +53,30 @@ public class DsmHttpClientWiringTests(ApplicationHostFactory factory) : IClassFi
     public async Task DsmClient_GetsPastTls_ForARootOwnedLoopbackLiteral()
     {
         using var host = WithRootListener();
-        await using var server = LocalTlsServer.Start(TestCertificates.CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1)));
+        await using var server = LocalTlsServer.Start(TestCertificates.CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1)), answerHttp: true);
 
-        var failure = await GetFailureAsync(host, IPAddress.Loopback.ToString(), server.Port);
+        var client = host.Services.GetRequiredService<IHttpClientFactory>().CreateClient(ApplicationConstants.DsmHttpClientName);
 
-        // The test server closes after the handshake, so something fails later, but not the certificate
-        Assert.False(HasInner<AuthenticationException>(failure), failure.ToString());
+        // Short timeout so a regression fails instead of waiting out the 100 s default
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var response = await client.GetAsync($"https://{IPAddress.Loopback}:{server.Port}/", cancellation.Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public void DsmClient_RegisteredHandler_UsesNoProxyAndFollowsNoRedirect()
+    {
+        var handler = factory.Services.GetRequiredService<IHttpMessageHandlerFactory>().CreateHandler(ApplicationConstants.DsmHttpClientName);
+
+        while (handler is DelegatingHandler delegating)
+        {
+            handler = delegating.InnerHandler!;
+        }
+
+        var primary = Assert.IsType<HttpClientHandler>(handler);
+
+        Assert.False(primary.UseProxy);
+        Assert.False(primary.AllowAutoRedirect);
     }
 }

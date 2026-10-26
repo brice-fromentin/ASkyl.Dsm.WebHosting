@@ -41,7 +41,7 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddHttpClient();
 
-// DSM gets its own client: only it may accept DSM's certificate, and only for a loopback IP literal
+// DSM gets its own client: only it may accept DSM's certificate, and only for a loopback IP literal whose port a root-owned listener holds
 builder.Services.AddSingleton<IRootListenerProbe, ProcNetTcpRootListenerProbe>();
 builder.Services.AddSingleton<DsmCertificatePolicy>();
 builder.Services.AddHttpClient(ApplicationConstants.DsmHttpClientName).ConfigurePrimaryHttpMessageHandler(provider => provider.GetRequiredService<DsmCertificatePolicy>().CreateHandler());

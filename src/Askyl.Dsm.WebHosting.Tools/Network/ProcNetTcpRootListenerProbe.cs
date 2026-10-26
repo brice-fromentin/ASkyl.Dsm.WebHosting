@@ -22,7 +22,9 @@ public sealed class ProcNetTcpRootListenerProbe(IFileReader fileReader) : IRootL
 
     public bool IsRootListening(IPAddress loopbackAddress, int port)
     {
-        var path = loopbackAddress.AddressFamily == AddressFamily.InterNetwork ? SystemDefaults.ProcNetTcpPath : SystemDefaults.ProcNetTcp6Path;
+        // A mapped address reaches an IPv4 listener, so it is judged against the IPv4 table
+        var address = loopbackAddress.IsIPv4MappedToIPv6 ? loopbackAddress.MapToIPv4() : loopbackAddress;
+        var path = address.AddressFamily == AddressFamily.InterNetwork ? SystemDefaults.ProcNetTcpPath : SystemDefaults.ProcNetTcp6Path;
 
         try
         {
@@ -31,7 +33,7 @@ public sealed class ProcNetTcpRootListenerProbe(IFileReader fileReader) : IRootL
                 return false;
             }
 
-            var bytes = loopbackAddress.GetAddressBytes();
+            var bytes = address.GetAddressBytes();
             var wildcard = new string('0', bytes.Length * 2);
             var exact = Convert.ToHexString([.. bytes.Chunk(4).SelectMany(word => word.Reverse())]);
             var portHex = port.ToString("X4");
