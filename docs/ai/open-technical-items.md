@@ -342,7 +342,13 @@ whoever root-owns the loopback listener on DSM's port; a stale port after a DSM 
 reverse-proxy rule an administrator created: no escalation, since only an administrator can create one. A small
 time-of-check window remains, because the probe runs in the certificate callback after the TCP connect;
 `SocketsHttpHandler.ConnectCallback` could close it. A NAS then needs neither a
-hostname nor a trusted certificate, and developer machines (no `DSM.json`) keep hostname mode. If adopted it
+hostname nor a trusted certificate, and developer machines (no `DSM.json`) keep hostname mode.
+
+Measured end to end on the Virtual DSM on 2026-10-26, hostname cleared and the default certificate in place: the
+diagnostic is healthy (check 5 passes against DSM for the first time), a real sign-in through the login page
+reaches the home page, and every DSM call in the log goes to `https://127.0.0.1:5001`. After moving DSM's HTTPS
+port to 5443 without a re-check, the next sign-in failed closed with the generic error and reloaded `DSM.json`;
+the one after it succeeded over `127.0.0.1:5443`. The port was then moved back. If adopted it
 supersedes step 2. Not yet done: the loopback-mode remedies on the diagnostic page are not reworded (the port
 lives under Login Portal, not Router Port), and `AGENTS.md` section 9 ("SSL validation enabled") needs the
 maintainer's amendment. Still open and not measured: DSM's account protection sees every login coming from
