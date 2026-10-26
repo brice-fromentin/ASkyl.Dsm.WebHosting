@@ -90,7 +90,9 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
         }
     }
 
-    // A wrong port fails closed: the certificate policy accepts loopback only where root holds the listener
+    // synoinfo.conf is no fallback: moving DSM's port leaves it untouched, and its external_port_dsm_https is the
+    // router's public port ("Router Port" in Control Panel). A wrong port fails closed: the certificate policy
+    // accepts loopback only where root holds the listener
     static int ReadLoopbackPort(ILogger<ILogDsmSettingsService> logger, IFileReader fileReader, IConfiguration configuration)
     {
         var path = configuration.GetValue<string>(SystemDefaults.ConfigKeyWebConfigPath) ?? SystemDefaults.DsmWebConfigPath;

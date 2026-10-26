@@ -33,7 +33,7 @@ public class DsmConnectionDiagnosticServiceTests
         // The API probe is never reached by these tests: every one stops at the first check
         var apiClient = new DsmApiClient(Mock.Of<IHttpClientFactory>(), _settings.Object, Mock.Of<ILogger<ILogDsmApiClient>>());
 
-        return new DsmConnectionDiagnosticService(_settings.Object, apiClient, new DsmCertificatePolicy(Mock.Of<IRootListenerProbe>()), Mock.Of<ILogger<ILogDsmConnectionDiagnosticService>>());
+        return new DsmConnectionDiagnosticService(_settings.Object, apiClient, new DsmCertificatePolicy(Mock.Of<IRootListenerProbe>(), TestCertificates.Pin(null)), Mock.Of<ILogger<ILogDsmConnectionDiagnosticService>>());
     }
 
     #region Ordering

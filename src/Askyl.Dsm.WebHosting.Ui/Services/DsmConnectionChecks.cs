@@ -40,7 +40,7 @@ internal static class DsmConnectionChecks
 
     /// <summary>
     /// Runs a TLS handshake under the application's own certificate policy (default validation everywhere
-    /// except a loopback IP literal with a root-owned listener).
+    /// except a loopback IP literal with a root-owned listener, or the certificate a developer pinned).
     /// </summary>
     /// <returns>The failure, and the certificate errors the policy saw, for the log.</returns>
     internal static async Task<(DsmCheckFailure Failure, SslPolicyErrors Errors)> InspectCertificateAsync(string host, int port, DsmCertificatePolicy policy, TimeSpan timeout)
@@ -53,12 +53,12 @@ internal static class DsmConnectionChecks
         var options = new SslClientAuthenticationOptions
         {
             TargetHost = host,
-            RemoteCertificateValidationCallback = (_, _, _, policyErrors) =>
+            RemoteCertificateValidationCallback = (_, certificate, _, policyErrors) =>
             {
                 errors = policyErrors;
 
                 // The same policy as the HttpClient that calls DSM, so the checklist matches reality
-                refused = !policy.Accepts(host, port, policyErrors);
+                refused = !policy.Accepts(host, port, certificate, policyErrors);
 
                 return !refused;
             }

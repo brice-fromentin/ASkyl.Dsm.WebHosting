@@ -361,7 +361,8 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 - Uses its own named client (`DsmHttpClientName`) whose handler (`DsmCertificatePolicy.CreateHandler`) never uses a proxy
   and never follows redirects, and applies `DsmCertificatePolicy`: default validation everywhere except a loopback IP
   literal whose port a root-owned listener holds (`IRootListenerProbe`, reading `/proc/net/tcp*`); a name, even
-  `localhost`, never gets the exception
+  `localhost`, never gets the exception. For local debugging only, it also accepts the one certificate whose SHA-256
+  fingerprint `ADWH_DSM_CERT_SHA256` names
 - Loopback only on the NAS: `DsmSettingsService` targets `127.0.0.1` on the `ssl.port` of DSM's web configuration
   (`/usr/syno/etc/www/DSM.json`, key `DsmSettings:WebConfigPath`), or DSM's default 5001 when the file cannot give
   one, so no hostname or trusted certificate is needed and a wrong port fails closed on the root-listener rule. A
@@ -1127,7 +1128,9 @@ or unreadable.
 variable (`ApplicationConstants.DsmUrlEnvironmentVariable`), read through `IConfiguration`, for example
 `https://nas.example:5001`. The application then connects to that URL's host and port under the same certificate
 policy — full validation for a name, the root-listener rule only for a loopback literal — so DSM needs a trusted
-certificate for that name. A value that is not an absolute `https` URL stops the start. The test host hides a
+certificate for that name. A DSM still on its self-signed default is trusted instead by its SHA-256 fingerprint in
+`ADWH_DSM_CERT_SHA256` (`ApplicationConstants.DsmCertificateSha256EnvironmentVariable`, 64 hex digits): that one
+certificate, whatever its name, issuer or dates. A value that is not an absolute `https` URL stops the start. The test host hides a
 developer's `ADWH_DSM_URL` (an in-memory `null` overrides the environment) and points both file paths at files it
 controls, and `AGENTS.md` §13 requires the maintainer's approval before an assistant launches the application.
 

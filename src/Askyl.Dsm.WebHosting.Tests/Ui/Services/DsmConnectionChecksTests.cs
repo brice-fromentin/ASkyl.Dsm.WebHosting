@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
 using Askyl.Dsm.WebHosting.Tools.Network;
@@ -16,7 +17,7 @@ public class DsmConnectionChecksTests
 
     static readonly string LoopbackAddress = IPAddress.Loopback.ToString();
 
-    static DsmCertificatePolicy Policy(bool rootListens) => new(Mock.Of<IRootListenerProbe>(probe => probe.IsRootListening(It.IsAny<IPAddress>(), It.IsAny<int>()) == rootListens));
+    static DsmCertificatePolicy Policy(bool rootListens) => new(Mock.Of<IRootListenerProbe>(probe => probe.IsRootListening(It.IsAny<IPAddress>(), It.IsAny<int>()) == rootListens), TestCertificates.Pin(null));
 
     static LocalTlsServer SelfSignedServer() => LocalTlsServer.Start(TestCertificates.CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1)));
 
@@ -68,6 +69,18 @@ public class DsmConnectionChecksTests
         var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, server.Port, Policy(rootListens: false), Timeout);
 
         Assert.Equal(DsmCheckFailure.NotTrusted, failure);
+    }
+
+    [Fact]
+    public async Task InspectCertificateAsync_ThePinnedCertificate_IsTrustedForAName()
+    {
+        var certificate = TestCertificates.CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+        var policy = new DsmCertificatePolicy(Mock.Of<IRootListenerProbe>(), TestCertificates.Pin(certificate.GetCertHashString(HashAlgorithmName.SHA256)));
+        await using var server = LocalTlsServer.Start(certificate);
+
+        var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, server.Port, policy, Timeout);
+
+        Assert.Equal(DsmCheckFailure.None, failure);
     }
 
     [Fact]

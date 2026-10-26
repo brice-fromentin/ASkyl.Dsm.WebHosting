@@ -1,11 +1,13 @@
 using System.Net;
 using System.Security.Authentication;
+using System.Security.Cryptography;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Network;
 using Askyl.Dsm.WebHosting.Tests.Ui.Services;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Ui.Components;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -60,6 +62,24 @@ public class DsmHttpClientWiringTests(ApplicationHostFactory factory) : IClassFi
         // Short timeout so a regression fails instead of waiting out the 100 s default
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         using var response = await client.GetAsync($"https://{IPAddress.Loopback}:{server.Port}/", cancellation.Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DsmClient_GetsPastTls_ForThePinnedCertificate()
+    {
+        var certificate = TestCertificates.CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+        var pin = certificate.GetCertHashString(HashAlgorithmName.SHA256);
+
+        using var host = factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, configuration)
+            => configuration.AddInMemoryCollection([new(ApplicationConstants.DsmCertificateSha256EnvironmentVariable, pin)])));
+        await using var server = LocalTlsServer.Start(certificate, answerHttp: true);
+
+        var client = host.Services.GetRequiredService<IHttpClientFactory>().CreateClient(ApplicationConstants.DsmHttpClientName);
+
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var response = await client.GetAsync($"https://{NetworkConstants.Localhost}:{server.Port}/", cancellation.Token);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

@@ -230,5 +230,11 @@ public static class ApplicationConstants
     /// </summary>
     public const string DsmUrlEnvironmentVariable = "ADWH_DSM_URL";
 
+    /// <summary>
+    /// Environment variable naming, for local debugging, the SHA-256 fingerprint (64 hex digits, no colons) of a DSM
+    /// certificate the developer machine does not trust, such as DSM's default self-signed one. Unset on the NAS.
+    /// </summary>
+    public const string DsmCertificateSha256EnvironmentVariable = "ADWH_DSM_CERT_SHA256";
+
     #endregion
 }

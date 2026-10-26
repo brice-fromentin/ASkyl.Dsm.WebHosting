@@ -5,7 +5,9 @@ using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Network;
+using Microsoft.Extensions.Configuration;
 
 namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 
@@ -30,6 +32,12 @@ internal static class TestCertificates
         // A PKCS#12 round trip: macOS cannot serve TLS from the ephemeral key CreateSelfSigned returns
         return X509CertificateLoader.LoadPkcs12(ephemeral.Export(X509ContentType.Pkcs12), null);
     }
+
+    /// <summary>
+    /// A configuration whose ADWH_DSM_CERT_SHA256 holds the given fingerprint, or nothing.
+    /// </summary>
+    internal static IConfiguration Pin(string? sha256)
+        => new ConfigurationBuilder().AddInMemoryCollection([new(ApplicationConstants.DsmCertificateSha256EnvironmentVariable, sha256)]).Build();
 }
 
 /// <summary>
