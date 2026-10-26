@@ -359,7 +359,10 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 - Structured logging: request timing, auth failures, API errors via `[LoggerMessage]` extensions
 - `ProbeAsync` sends `SYNO.API.Info` for the connection diagnostic without touching the handshake cache; every call fails fast when no hostname is configured
 - Uses its own named client (`DsmHttpClientName`) whose handler applies `DsmCertificatePolicy`: default validation everywhere except a loopback IP literal (a name, even `localhost`, never gets the exception)
-- Loopback mode: when DSM's web configuration (`/usr/syno/etc/www/DSM.json`, key `DsmSettings:WebConfigPath`) gives `ssl.port`, `DsmSettingsService` targets `127.0.0.1` on that port, so no hostname or trusted certificate is needed; without the file (developer machines) the `external_host_ip` hostname mode applies, and the connection diagnostic uses the same policy
+- Loopback mode: when DSM's web configuration (`/usr/syno/etc/www/DSM.json`, key `DsmSettings:WebConfigPath`)
+  gives `ssl.port`, `DsmSettingsService` targets `127.0.0.1` on that port, so no hostname or trusted
+  certificate is needed; without the file (developer machines) the `external_host_ip` hostname mode applies,
+  and the connection diagnostic uses the same policy
 
 **Process Lifecycle:** `SystemProcessRunner` requires `ILoggerFactory` to create correctly-typed child loggers for `SystemProcessHandle` instances (distinct closed generic types cannot be cast).
 
