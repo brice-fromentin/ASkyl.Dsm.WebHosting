@@ -223,8 +223,10 @@ Measured on the Virtual DSM 7.4.1 on 2026-10-25: after `synopkg install` and `st
 answered 404 from DSM's own handler (`/usr/syno/synoman/adwh/index.cgi is not found`).
 `synosystemctl reload nginx` fixed it. An uninstall the day before had reloaded nginx.
 
-Not yet known: whether Package Center's GUI install behaves differently from `synopkg`, and whether an upgrade
-reloads. Fix candidates: reload nginx from `postinst`, or find the resource key DSM honours for it.
+An upgrade through `synopkg install` on 2026-10-26 did not reload nginx either: the workers kept their start time,
+and `/adwh/` answered only because the configuration loaded by the earlier manual reload was still in memory.
+Not yet known: whether Package Center's GUI install behaves differently from `synopkg`. Fix candidates: reload
+nginx from `postinst`, or find the resource key DSM honours for it.
 
 ### Cosmetic: packaging leaves precompressed development settings behind
 
@@ -289,8 +291,11 @@ the external port reaches DSM from inside. The README names none of it, and each
   instance has no `external_host_ip` at all and serves that default certificate. Acceptance on the Virtual DSM
   on 2026-10-25 measured the result: the login page shows the diagnostic with check 4 failing on DSM's default
   certificate (names `synology`), and a real login answers HTTP 200 with `DsmUnreachable` instead of a 500.
-- **The last two links are inferred, not tried**: resolution from the NAS, and an external port that differs
-  from DSM's own.
+  On 2026-10-26, with the hostname set to an IP literal, neither the page nor the JSON carried the address and
+  the page showed the IP remedy; clearing the hostname in DSM brought check 1 back on the next re-check; and the
+  re-check throttle answered 429 through DSM's nginx while the login stayed unthrottled.
+- **Resolution from the NAS was tried**: the Virtual DSM resolves its own name from inside. An external port
+  that differs from DSM's own is still inferred, not tried.
 - **A later change in DSM** applies on the diagnostic's re-check, which reloads `synoinfo.conf`.
 
 Loopback does not remove the constraint by itself. From inside the Virtual DSM, `http://127.0.0.1:5000` answers
