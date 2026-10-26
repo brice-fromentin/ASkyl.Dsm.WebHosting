@@ -225,8 +225,10 @@ answered 404 from DSM's own handler (`/usr/syno/synoman/adwh/index.cgi is not fo
 
 An upgrade through `synopkg install` on 2026-10-26 did not reload nginx either: the workers kept their start time,
 and `/adwh/` answered only because the configuration loaded by the earlier manual reload was still in memory.
-Not yet known: whether Package Center's GUI install behaves differently from `synopkg`. Fix candidates: reload
-nginx from `postinst`, or find the resource key DSM honours for it.
+The same happened on a fresh Virtual DSM 7.2.2 on 2026-10-26: after `synopkg install` and `start`, `/adwh/`
+answered 404 until `synosystemctl reload nginx`. Not yet known: whether Package Center's GUI install behaves
+differently from `synopkg`. Fix candidates: reload nginx from `postinst`, or find the resource key DSM honours for
+it.
 
 ### Signing in over plain HTTP succeeds on the server but the user stays on the login page
 
@@ -362,8 +364,15 @@ Measured end to end on the Virtual DSM on 2026-10-26, hostname cleared and the d
 diagnostic is healthy (check 5 passes against DSM for the first time), a real sign-in through the login page
 reaches the home page, and every DSM call in the log goes to `https://127.0.0.1:5001`. After moving DSM's HTTPS
 port to 5443 without a re-check, the next sign-in failed closed with the generic error and reloaded `DSM.json`;
-the one after it succeeded over `127.0.0.1:5443`. The port was then moved back. If adopted it
-supersedes step 2. Not yet done: the loopback-mode remedies on the diagnostic page are not reworded (the port
+the one after it succeeded over `127.0.0.1:5443`. The port was then moved back.
+
+The Virtual DSM was then rebuilt on DSM 7.2.2 (build 72806; the package's `os_min_ver` is 7.2-64561) and the same
+facts measured again on 2026-10-26: `DSM.json` exists with the same structure and is world-readable, `ssl.port`
+follows a port change in DSM (5443 and back), `synoinfo.conf` has no port key, `/proc/net/tcp` shows DSM's
+listeners as uid 0, and the certificate files are root-only. The SPK installs and runs there — the first test on
+the minimum line — and the loopback sign-in, a healthy diagnostic and the plain-HTTP card all work. The DSM menu
+labels the remedies quote are identical to 7.4.1's. DSM 7.2.0 and 7.3 were not tested. If adopted it supersedes
+step 2. Not yet done: the loopback-mode remedies on the diagnostic page are not reworded (the port
 lives under Login Portal, not Router Port), and `AGENTS.md` section 9 ("SSL validation enabled") needs the
 maintainer's amendment. Still open and not measured: DSM's account protection sees every login coming from
 `127.0.0.1`, as it already sees the NAS's own address today.
