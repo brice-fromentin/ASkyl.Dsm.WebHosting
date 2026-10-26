@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
+using Askyl.Dsm.WebHosting.Tools.Network;
 
 namespace Askyl.Dsm.WebHosting.Ui.Services;
 
@@ -60,7 +61,7 @@ internal static class DsmConnectionChecks
     }
 
     /// <summary>
-    /// Runs a TLS handshake against the hostname with default validation, recording what DSM presented.
+    /// Runs a TLS handshake against the hostname under the application's own certificate policy (default validation everywhere except a loopback IP literal), recording what DSM presented.
     /// </summary>
     internal static async Task<(DsmCheckFailure Failure, DsmCertificateSummary? Certificate)> InspectCertificateAsync(string host, IPAddress[] addresses, int port, TimeSpan timeout)
     {
@@ -79,8 +80,8 @@ internal static class DsmConnectionChecks
                 errors = policyErrors;
                 chainStatus = chain?.ChainStatus.Aggregate(X509ChainStatusFlags.NoError, (all, status) => all | status.Status) ?? X509ChainStatusFlags.NoError;
 
-                // Observes default validation and never relaxes it
-                return policyErrors == SslPolicyErrors.None;
+                // The same policy as the HttpClient that calls DSM, so the checklist matches reality
+                return DsmCertificatePolicy.Accepts(host, policyErrors);
             }
         };
 

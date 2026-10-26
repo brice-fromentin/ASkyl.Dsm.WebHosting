@@ -18,6 +18,11 @@ public class DsmConnectionChecksTests
     /// </summary>
     const string UnresolvableHost = "dsm.invalid";
 
+    /// <summary>
+    /// Not a loopback IP literal, so it gets full validation; the test certificate covers localhost only.
+    /// </summary>
+    const string NonLoopbackName = "dsm.test";
+
     const string CertificateSubject = "CN=localhost";
 
     static readonly TimeSpan Timeout = TimeSpan.FromSeconds(3);
@@ -72,9 +77,20 @@ public class DsmConnectionChecksTests
     {
         await using var server = LocalTlsServer.Start(CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1)));
 
-        var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, [IPAddress.Loopback], server.Port, Timeout);
+        var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(NonLoopbackName, [IPAddress.Loopback], server.Port, Timeout);
 
         Assert.Equal(DsmCheckFailure.CertificateNameMismatch, failure);
+    }
+
+    [Fact]
+    public async Task InspectCertificateAsync_ALoopbackIpLiteral_AcceptsTheSelfSignedCertificate()
+    {
+        await using var server = LocalTlsServer.Start(CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1)));
+
+        var (failure, certificate) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, [IPAddress.Loopback], server.Port, Timeout);
+
+        Assert.Equal(DsmCheckFailure.None, failure);
+        Assert.NotNull(certificate);
     }
 
     [Fact]

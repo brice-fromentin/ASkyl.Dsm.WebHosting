@@ -45,4 +45,16 @@ public static partial class DsmSettingsServiceLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2800006, Level = LogLevel.Debug, Message = "Resolving DSM settings from: {ConfigPath} (configured: {HasConfigurationOverride})")]
     public static partial void ResolvingConfigPath(this ILogger<ILogDsmSettingsService> logger, string configPath, bool hasConfigurationOverride);
+
+    /// <summary>
+    /// Logs that DSM is reached over loopback on the port named by its web configuration.
+    /// </summary>
+    [LoggerMessage(EventId = 2800007, Level = LogLevel.Information, Message = "Reaching DSM over loopback on port {Port}")]
+    public static partial void ReachingDsmOverLoopback(this ILogger<ILogDsmSettingsService> logger, int port);
+
+    /// <summary>
+    /// Logs that DSM's web configuration exists but cannot give a port, so the hostname is used instead.
+    /// </summary>
+    [LoggerMessage(EventId = 2800008, Level = LogLevel.Warning, Message = "DSM web configuration unreadable, falling back to the hostname: {Path}")]
+    public static partial void WebConfigurationUnreadable(this ILogger<ILogDsmSettingsService> logger, string path, Exception? exception);
 }

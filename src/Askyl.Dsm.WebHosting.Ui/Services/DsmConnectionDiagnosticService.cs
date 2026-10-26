@@ -43,7 +43,7 @@ public sealed class DsmConnectionDiagnosticService(IDsmSettingsService settings,
     /// </summary>
     internal static DsmConnectionReport ForAnonymousVisitor(DsmConnectionReport report)
         => report.IsHealthy ? new(true, report.CheckedAt, null, 0, [])
-         : report.Host is { } host && IPAddress.TryParse(host.Trim().TrimEnd('.'), out _) ? report with { Host = null, HostIsIpAddress = true }
+         : report.Host is { } host && IPAddress.TryParse(host.Trim().TrimEnd('.'), out var address) && !IPAddress.IsLoopback(address) ? report with { Host = null, HostIsIpAddress = true }
          : report;
 
     async Task<DsmConnectionReport> RunAsync(bool reuseAnyReport)

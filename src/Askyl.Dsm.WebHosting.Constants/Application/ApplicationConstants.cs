@@ -33,6 +33,11 @@ public static class ApplicationConstants
     public const string HttpClientName = "UiClient";
 
     /// <summary>
+    /// Name of the HTTP client that reaches DSM, the only one with the loopback certificate policy.
+    /// </summary>
+    public const string DsmHttpClientName = "Dsm";
+
+    /// <summary>
     /// HTTP client timeout in seconds. Must exceed <see cref="WebSiteConstants.DefaultProcessTimeoutSeconds"/> to avoid client-side timeouts during stop operations. SIGTERM + ASP.NET Core drain completes in ~1-3 seconds; 15s provides headroom for the full request/response roundtrip.
     /// </summary>
     public const int HttpClientTimeoutSeconds = 15;

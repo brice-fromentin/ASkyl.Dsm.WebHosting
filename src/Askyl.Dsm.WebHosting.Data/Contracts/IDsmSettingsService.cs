@@ -6,7 +6,7 @@ namespace Askyl.Dsm.WebHosting.Data.Contracts;
 public interface IDsmSettingsService
 {
     /// <summary>
-    /// The DSM hostname (external_host_ip), or null when DSM has none configured.
+    /// The address the application connects to: 127.0.0.1 when DSM's web configuration is readable, else the DSM hostname (external_host_ip), or null when neither exists.
     /// </summary>
     string? Server { get; }
 

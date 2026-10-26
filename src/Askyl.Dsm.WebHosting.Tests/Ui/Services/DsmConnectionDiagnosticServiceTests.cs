@@ -172,7 +172,6 @@ public class DsmConnectionDiagnosticServiceTests
 
     [Theory]
     [InlineData("192.0.2.10")]
-    [InlineData("::1")]
     [InlineData("192.0.2.10.")]
     [InlineData(" 192.0.2.10 ")]
     public void ForAnonymousVisitor_AnIpAddressHost_IsNeverShown(string address)
@@ -186,6 +185,19 @@ public class DsmConnectionDiagnosticServiceTests
         Assert.True(visible.HostIsIpAddress);
         Assert.Equal(DsmPort, visible.Port);
         Assert.Equal(checks, visible.Checks);
+    }
+
+    [Theory]
+    [InlineData("127.0.0.1")]
+    [InlineData("::1")]
+    public void ForAnonymousVisitor_ALoopbackHost_IsKept(string address)
+    {
+        var unhealthy = new DsmConnectionReport(false, DateTimeOffset.UtcNow, address, DsmPort, []);
+
+        var visible = DsmConnectionDiagnosticService.ForAnonymousVisitor(unhealthy);
+
+        Assert.Equal(address, visible.Host);
+        Assert.False(visible.HostIsIpAddress);
     }
 
     #endregion

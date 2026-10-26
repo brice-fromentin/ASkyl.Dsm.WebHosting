@@ -12,6 +12,21 @@ public static class SystemDefaults
     /// </summary>
     public const string SynoInfoConfPath = "/etc/synoinfo.conf";
 
+    /// <summary>
+    /// Path to DSM's own web server configuration, which holds the HTTPS port (absent off a NAS).
+    /// </summary>
+    public const string DsmWebConfigPath = "/usr/syno/etc/www/DSM.json";
+
+    /// <summary>
+    /// Configuration key overriding <see cref="DsmWebConfigPath"/>.
+    /// </summary>
+    public const string ConfigKeyWebConfigPath = "DsmSettings:WebConfigPath";
+
+    /// <summary>
+    /// Address of DSM on the NAS itself, where nothing on the network can intercept the traffic.
+    /// </summary>
+    public const string LoopbackAddress = "127.0.0.1";
+
     #endregion
 
     #region Configuration Keys
@@ -31,6 +46,16 @@ public static class SystemDefaults
     /// If "def", the browser language should be used as fallback.
     /// </summary>
     public const string KeyLanguage = "language";
+
+    /// <summary>
+    /// Object holding the HTTPS settings in DSM.json.
+    /// </summary>
+    public const string KeyDsmWebConfigSsl = "ssl";
+
+    /// <summary>
+    /// Port property in DSM.json.
+    /// </summary>
+    public const string KeyDsmWebConfigPort = "port";
 
     #endregion
 

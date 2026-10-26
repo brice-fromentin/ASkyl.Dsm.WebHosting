@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using AngleSharp.Html.Parser;
 using Askyl.Dsm.WebHosting.Constants.Application;
@@ -71,6 +72,52 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
 
         return factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration(configuration => configuration.AddInMemoryCollection(
             new Dictionary<string, string?> { [ApplicationHostFactory.ConfigPathSettingKey] = settingsPath })));
+    }
+
+    /// <summary>
+    /// A host whose DSM web configuration names a port nothing listens on, with no hostname in synoinfo.conf.
+    /// </summary>
+    (WebApplicationFactory<App> Host, int Port) WithClosedLoopbackDsm()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+
+        listener.Start();
+
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+        listener.Stop();
+        Directory.CreateDirectory(factory.StateDirectory);
+
+        var settingsPath = Path.Combine(factory.StateDirectory, HostnamelessSettingsFileName);
+        var webConfigPath = Path.Combine(factory.StateDirectory, "DSM-loopback.json");
+
+        File.WriteAllLines(settingsPath, [$"{SystemDefaults.KeyLanguage}=\"{FakeDsmSettings.Language}\""]);
+        File.WriteAllText(webConfigPath, $"{{\"ssl\":{{\"port\":{port}}}}}");
+
+        return (factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration(configuration => configuration.AddInMemoryCollection(
+            new Dictionary<string, string?>
+            {
+                [ApplicationHostFactory.ConfigPathSettingKey] = settingsPath,
+                [ApplicationHostFactory.WebConfigPathSettingKey] = webConfigPath
+            }))), port);
+    }
+
+    [Fact]
+    public async Task DsmDiagnostic_WithDsmWebConfiguration_ReachesDsmOverLoopback()
+    {
+        var (host, port) = WithClosedLoopbackDsm();
+
+        using var loopback = host;
+
+        var result = await loopback.CreateClient().GetFromJsonAsync<DsmConnectionReportResult>(DiagnosticReportRoute, JsonOptionsCache.Options);
+
+        Assert.NotNull(result?.Value);
+        Assert.Equal(SystemDefaults.LoopbackAddress, result.Value.Host);
+        Assert.Equal(port, result.Value.Port);
+        Assert.Equal(DsmCheckStatus.Passed, result.Value.Checks[0].Status);
+        Assert.Equal(DsmCheckStatus.Passed, result.Value.Checks[1].Status);
+        Assert.Equal(new DsmConnectionCheckResult(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.PortRefused), result.Value.Checks[2]);
+        Assert.All(result.Value.Checks.Skip(3), check => Assert.Equal(DsmCheckStatus.Skipped, check.Status));
     }
 
     [Fact]

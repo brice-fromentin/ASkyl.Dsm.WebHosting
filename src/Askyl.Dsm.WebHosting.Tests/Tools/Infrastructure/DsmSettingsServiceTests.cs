@@ -175,6 +175,64 @@ public class DsmSettingsServiceTests
 
     #endregion
 
+    #region Loopback Mode
+
+    const string WebConfigPath = "/usr/syno/etc/www/DSM.json";
+
+    DsmSettingsService WithWebConfig(string? json)
+    {
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath)).Returns(["external_host_ip=10.0.0.1", "external_port_dsm_https=9001", "language=fra"]);
+
+        if (json is not null)
+        {
+            _fileReader.Setup(f => f.FileExists(SystemDefaults.DsmWebConfigPath)).Returns(true);
+            _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.DsmWebConfigPath)).Returns([json]);
+        }
+
+        return new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+    }
+
+    [Fact]
+    public void Constructor_WebConfigPresent_ReachesDsmOverLoopback()
+    {
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath)).Returns(["language=fra"]);
+        _fileReader.Setup(f => f.FileExists(WebConfigPath)).Returns(true);
+        _fileReader.Setup(f => f.ReadAllLines(WebConfigPath)).Returns(["{\"port\":5000,", "\"ssl\":{\"port\":5443}}"]);
+
+        var service = new DsmSettingsService(_logger.Object, _fileReader.Object, _configuration);
+
+        Assert.Equal("127.0.0.1", service.Server);
+        Assert.Equal(5443, service.Port);
+        Assert.Equal("fra", service.Language);
+    }
+
+    [Fact]
+    public void Constructor_WebConfigAbsent_UsesTheHostname()
+    {
+        var service = WithWebConfig(null);
+
+        Assert.Equal("10.0.0.1", service.Server);
+        Assert.Equal(9001, service.Port);
+    }
+
+    [Theory]
+    [InlineData("{")]
+    [InlineData("{\"ssl\":{\"port\":0}}")]
+    [InlineData("{\"ssl\":{\"port\":70000}}")]
+    [InlineData("{\"ssl\":{\"port\":\"abc\"}}")]
+    [InlineData("{\"port\":5000}")]
+    public void Constructor_UnusableWebConfig_FallsBackToTheHostname(string json)
+    {
+        var service = WithWebConfig(json);
+
+        Assert.Equal("10.0.0.1", service.Server);
+        Assert.Equal(9001, service.Port);
+    }
+
+    #endregion
+
     #region Reload
 
     [Fact]

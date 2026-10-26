@@ -18,7 +18,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Network;
 public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsService settingsService, ILogger<ILogDsmApiClient> logger)
     : ISemaphoreOwner, IAsyncDisposable
 {
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.DsmHttpClientName);
 
     public ApiInformationCollection ApiInformations { get; } = new();
 

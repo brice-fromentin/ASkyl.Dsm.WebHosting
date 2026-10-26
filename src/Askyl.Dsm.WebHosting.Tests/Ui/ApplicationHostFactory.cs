@@ -40,6 +40,8 @@ public sealed class ApplicationHostFactory : WebApplicationFactory<App>
 
     internal const string ConfigPathSettingKey = "DsmSettings:ConfigPath";
 
+    internal const string WebConfigPathSettingKey = SystemDefaults.ConfigKeyWebConfigPath;
+
     #endregion
 
     #region Fields
@@ -72,7 +74,12 @@ public sealed class ApplicationHostFactory : WebApplicationFactory<App>
 
         // Added last so it wins over appsettings.json, which points at /etc/synoinfo.conf.
         builder.ConfigureAppConfiguration(configuration => configuration.AddInMemoryCollection(
-            new Dictionary<string, string?> { [ConfigPathSettingKey] = SynoInfoPath }));
+            new Dictionary<string, string?>
+            {
+                [ConfigPathSettingKey] = SynoInfoPath,
+                // Never written: no machine's real DSM.json may switch the tests to loopback mode
+                [WebConfigPathSettingKey] = Path.Combine(_stateDirectory, "DSM.json")
+            }));
 
         builder.ConfigureServices(services =>
         {
