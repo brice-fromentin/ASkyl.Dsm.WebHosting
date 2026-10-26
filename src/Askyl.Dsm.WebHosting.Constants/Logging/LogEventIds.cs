@@ -13,7 +13,7 @@ static class LogEventIds
 
     /// <summary>Authentication service.</summary>
     public const int AuthenticationBase = 1000000;
-    public const int AuthenticationLast = 1000008;
+    public const int AuthenticationLast = 1000007;
 
     #endregion
 
@@ -57,7 +57,7 @@ static class LogEventIds
 
     /// <summary>ReverseProxyManagerService.</summary>
     public const int ReverseProxyBase = 1700000;
-    public const int ReverseProxyLast = 1700014;
+    public const int ReverseProxyLast = 1700013;
 
     #endregion
 
@@ -65,7 +65,7 @@ static class LogEventIds
 
     /// <summary>WebSiteHostingService.</summary>
     public const int WebsiteHostingBase = 1800000;
-    public const int WebsiteHostingLast = 1800032;
+    public const int WebsiteHostingLast = 1800031;
 
     #endregion
 
@@ -81,7 +81,7 @@ static class LogEventIds
 
     /// <summary>DsmApiClient.</summary>
     public const int DsmApiBase = 2000000;
-    public const int DsmApiLast = 2000013;
+    public const int DsmApiLast = 2000004;
 
     #endregion
 
@@ -113,7 +113,7 @@ static class LogEventIds
 
     /// <summary>SystemProcessHandle (incl. ProcessTerminator).</summary>
     public const int ProcessHandleBase = 2600000;
-    public const int ProcessHandleLast = 2600005;
+    public const int ProcessHandleLast = 2600004;
 
     /// <summary>GlobalizationSettings.</summary>
     public const int GlobalizationSettingsBase = 2700000;
@@ -121,11 +121,11 @@ static class LogEventIds
 
     /// <summary>DsmSettingsService.</summary>
     public const int DsmSettingsBase = 2800000;
-    public const int DsmSettingsLast = 2800010;
+    public const int DsmSettingsLast = 2800008;
 
     /// <summary>DsmSession.</summary>
     public const int DsmSessionBase = 2900000;
-    public const int DsmSessionLast = 2900013;
+    public const int DsmSessionLast = 2900009;
 
     #endregion
 
@@ -153,7 +153,7 @@ static class LogEventIds
 
     /// <summary>CultureManager (client).</summary>
     public const int CultureManagerBase = 7600000;
-    public const int CultureManagerLast = 7600011;
+    public const int CultureManagerLast = 7600007;
 
     /// <summary>Client utilities (JS interop).</summary>
     public const int ClientUtilitiesBase = 7100000;

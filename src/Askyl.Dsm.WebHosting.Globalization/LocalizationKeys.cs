@@ -13,10 +13,8 @@ public static class LK
         public const string OK = "OK";
         public const string Cancel = "Cancel";
         public const string Close = "Close";
-        public const string Save = "Save";
         public const string Delete = "Delete";
         public const string Refresh = "Refresh";
-        public const string Loading = "Loading";
         public const string Size = "Common_Size";
         public const string Type = "Common_Type";
         public const string Modified = "Common_Modified";
@@ -237,14 +235,12 @@ public static class LK
         public const string FailedToQueueStop = "Error_FailedToQueueStop";
         public const string SiteAlreadyRunning = "Error_SiteAlreadyRunning";
         public const string ApplicationBinaryNotFound = "Error_ApplicationBinaryNotFound";
-        public const string IncompatibleFramework = "Error_IncompatibleFramework";
         public const string RuntimeNotInstalled = "Error_RuntimeNotInstalled";
         public const string RuntimeDetectionFailed = "Error_RuntimeDetectionFailed";
         public const string InstanceNotFound = "Error_InstanceNotFound";
         public const string NoApplicationPath = "Error_NoApplicationPath";
         public const string SiteNotFound = "Error_SiteNotFound";
         public const string FailedToSetACL = "Error_FailedToSetACL";
-        public const string NoSessionFound = "Error_NoSessionFound";
         public const string SessionExpired = "Error_SessionExpired";
         public const string FailedToSetPermissions = "Error_FailedToSetPermissions";
         public const string FailedToCreateReverseProxy = "Error_FailedToCreateReverseProxy";
@@ -263,7 +259,6 @@ public static class LK
     /// <summary>Validation error messages from server-side services (not model-specific).</summary>
     public static class Validation
     {
-        public const string PathRequired = "Validation_PathRequired";
         public const string PathTraversalDetected = "Validation_PathTraversalDetected";
         public const string InvalidVersionFormat = "Validation_InvalidVersionFormat";
         public const string VersionRequired = "Validation_VersionRequired";

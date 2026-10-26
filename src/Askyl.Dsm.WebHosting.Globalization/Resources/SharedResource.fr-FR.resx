@@ -69,17 +69,11 @@
   <data name="Close" xml:space="preserve">
     <value>Fermer</value>
   </data>
-  <data name="Save" xml:space="preserve">
-    <value>Enregistrer</value>
-  </data>
   <data name="Delete" xml:space="preserve">
     <value>Supprimer</value>
   </data>
   <data name="Refresh" xml:space="preserve">
     <value>Actualiser</value>
-  </data>
-  <data name="Loading" xml:space="preserve">
-    <value>Chargement...</value>
   </data>
   <data name="Common_Size" xml:space="preserve">
     <value>Taille</value>
@@ -535,9 +529,6 @@
   <data name="Error_ApplicationBinaryNotFound" xml:space="preserve">
     <value>Binaire de l'application introuvable : {0}</value>
   </data>
-  <data name="Error_IncompatibleFramework" xml:space="preserve">
-    <value>Framework incompatible</value>
-  </data>
   <data name="Error_RuntimeNotInstalled" xml:space="preserve">
     <value>Requiert .NET {0}, mais ce runtime n'est pas installé</value>
   </data>
@@ -555,9 +546,6 @@
   </data>
   <data name="Error_FailedToSetACL" xml:space="preserve">
     <value>Échec de la configuration des permissions ACL pour {0} : Réussite={1}, Code d'erreur={2}</value>
-  </data>
-  <data name="Error_NoSessionFound" xml:space="preserve">
-    <value>Aucune session trouvée</value>
   </data>
   <data name="Error_SessionExpired" xml:space="preserve">
     <value>Session expirée sur le serveur</value>
@@ -587,9 +575,6 @@
   </data>
 
   <!-- Validation -->
-  <data name="Validation_PathRequired" xml:space="preserve">
-    <value>Le chemin est requis</value>
-  </data>
   <data name="Validation_PathTraversalDetected" xml:space="preserve">
     <value>Chemin invalide : les séquences de traversée ne sont pas autorisées</value>
   </data>

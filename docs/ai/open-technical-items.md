@@ -415,12 +415,12 @@ The mechanics behind that, each checked against the script:
 - **Section 4 never finds the application's boot in production.** It brackets on the literal
   `Application started`, which `Microsoft.Hosting.Lifetime` writes at Information and `Microsoft: Warning`
   filters out. The only such text left is a hosted site's own stdout relayed as 2500002, so the section
-  brackets site boots. The application's boot runs from 2800006 `ResolvingConfigPath` to 1800010
+  brackets site boots. The application's boot runs from 2800004 `ResolvingConfigPath` to 1800010
   `HostingServiceStarted`. Since 0.7.0 (#76) it opens one line earlier, with 3000001 `ApplicationStarting`.
   That line also names the build (`x.y.z+<sha>`), which is the bracket section 4 needs and the way to tell two
   archives apart. Its position comes from reading `Program.cs`: no real archive has shown it yet.
 - **Section 5 times DSM calls, not requests.** Production logs no request duration. The `Nms` pattern
-  catches 2000004 `ApiRequest`, the 1600019 timeout setting and relayed site output, and `cut -c1-150` cuts
+  catches 2000001 `ApiRequest`, the 1600019 timeout setting and relayed site output, and `cut -c1-150` cuts
   each line before the API name and the duration. The comment saying PR #39 "looked exactly like this" is
   false.
 - **Section 2 drops rows silently** past `head -12`, ranked by absolute delta, so a 0 → 1 error sinks under
@@ -433,7 +433,7 @@ The mechanics behind that, each checked against the script:
 - **The no-argument mode orders by modification time**, which a plain `cp` resets, and ignores the timestamp
   the archive name carries; it skips directories although its comment says "whatever their form".
 
-Until those are fixed, a real review needs by hand: the 2800006 → 1800010 block of each archive (3000001 →
+Until those are fixed, a real review needs by hand: the 2800004 → 1800010 block of each archive (3000001 →
 1800010 from 0.7.0, its first line naming the build); each
 section-3 id opened with its exception and the lines before it; WRN/ERR lines without an id; 2500002 lines
 carrying `fail:` or `warn:`; the arguments of log lines checked against reality; and `package-logs/`.

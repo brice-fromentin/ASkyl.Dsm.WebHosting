@@ -693,7 +693,7 @@ anything from `ConnectAsync` except the caller's own cancellation.
 captured cookie cannot be replayed against the NAS after signing out. `Disconnect` is the local-only
 variant, correct only where the SID is already known to be dead — session validation failing, for
 instance. Revocation failures are logged and swallowed: clearing the local session must succeed even
-when the NAS is unreachable, or an outage would leave users unable to log out. EventIds 2900009-2900011
+when the NAS is unreachable, or an outage would leave users unable to log out. EventIds 2900005-2900007
 distinguish revoked, refused and unreachable, which is how the call is confirmed against a real NAS —
 the DSM Core APIs are undocumented, so the log is the evidence.
 

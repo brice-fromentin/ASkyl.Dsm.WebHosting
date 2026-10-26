@@ -118,22 +118,17 @@ public static partial class WebsiteLoggingExtensions
     [LoggerMessage(EventId = 1800015, Level = LogLevel.Information, Message = "Instance added for site: {SiteName}")]
     public static partial void InstanceAdded(this ILogger<ILogWebSiteHostingService> logger, string siteName);
 
-    /// <summary>
-    /// Logs that an existing instance was not found during update.
-    /// </summary>
-    [LoggerMessage(EventId = 1800016, Level = LogLevel.Error, Message = "Instance of site: {SiteName} not found.")]
-    public static partial void InstanceNotFoundDuringUpdate(this ILogger<ILogWebSiteHostingService> logger, string siteName);
 
     /// <summary>
     /// Logs site stopping due to disable or restart requirement.
     /// </summary>
-    [LoggerMessage(EventId = 1800017, Level = LogLevel.Information, Message = "Stopping site: {SiteName} (disabled or restart required)")]
+    [LoggerMessage(EventId = 1800016, Level = LogLevel.Information, Message = "Stopping site: {SiteName} (disabled or restart required)")]
     public static partial void StoppingSiteDisabledOrRestart(this ILogger<ILogWebSiteHostingService> logger, string siteName);
 
     /// <summary>
     /// Logs instance update for a site.
     /// </summary>
-    [LoggerMessage(EventId = 1800018, Level = LogLevel.Information, Message = "Instance updated for site: {SiteName}")]
+    [LoggerMessage(EventId = 1800017, Level = LogLevel.Information, Message = "Instance updated for site: {SiteName}")]
     public static partial void InstanceUpdated(this ILogger<ILogWebSiteHostingService> logger, string siteName);
 
     #endregion
@@ -143,31 +138,31 @@ public static partial class WebsiteLoggingExtensions
     /// <summary>
     /// Logs that instance cannot be removed (not found).
     /// </summary>
-    [LoggerMessage(EventId = 1800019, Level = LogLevel.Warning, Message = "Cannot remove instance: instance {InstanceId} not found")]
+    [LoggerMessage(EventId = 1800018, Level = LogLevel.Warning, Message = "Cannot remove instance: instance {InstanceId} not found")]
     public static partial void CannotRemoveInstanceNotFound(this ILogger<ILogWebSiteHostingService> logger, Guid instanceId);
 
     /// <summary>
     /// Logs failure to stop site before deletion.
     /// </summary>
-    [LoggerMessage(EventId = 1800020, Level = LogLevel.Warning, Message = "Failed to stop site before deletion: {ErrorMessage}")]
+    [LoggerMessage(EventId = 1800019, Level = LogLevel.Warning, Message = "Failed to stop site before deletion: {ErrorMessage}")]
     public static partial void FailedToStopBeforeDeletion(this ILogger<ILogWebSiteHostingService> logger, string? errorMessage);
 
     /// <summary>
     /// Logs reverse proxy deletion failure (non-blocking).
     /// </summary>
-    [LoggerMessage(EventId = 1800021, Level = LogLevel.Warning, Message = "Reverse proxy deletion failed for '{SiteName}' (site will be removed anyway): {ErrorMessage}")]
+    [LoggerMessage(EventId = 1800020, Level = LogLevel.Warning, Message = "Reverse proxy deletion failed for '{SiteName}' (site will be removed anyway): {ErrorMessage}")]
     public static partial void ReverseProxyDeletionFailed(this ILogger<ILogWebSiteHostingService> logger, string siteName, string? errorMessage);
 
     /// <summary>
     /// Logs instance removal for a site.
     /// </summary>
-    [LoggerMessage(EventId = 1800022, Level = LogLevel.Information, Message = "Instance removed for site: {SiteName}")]
+    [LoggerMessage(EventId = 1800021, Level = LogLevel.Information, Message = "Instance removed for site: {SiteName}")]
     public static partial void InstanceRemoved(this ILogger<ILogWebSiteHostingService> logger, string siteName);
 
     /// <summary>
     /// Logs error during site removal.
     /// </summary>
-    [LoggerMessage(EventId = 1800023, Level = LogLevel.Error, Message = "Failed to remove site: {SiteName}")]
+    [LoggerMessage(EventId = 1800022, Level = LogLevel.Error, Message = "Failed to remove site: {SiteName}")]
     public static partial void FailedToRemoveSite(this ILogger<ILogWebSiteHostingService> logger, Exception ex, string siteName);
 
     #endregion
@@ -177,13 +172,13 @@ public static partial class WebsiteLoggingExtensions
     /// <summary>
     /// Logs that no application real path is configured for permission setting.
     /// </summary>
-    [LoggerMessage(EventId = 1800024, Level = LogLevel.Warning, Message = "No application real path configured for '{SiteName}', skipping permission setting")]
+    [LoggerMessage(EventId = 1800023, Level = LogLevel.Warning, Message = "No application real path configured for '{SiteName}', skipping permission setting")]
     public static partial void NoApplicationRealPath(this ILogger<ILogWebSiteHostingService> logger, string siteName);
 
     /// <summary>
     /// Logs setting of HTTP group permissions for a site.
     /// </summary>
-    [LoggerMessage(EventId = 1800025, Level = LogLevel.Debug, Message = "Setting HTTP group permissions for '{SiteName}' at path: {Path} (IsDirectory: {IsDirectory})")]
+    [LoggerMessage(EventId = 1800024, Level = LogLevel.Debug, Message = "Setting HTTP group permissions for '{SiteName}' at path: {Path} (IsDirectory: {IsDirectory})")]
     public static partial void SettingHttpGroupPermissions(this ILogger<ILogWebSiteHostingService> logger, string siteName, string path, bool isDirectory);
 
     #endregion
@@ -193,42 +188,42 @@ public static partial class WebsiteLoggingExtensions
     /// <summary>
     /// Logs successful reverse proxy rule creation.
     /// </summary>
-    [LoggerMessage(EventId = 1800026, Level = LogLevel.Information, Message = "Reverse proxy rule created for site '{SiteName}'")]
+    [LoggerMessage(EventId = 1800025, Level = LogLevel.Information, Message = "Reverse proxy rule created for site '{SiteName}'")]
     public static partial void ReverseProxyRuleCreated(this ILogger<ILogWebSiteHostingService> logger, string siteName);
 
     /// <summary>
     /// Logs error creating reverse proxy rule.
     /// </summary>
-    [LoggerMessage(EventId = 1800027, Level = LogLevel.Error, Message = "Failed to create reverse proxy rule for '{SiteName}'")]
+    [LoggerMessage(EventId = 1800026, Level = LogLevel.Error, Message = "Failed to create reverse proxy rule for '{SiteName}'")]
     public static partial void FailedToCreateReverseProxyRule(this ILogger<ILogWebSiteHostingService> logger, Exception ex, string siteName);
 
     /// <summary>
     /// Logs successful reverse proxy rule update.
     /// </summary>
-    [LoggerMessage(EventId = 1800028, Level = LogLevel.Information, Message = "Reverse proxy rule updated for '{SiteName}'")]
+    [LoggerMessage(EventId = 1800027, Level = LogLevel.Information, Message = "Reverse proxy rule updated for '{SiteName}'")]
     public static partial void ReverseProxyRuleUpdated(this ILogger<ILogWebSiteHostingService> logger, string siteName);
 
     /// <summary>
     /// Logs error updating reverse proxy rule.
     /// </summary>
-    [LoggerMessage(EventId = 1800029, Level = LogLevel.Error, Message = "Failed to update reverse proxy rule for '{SiteName}'")]
+    [LoggerMessage(EventId = 1800028, Level = LogLevel.Error, Message = "Failed to update reverse proxy rule for '{SiteName}'")]
     public static partial void FailedToUpdateReverseProxyRule(this ILogger<ILogWebSiteHostingService> logger, Exception ex, string siteName);
 
     /// <summary>
     /// Logs successful reverse proxy rule deletion.
     /// </summary>
-    [LoggerMessage(EventId = 1800030, Level = LogLevel.Information, Message = "Reverse proxy rule deleted for site '{SiteName}'")]
+    [LoggerMessage(EventId = 1800029, Level = LogLevel.Information, Message = "Reverse proxy rule deleted for site '{SiteName}'")]
     public static partial void ReverseProxyRuleDeleted(this ILogger<ILogWebSiteHostingService> logger, string siteName);
 
     /// <summary>
     /// Logs error deleting reverse proxy rule.
     /// </summary>
-    [LoggerMessage(EventId = 1800031, Level = LogLevel.Error, Message = "Failed to delete reverse proxy rule for '{SiteName}'")]
+    [LoggerMessage(EventId = 1800030, Level = LogLevel.Error, Message = "Failed to delete reverse proxy rule for '{SiteName}'")]
     public static partial void FailedToDeleteReverseProxyRule(this ILogger<ILogWebSiteHostingService> logger, Exception ex, string siteName);
     /// <summary>
     /// Logs that no instance could be initialized because the configuration could not be read.
     /// </summary>
-    [LoggerMessage(EventId = 1800032, Level = LogLevel.Error, Message = "No website was initialized: the configuration could not be read. The host starts so the interface and logs stay reachable, and no write is attempted over an unreadable file")]
+    [LoggerMessage(EventId = 1800031, Level = LogLevel.Error, Message = "No website was initialized: the configuration could not be read. The host starts so the interface and logs stay reachable, and no write is attempted over an unreadable file")]
     public static partial void InstanceInitializationSkipped(this ILogger<ILogWebSiteHostingService> logger, Exception ex);
 
 
