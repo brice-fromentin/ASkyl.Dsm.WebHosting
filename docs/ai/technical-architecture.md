@@ -651,6 +651,9 @@ response is disposed first.
    issued them is revoked rather than abandoned
 8. Binding issued → a fresh 32-byte token stored in the session (SessionBinding) and sent as the
    `ADWH.Binding` cookie (HttpOnly, Secure, SameSite=Strict); replaced on every login, removed on disconnect
+   Both cookies are `Secure`, which browsers refuse to store over plain HTTP, so the login page shows a
+   "connection not secure" card with a link to the HTTPS version instead of the form (`DsmHttpsEndpoint`, DSM's
+   HTTPS port arriving as `ADWH_DSM_HTTPS_PORT`)
 ```
 
 The binding exists because ASP.NET Core cannot rotate a session key: the session middleware accepts any

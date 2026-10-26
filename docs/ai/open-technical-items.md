@@ -228,6 +228,20 @@ and `/adwh/` answered only because the configuration loaded by the earlier manua
 Not yet known: whether Package Center's GUI install behaves differently from `synopkg`. Fix candidates: reload
 nginx from `postinst`, or find the resource key DSM honours for it.
 
+### Signing in over plain HTTP succeeds on the server but the user stays on the login page
+
+Measured on the Virtual DSM on 2026-10-26: opened as `http://<nas>:5000/adwh/login`, a sign-in succeeds server-side,
+yet the next request carries no session. The session and binding cookies are `Secure`, and browsers refuse to store a
+`Secure` cookie received over plain HTTP, so the navigation guard sends the user back to the login. Over the HTTPS
+port it works. DSM's own "redirect HTTP to HTTPS" setting (`enable_https_redirect`) does not help: measured in a real
+browser, it redirects DSM's desktop (a script in DSM's page; nginx's generated configuration has no 30x) but not
+`/adwh/login`. The cookies stay `Secure`: the session must not travel in clear.
+
+Remedy: the login page detects non-loopback plain HTTP (`http://localhost` is a secure context and keeps working) and
+shows a card with a button to the HTTPS version on DSM's port, which the host page passes to the client as
+`ADWH_DSM_HTTPS_PORT`. Not covered: the card is client-side, so it appears only once the WebAssembly runtime has
+loaded over HTTP.
+
 ### Cosmetic: packaging leaves precompressed development settings behind
 
 `build-spk.sh` deletes `*Development.json` from the publish output, which misses the client's
