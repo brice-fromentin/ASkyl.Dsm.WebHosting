@@ -358,6 +358,10 @@ How loopback mode works, and what was measured:
   RemoteCertificateChainErrors`. With that certificate's SHA-256 in `ADWH_DSM_CERT_SHA256`, read from DSM's
   certificate file over SSH and matching what the network served, the diagnostic is healthy, and a sign-in from
   Chrome reaches the home page and signs out.
+- The `DSM.json` watcher on the Virtual DSM (7.2.2, package built at `daf5c7b`): moving DSM's HTTPS port through
+  Control Panel's API replaced the file (new inode) and only reloaded nginx; the running package reloaded the new
+  port 5 ms later, once. A sign-in right after succeeded at the first attempt with every DSM call on the new port,
+  and moving the port back was picked up the same way.
 
 Not chosen: calling the host the browser used. The `Host` header is client-controlled, and calling it would send
 the DSM password wherever a forged request points.
