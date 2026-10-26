@@ -325,6 +325,22 @@ the DSM password wherever a forged request points. It may appear on the diagnost
 The Virtual DSM now has a hostname set (through DSM's own External Access setting) and still serves the default
 self-signed certificate. A trusted certificate is the next prerequisite, for the positive path of step 2.
 
+**Prototype on PR #82 (2026-10-26): loopback mode.** Measured on the Virtual DSM 7.4.1:
+
+- Login, `SYNO.Core.User.get` (the admin check) and logout all succeed against `https://127.0.0.1:{port}` from
+  inside the NAS, with DSM's default self-signed certificate and no hostname.
+- DSM's HTTPS port is not in `synoinfo.conf`; it is `ssl.port` in `/usr/syno/etc/www/DSM.json`, world-readable.
+  Changing the port in DSM changed exactly that value. On a developer machine the file does not exist.
+- DSM's certificate files are `0400 root`, so the package cannot pin the exact certificate.
+
+The prototype reads that port and connects to `127.0.0.1`, accepting the certificate only for a loopback IP
+literal (`DsmCertificatePolicy`); a name, even `localhost`, keeps full validation. A NAS then needs neither a
+hostname nor a trusted certificate, and developer machines (no `DSM.json`) keep hostname mode. If adopted it
+supersedes step 2. Not yet done: the loopback-mode remedies on the diagnostic page are not reworded (the port
+lives under Login Portal, not Router Port), and `AGENTS.md` section 9 ("SSL validation enabled") needs the
+maintainer's amendment. Still open and not measured: DSM's account protection sees every login coming from
+`127.0.0.1`, as it already sees the NAS's own address today.
+
 Known behaviour of step 1:
 
 - An unhealthy report stays cached, so one transient failure during a login keeps the diagnostic in front of
