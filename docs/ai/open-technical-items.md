@@ -360,6 +360,15 @@ How loopback mode works, and what was measured:
 Not chosen: calling the host the browser used. The `Host` header is client-controlled, and calling it would send
 the DSM password wherever a forged request points.
 
+Not chosen: depending on DSM's nginx to keep the port fresh, and checking the listener once at startup. Measured
+on the Virtual DSM (7.2.2): `start_dep_services="nginx.service"` becomes `Requisite=` and `After=nginx.service` in
+a package's systemd unit, as for File Station. Restarting nginx restarts such a package; reloading it does not. Moving
+DSM's HTTPS port through `SYNO.Core.Web.DSM` (Control Panel's API) only reloads nginx: same main PID, File Station
+not restarted, listeners moved. The dependency would not follow a port change, and every nginx restart would restart
+the package with its hosted sites (inferred from File Station). A check made once at startup would keep trusting a
+port whose holder can change later — an nginx crash or a reload that moves the port frees it for any process —
+while the check at each handshake reads one small file per new pooled connection.
+
 Still open:
 
 - **Untested DSM versions**: 7.2.0 and 7.3 were not tested.
