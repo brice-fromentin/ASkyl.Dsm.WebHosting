@@ -1,4 +1,6 @@
+using System.Net;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Globalization.Extensions;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
@@ -42,6 +44,11 @@ builder.Services.AddFluentUIComponentsWithDefaults();
 
 // Register FluentValidation validators from Globalization assembly
 builder.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
+
+// DSM's HTTPS port, passed by the host page; the login page offers the HTTPS version of itself on it
+var dsmHttpsPort = Int32.TryParse(Environment.GetEnvironmentVariable(ApplicationConstants.DsmHttpsPortEnvironmentVariable), out var parsedPort)
+    && parsedPort > IPEndPoint.MinPort && parsedPort <= IPEndPoint.MaxPort ? parsedPort : SystemDefaults.DefaultHttpsPort;
+builder.Services.AddSingleton(new DsmHttpsEndpoint(dsmHttpsPort));
 
 // Register authentication service as Singleton for app lifetime
 // Authentication state is managed server-side via session cookies, not client storage

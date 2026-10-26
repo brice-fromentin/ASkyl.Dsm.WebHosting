@@ -125,6 +125,18 @@
   <data name="Login_Authenticating" xml:space="preserve">
     <value>Authentification...</value>
   </data>
+  <data name="Login_InsecureTitle" xml:space="preserve">
+    <value>Cette connexion n'est pas sécurisée</value>
+  </data>
+  <data name="Login_InsecureBody" xml:space="preserve">
+    <value>Cette page a été ouverte en HTTP, sans SSL. La connexion exige HTTPS : sans lui, le navigateur ne garde pas votre session, et votre mot de passe DSM circulerait en clair.</value>
+  </data>
+  <data name="Login_OpenSecureVersion" xml:space="preserve">
+    <value>Ouvrir la version sécurisée</value>
+  </data>
+  <data name="Login_InsecureIcon" xml:space="preserve">
+    <value>Non sécurisé</value>
+  </data>
   <data name="Diagnostic_Unavailable" xml:space="preserve">
     <value>Le diagnostic de connexion à DSM est indisponible.</value>
   </data>

@@ -16,6 +16,7 @@
 @inject IDsmConnectionDiagnosticService diagnosticService
 @inject ILocalizer localizer
 @inject ICultureManager cultureManager
+@inject DsmHttpsEndpoint httpsEndpoint
 
 <PageTitle>@localizer[LK.Login.PageTitle]</PageTitle>
 
@@ -24,7 +25,11 @@
 @* A page, not a modal dialog: a modal overlay blocked everything outside it, the header included *@
 <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Class="full-height">
     <FluentCard Class="login-card">
-        @if (Report is { IsHealthy: false })
+        @if (SecureUri is not null)
+        {
+            <InsecureConnectionPanel SecureUri="@SecureUri" />
+        }
+        else if (Report is { IsHealthy: false })
         {
             <DsmDiagnosticPanel Report="@Report" OnRecheck="Recheck" />
         }
@@ -54,8 +59,19 @@
     // Null until read, and when reading failed: the form then shows as it always did
     private DsmConnectionReport? Report;
 
+    // Set when the page was opened over plain HTTP: the browser would drop the session cookies, so nothing else can work
+    private Uri? SecureUri;
+
     protected override async Task OnInitializedAsync()
     {
+        var pageUri = new Uri(navigation.Uri);
+
+        if (httpsEndpoint.IsInsecure(pageUri))
+        {
+            SecureUri = httpsEndpoint.ToHttps(pageUri);
+            return;
+        }
+
         // The overlay covers the form until the report is known, so it cannot flash under a user who started typing
         using var worker = this.CreateWorkingState(localizer[LK.Diagnostic.Checking]);
 

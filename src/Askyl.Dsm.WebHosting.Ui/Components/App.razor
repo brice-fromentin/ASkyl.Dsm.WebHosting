@@ -6,6 +6,7 @@
 
 @inject IHttpContextAccessor HttpContextAccessor
 @inject IGlobalizationSettings GlobalizationSettings
+@inject IDsmSettingsService DsmSettings
 
 <!DOCTYPE html>
 <html lang="@(ResolvedCulture.Name)" dir="@(ResolvedCulture.GetTextDirection())">
@@ -46,6 +47,10 @@
                     dotnet.withEnvironmentVariable(
                         '@GlobalizationConstants.SystemCultureEnvironmentVariable',
                         '@(GlobalizationSettings.SystemCulture ?? "")'
+                    );
+                    dotnet.withEnvironmentVariable(
+                        '@ApplicationConstants.DsmHttpsPortEnvironmentVariable',
+                        '@DsmSettings.Port'
                     );
                 }
             },

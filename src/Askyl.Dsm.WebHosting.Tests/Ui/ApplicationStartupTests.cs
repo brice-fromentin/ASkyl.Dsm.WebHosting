@@ -166,6 +166,15 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
     }
 
     [Fact]
+    public async Task Application_HostPage_PassesDsmHttpsPortToTheClient()
+    {
+        var html = await factory.CreateClient().GetStringAsync(ApplicationConstants.ApplicationUrlSubPath);
+
+        Assert.Contains(ApplicationConstants.DsmHttpsPortEnvironmentVariable, html, StringComparison.Ordinal);
+        Assert.Contains($"'{FakeDsmSettings.Port}'", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Application_ServesTheRealHostPage_NotJustSomeHtml()
     {
         // A status 200 carrying text/html proves very little: an error page, an empty shell and a Blazor

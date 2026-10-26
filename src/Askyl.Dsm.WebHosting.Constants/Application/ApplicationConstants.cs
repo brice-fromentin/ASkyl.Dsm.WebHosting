@@ -219,5 +219,10 @@ public static class ApplicationConstants
     /// </summary>
     public const string RepositoryCommitUrlFormat = "https://github.com/brice-fromentin/ASkyl.Dsm.WebHosting/commit/{0}";
 
+    /// <summary>
+    /// Environment variable name for DSM's HTTPS port passed from server to WASM client via <c>Blazor.start()</c>.
+    /// </summary>
+    public const string DsmHttpsPortEnvironmentVariable = "ADWH_DSM_HTTPS_PORT";
+
     #endregion
 }

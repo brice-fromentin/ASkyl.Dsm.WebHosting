@@ -36,6 +36,10 @@ public static class LK
         public const string PasswordLabel = "Login_PasswordLabel";
         public const string OTPLabel = "Login_OTPLabel";
         public const string Authenticating = "Login_Authenticating";
+        public const string InsecureTitle = "Login_InsecureTitle";
+        public const string InsecureBody = "Login_InsecureBody";
+        public const string OpenSecureVersion = "Login_OpenSecureVersion";
+        public const string InsecureIcon = "Login_InsecureIcon";
     }
 
     /// <summary>DSM connection diagnostic strings.</summary>

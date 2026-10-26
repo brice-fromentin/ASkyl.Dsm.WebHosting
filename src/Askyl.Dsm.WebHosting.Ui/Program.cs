@@ -182,9 +182,10 @@ app.UseRateLimiter();
 
 app.UseStatusCodePagesWithReExecute(ApplicationConstants.NotFoundPagePath, ApplicationConstants.NotFoundPageQueryFormat, createScopeForStatusCodePages: true);
 
-// No UseHttpsRedirection: DSM's nginx terminates TLS and owns the http-to-https redirect, and nothing
-// binds an HTTPS port in this process, so the middleware could only log "Failed to determine the https
-// port for redirect" and pass the request through. Reporting the scheme truthfully is this app's job.
+// No UseHttpsRedirection: nothing binds an HTTPS port in this process, so the middleware could only log
+// "Failed to determine the https port for redirect" and pass the request through. DSM's nginx does not
+// redirect /adwh either (measured; DSM's own redirect is a script on its desktop page), so the login page
+// detects plain HTTP and offers the HTTPS version. The cookies stay Secure on purpose.
 
 // Security headers
 app.Use((context, next) =>

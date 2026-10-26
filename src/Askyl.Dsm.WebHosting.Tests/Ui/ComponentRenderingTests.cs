@@ -17,6 +17,7 @@ using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Bunit;
 using FluentValidation;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Moq;
@@ -88,6 +89,7 @@ public class ComponentRenderingTests : IAsyncLifetime
         _ctx.Services.AddSingleton(_licenseService.Object);
         _ctx.Services.AddSingleton(_diagnosticService.Object);
         _ctx.Services.AddSingleton(Mock.Of<ICultureManager>());
+        _ctx.Services.AddSingleton(new DsmHttpsEndpoint(5001));
 
         _authService.Setup(service => service.IsAuthenticatedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(ApiResultBool.CreateSuccess(false));
         _diagnosticService.Setup(service => service.GetReportAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: true));
@@ -122,6 +124,25 @@ public class ComponentRenderingTests : IAsyncLifetime
         Assert.Single(cut.FindAll("[name=username]"));
         Assert.Single(cut.FindAll("[name=password]"));
         Assert.Single(cut.FindAll("[name=otp]"));
+    }
+
+    [Fact]
+    public void Login_OverPlainHttp_OffersTheHttpsVersion_InsteadOfTheForm()
+    {
+        var navigation = _ctx.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("http://nas.test:5000/adwh/login");
+
+        var cut = _ctx.Render<Login>();
+
+        Assert.Contains(_localizer[LK.Login.InsecureTitle], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("[name=username]"));
+        _authService.Verify(service => service.IsAuthenticatedAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _diagnosticService.Verify(service => service.GetReportAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        cut.Find("fluent-button[appearance=primary]").Click();
+
+        Assert.Equal("https://nas.test:5001/adwh/login", navigation.Uri);
     }
 
     [Fact]
