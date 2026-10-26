@@ -312,6 +312,11 @@ How loopback mode works, and what was measured:
 - DSM's HTTPS port is not in `synoinfo.conf`; it is `ssl.port` in `/usr/syno/etc/www/DSM.json`, world-readable,
   and changing the port in DSM changes exactly that value. When the file cannot give a port, the application
   uses DSM's default 5001.
+- `synoinfo.conf` is no fallback either (DSM 7.2.2, 2026-10-26): moving DSM's HTTPS port left both
+  `/etc/synoinfo.conf` and `/etc.defaults/synoinfo.conf` byte-identical. Its only DSM port keys,
+  `external_port_dsm_http` and `external_port_dsm_https`, back what DSM's own strings call *Router Port*: the
+  public port of a router's port forwarding, to enter "only if different from default". Where set, it is
+  therefore likely to differ from the local port, and 5001 is the better guess.
 - DSM's certificate files are `0400 root`, so the package cannot pin the exact certificate. `DsmCertificatePolicy`
   accepts the certificate only for a loopback IP literal whose port a root-owned listener holds (read from
   `/proc/net/tcp` and `tcp6`, which any user can read); a name, even `localhost`, keeps full validation. The DSM
@@ -332,6 +337,11 @@ How loopback mode works, and what was measured:
   certificate files are root-only. The SPK installs and runs there, and the loopback sign-in, a healthy diagnostic
   and the plain-HTTP card all work. The DSM menu labels the remedies quote are identical to 7.4.1's.
 - The re-check throttle answered 429 through DSM's nginx while the login stayed unthrottled (2026-10-26).
+- Local debugging against a DSM on its self-signed default (the Virtual DSM, 2026-10-26): with `ADWH_DSM_URL`
+  alone, the diagnostic stops at *connection trusted*, and the log names `RemoteCertificateNameMismatch,
+  RemoteCertificateChainErrors`. With that certificate's SHA-256 in `ADWH_DSM_CERT_SHA256`, read from DSM's
+  certificate file over SSH and matching what the network served, the diagnostic is healthy, and a sign-in from
+  Chrome reaches the home page and signs out.
 
 Not chosen: calling the host the browser used. The `Host` header is client-controlled, and calling it would send
 the DSM password wherever a forged request points.
@@ -343,7 +353,9 @@ Still open:
   NAS's own address before.
 - **`AGENTS.md`** needs the maintainer's amendment: section 9 says "SSL validation enabled", and section 13 still
   describes the `dev-mock/synoinfo.conf` mock and checks it before a vDSM run, while a local run now reaches
-  whatever `ADWH_DSM_URL` names.
+  whatever `ADWH_DSM_URL` names, and needs `ADWH_DSM_CERT_SHA256` to trust the Virtual DSM.
+- **Misleading remedy under `ADWH_DSM_URL`**: *not trusted* names the loopback cause ("the port is not held by
+  DSM") even when the cause is a certificate the developer machine does not trust. The log names the errors.
 
 Known behaviour of the diagnostic:
 
@@ -458,6 +470,10 @@ any test.
 
 `ResourceCompletenessTests` hardcodes `fr-FR`, so a newly added culture would be silently untested for key
 parity — which undercuts the "drop in a `.resx`, zero code changes" story.
+
+`OperationTimerTests.UsingScope_WithEarlyReturn_CallbackInvoked` asserts that a 5 ms sleep measures at most
+100 ms. It measured 106 ms once on a loaded machine on 2026-10-26, and passed on the next two runs: an upper
+bound on wall-clock time is a flake waiting for a busy CI runner.
 
 ## Prerequisite for a roadmap feature
 
