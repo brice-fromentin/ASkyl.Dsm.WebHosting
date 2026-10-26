@@ -41,10 +41,4 @@
     <Folder Include="Services/" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="dev-mock/**/*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>
