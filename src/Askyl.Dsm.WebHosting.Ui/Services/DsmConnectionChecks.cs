@@ -61,9 +61,10 @@ internal static class DsmConnectionChecks
     }
 
     /// <summary>
-    /// Runs a TLS handshake against the hostname under the application's own certificate policy (default validation everywhere except a loopback IP literal), recording what DSM presented.
+    /// Runs a TLS handshake against the hostname under the application's own certificate policy (default validation everywhere except a loopback IP literal with a root-owned listener), recording what DSM presented.
     /// </summary>
-    internal static async Task<(DsmCheckFailure Failure, DsmCertificateSummary? Certificate)> InspectCertificateAsync(string host, IPAddress[] addresses, int port, TimeSpan timeout)
+    internal static async Task<(DsmCheckFailure Failure, DsmCertificateSummary? Certificate)> InspectCertificateAsync(
+        string host, IPAddress[] addresses, int port, DsmCertificatePolicy policy, TimeSpan timeout)
     {
         using var cancellation = new CancellationTokenSource(timeout);
 
@@ -81,7 +82,7 @@ internal static class DsmConnectionChecks
                 chainStatus = chain?.ChainStatus.Aggregate(X509ChainStatusFlags.NoError, (all, status) => all | status.Status) ?? X509ChainStatusFlags.NoError;
 
                 // The same policy as the HttpClient that calls DSM, so the checklist matches reality
-                return DsmCertificatePolicy.Accepts(host, policyErrors);
+                return policy.Accepts(host, port, policyErrors);
             }
         };
 

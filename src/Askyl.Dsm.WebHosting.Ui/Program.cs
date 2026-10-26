@@ -42,10 +42,9 @@ builder.Services.AddSession(options =>
 builder.Services.AddHttpClient();
 
 // DSM gets its own client: only it may accept DSM's certificate, and only for a loopback IP literal
-builder.Services.AddHttpClient(ApplicationConstants.DsmHttpClientName).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-{
-    ServerCertificateCustomValidationCallback = (request, _, _, errors) => DsmCertificatePolicy.Accepts(request.RequestUri?.Host, errors)
-});
+builder.Services.AddSingleton<IRootListenerProbe, ProcNetTcpRootListenerProbe>();
+builder.Services.AddSingleton<DsmCertificatePolicy>();
+builder.Services.AddHttpClient(ApplicationConstants.DsmHttpClientName).ConfigurePrimaryHttpMessageHandler(provider => provider.GetRequiredService<DsmCertificatePolicy>().CreateHandler());
 builder.Services.AddFluentUIComponentsWithDefaults();
 
 // Add globalization/localization services

@@ -88,7 +88,7 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
         listener.Stop();
         Directory.CreateDirectory(factory.StateDirectory);
 
-        var settingsPath = Path.Combine(factory.StateDirectory, HostnamelessSettingsFileName);
+        var settingsPath = Path.Combine(factory.StateDirectory, "synoinfo-loopback.conf");
         var webConfigPath = Path.Combine(factory.StateDirectory, "DSM-loopback.json");
 
         File.WriteAllLines(settingsPath, [$"{SystemDefaults.KeyLanguage}=\"{FakeDsmSettings.Language}\""]);

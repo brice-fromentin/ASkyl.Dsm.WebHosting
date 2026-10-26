@@ -349,7 +349,7 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 | **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info (implements `ISemaphoreOwner` for the cache lock) | ILogger |
 | **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes, drains their redirected output | ILogger, ILoggerFactory |
 | **SystemProcessHandle** | `IProcessHandle` | Not registered | Wraps `Process`; created per process by `SystemProcessRunner` | ILogger<ILogSystemProcessHandle> |
-| **DsmSettingsService** | `IDsmSettingsService` | Singleton | Reads /etc/synoinfo.conf via IFileReader at startup and on Reload(); a missing hostname leaves Server null | ILogger, IFileReader |
+| **DsmSettingsService** | `IDsmSettingsService` | Singleton | Reads /etc/synoinfo.conf (and DSM.json for loopback mode) via IFileReader at startup and on Reload(); a missing hostname leaves Server null | ILogger, IFileReader |
 
 **DsmApiClient Key Features:**
 
@@ -358,7 +358,10 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 - Strategy pattern for Form vs JSON serialization
 - Structured logging: request timing, auth failures, API errors via `[LoggerMessage]` extensions
 - `ProbeAsync` sends `SYNO.API.Info` for the connection diagnostic without touching the handshake cache; every call fails fast when no hostname is configured
-- Uses its own named client (`DsmHttpClientName`) whose handler applies `DsmCertificatePolicy`: default validation everywhere except a loopback IP literal (a name, even `localhost`, never gets the exception)
+- Uses its own named client (`DsmHttpClientName`) whose handler (`DsmCertificatePolicy.CreateHandler`) never uses a proxy
+  and never follows redirects, and applies `DsmCertificatePolicy`: default validation everywhere except a loopback IP
+  literal whose port a root-owned listener holds (`IRootListenerProbe`, reading `/proc/net/tcp*`); a name, even
+  `localhost`, never gets the exception
 - Loopback mode: when DSM's web configuration (`/usr/syno/etc/www/DSM.json`, key `DsmSettings:WebConfigPath`)
   gives `ssl.port`, `DsmSettingsService` targets `127.0.0.1` on that port, so no hostname or trusted
   certificate is needed; without the file (developer machines) the `external_host_ip` hostname mode applies,

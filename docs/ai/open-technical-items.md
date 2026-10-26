@@ -334,7 +334,11 @@ self-signed certificate. A trusted certificate is the next prerequisite, for the
 - DSM's certificate files are `0400 root`, so the package cannot pin the exact certificate.
 
 The prototype reads that port and connects to `127.0.0.1`, accepting the certificate only for a loopback IP
-literal (`DsmCertificatePolicy`); a name, even `localhost`, keeps full validation. A NAS then needs neither a
+literal (`DsmCertificatePolicy`) whose port is held by a root-owned listener (read from `/proc/net/tcp` and
+`tcp6`, which any user can read); a name, even `localhost`, keeps full validation. The client uses no proxy
+(an environment proxy would otherwise read the login body) and follows no redirect. Trust assumption: DSM is
+whoever root-owns the loopback listener on DSM's port; a stale port after a DSM port change fails closed,
+because the diagnostic reloads `DSM.json` on its next run. A NAS then needs neither a
 hostname nor a trusted certificate, and developer machines (no `DSM.json`) keep hostname mode. If adopted it
 supersedes step 2. Not yet done: the loopback-mode remedies on the diagnostic page are not reworded (the port
 lives under Login Portal, not Router Port), and `AGENTS.md` section 9 ("SSL validation enabled") needs the

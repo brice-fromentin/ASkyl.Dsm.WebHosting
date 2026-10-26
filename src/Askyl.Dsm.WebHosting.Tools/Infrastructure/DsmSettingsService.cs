@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Data.Contracts;
@@ -68,7 +69,7 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
             if (document.RootElement.TryGetProperty(SystemDefaults.KeyDsmWebConfigSsl, out var ssl)
                 && ssl.TryGetProperty(SystemDefaults.KeyDsmWebConfigPort, out var port)
                 && port.TryGetInt32(out var value)
-                && value is >= 1 and <= 65535)
+                && value is > IPEndPoint.MinPort and <= IPEndPoint.MaxPort)
             {
                 return value;
             }

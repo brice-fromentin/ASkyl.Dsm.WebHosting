@@ -18,14 +18,14 @@ public static class SystemDefaults
     public const string DsmWebConfigPath = "/usr/syno/etc/www/DSM.json";
 
     /// <summary>
-    /// Configuration key overriding <see cref="DsmWebConfigPath"/>.
+    /// Kernel table of IPv4 TCP sockets, readable by any user.
     /// </summary>
-    public const string ConfigKeyWebConfigPath = "DsmSettings:WebConfigPath";
+    public const string ProcNetTcpPath = "/proc/net/tcp";
 
     /// <summary>
-    /// Address of DSM on the NAS itself, where nothing on the network can intercept the traffic.
+    /// Kernel table of IPv6 TCP sockets, readable by any user.
     /// </summary>
-    public const string LoopbackAddress = "127.0.0.1";
+    public const string ProcNetTcp6Path = "/proc/net/tcp6";
 
     #endregion
 
@@ -56,6 +56,25 @@ public static class SystemDefaults
     /// Port property in DSM.json.
     /// </summary>
     public const string KeyDsmWebConfigPort = "port";
+
+    #endregion
+
+    #region Loopback Mode
+
+    /// <summary>
+    /// Configuration key overriding <see cref="DsmWebConfigPath"/>.
+    /// </summary>
+    public const string ConfigKeyWebConfigPath = "DsmSettings:WebConfigPath";
+
+    /// <summary>
+    /// Address of DSM on the NAS itself, where nothing on the network can intercept the traffic.
+    /// </summary>
+    public const string LoopbackAddress = "127.0.0.1";
+
+    /// <summary>
+    /// State column of a listening socket in /proc/net/tcp (hexadecimal TCP_LISTEN).
+    /// </summary>
+    public const string ProcNetListenState = "0A";
 
     #endregion
 

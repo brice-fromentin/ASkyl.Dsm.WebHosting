@@ -14,8 +14,10 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// </summary>
 /// <param name="settings">DSM settings, reloaded at the start of every run.</param>
 /// <param name="apiClient">DSM API client, for the SYNO.API.Info probe.</param>
+/// <param name="certificatePolicy">The certificate policy of the DSM HTTP client, so the checklist decides as it does.</param>
 /// <param name="logger">Logger for the outcome of each run.</param>
-public sealed class DsmConnectionDiagnosticService(IDsmSettingsService settings, DsmApiClient apiClient, ILogger<ILogDsmConnectionDiagnosticService> logger)
+public sealed class DsmConnectionDiagnosticService(
+    IDsmSettingsService settings, DsmApiClient apiClient, DsmCertificatePolicy certificatePolicy, ILogger<ILogDsmConnectionDiagnosticService> logger)
     : IDsmConnectionDiagnosticService, ISemaphoreOwner, IDisposable
 {
     static readonly TimeSpan StepTimeout = TimeSpan.FromSeconds(ApplicationConstants.DsmDiagnosticStepTimeoutSeconds);
@@ -102,7 +104,7 @@ public sealed class DsmConnectionDiagnosticService(IDsmSettingsService settings,
 
             if (LastPassed(results))
             {
-                var (failure, certificate) = await DsmConnectionChecks.InspectCertificateAsync(host, addresses, port, StepTimeout);
+                var (failure, certificate) = await DsmConnectionChecks.InspectCertificateAsync(host, addresses, port, certificatePolicy, StepTimeout);
                 results.Add(Result(DsmConnectionCheck.CertificateCoversName, failure) with { Certificate = certificate });
             }
 

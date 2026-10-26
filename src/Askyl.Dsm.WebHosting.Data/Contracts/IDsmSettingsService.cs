@@ -1,7 +1,7 @@
 namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 /// <summary>
-/// DSM system preferences from /etc/synoinfo.conf, read at startup and again on <see cref="Reload"/>.
+/// DSM system preferences from /etc/synoinfo.conf and, when present, DSM's web configuration (DSM.json, loopback mode), read at startup and again on <see cref="Reload"/>.
 /// </summary>
 public interface IDsmSettingsService
 {
