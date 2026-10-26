@@ -351,9 +351,6 @@ Still open:
 - **Untested DSM versions**: 7.2.0 and 7.3 were not tested.
 - **Not measured**: DSM's account protection sees every login coming from `127.0.0.1`, as it already saw the
   NAS's own address before.
-- **`AGENTS.md`** needs the maintainer's amendment: section 9 says "SSL validation enabled", and section 13 still
-  describes the `dev-mock/synoinfo.conf` mock and checks it before a vDSM run, while a local run now reaches
-  whatever `ADWH_DSM_URL` names, and needs `ADWH_DSM_CERT_SHA256` to trust the Virtual DSM.
 - **Misleading remedy under `ADWH_DSM_URL`**: *not trusted* names the loopback cause ("the port is not held by
   DSM") even when the cause is a certificate the developer machine does not trust. The log names the errors.
 

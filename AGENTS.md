@@ -29,7 +29,8 @@ Key structural facts that span multiple projects:
 
 - **Dual service implementations**: interfaces live in `Data/Contracts/` and are implemented twice — server-side in `Ui/Services/` (real logic)
   and client-side in `Ui.Client/Services/` (HTTP proxy calling `/api/v1/...` controllers). When adding a service capability, you usually touch
-  both plus the thin controller in `Ui/Controllers/` (`[AuthorizeSession]` on everything except authentication).
+  both plus the thin controller in `Ui/Controllers/` (`[AuthorizeSession]` on everything except authentication and the DSM connection diagnostic, anonymous by
+  design: it is what a visitor sees when signing in is impossible).
 - **DSM communication chain**: Client service → Controller → `Ui/Services` → `IDsmSession` (Scoped; SID/username in ASP.NET session, TTL-cached
   validation serialized by a `SemaphoreSlim`; validation calls the admin-only `SYNO.Core.User.get` and **fails closed**, which is also the app's
   only administrator check — do not relax it) → `DsmApiClient` (Singleton in `Tools/Network/`; stateless — SID passed per call; lazy
@@ -44,8 +45,11 @@ Key structural facts that span multiple projects:
   ADWH03001 no direct `ILogger` calls.
 - **Result pattern over exceptions**: `Data/Results/` (`ApiResult`, `ApiResultData<T>`, …). `IOptions<T>`/config binding are deliberately not
   used — configuration is read directly.
-- **DSM settings** come from `/etc/synoinfo.conf` via `IFileReader`; `src/Askyl.Dsm.WebHosting.Ui/dev-mock/` provides a mock for local dev.
-- Server pipeline runs under path base `/adwh`; login is rate-limited (5/min); session cookie `ADWH.Session` is Strict/HttpOnly/Secure.
+- **DSM endpoint**: on a NAS, `127.0.0.1` on DSM's own HTTPS port (`ssl.port` in `/usr/syno/etc/www/DSM.json`,
+  5001 if absent); for local debugging, the URL in the `ADWH_DSM_URL` environment variable. `/etc/synoinfo.conf`
+  supplies only the system language.
+- Server pipeline runs under path base `/adwh`; login is rate-limited (5/min); session cookies `ADWH.Session` and `ADWH.Binding` are Strict/HttpOnly/Secure,
+  so signing in needs HTTPS (the login page offers it when opened over HTTP).
 
 ---
 
@@ -372,7 +376,10 @@ After EVERY code modification:
 - FileStation, ReverseProxy, Authentication APIs
 - Documentation: <https://global.download.synology.com/download/Document/DeveloperGuide/Synology_File_Station_API_Guide.pdf>
 - OSS Documentation: <https://github.com/pmilano1/synology-dsm-api/tree/master/docs/api-reference>
-- SSL validation enabled; all interactions through `DsmApiClient`
+- SSL validation enabled, with one exception: a loopback IP literal whose port a root-owned listener holds —
+  the package reaching its own DSM (`DsmCertificatePolicy`). Never relax it for a name; local debugging may
+  pin one exact certificate (`ADWH_DSM_CERT_SHA256`), which the package never sets. All interactions
+  through `DsmApiClient`
 
 **For API integration patterns, see `docs/ai/technical-architecture.md` section "Data Models & API Integration".**
 
@@ -518,13 +525,14 @@ PR #70 merged green and `main` went red in `vulnerable` (run #115) on advisories
 ## 13. APPLICATION LAUNCH RESTRICTIONS
 
 **An assistant never launches the application without the maintainer's explicit approval for that run.**
-The local mock may name the real NAS by design, so a local run can reach production; approval for one run
-does not extend to the next. The disposable vDSM below is the only exception.
+A local run reaches whatever DSM `ADWH_DSM_URL` names, which may be the real NAS, so a local run can reach
+production; approval for one run does not extend to the next. The disposable vDSM below is the only exception.
 
-- Local runs read DSM settings from the development mock (`src/Askyl.Dsm.WebHosting.Ui/dev-mock/`),
-  which supplies `synoinfo.conf` through the configurable `DsmSettings:ConfigPath`
-- The tests never read it: `ApplicationHostFactory` runs the host as `Testing` and points `ConfigPath` at
-  a synthetic file, so the mandatory sequence needs no approval
+- Local runs reach DSM at the absolute HTTPS URL in `ADWH_DSM_URL`. Without it they target loopback, where
+  nothing answers on a developer machine. A name gets full TLS validation: DSM's certificate must be trusted,
+  for that name, by the machine running the debugger, or pinned by its SHA-256 in `ADWH_DSM_CERT_SHA256`
+- The tests never read it: `ApplicationHostFactory` runs the host as `Testing`, clears `ADWH_DSM_URL` and points
+  `DSM.json` and `synoinfo.conf` at files it controls, so the mandatory sequence needs no approval
 - An assistant never handles DSM credentials — logging in is the maintainer's, except on the vDSM
 - Always stop what you started — never leave a listener running between tasks
 - Everything else still goes through the standardized build/clean commands
@@ -533,13 +541,14 @@ does not extend to the next. The disposable vDSM below is the only exception.
 
 The maintainer runs a Virtual DSM reserved for the assistant: production's DSM version, no real data, a
 throwaway administrator account. Its host, ports and credentials live in the gitignored
-`dev-mock/vdsm.env`, the only place an assistant reads them from. While the mock names that host, an
-assistant may launch the application without asking, sign in with that account, and use SSH and `sudo` on
-the instance. The mock is local state and can point back at production at any time, so check before every
-such run — a non-zero exit means §13 applies as written:
+`dev-mock/vdsm.env`, the only place an assistant reads them from. An assistant may sign in with that account,
+use SSH and `sudo` on the instance, and launch the application against it without asking — but only with
+`ADWH_DSM_URL` set on the command itself from that file, never inherited from the shell, which may name
+production. The instance keeps DSM's self-signed certificate, so the same file holds its fingerprint
+(`VDSM_CERT_SHA256`, read from DSM's certificate file over SSH, never from the network alone):
 
 ```bash
-. src/Askyl.Dsm.WebHosting.Ui/dev-mock/vdsm.env && grep -qx "external_host_ip=\"$VDSM_HOST\"" src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf
+. src/Askyl.Dsm.WebHosting.Ui/dev-mock/vdsm.env && ADWH_DSM_URL="https://$VDSM_HOST:$VDSM_HTTPS_PORT" ADWH_DSM_CERT_SHA256="$VDSM_CERT_SHA256" dotnet run --project src/Askyl.Dsm.WebHosting.Ui --no-build --launch-profile https
 ```
 
 Its values are local infrastructure exactly as production's are: §3 applies in full, and
@@ -563,21 +572,13 @@ contains the same string. Run `pgrep -fl "Askyl.Dsm.WebHosting.Ui"` first and st
 working directory to the project directory (MSBuild's `RunWorkingDirectory`), so the mock resolves whatever
 the shell's own directory. Running the dll leaves the working directory where the shell stood, and that
 directory is also the content root: from anywhere but the output directory ASP.NET loads **no
-`appsettings*.json` at all**, so startup dies naming `/etc/synoinfo.conf` — an error that reads as a missing
-mock and is really a missing configuration.
+`appsettings*.json` at all** — a missing configuration that reads as something else.
 
-`appsettings.Development.json` points `DsmSettings:ConfigPath` at `dev-mock/synoinfo.conf`, which resolves
-under both the project directory and the output directory. **Do not re-add that override to
-`.vscode/launch.json`**: an environment variable there overrides the JSON silently, and a drifted one is why
-a whole session concluded the application could not start.
-
-The mock is gitignored **so that it can hold the real NAS settings**; the versioned template keeps
-placeholders because it is published. Differing from the template is its design, not drift. On a fresh
-clone, create it from the template, then fill in the NAS:
-
-```bash
-cp src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf.template src/Askyl.Dsm.WebHosting.Ui/dev-mock/synoinfo.conf
-```
+**`ADWH_DSM_URL` is inherited.** Set it on the command, as above, or in an IDE launch profile that reads it
+from a gitignored file (VS Code's `envFile` pointing into `dev-mock/`, for instance); never commit its value,
+which names local infrastructure (§3). A drifted value inherited from a shell or a launch profile is exactly
+the kind of silent override that once made a whole session conclude the application could not start.
+`dev-mock/synoinfo.conf` and its template are no longer read by the application.
 
 ### Deployment Log Review
 
