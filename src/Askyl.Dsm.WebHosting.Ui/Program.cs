@@ -78,7 +78,8 @@ builder.Services.AddSingleton<IFileReader, SystemFileReader>();
 builder.Services.AddSingleton<IDsmSettingsService, DsmSettingsService>();
 builder.Services.AddHostedService<DsmWebConfigurationWatcher>();
 
-// Register DSM API client and authentication facade
+// Register DSM API client and authentication facade (the clock times the login's DSM budget)
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<DsmApiClient>();
 builder.Services.AddScoped<IDsmSession, DsmSession>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();

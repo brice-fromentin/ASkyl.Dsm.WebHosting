@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
@@ -17,6 +18,7 @@ public class AuthenticationServiceTests
     readonly Mock<ILogger<ILogAuthenticationService>> _logger;
     readonly Mock<ILocalizer> _localizer;
     readonly Mock<IDsmConnectionDiagnosticService> _diagnostic = new();
+    TimeProvider _time = TimeProvider.System;
 
     public AuthenticationServiceTests()
     {
@@ -32,7 +34,7 @@ public class AuthenticationServiceTests
 
     AuthenticationService CreateService()
     {
-        return new AuthenticationService(_dsmSession.Object, _diagnostic.Object, new LoginCredentialsValidator(), _logger.Object, _localizer.Object);
+        return new AuthenticationService(_dsmSession.Object, _diagnostic.Object, new LoginCredentialsValidator(), _time, _logger.Object, _localizer.Object);
     }
 
     #region LoginAsync — DSM Unreachable
@@ -90,6 +92,44 @@ public class AuthenticationServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(() => CreateService().LoginAsync("admin", "password123", null, cancellation.Token));
         _diagnostic.Verify(d => d.RecheckAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenDsmNeverAnswers_GivesUpInTimeToSaySo()
+    {
+        // Arrange — a hung DSM used to hold the login past the browser's own wait, so the browser gave up
+        // first and the diagnostic never showed
+        _time = new ExpiredTimeProvider();
+        _dsmSession.Setup(s => s.ConnectAsync(It.IsAny<LoginCredentials>(), It.IsAny<CancellationToken>()))
+            .Returns(async (LoginCredentials _, CancellationToken token) =>
+            {
+                await Task.Delay(Timeout.Infinite, token);
+                return ApiResult.CreateSuccess();
+            });
+        DiagnosticReports(isHealthy: false);
+
+        // Act — WaitAsync turns a login that never gives up into a failure, not a hang
+        var result = await CreateService().LoginAsync("admin", "password123", null).WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert
+        Assert.Equal(ApiErrorCode.DsmUnreachable, result.ErrorCode);
+    }
+
+    [Fact]
+    public void LoginBudget_AndAFullDiagnostic_FitInsideTheBrowsersWait()
+    {
+        var diagnostic = Enum.GetValues<DsmConnectionCheck>().Length * ApplicationConstants.DsmDiagnosticStepTimeoutSeconds;
+
+        Assert.True(ApplicationConstants.DsmLoginTimeoutSeconds + diagnostic < ApplicationConstants.HttpClientTimeoutSeconds);
+    }
+
+    /// <summary>
+    /// Starts every timer already due: the login's DSM budget is spent before the call begins.
+    /// </summary>
+    sealed class ExpiredTimeProvider : TimeProvider
+    {
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+            => TimeProvider.System.CreateTimer(callback, state, TimeSpan.Zero, period);
     }
 
     #endregion

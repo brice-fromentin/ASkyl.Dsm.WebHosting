@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Results;
@@ -14,15 +15,19 @@ namespace Askyl.Dsm.WebHosting.Ui.Services;
 /// </summary>
 /// <param name="dsmSession">The DSM session for making authentication calls.</param>
 /// <param name="diagnosticService">Decides whether a failed login means DSM is unreachable.</param>
+/// <param name="timeProvider">Times the login's DSM budget.</param>
 /// <param name="logger">Logger for tracking authentication operations.</param>
 /// <param name="localizer">Localizer for user-facing strings.</param>
 public class AuthenticationService(
     IDsmSession dsmSession,
     IDsmConnectionDiagnosticService diagnosticService,
     IValidator<LoginCredentials> credentialsValidator,
+    TimeProvider timeProvider,
     ILogger<ILogAuthenticationService> logger,
     ILocalizer localizer) : IAuthenticationService
 {
+    static readonly TimeSpan DsmTimeout = TimeSpan.FromSeconds(ApplicationConstants.DsmLoginTimeoutSeconds);
+
     /// <inheritdoc/>
     public async Task<AuthenticationResult> LoginAsync(string login, string password, string? otpCode, CancellationToken cancellationToken = default)
     {
@@ -42,7 +47,11 @@ public class AuthenticationService(
 
         try
         {
-            connection = await dsmSession.ConnectAsync(model, cancellationToken);
+            // Bounded, so the diagnostic below still answers before the browser stops waiting
+            using var timeout = new CancellationTokenSource(DsmTimeout, timeProvider);
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+
+            connection = await dsmSession.ConnectAsync(model, linked.Token);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {

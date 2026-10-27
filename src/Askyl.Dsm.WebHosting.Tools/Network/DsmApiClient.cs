@@ -35,7 +35,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
     public async Task<R?> ExecuteAsync<R>(string? sid, IApiParameters parameters, CancellationToken cancellationToken = default)
         where R : IApiResponse
     {
-        await EnsureInitializedAsync();
+        await EnsureInitializedAsync(cancellationToken);
 
         var path = (parameters.Name == ApiConstants.Info)
             ? ApiConstants.Handshake
@@ -94,32 +94,33 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
         }
     }
 
-    private async Task EnsureInitializedAsync()
+    private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
     {
         if (ApiInformations.Get(ApiConstants.Auth) is not null)
         {
             return;
         }
 
-        using var @lock = await SemaphoreLock.AcquireAsync(this);
+        // The caller's token, so a DSM that never answers cannot hold a login past its budget
+        using var @lock = await SemaphoreLock.AcquireAsync(this, cancellationToken: cancellationToken);
 
         if (ApiInformations.Get(ApiConstants.Auth) is not null)
         {
             return;
         }
 
-        if (!await HandShakeAsync())
+        if (!await HandShakeAsync(cancellationToken))
         {
             throw new InvalidOperationException("DSM API handshake failed");
         }
     }
 
-    private async Task<bool> HandShakeAsync()
+    private async Task<bool> HandShakeAsync(CancellationToken cancellationToken)
     {
         var parameters = new InformationsQueryParameters();
         var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, ApiConstants.Handshake);
 
-        var result = await ExecuteFormAsync<ApiInformationResponse>(null, url, parameters, CancellationToken.None);
+        var result = await ExecuteFormAsync<ApiInformationResponse>(null, url, parameters, cancellationToken);
 
         if (result?.Success != true || result.Data is null || result.Data.Count == 0)
         {

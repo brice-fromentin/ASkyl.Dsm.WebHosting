@@ -316,6 +316,32 @@ public class DsmApiClientTests : IDisposable
         Assert.Equal("network down", exception.Message);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenTheHandshakeNeverAnswers_GivesUpWithTheCaller()
+    {
+        // The first call after startup runs the SYNO.API.Info handshake. It used to ignore the caller's
+        // token, so a DSM that never answered held a login for the HttpClient's 100 s default.
+        using var caller = new CancellationTokenSource();
+
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns(async (HttpRequestMessage _, CancellationToken token) =>
+            {
+                caller.Cancel();
+                await Task.Delay(Timeout.Infinite, token);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
+
+        var client = new DsmApiClient(factory.Object, _settingsService, _logger.Object);
+
+        // Act & Assert — WaitAsync turns a token that never reaches the handshake into a failure, not a hang
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.ExecuteAsync<TestResponse>(null, new TestFormParameters(), caller.Token).WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
     #endregion
 
     #region Probe

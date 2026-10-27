@@ -48,6 +48,13 @@ public static class ApplicationConstants
     /// </summary>
     public const int DsmDiagnosticStepTimeoutSeconds = 3;
 
+    /// <summary>
+    /// Time allowed to the DSM calls of a login. A login that runs out of it runs the diagnostic next, and both
+    /// must fit inside <see cref="HttpClientTimeoutSeconds"/>, or the browser gives up before it can show why.
+    /// A cold login took about one second on a Virtual DSM, handshake included.
+    /// </summary>
+    public const int DsmLoginTimeoutSeconds = 5;
+
     #endregion
 
     #region Runtime Path
