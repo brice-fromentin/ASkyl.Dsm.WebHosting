@@ -17,5 +17,6 @@ report_url="https://github.com/brice-fromentin/ASkyl.Dsm.WebHosting/wiki"
 silent_install="yes"
 silent_upgrade="yes"
 silent_uninstall="yes"
+startstop_restart_services="nginx.service"
 thirdparty="yes"
 
