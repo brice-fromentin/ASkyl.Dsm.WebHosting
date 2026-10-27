@@ -667,7 +667,10 @@ refused login never receives one.
 
 A login that throws before DSM answers re-runs the connection diagnostic; when DSM is unreachable the result
 carries `ApiErrorCode.DsmUnreachable` and the login page shows the diagnostic. `AuthenticationService` catches
-anything from `ConnectAsync` except the caller's own cancellation.
+anything from `ConnectAsync` except the caller's own cancellation, and gives it `DsmLoginTimeoutSeconds` (10 s,
+the `SYNO.API.Info` handshake included) so that a DSM that never answers still ends on the diagnostic inside the
+browser's `HttpClientTimeoutSeconds` (25 s). DSM takes seconds to refuse a wrong password, which bounds the budget
+from below.
 
 `ConnectAsync` returns an `ApiResult` rather than a bool so the caller can distinguish invalid credentials
 (`ApiErrorCode.Unauthorized`) from a valid non-administrator (`ApiErrorCode.Forbidden`) and localize each.
@@ -1000,6 +1003,15 @@ still carries all of them.
 built-in Nginx via the `web-config` resource declaration (`nginx-static-config`, type `dsm`) in `conf/resource`.
 The alias is the intended access path, enabling sub-path access without port conflicts, but not the only one: the
 application listens on `0.0.0.0:7120` and `adwh.sc` marks that port for forwarding.
+
+The worker links the configuration when the package starts and unlinks it when it stops, but never reloads nginx
+(Synology's developer guide, _Web Config_). `INFO` asks DSM to, with `startstop_restart_services="nginx.service"`,
+as File Station does. Measured with `synopkg` on the Virtual DSM (7.2.2) on 2026-10-27: DSM reloads nginx rather
+than restarting it — same master process, new workers, File Station untouched — and `/adwh/` follows the package
+through a fresh install, a stop, a start, an upgrade and an uninstall. Without the key, a fresh install answered
+DSM's 404 until something else reloaded nginx. `instuninst_restart_services`, which the guide names for this kind
+of configuration, reloads during the install, before the start creates the link, and a fresh install still
+answered 404.
 
 ### Service Account and Permissions
 

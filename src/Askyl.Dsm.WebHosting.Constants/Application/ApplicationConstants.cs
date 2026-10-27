@@ -50,8 +50,8 @@ public static class ApplicationConstants
     public const int DsmDiagnosticStepTimeoutSeconds = 3;
 
     /// <summary>
-    /// Time allowed to the DSM calls of a login. On a Virtual DSM a login took under a second, but DSM took about
-    /// five to refuse a wrong password, so this leaves a refusal room twice over. A login that runs out of it runs
+    /// Time allowed to the DSM calls of a login. On a Virtual DSM a login took under a second, but DSM took 4.5 to
+    /// 6.6 s to refuse a wrong password, and a refusal must not read as an outage. A login that runs out of it runs
     /// the diagnostic next, and both must fit inside <see cref="HttpClientTimeoutSeconds"/>, or the browser gives
     /// up before it can show why.
     /// </summary>

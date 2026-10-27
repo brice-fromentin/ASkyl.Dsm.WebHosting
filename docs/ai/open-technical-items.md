@@ -230,20 +230,6 @@ A fresh install from such a package starts with that site list; an upgrade resto
 not carry it, but none has ever been published (see *No release has ever been published*), so every SPK
 installed so far was built locally. Excluding it from publish in the `.csproj`, or deleting it in `build-spk.sh`, closes it.
 
-### A fresh install does not reload nginx, so `/adwh/` answers DSM's 404
-
-Measured on the Virtual DSM 7.4.1 on 2026-10-25: after `synopkg install` and `start`, the package's
-`dsm.pkg-static.*.conf` link was in nginx's `conf.d`, but the nginx workers predated the install and `/adwh/`
-answered 404 from DSM's own handler (`/usr/syno/synoman/adwh/index.cgi is not found`).
-`synosystemctl reload nginx` fixed it. An uninstall the day before had reloaded nginx.
-
-An upgrade through `synopkg install` on 2026-10-26 did not reload nginx either: the workers kept their start time,
-and `/adwh/` answered only because the configuration loaded by the earlier manual reload was still in memory.
-The same happened on a fresh Virtual DSM 7.2.2 on 2026-10-26: after `synopkg install` and `start`, `/adwh/`
-answered 404 until `synosystemctl reload nginx`. Not yet known: whether Package Center's GUI install behaves
-differently from `synopkg`. Fix candidates: reload nginx from `postinst`, or find the resource key DSM honours for
-it.
-
 ### Signing in over plain HTTP succeeds on the server but the user stays on the login page
 
 Measured on the Virtual DSM on 2026-10-26: opened as `http://<nas>:5000/adwh/login`, a sign-in succeeds server-side,
@@ -388,9 +374,15 @@ Known behaviour of the diagnostic:
 
 - An unhealthy report stays cached, so one transient failure during a login keeps the diagnostic in front of
   every visitor until someone presses Re-check. By design: the report is computed on demand, never on a timer.
-- The server's DSM calls use the default 100 s `HttpClient` timeout while the WebAssembly client gives up after
-  15 s, so a DSM that times out during a login never shows `DsmUnreachable` in the browser. The diagnostic's
-  budget covers only its own steps.
+- A login gives DSM 10 s (`DsmLoginTimeoutSeconds`) before the diagnostic runs, and the browser waits 25 s, enough
+  for both; `AuthenticationServiceTests` asserts the sum. Measured on the Virtual DSM (7.2.2) on 2026-10-27 with
+  DSM's web API frozen (`synoscgi` stopped with `SIGSTOP`): before, DSM's own nginx ended the call after 60 s and the
+  `/adwh` proxy answered 504; now the login answers `DsmUnreachable` after 13 s, including when the frozen call is
+  the first `SYNO.API.Info` handshake, and Chrome shows the diagnostic. DSM took 4.5 to 6.6 s to refuse a wrong
+  password, which is why the budget is not shorter: at 5 s, two refusals in three ran the diagnostic. Other DSM
+  calls have no budget of their own.
+- A login whose budget runs out after DSM accepted the password leaves that SID live on DSM, and unbound here,
+  until DSM expires it, as any transport failure at that point already did (read from the code, not measured).
 
 ## Tooling and dependencies
 
