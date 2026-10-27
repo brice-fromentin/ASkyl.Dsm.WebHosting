@@ -38,9 +38,10 @@ public static class ApplicationConstants
     public const string DsmHttpClientName = "Dsm";
 
     /// <summary>
-    /// HTTP client timeout in seconds. Must exceed <see cref="WebSiteConstants.DefaultProcessTimeoutSeconds"/> to avoid client-side timeouts during stop operations. SIGTERM + ASP.NET Core drain completes in ~1-3 seconds; 15s provides headroom for the full request/response roundtrip.
+    /// HTTP client timeout in seconds. Must exceed <see cref="WebSiteConstants.DefaultProcessTimeoutSeconds"/> to avoid client-side timeouts during stop operations, and a login's
+    /// <see cref="DsmLoginTimeoutSeconds"/> plus a full diagnostic, so that a login against a DSM that never answers still ends on the diagnostic.
     /// </summary>
-    public const int HttpClientTimeoutSeconds = 15;
+    public const int HttpClientTimeoutSeconds = 25;
 
     /// <summary>
     /// Time allowed to each network step of the DSM connection diagnostic. Three such steps run in sequence,
@@ -49,11 +50,12 @@ public static class ApplicationConstants
     public const int DsmDiagnosticStepTimeoutSeconds = 3;
 
     /// <summary>
-    /// Time allowed to the DSM calls of a login. A login that runs out of it runs the diagnostic next, and both
-    /// must fit inside <see cref="HttpClientTimeoutSeconds"/>, or the browser gives up before it can show why.
-    /// A cold login took about one second on a Virtual DSM, handshake included.
+    /// Time allowed to the DSM calls of a login. On a Virtual DSM a login took under a second, but DSM took about
+    /// five to refuse a wrong password, so this leaves a refusal room twice over. A login that runs out of it runs
+    /// the diagnostic next, and both must fit inside <see cref="HttpClientTimeoutSeconds"/>, or the browser gives
+    /// up before it can show why.
     /// </summary>
-    public const int DsmLoginTimeoutSeconds = 5;
+    public const int DsmLoginTimeoutSeconds = 10;
 
     #endregion
 
