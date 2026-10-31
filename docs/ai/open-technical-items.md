@@ -29,6 +29,29 @@ that happens to listen on DSM's former port, from receiving a login; it cannot s
 the two needs either a second user for the hosted sites or admin UI files the package user cannot write. Whether
 DSM 7 offers either to a package running as `package` is not checked.
 
+### Every sign-in through the package is one DSM client
+
+DSM sees every login the package makes come from `127.0.0.1` with no user agent, so its two defences against
+password guessing cannot tell one browser from another. Measured on the Virtual DSM (7.2.2) on 2026-10-31, with
+DSM's Auto Block on at its defaults (10 attempts in 5 minutes, never expiring) and Account Protection switched on at
+its defaults:
+
+- **Auto Block exempts loopback.** 100 failed logins through the package in 35 s, from 20 simulated client
+  addresses, left DSM's deny list empty. The same attempts from a non-loopback address of the NAS were refused with
+  `407` (blocked address) from the 10th on. DSM never sees a guesser's own address, so only the package's limit,
+  5 logins a minute per client address, slows one down.
+- **Account Protection locks the package out.** After one successful sign-in through the package, DSM trusts that
+  single client; 10 failed logins on an account within a minute jail it for 30 minutes (table `tjail` of
+  `/var/lib/synosmartblock/db.sqlite`). Every sign-in to that account through the package then failed with `401`,
+  the right password included, while the same account still signed in to DSM directly from another address. Two
+  client addresses at the package's rate limit are enough to keep an administrator out of the package.
+- Not introduced by loopback mode: before it, DSM saw every login come from the NAS's own address, one client all
+  the same (inferred, not measured).
+
+Fix candidates, none tried: return the `did` (device id) that every successful `SYNO.API.Auth` login answers with,
+and the package ignores, once per browser, if DSM keys its trusted clients on it; or forward the browser's address,
+if DSM honours one from a proxy it trusts. A lockout of the package's own would only move the denial of service.
+
 ### The application listens on every IPv4 interface, not only behind nginx
 
 `spk-project/scripts/start-stop-status:9` exports `ASPNETCORE_URLS="http://0.0.0.0:7120"`, and
@@ -365,8 +388,7 @@ watches `DSM.json` instead, so a moved port is picked up without a restart.
 Still open:
 
 - **Untested DSM versions**: 7.2.0 and 7.3 were not tested.
-- **Not measured**: DSM's account protection sees every login coming from `127.0.0.1`, as it already saw the
-  NAS's own address before.
+- **Account protection**: measured, and a weakness; see *Every sign-in through the package is one DSM client*.
 - **Misleading remedy under `ADWH_DSM_URL`**: *not trusted* names the loopback cause ("the port is not held by
   DSM") even when the cause is a certificate the developer machine does not trust. The log names the errors.
 
