@@ -283,6 +283,17 @@ culture, and the first `Accept-Language` tag is compared as a whole against two-
 does not. It only decides the server-rendered `lang`/`dir` until the client sets its own
 (`Ui.Client/Services/CultureManager.cs`). How often real installs run with `def` has not been measured.
 
+### Cosmetic: a server that never answers reads differently on each screen
+
+The login page and the overlay's elapsed-seconds line cover the waits; what follows a wait that ends badly does
+not read the same everywhere. Read from code, not measured:
+
+- **Home and the dialogs** catch the browser giving up, but their toast or error dialog shows the exception's own
+  message, which is English and technical whatever the UI language.
+- **The licenses dialog** never fails: `LicenseService` swallows each file's failure, so the dialog opens empty,
+  and keeps that empty list until the page reloads (`_loadLicensesTask`).
+- **The installed-runtimes dialog** has its own inline indicator (`IsLoading`), without the elapsed seconds.
+
 ### The UI language changes between the login and the next click
 
 Seen in a browser on 2026-10-23, with the FluentUI 5 branch, though none of the culture code differs from

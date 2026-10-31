@@ -419,7 +419,9 @@ load-bearing: nginx terminates TLS, so without it `Request.IsHttps` is false and
 **Structure:**
 
 - **Components/Controls/** — custom UI controls: `AutoDataGrid` (generic data grid with sorting, reload, row click/double-click),  
-  `LoadingOverlay` (full-screen overlay for WorkingState disposable pattern),  
+  `LoadingOverlay` (full-screen overlay for WorkingState disposable pattern; once a wait passes
+  `LoadingElapsedThresholdSeconds`, 5 s, it adds a "Still working... N s" line, so a 10 to 25 s wait never
+  looks frozen),  
   `RealTimeNumberField` and `RealTimeTextField` (numeric/text input with real-time validation). Both wrap
   `FluentTextInput`; the number field deliberately avoids `FluentNumberInput`, which loads IMask from unpkg.com
   on first render and is refused by the CSP.
@@ -670,7 +672,8 @@ carries `ApiErrorCode.DsmUnreachable` and the login page shows the diagnostic. `
 anything from `ConnectAsync` except the caller's own cancellation, and gives it `DsmLoginTimeoutSeconds` (10 s,
 the `SYNO.API.Info` handshake included) so that a DSM that never answers still ends on the diagnostic inside the
 browser's `HttpClientTimeoutSeconds` (25 s). DSM takes seconds to refuse a wrong password, which bounds the budget
-from below.
+from below. When the browser gives up anyway, or cannot reach the server at all, the login page says so in a toast
+(`Error_ServerNotResponding`) instead of Blazor's "An unhandled error has occurred" bar.
 
 `ConnectAsync` returns an `ApiResult` rather than a bool so the caller can distinguish invalid credentials
 (`ApiErrorCode.Unauthorized`) from a valid non-administrator (`ApiErrorCode.Forbidden`) and localize each.
@@ -803,6 +806,9 @@ compiles. What the move established, for whoever touches the UI or the next majo
 - **Overlay.** Without `FullScreen`, `FluentOverlay` centres its content on its parent, which inside a dialog
   is a 0x0 box in a corner of the screen. Its content sits in a native `<dialog>` that gives text the
   browser's own colour, so `LoadingOverlay` sets `Color.Default`.
+- **Toasts.** Moq cannot stand in for `INotificationService` (Castle cannot implement one of its setters): a
+  bUnit test renders a `FluentToastProvider` and reads its markup. `ShowErrorToastAsync` says it waits for the
+  close result, yet a page's overlay was gone while its error toast still showed, in bUnit and in Chrome.
 - **Tabs.** `fluent-tab` reserves the width of its bold label from `--textContent`. It reads that value
   before Blazor inserts the label, so the dialog sets it through `HeaderStyle`
   (`LayoutConstants.TabLabelProperty`).
