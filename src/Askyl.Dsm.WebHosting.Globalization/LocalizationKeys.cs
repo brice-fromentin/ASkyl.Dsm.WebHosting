@@ -196,6 +196,8 @@ public static class LK
         public const string StoppingWebsite = "Loading_StoppingWebsite";
         public const string UpdatingWebsite = "Loading_UpdatingWebsite";
         public const string CreatingWebsite = "Loading_CreatingWebsite";
+        public const string LoggingOut = "Loading_LoggingOut";
+        public const string StillWorking = "Loading_StillWorking";
     }
 
     /// <summary>Error messages displayed to the user (toasts, dialogs, API responses).</summary>
@@ -226,6 +228,7 @@ public static class LK
         public const string FailedToInstallFramework = "Error_FailedToInstallFramework";
         public const string FailedToLogin = "Error_FailedToLogin";
         public const string FailedToCheckAuthStatus = "Error_FailedToCheckAuthStatus";
+        public const string ServerNotResponding = "Error_ServerNotResponding";
         public const string Unknown = "Error_Unknown";
         public const string ApplicationPathRequired = "Error_ApplicationPathRequired";
         public const string InstallationFailed = "Error_InstallationFailed";

@@ -425,6 +425,12 @@
   <data name="Loading_CreatingWebsite" xml:space="preserve">
     <value>Création de '{0}'...</value>
   </data>
+  <data name="Loading_LoggingOut" xml:space="preserve">
+    <value>Déconnexion...</value>
+  </data>
+  <data name="Loading_StillWorking" xml:space="preserve">
+    <value>Toujours en cours... {0} s</value>
+  </data>
 
   <!-- Error -->
   <data name="Error_AuthenticationFailed" xml:space="preserve">
@@ -498,6 +504,9 @@
   </data>
   <data name="Error_FailedToLogin" xml:space="preserve">
     <value>Échec de la connexion</value>
+  </data>
+  <data name="Error_ServerNotResponding" xml:space="preserve">
+    <value>Le serveur n'a pas répondu. Réessayez dans un instant.</value>
   </data>
   <data name="Error_FailedToCheckAuthStatus" xml:space="preserve">
     <value>Échec de la vérification du statut d'authentification</value>

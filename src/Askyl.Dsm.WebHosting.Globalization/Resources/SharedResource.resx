@@ -425,6 +425,12 @@
   <data name="Loading_CreatingWebsite" xml:space="preserve">
     <value>Creating '{0}'...</value>
   </data>
+  <data name="Loading_LoggingOut" xml:space="preserve">
+    <value>Signing out...</value>
+  </data>
+  <data name="Loading_StillWorking" xml:space="preserve">
+    <value>Still working... {0} s</value>
+  </data>
 
   <!-- Error -->
   <data name="Error_AuthenticationFailed" xml:space="preserve">
@@ -498,6 +504,9 @@
   </data>
   <data name="Error_FailedToLogin" xml:space="preserve">
     <value>Failed to login</value>
+  </data>
+  <data name="Error_ServerNotResponding" xml:space="preserve">
+    <value>The server did not answer. Try again in a moment.</value>
   </data>
   <data name="Error_FailedToCheckAuthStatus" xml:space="preserve">
     <value>Failed to check authentication status</value>

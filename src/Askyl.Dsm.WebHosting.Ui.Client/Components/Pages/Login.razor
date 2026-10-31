@@ -75,14 +75,22 @@
         // The overlay covers the form until the report is known, so it cannot flash under a user who started typing
         using var worker = this.CreateWorkingState(localizer[LK.Diagnostic.Checking]);
 
-        var isAuthenticatedResult = await authService.IsAuthenticatedAsync();
-        if (isAuthenticatedResult.Success && isAuthenticatedResult.Value == true)
+        try
         {
-            navigation.NavigateTo(ApplicationConstants.HomePagePath);
-            return;
-        }
+            var isAuthenticatedResult = await authService.IsAuthenticatedAsync();
+            if (isAuthenticatedResult.Success && isAuthenticatedResult.Value == true)
+            {
+                navigation.NavigateTo(ApplicationConstants.HomePagePath);
+                return;
+            }
 
-        Report = (await diagnosticService.GetReportAsync()).Value;
+            Report = (await diagnosticService.GetReportAsync()).Value;
+        }
+        catch (Exception exception) when (IsNoAnswer(exception))
+        {
+            // Report stays null, so the form shows, as when the report could not be read
+            await ToastService.ShowErrorToastAsync(localizer[LK.Error.ServerNotResponding]);
+        }
     }
 
     private async Task Authenticate(EditContext context)
@@ -94,32 +102,39 @@
 
         using var worker = this.CreateWorkingState(localizer[LK.Login.Authenticating]);
 
-        var result = await authService.LoginAsync(Model.Login, Model.Password, Model.OtpCode);
-
-        if (!result.Success || !result.IsAuthenticated)
+        try
         {
-            if (result.ErrorCode == ApiErrorCode.DsmUnreachable)
-            {
-                // The server re-ran the checks before answering; the panel says more than a toast
-                Report = (await diagnosticService.GetReportAsync()).Value;
+            var result = await authService.LoginAsync(Model.Login, Model.Password, Model.OtpCode);
 
-                if (Report is { IsHealthy: false })
+            if (!result.Success || !result.IsAuthenticated)
+            {
+                if (result.ErrorCode == ApiErrorCode.DsmUnreachable)
                 {
-                    return;
+                    // The server re-ran the checks before answering; the panel says more than a toast
+                    Report = (await diagnosticService.GetReportAsync()).Value;
+
+                    if (Report is { IsHealthy: false })
+                    {
+                        return;
+                    }
                 }
+
+                // failed - either HTTP call failed or credentials invalid
+                var errorMessage = result.Message?.Trim() ?? localizer[LK.Error.AuthenticationFailed];
+                await ToastService.ShowErrorToastAsync(errorMessage);
+                return;
             }
 
-            // failed - either HTTP call failed or credentials invalid
-            var errorMessage = result.Message?.Trim() ?? localizer[LK.Error.AuthenticationFailed];
-            await ToastService.ShowErrorToastAsync(errorMessage);
-            return;
+            // Initialize culture from login response (user preference or system fallback)
+            cultureManager.InitializeFromLogin(result.Culture, result.DateFormat, result.TimeFormat);
+
+            await ToastService.ShowSuccessToastAsync(localizer[LK.Success.AuthenticationSuccessful]);
+            navigation.NavigateTo(ApplicationConstants.HomePagePath);
         }
-
-        // Initialize culture from login response (user preference or system fallback)
-        cultureManager.InitializeFromLogin(result.Culture, result.DateFormat, result.TimeFormat);
-
-        await ToastService.ShowSuccessToastAsync(localizer[LK.Success.AuthenticationSuccessful]);
-        navigation.NavigateTo(ApplicationConstants.HomePagePath);
+        catch (Exception exception) when (IsNoAnswer(exception))
+        {
+            await ToastService.ShowErrorToastAsync(localizer[LK.Error.ServerNotResponding]);
+        }
     }
 
     private async Task Recheck()
@@ -131,14 +146,25 @@
 
         using var worker = this.CreateWorkingState(localizer[LK.Diagnostic.Checking]);
 
-        var result = await diagnosticService.RecheckAsync();
-
-        if (!result.Success)
+        try
         {
-            await ToastService.ShowErrorToastAsync(result.Message ?? localizer[LK.Diagnostic.Unavailable]);
-            return;
-        }
+            var result = await diagnosticService.RecheckAsync();
 
-        Report = result.Value;
+            if (!result.Success)
+            {
+                await ToastService.ShowErrorToastAsync(result.Message ?? localizer[LK.Diagnostic.Unavailable]);
+                return;
+            }
+
+            Report = result.Value;
+        }
+        catch (Exception exception) when (IsNoAnswer(exception))
+        {
+            await ToastService.ShowErrorToastAsync(localizer[LK.Error.ServerNotResponding]);
+        }
     }
+
+    // What the browser's HttpClient throws once its wait runs out (TaskCanceledException), or when the server
+    // cannot be reached at all; without a catch, either one ends on Blazor's "An unhandled error has occurred" bar
+    private static bool IsNoAnswer(Exception exception) => exception is TaskCanceledException or HttpRequestException;
 }

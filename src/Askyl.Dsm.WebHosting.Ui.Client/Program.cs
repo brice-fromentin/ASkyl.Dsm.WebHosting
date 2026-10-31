@@ -50,6 +50,9 @@ var dsmHttpsPort = Int32.TryParse(Environment.GetEnvironmentVariable(Application
     && parsedPort > IPEndPoint.MinPort && parsedPort <= IPEndPoint.MaxPort ? parsedPort : SystemDefaults.DefaultHttpsPort;
 builder.Services.AddSingleton(new DsmHttpsEndpoint(dsmHttpsPort));
 
+// The loading overlay's clock, which counts a long wait out loud
+builder.Services.AddSingleton(TimeProvider.System);
+
 // Register authentication service as Singleton for app lifetime
 // Authentication state is managed server-side via session cookies, not client storage
 builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();

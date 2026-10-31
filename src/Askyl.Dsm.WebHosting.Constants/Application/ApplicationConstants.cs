@@ -186,6 +186,12 @@ public static class ApplicationConstants
     /// </summary>
     public const int DoubleClickTimeoutMilliseconds = 400;
 
+    /// <summary>
+    /// Wait, in seconds, after which the loading overlay starts counting the seconds out loud. A login alone may
+    /// take <see cref="DsmLoginTimeoutSeconds"/>, and a still screen that long reads as a frozen one.
+    /// </summary>
+    public const int LoadingElapsedThresholdSeconds = 5;
+
     #endregion
 
     #region File Operations
