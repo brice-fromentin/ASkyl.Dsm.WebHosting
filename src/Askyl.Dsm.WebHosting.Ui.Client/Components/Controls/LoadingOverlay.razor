@@ -1,3 +1,11 @@
+@implements IDisposable
+
+@using Askyl.Dsm.WebHosting.Constants.Application
+@using Askyl.Dsm.WebHosting.Globalization
+
+@inject TimeProvider timeProvider
+@inject ILocalizer localizer
+
 @* Without FullScreen, FluentUI 5 centres the content on the overlay's parent, a 0x0 box inside a dialog *@
 <FluentOverlay Visible="@WorkingState.IsWorking" Opacity="@Opacity" FullScreen="true">
     <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center">
@@ -7,14 +15,52 @@
         <FluentText As="TextTag.H5" Size="TextSize.Size400" Weight="TextWeight.Semibold" Color="Color.Default" Class="full-size">
             @WorkingState.Message
         </FluentText>
+        @if (Elapsed is { } elapsed)
+        {
+            <FluentText Color="Color.Default">@localizer[LK.Loading.StillWorking, (int)elapsed.TotalSeconds]</FluentText>
+        }
     </FluentStack>
 </FluentOverlay>
 
 @code
 {
+    static readonly TimeSpan Threshold = TimeSpan.FromSeconds(ApplicationConstants.LoadingElapsedThresholdSeconds);
+
+    // The counter shows whole seconds
+    static readonly TimeSpan Tick = TimeSpan.FromSeconds(1);
+
+    private ITimer? _timer;
+
+    private long _startedAt;
+
     [Parameter, EditorRequired]
     public WorkingStateBase WorkingState { get; set; } = default!;
 
     [Parameter]
     public int Opacity { get; set; } = 40;
+
+    // Null while the wait is short enough not to look frozen
+    private TimeSpan? Elapsed => _timer is not null && timeProvider.GetElapsedTime(_startedAt) is var elapsed && elapsed >= Threshold ? elapsed : null;
+
+    // The page re-renders its overlay whenever its working state changes, so this sees every wait start and end
+    protected override void OnParametersSet()
+    {
+        if (!WorkingState.IsWorking)
+        {
+            StopCounting();
+        }
+        else if (_timer is null)
+        {
+            _startedAt = timeProvider.GetTimestamp();
+            _timer = timeProvider.CreateTimer(_ => _ = InvokeAsync(StateHasChanged), null, Threshold, Tick);
+        }
+    }
+
+    public void Dispose() => StopCounting();
+
+    private void StopCounting()
+    {
+        _timer?.Dispose();
+        _timer = null;
+    }
 }

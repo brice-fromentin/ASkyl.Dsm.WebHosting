@@ -69,17 +69,11 @@
   <data name="Close" xml:space="preserve">
     <value>Close</value>
   </data>
-  <data name="Save" xml:space="preserve">
-    <value>Save</value>
-  </data>
   <data name="Delete" xml:space="preserve">
     <value>Delete</value>
   </data>
   <data name="Refresh" xml:space="preserve">
     <value>Refresh</value>
-  </data>
-  <data name="Loading" xml:space="preserve">
-    <value>Loading...</value>
   </data>
   <data name="Common_Size" xml:space="preserve">
     <value>Size</value>
@@ -124,6 +118,78 @@
   </data>
   <data name="Login_Authenticating" xml:space="preserve">
     <value>Authenticating...</value>
+  </data>
+  <data name="Login_InsecureTitle" xml:space="preserve">
+    <value>This connection is not secure</value>
+  </data>
+  <data name="Login_InsecureBody" xml:space="preserve">
+    <value>This page was opened over HTTP, without SSL. Signing in needs HTTPS: without it the browser does not keep your session, and your DSM password would travel unencrypted.</value>
+  </data>
+  <data name="Login_OpenSecureVersion" xml:space="preserve">
+    <value>Open the secure version</value>
+  </data>
+  <data name="Login_InsecureIcon" xml:space="preserve">
+    <value>Not secure</value>
+  </data>
+  <data name="Diagnostic_Unavailable" xml:space="preserve">
+    <value>The DSM connection check is unavailable.</value>
+  </data>
+  <data name="Diagnostic_DsmUnreachable" xml:space="preserve">
+    <value>DSM cannot be reached.</value>
+  </data>
+  <data name="Diagnostic_Title" xml:space="preserve">
+    <value>DSM cannot be reached</value>
+  </data>
+  <data name="Diagnostic_Intro" xml:space="preserve">
+    <value>This application signs you in through DSM, and cannot reach it. The first failed check below says what to fix in DSM.</value>
+  </data>
+  <data name="Diagnostic_CheckedAt" xml:space="preserve">
+    <value>Checked {0:g}</value>
+  </data>
+  <data name="Diagnostic_Recheck" xml:space="preserve">
+    <value>Re-check</value>
+  </data>
+  <data name="Diagnostic_Checking" xml:space="preserve">
+    <value>Checking the connection to DSM...</value>
+  </data>
+  <data name="Diagnostic_StatusPassed" xml:space="preserve">
+    <value>Passed</value>
+  </data>
+  <data name="Diagnostic_StatusFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Diagnostic_StatusSkipped" xml:space="preserve">
+    <value>Not run</value>
+  </data>
+  <data name="Diagnostic_CheckPortAnswers" xml:space="preserve">
+    <value>DSM answers on its HTTPS port</value>
+  </data>
+  <data name="Diagnostic_CheckConnectionTrusted" xml:space="preserve">
+    <value>The connection to DSM is trusted</value>
+  </data>
+  <data name="Diagnostic_CheckApiAnswers" xml:space="preserve">
+    <value>The DSM API answers</value>
+  </data>
+  <data name="Diagnostic_FailurePortRefused" xml:space="preserve">
+    <value>DSM does not answer on port {0}. Check that DSM is running, and its HTTPS port in Control Panel &gt; Login Portal &gt; DSM &gt; DSM port (HTTPS), then re-check.</value>
+  </data>
+  <data name="Diagnostic_FailurePortTimedOut" xml:space="preserve">
+    <value>DSM did not answer on port {0} in time. Check that DSM is running, and its HTTPS port in Control Panel &gt; Login Portal &gt; DSM &gt; DSM port (HTTPS), then re-check.</value>
+  </data>
+  <data name="Diagnostic_FailureNotTrusted" xml:space="preserve">
+    <value>Port {0} is not held by DSM, so the connection cannot be trusted. If DSM's HTTPS port was just changed, re-check in a moment.</value>
+  </data>
+  <data name="Diagnostic_FailureHandshakeFailed" xml:space="preserve">
+    <value>Port {0} accepted the connection but did not complete a TLS handshake. Check that it is DSM's HTTPS port in Control Panel &gt; Login Portal &gt; DSM &gt; DSM port (HTTPS).</value>
+  </data>
+  <data name="Diagnostic_FailureUnexpectedResponse" xml:space="preserve">
+    <value>The DSM API answered HTTP {0} instead of its API list. Check that this port serves DSM itself.</value>
+  </data>
+  <data name="Diagnostic_FailureNoResponse" xml:space="preserve">
+    <value>The DSM API did not answer.</value>
+  </data>
+  <data name="Diagnostic_FailureUnexpected" xml:space="preserve">
+    <value>This check failed in a way the application does not recognize. The application log has the details.</value>
   </data>
 
   <!-- Home -->
@@ -359,6 +425,12 @@
   <data name="Loading_CreatingWebsite" xml:space="preserve">
     <value>Creating '{0}'...</value>
   </data>
+  <data name="Loading_LoggingOut" xml:space="preserve">
+    <value>Signing out...</value>
+  </data>
+  <data name="Loading_StillWorking" xml:space="preserve">
+    <value>Still working... {0} s</value>
+  </data>
 
   <!-- Error -->
   <data name="Error_AuthenticationFailed" xml:space="preserve">
@@ -433,6 +505,9 @@
   <data name="Error_FailedToLogin" xml:space="preserve">
     <value>Failed to login</value>
   </data>
+  <data name="Error_ServerNotResponding" xml:space="preserve">
+    <value>The server did not answer. Try again in a moment.</value>
+  </data>
   <data name="Error_FailedToCheckAuthStatus" xml:space="preserve">
     <value>Failed to check authentication status</value>
   </data>
@@ -463,9 +538,6 @@
   <data name="Error_ApplicationBinaryNotFound" xml:space="preserve">
     <value>Application binary not found: {0}</value>
   </data>
-  <data name="Error_IncompatibleFramework" xml:space="preserve">
-    <value>Incompatible framework</value>
-  </data>
   <data name="Error_RuntimeNotInstalled" xml:space="preserve">
     <value>Requires .NET {0}, but this runtime is not installed</value>
   </data>
@@ -483,9 +555,6 @@
   </data>
   <data name="Error_FailedToSetACL" xml:space="preserve">
     <value>Failed to set ACL permissions for {0}: Success={1}, ErrorCode={2}</value>
-  </data>
-  <data name="Error_NoSessionFound" xml:space="preserve">
-    <value>No session found</value>
   </data>
   <data name="Error_SessionExpired" xml:space="preserve">
     <value>Session expired on server</value>
@@ -515,9 +584,6 @@
   </data>
 
   <!-- Validation -->
-  <data name="Validation_PathRequired" xml:space="preserve">
-    <value>Path is required</value>
-  </data>
   <data name="Validation_PathTraversalDetected" xml:space="preserve">
     <value>Invalid path: traversal sequences are not allowed</value>
   </data>

@@ -13,10 +13,8 @@ public static class LK
         public const string OK = "OK";
         public const string Cancel = "Cancel";
         public const string Close = "Close";
-        public const string Save = "Save";
         public const string Delete = "Delete";
         public const string Refresh = "Refresh";
-        public const string Loading = "Loading";
         public const string Size = "Common_Size";
         public const string Type = "Common_Type";
         public const string Modified = "Common_Modified";
@@ -36,6 +34,35 @@ public static class LK
         public const string PasswordLabel = "Login_PasswordLabel";
         public const string OTPLabel = "Login_OTPLabel";
         public const string Authenticating = "Login_Authenticating";
+        public const string InsecureTitle = "Login_InsecureTitle";
+        public const string InsecureBody = "Login_InsecureBody";
+        public const string OpenSecureVersion = "Login_OpenSecureVersion";
+        public const string InsecureIcon = "Login_InsecureIcon";
+    }
+
+    /// <summary>DSM connection diagnostic strings.</summary>
+    public static class Diagnostic
+    {
+        public const string Unavailable = "Diagnostic_Unavailable";
+        public const string DsmUnreachable = "Diagnostic_DsmUnreachable";
+        public const string Title = "Diagnostic_Title";
+        public const string Intro = "Diagnostic_Intro";
+        public const string CheckedAt = "Diagnostic_CheckedAt";
+        public const string Recheck = "Diagnostic_Recheck";
+        public const string Checking = "Diagnostic_Checking";
+        public const string StatusPassed = "Diagnostic_StatusPassed";
+        public const string StatusFailed = "Diagnostic_StatusFailed";
+        public const string StatusSkipped = "Diagnostic_StatusSkipped";
+        public const string CheckPortAnswers = "Diagnostic_CheckPortAnswers";
+        public const string CheckConnectionTrusted = "Diagnostic_CheckConnectionTrusted";
+        public const string CheckApiAnswers = "Diagnostic_CheckApiAnswers";
+        public const string FailurePortRefused = "Diagnostic_FailurePortRefused";
+        public const string FailurePortTimedOut = "Diagnostic_FailurePortTimedOut";
+        public const string FailureNotTrusted = "Diagnostic_FailureNotTrusted";
+        public const string FailureHandshakeFailed = "Diagnostic_FailureHandshakeFailed";
+        public const string FailureUnexpectedResponse = "Diagnostic_FailureUnexpectedResponse";
+        public const string FailureNoResponse = "Diagnostic_FailureNoResponse";
+        public const string FailureUnexpected = "Diagnostic_FailureUnexpected";
     }
 
     /// <summary>Home page strings (toolbar, grid columns, toasts).</summary>
@@ -169,6 +196,8 @@ public static class LK
         public const string StoppingWebsite = "Loading_StoppingWebsite";
         public const string UpdatingWebsite = "Loading_UpdatingWebsite";
         public const string CreatingWebsite = "Loading_CreatingWebsite";
+        public const string LoggingOut = "Loading_LoggingOut";
+        public const string StillWorking = "Loading_StillWorking";
     }
 
     /// <summary>Error messages displayed to the user (toasts, dialogs, API responses).</summary>
@@ -199,6 +228,7 @@ public static class LK
         public const string FailedToInstallFramework = "Error_FailedToInstallFramework";
         public const string FailedToLogin = "Error_FailedToLogin";
         public const string FailedToCheckAuthStatus = "Error_FailedToCheckAuthStatus";
+        public const string ServerNotResponding = "Error_ServerNotResponding";
         public const string Unknown = "Error_Unknown";
         public const string ApplicationPathRequired = "Error_ApplicationPathRequired";
         public const string InstallationFailed = "Error_InstallationFailed";
@@ -208,14 +238,12 @@ public static class LK
         public const string FailedToQueueStop = "Error_FailedToQueueStop";
         public const string SiteAlreadyRunning = "Error_SiteAlreadyRunning";
         public const string ApplicationBinaryNotFound = "Error_ApplicationBinaryNotFound";
-        public const string IncompatibleFramework = "Error_IncompatibleFramework";
         public const string RuntimeNotInstalled = "Error_RuntimeNotInstalled";
         public const string RuntimeDetectionFailed = "Error_RuntimeDetectionFailed";
         public const string InstanceNotFound = "Error_InstanceNotFound";
         public const string NoApplicationPath = "Error_NoApplicationPath";
         public const string SiteNotFound = "Error_SiteNotFound";
         public const string FailedToSetACL = "Error_FailedToSetACL";
-        public const string NoSessionFound = "Error_NoSessionFound";
         public const string SessionExpired = "Error_SessionExpired";
         public const string FailedToSetPermissions = "Error_FailedToSetPermissions";
         public const string FailedToCreateReverseProxy = "Error_FailedToCreateReverseProxy";
@@ -234,7 +262,6 @@ public static class LK
     /// <summary>Validation error messages from server-side services (not model-specific).</summary>
     public static class Validation
     {
-        public const string PathRequired = "Validation_PathRequired";
         public const string PathTraversalDetected = "Validation_PathTraversalDetected";
         public const string InvalidVersionFormat = "Validation_InvalidVersionFormat";
         public const string VersionRequired = "Validation_VersionRequired";

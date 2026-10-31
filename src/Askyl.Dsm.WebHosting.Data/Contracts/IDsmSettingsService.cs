@@ -1,13 +1,14 @@
 namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 /// <summary>
-/// Reads DSM system preferences from /etc/synoinfo.conf once at startup.
-/// Provides graceful fallback defaults if the configuration file is missing or malformed.
+/// The DSM endpoint and system language, read at startup and again on <see cref="Reload"/>. On the NAS, DSM is
+/// reached over loopback on the HTTPS port of its web configuration (DSM.json); a developer machine names DSM's
+/// URL in the ADWH_DSM_URL environment variable instead.
 /// </summary>
 public interface IDsmSettingsService
 {
     /// <summary>
-    /// The DSM server address (e.g. "127.0.0.1").
+    /// The address the application connects to: 127.0.0.1, or the host of ADWH_DSM_URL when it is set.
     /// </summary>
     string Server { get; }
 
@@ -17,7 +18,13 @@ public interface IDsmSettingsService
     int Port { get; }
 
     /// <summary>
-    /// The system language in DSM format (e.g. "enu", "fra").
+    /// The system language in DSM format (e.g. "enu", "fra"), or the default when synoinfo.conf cannot be read.
     /// </summary>
     string Language { get; }
+
+    /// <summary>
+    /// Re-reads the settings, so a port changed in DSM applies without a restart.
+    /// Throws <see cref="InvalidOperationException"/> when ADWH_DSM_URL is not an absolute https URL, keeping the previous values.
+    /// </summary>
+    void Reload();
 }

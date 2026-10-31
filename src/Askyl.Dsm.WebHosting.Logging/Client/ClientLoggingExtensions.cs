@@ -44,64 +44,44 @@ public static partial class ClientLoggingExtensions
     [LoggerMessage(EventId = 7600001, Level = LogLevel.Debug, Message = "Culture resolved from login response: {Culture}")]
     public static partial void CultureResolvedFromLogin(this ILogger<ILogCultureManager> logger, string culture);
 
-    /// <summary>
-    /// Logs the browser language fallback detection.
-    /// </summary>
-    [LoggerMessage(EventId = 7600002, Level = LogLevel.Debug, Message = "Culture resolved from browser language: {Culture}")]
-    public static partial void CultureResolvedFromBrowser(this ILogger<ILogCultureManager> logger, string culture);
 
-    /// <summary>
-    /// Logs the fallback to default culture.
-    /// </summary>
-    [LoggerMessage(EventId = 7600003, Level = LogLevel.Debug, Message = "Culture resolved to default: {Culture}")]
-    public static partial void CultureResolvedToDefault(this ILogger<ILogCultureManager> logger, string culture);
 
     /// <summary>
     /// Logs the final culture applied to the thread.
     /// </summary>
-    [LoggerMessage(EventId = 7600004, Level = LogLevel.Debug, Message = "Culture applied to thread: {Culture}")]
+    [LoggerMessage(EventId = 7600002, Level = LogLevel.Debug, Message = "Culture applied to thread: {Culture}")]
     public static partial void CultureApplied(this ILogger<ILogCultureManager> logger, string culture);
 
-    /// <summary>
-    /// Logs a failure to detect browser language via JS interop.
-    /// </summary>
-    [LoggerMessage(EventId = 7600005, Level = LogLevel.Debug, Message = "Failed to detect browser language via JS interop")]
-    public static partial void BrowserLanguageDetectionFailed(this ILogger<ILogCultureManager> logger, Exception ex);
 
-    /// <summary>
-    /// Logs the culture resolved from DSM system settings.
-    /// </summary>
-    [LoggerMessage(EventId = 7600006, Level = LogLevel.Debug, Message = "Culture resolved from DSM system settings: {Culture}")]
-    public static partial void CultureResolvedFromSystem(this ILogger<ILogCultureManager> logger, string culture);
 
     /// <summary>
     /// Logs the culture reset to DSM system resolution (on logout).
     /// </summary>
-    [LoggerMessage(EventId = 7600007, Level = LogLevel.Debug, Message = "Culture reset to system resolution: {Culture}")]
+    [LoggerMessage(EventId = 7600003, Level = LogLevel.Debug, Message = "Culture reset to system resolution: {Culture}")]
     public static partial void CultureResetToSystem(this ILogger<ILogCultureManager> logger, string culture);
 
     /// <summary>
     /// Logs that an invalid date format was ignored and the culture default was kept.
     /// </summary>
-    [LoggerMessage(EventId = 7600008, Level = LogLevel.Warning, Message = "Invalid date format ignored, using culture default: {DateFormat}")]
+    [LoggerMessage(EventId = 7600004, Level = LogLevel.Warning, Message = "Invalid date format ignored, using culture default: {DateFormat}")]
     public static partial void InvalidDateFormatIgnored(this ILogger<ILogCultureManager> logger, string dateFormat);
 
     /// <summary>
     /// Logs that an invalid time format was ignored and the culture default was kept.
     /// </summary>
-    [LoggerMessage(EventId = 7600009, Level = LogLevel.Warning, Message = "Invalid time format ignored, using culture default: {TimeFormat}")]
+    [LoggerMessage(EventId = 7600005, Level = LogLevel.Warning, Message = "Invalid time format ignored, using culture default: {TimeFormat}")]
     public static partial void InvalidTimeFormatIgnored(this ILogger<ILogCultureManager> logger, string timeFormat);
 
     /// <summary>
     /// Logs that the user's culture from login was not supported and fell back to system resolution.
     /// </summary>
-    [LoggerMessage(EventId = 7600010, Level = LogLevel.Warning, Message = "User culture '{UserCulture}' not supported, falling back to '{FallbackCulture}'")]
+    [LoggerMessage(EventId = 7600006, Level = LogLevel.Warning, Message = "User culture '{UserCulture}' not supported, falling back to '{FallbackCulture}'")]
     public static partial void UserCultureUnsupported(this ILogger<ILogCultureManager> logger, string userCulture, string fallbackCulture);
 
     /// <summary>
     /// Logs a failure to write the lang and dir attributes that is not the expected early-startup one.
     /// </summary>
-    [LoggerMessage(EventId = 7600011, Level = LogLevel.Warning, Message = "Could not set the html lang and dir attributes; the culture itself was applied")]
+    [LoggerMessage(EventId = 7600007, Level = LogLevel.Warning, Message = "Could not set the html lang and dir attributes; the culture itself was applied")]
     public static partial void HtmlLangAndDirUpdateFailed(this ILogger<ILogCultureManager> logger, Exception exception);
 
     #endregion

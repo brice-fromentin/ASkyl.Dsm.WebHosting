@@ -84,7 +84,7 @@ The generated `.spk` file will be available in the `dist/` directory.
 - **DSM Version**: 7.2 or higher
 - **Architecture**: x86_64 (64-bit Intel/AMD processors only)
 - **Ports**: 7120 (internal), 7121 (HTTPS proxy)
-- **Services**: nginx service restart during install/uninstall
+- **Services**: nginx reloaded when the package starts or stops (`startstop_restart_services`), so `/adwh` follows it
 
 ## Configuration Files
 

@@ -26,6 +26,11 @@ public enum ApiErrorCode
     InvalidState = 1001,
 
     /// <summary>
+    /// The application cannot reach its DSM; the connection diagnostic says why.
+    /// </summary>
+    DsmUnreachable = 1002,
+
+    /// <summary>
     /// Authentication or authorization failed.
     /// </summary>
     Unauthorized = 401,

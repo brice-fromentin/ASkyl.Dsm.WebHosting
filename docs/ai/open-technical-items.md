@@ -15,6 +15,43 @@ added above it. Line numbers are the first thing to go stale here; re-run the sw
 
 ## Security
 
+### A hosted site runs as the package user, which owns the admin UI's files
+
+`SiteLifecycleManager.CreateProcessStartInfo` sets no `UserName`, so every hosted site runs as the package user
+(`conf/privilege`, `run-as` `package`), like the admin UI. Measured on the Virtual DSM (7.2.2): the admin UI's
+directory and assembly belong to that user (`755` and `644`), and the kernel has no Yama `ptrace_scope`. A hosted
+site that gets compromised — the part of the package exposed to the internet by design — can therefore replace the
+admin UI's assembly, which then runs at the next start and receives the administrator's DSM password at the next
+sign-in. Without Yama it can presumably also attach to the running admin UI (inferred, not tried).
+
+This bounds the loopback certificate rule: its root-listener check keeps another user's process, or a hosted site
+that happens to listen on DSM's former port, from receiving a login; it cannot stop a hostile hosted site. Separating
+the two needs either a second user for the hosted sites or admin UI files the package user cannot write. Whether
+DSM 7 offers either to a package running as `package` is not checked.
+
+### Every sign-in through the package is one DSM client
+
+DSM sees every login the package makes come from `127.0.0.1` with no user agent, so its two defences against
+password guessing cannot tell one browser from another. Measured on the Virtual DSM (7.2.2) on 2026-10-31, with
+DSM's Auto Block on at its defaults (10 attempts in 5 minutes, never expiring) and Account Protection switched on at
+its defaults:
+
+- **Auto Block exempts loopback.** 100 failed logins through the package in 35 s, from 20 simulated client
+  addresses, left DSM's deny list empty. The same attempts from a non-loopback address of the NAS were refused with
+  `407` (blocked address) from the 10th on. DSM never sees a guesser's own address, so only the package's limit,
+  5 logins a minute per client address, slows one down.
+- **Account Protection locks the package out.** After one successful sign-in through the package, DSM trusts that
+  single client; 10 failed logins on an account within a minute jail it for 30 minutes (table `tjail` of
+  `/var/lib/synosmartblock/db.sqlite`). Every sign-in to that account through the package then failed with `401`,
+  the right password included, while the same account still signed in to DSM directly from another address. Two
+  client addresses at the package's rate limit are enough to keep an administrator out of the package.
+- Not introduced by loopback mode: before it, DSM saw every login come from the NAS's own address, one client all
+  the same (inferred, not measured).
+
+Fix candidates, none tried: return the `did` (device id) that every successful `SYNO.API.Auth` login answers with,
+and the package ignores, once per browser, if DSM keys its trusted clients on it; or forward the browser's address,
+if DSM honours one from a proxy it trusts. A lockout of the package's own would only move the denial of service.
+
 ### The application listens on every IPv4 interface, not only behind nginx
 
 `spk-project/scripts/start-stop-status:9` exports `ASPNETCORE_URLS="http://0.0.0.0:7120"`, and
@@ -216,6 +253,20 @@ A fresh install from such a package starts with that site list; an upgrade resto
 not carry it, but none has ever been published (see *No release has ever been published*), so every SPK
 installed so far was built locally. Excluding it from publish in the `.csproj`, or deleting it in `build-spk.sh`, closes it.
 
+### Signing in over plain HTTP succeeds on the server but the user stays on the login page
+
+Measured on the Virtual DSM on 2026-10-26: opened as `http://<nas>:5000/adwh/login`, a sign-in succeeds server-side,
+yet the next request carries no session. The session and binding cookies are `Secure`, and browsers refuse to store a
+`Secure` cookie received over plain HTTP, so the navigation guard sends the user back to the login. Over the HTTPS
+port it works. DSM's own "redirect HTTP to HTTPS" setting (`enable_https_redirect`) does not help: measured in a real
+browser, it redirects DSM's desktop (a script in DSM's page; nginx's generated configuration has no 30x) but not
+`/adwh/login`. The cookies stay `Secure`: the session must not travel in clear.
+
+Remedy: the login page detects non-loopback plain HTTP (`http://localhost` is a secure context and keeps working) and
+shows a card with a button to the HTTPS version on DSM's port, which the host page passes to the client as
+`ADWH_DSM_HTTPS_PORT`. Not covered: the card is client-side, so it appears only once the WebAssembly runtime has
+loaded over HTTP.
+
 ### Cosmetic: packaging leaves precompressed development settings behind
 
 `build-spk.sh` deletes `*Development.json` from the publish output, which misses the client's
@@ -231,6 +282,17 @@ culture, and the first `Accept-Language` tag is compared as a whole against two-
 `fr-FR` does not, and the page falls back to `en-US`. The comment there says it takes "the first 2 chars"; the code
 does not. It only decides the server-rendered `lang`/`dir` until the client sets its own
 (`Ui.Client/Services/CultureManager.cs`). How often real installs run with `def` has not been measured.
+
+### Cosmetic: a server that never answers reads differently on each screen
+
+The login page and the overlay's elapsed-seconds line cover the waits; what follows a wait that ends badly does
+not read the same everywhere. Read from code, not measured:
+
+- **Home and the dialogs** catch the browser giving up, but their toast or error dialog shows the exception's own
+  message, which is English and technical whatever the UI language.
+- **The licenses dialog** never fails: `LicenseService` swallows each file's failure, so the dialog opens empty,
+  and keeps that empty list until the page reloads (`_loadLicensesTask`).
+- **The installed-runtimes dialog** has its own inline indicator (`IsLoading`), without the elapsed seconds.
 
 ### The UI language changes between the login and the next click
 
@@ -264,51 +326,96 @@ before Serilog was up — an unhandled startup exception, for instance — survi
 and a host that fails to boot produces no downloadable archive at all. Appending (`>>`) with a size bound
 would keep it.
 
-### The package needs a DSM hostname and a matching certificate, and says so nowhere
+### Resolved by loopback mode: the package needed a DSM hostname and a matching certificate
 
-The application reaches its own DSM at `https://{external_host_ip}:{external_port_dsm_https}`
-(`Data/DsmApi/Parameters/ApiParametersBase.cs:58`, called from `Tools/Network/DsmApiClient.cs:45,88`), through
-the default `HttpClient` (`Ui/Program.cs:42`), so with full certificate validation. That works only if DSM has a
-hostname under *External Access*, its certificate covers that name, the name resolves from the NAS itself, and
-the external port reaches DSM from inside. The README names none of it, and each missing link fails differently:
+The application used to reach its own DSM at `https://{external_host_ip}:{external_port_dsm_https}` with full
+certificate validation. That worked only if DSM had a hostname under *External Access*, its certificate covered
+that name, the name resolved from the NAS itself, and the external port reached DSM from inside — none of which
+the README said. Measured on a Virtual DSM on 2026-10-24: a fresh instance has no `external_host_ip` at all and
+serves DSM's default self-signed certificate, issued to `synology`. From inside it, `https://127.0.0.1:5001`
+fails strict validation, since no DSM certificate names `127.0.0.1` or `localhost`.
 
-- **No hostname: the package does not start.** `Ui/Program.cs:143` applies the DSM culture before `app.Run()`,
-  which resolves `DsmSettingsService`, whose constructor throws (`Tools/Infrastructure/DsmSettingsService.cs:82`).
-  The reason reaches only the log, and `application.log` is truncated at the next start (entry above).
-  Confirmed by the maintainer on 2026-10-24; what Package Center shows the user was not checked.
-- **A name the certificate does not cover** — an IP, or DSM's default self-signed certificate, issued to
-  `synology` — lets the host start and fails every DSM call. Measured on a Virtual DSM on 2026-10-24: a fresh
-  instance has no `external_host_ip` at all and serves that default certificate. What the login page then shows
-  was not checked.
-- **The last two links are inferred, not tried**: resolution from the NAS, and an external port that differs
-  from DSM's own.
-- **Any later change in DSM needs a package restart**: `DsmSettingsService` is a Singleton that reads
-  `synoinfo.conf` once.
+**Decided with the maintainer on 2026-10-26** (PR #82): production reaches DSM over loopback only, and the
+hostname mode is deleted. The earlier two-step plan — diagnose, then discover the name from DSM's certificate —
+is superseded: its first step became the connection diagnostic, now three checks (port, trust, `SYNO.API.Info`),
+and its second is no longer needed. A developer machine names DSM's URL in `ADWH_DSM_URL` instead of a
+`synoinfo.conf` mock.
 
-Loopback does not remove the constraint by itself. From inside the Virtual DSM, `http://127.0.0.1:5000` answers
-and `https://127.0.0.1:5001` fails strict validation, since no DSM certificate names `127.0.0.1` or `localhost`.
-Plain HTTP or a loopback-only certificate bypass would both drop the rule that nothing bypasses validation.
+How loopback mode works, and what was measured:
 
-**Decided with the maintainer on 2026-10-24**, as two changes in this order:
-
-1. **Diagnose instead of crashing.** The host starts whatever the settings say and, in place of the login, lists
-   each link checked live — hostname set, name resolves, port answers, certificate covers the name (showing the
-   names it does cover and its issuer), `SYNO.API.Info` answers — each with its remedy, plus a re-check that
-   re-reads `synoinfo.conf` without a restart.
-2. **Discover the name from DSM's own certificate.** Read the certificate DSM presents on loopback, take an exact
-   name from its SAN, then connect to that name with full validation. A self-signed or wildcard-only certificate
-   falls back to the diagnostic. Nothing bypasses validation.
-
-Open for the design of step 2: connecting to `127.0.0.1` through `SocketsHttpHandler.ConnectCallback` while the
-URL keeps the name would validate against the name and drop the resolution and port links. Not yet verified:
-that the TLS target name still comes from the URL. Applying it when a hostname *is* set would also change a
-path that works today.
+- DSM's HTTPS port is not in `synoinfo.conf`; it is `ssl.port` in `/usr/syno/etc/www/DSM.json`, world-readable,
+  and changing the port in DSM changes exactly that value. When the file cannot give a port, the application
+  uses DSM's default 5001.
+- `synoinfo.conf` is no fallback either (DSM 7.2.2, 2026-10-26): moving DSM's HTTPS port left both
+  `/etc/synoinfo.conf` and `/etc.defaults/synoinfo.conf` byte-identical. Its only DSM port keys,
+  `external_port_dsm_http` and `external_port_dsm_https`, back what DSM's own strings call *Router Port*: the
+  public port of a router's port forwarding, to enter "only if different from default". Where set, it is
+  therefore likely to differ from the local port, and 5001 is the better guess.
+- DSM's certificate files are `0400 root`, so the package cannot pin the exact certificate. `DsmCertificatePolicy`
+  accepts the certificate only for a loopback IP literal whose port a root-owned listener holds (read from
+  `/proc/net/tcp`, which any user can read; IPv4 only, since DSM is reached on `127.0.0.1`); a name, even
+  `localhost`, keeps full validation. The DSM client uses no proxy (an environment proxy would otherwise read the
+  login body) and follows no redirect.
+- Trust assumption: DSM is whoever root-owns the loopback listener on DSM's port. `DsmWebConfigurationWatcher`
+  reloads the port when `DSM.json` changes. A port still stale (the watch failed, or the change lands between the
+  file and nginx) fails closed, and the diagnostic reloads `DSM.json` on its next run, unless another root-owned
+  listener now holds it, such as a reverse-proxy rule an administrator created: no escalation, since only an administrator can
+  create one. A small time-of-check window remains, because the probe runs in the certificate callback after the
+  TCP connect; `SocketsHttpHandler.ConnectCallback` could close it.
+- Measured end to end on the Virtual DSM 7.4.1 on 2026-10-26, hostname cleared and the default certificate in
+  place: login, `SYNO.Core.User.get` (the admin check) and logout succeed against `127.0.0.1`, the diagnostic is
+  healthy, a real sign-in reaches the home page, and every DSM call in the log goes to `https://127.0.0.1:5001`.
+  After moving DSM's HTTPS port to 5443 without a re-check, the next sign-in failed closed with the generic error
+  and reloaded `DSM.json`; the one after it succeeded over `127.0.0.1:5443`. The port was then moved back.
+- The same facts were measured again on a Virtual DSM rebuilt on DSM 7.2.2 (build 72806; the package's
+  `os_min_ver` is 7.2-64561): `DSM.json` exists with the same structure and is world-readable, `ssl.port` follows
+  a port change, `synoinfo.conf` has no port key, `/proc/net/tcp` shows DSM's listeners as uid 0, and the
+  certificate files are root-only. The SPK installs and runs there, and the loopback sign-in, a healthy diagnostic
+  and the plain-HTTP card all work. The DSM menu labels the remedies quote are identical to 7.4.1's.
+- The re-check throttle answered 429 through DSM's nginx while the login stayed unthrottled (2026-10-26).
+- Local debugging against a DSM on its self-signed default (the Virtual DSM, 2026-10-26): with `ADWH_DSM_URL`
+  alone, the diagnostic stops at *connection trusted*, and the log names `RemoteCertificateNameMismatch,
+  RemoteCertificateChainErrors`. With that certificate's SHA-256 in `ADWH_DSM_CERT_SHA256`, read from DSM's
+  certificate file over SSH and matching what the network served, the diagnostic is healthy, and a sign-in from
+  Chrome reaches the home page and signs out.
+- The `DSM.json` watcher on the Virtual DSM (7.2.2, package built at `daf5c7b`): moving DSM's HTTPS port through
+  Control Panel's API replaced the file (new inode) and only reloaded nginx; the running package reloaded the new
+  port 5 ms later, once. A sign-in right after succeeded at the first attempt with every DSM call on the new port,
+  and moving the port back was picked up the same way.
 
 Not chosen: calling the host the browser used. The `Host` header is client-controlled, and calling it would send
-the DSM password wherever a forged request points. It may appear on the diagnostic page as a suggestion only.
+the DSM password wherever a forged request points.
 
-The Virtual DSM stays in its current state until step 1 lands: it is exactly the case to diagnose. A trusted
-certificate goes on it afterwards, for the positive path of step 2.
+Not chosen: depending on DSM's nginx to keep the port fresh, and checking the listener once at startup. Measured
+on the Virtual DSM (7.2.2): `start_dep_services="nginx.service"` becomes `Requisite=` and `After=nginx.service` in
+a package's systemd unit, as for File Station. Restarting nginx restarts such a package; reloading it does not. Moving
+DSM's HTTPS port through `SYNO.Core.Web.DSM` (Control Panel's API) only reloads nginx: same main PID, File Station
+not restarted, listeners moved. The dependency would not follow a port change, and every nginx restart would restart
+the package with its hosted sites (inferred from File Station). A check made once at startup would keep trusting a
+port whose holder can change later — an nginx crash or a reload that moves the port frees it for any process —
+while the check at each handshake reads one small file per new pooled connection. `DsmWebConfigurationWatcher`
+watches `DSM.json` instead, so a moved port is picked up without a restart.
+
+Still open:
+
+- **Untested DSM versions**: 7.2.0 and 7.3 were not tested.
+- **Account protection**: measured, and a weakness; see *Every sign-in through the package is one DSM client*.
+- **Misleading remedy under `ADWH_DSM_URL`**: *not trusted* names the loopback cause ("the port is not held by
+  DSM") even when the cause is a certificate the developer machine does not trust. The log names the errors.
+
+Known behaviour of the diagnostic:
+
+- An unhealthy report stays cached, so one transient failure during a login keeps the diagnostic in front of
+  every visitor until someone presses Re-check. By design: the report is computed on demand, never on a timer.
+- A login gives DSM 10 s (`DsmLoginTimeoutSeconds`) before the diagnostic runs, and the browser waits 25 s, enough
+  for both; `AuthenticationServiceTests` asserts the sum. Measured on the Virtual DSM (7.2.2) on 2026-10-27 with
+  DSM's web API frozen (`synoscgi` stopped with `SIGSTOP`): before, DSM's own nginx ended the call after 60 s and the
+  `/adwh` proxy answered 504; now the login answers `DsmUnreachable` after 13 s, including when the frozen call is
+  the first `SYNO.API.Info` handshake, and Chrome shows the diagnostic. DSM took 4.5 to 6.6 s to refuse a wrong
+  password, which is why the budget is not shorter: at 5 s, two refusals in three ran the diagnostic. Other DSM
+  calls have no budget of their own.
+- A login whose budget runs out after DSM accepted the password leaves that SID live on DSM, and unbound here,
+  until DSM expires it, as any transport failure at that point already did (read from the code, not measured).
 
 ## Tooling and dependencies
 
@@ -333,12 +440,12 @@ The mechanics behind that, each checked against the script:
 - **Section 4 never finds the application's boot in production.** It brackets on the literal
   `Application started`, which `Microsoft.Hosting.Lifetime` writes at Information and `Microsoft: Warning`
   filters out. The only such text left is a hosted site's own stdout relayed as 2500002, so the section
-  brackets site boots. The application's boot runs from 2800006 `ResolvingConfigPath` to 1800010
+  brackets site boots. The application's boot runs from 2800004 `ResolvingConfigPath` to 1800010
   `HostingServiceStarted`. Since 0.7.0 (#76) it opens one line earlier, with 3000001 `ApplicationStarting`.
   That line also names the build (`x.y.z+<sha>`), which is the bracket section 4 needs and the way to tell two
   archives apart. Its position comes from reading `Program.cs`: no real archive has shown it yet.
 - **Section 5 times DSM calls, not requests.** Production logs no request duration. The `Nms` pattern
-  catches 2000004 `ApiRequest`, the 1600019 timeout setting and relayed site output, and `cut -c1-150` cuts
+  catches 2000001 `ApiRequest`, the 1600019 timeout setting and relayed site output, and `cut -c1-150` cuts
   each line before the API name and the duration. The comment saying PR #39 "looked exactly like this" is
   false.
 - **Section 2 drops rows silently** past `head -12`, ranked by absolute delta, so a 0 → 1 error sinks under
@@ -351,7 +458,7 @@ The mechanics behind that, each checked against the script:
 - **The no-argument mode orders by modification time**, which a plain `cp` resets, and ignores the timestamp
   the archive name carries; it skips directories although its comment says "whatever their form".
 
-Until those are fixed, a real review needs by hand: the 2800006 → 1800010 block of each archive (3000001 →
+Until those are fixed, a real review needs by hand: the 2800004 → 1800010 block of each archive (3000001 →
 1800010 from 0.7.0, its first line naming the build); each
 section-3 id opened with its exception and the lines before it; WRN/ERR lines without an id; 2500002 lines
 carrying `fail:` or `warn:`; the arguments of log lines checked against reality; and `package-logs/`.
@@ -415,6 +522,10 @@ any test.
 
 `ResourceCompletenessTests` hardcodes `fr-FR`, so a newly added culture would be silently untested for key
 parity — which undercuts the "drop in a `.resx`, zero code changes" story.
+
+`OperationTimerTests.UsingScope_WithEarlyReturn_CallbackInvoked` asserts that a 5 ms sleep measures at most
+100 ms. It measured 106 ms once on a loaded machine on 2026-10-26, and passed on the next two runs: an upper
+bound on wall-clock time is a flake waiting for a busy CI runner.
 
 ## Prerequisite for a roadmap feature
 

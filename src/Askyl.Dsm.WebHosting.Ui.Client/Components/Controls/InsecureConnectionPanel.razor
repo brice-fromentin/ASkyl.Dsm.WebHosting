@@ -1,0 +1,22 @@
+@using Askyl.Dsm.WebHosting.Globalization
+
+@inject ILocalizer localizer
+@inject NavigationManager navigation
+
+<FluentStack Orientation="Orientation.Vertical">
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new IconsRegular20.Warning().WithColor(Color.Warning))" Title="@localizer[LK.Login.InsecureIcon]" />
+        <FluentText As="TextTag.H2" Size="TextSize.Size600" Weight="TextWeight.Semibold">@localizer[LK.Login.InsecureTitle]</FluentText>
+    </FluentStack>
+    <FluentText>@localizer[LK.Login.InsecureBody]</FluentText>
+    <FluentButton Appearance="ButtonAppearance.Primary" OnClick="OpenSecureVersion">@localizer[LK.Login.OpenSecureVersion]</FluentButton>
+</FluentStack>
+
+@code
+{
+    /// <summary>The HTTPS version of the page the user is on.</summary>
+    [Parameter, EditorRequired]
+    public Uri SecureUri { get; set; } = default!;
+
+    private void OpenSecureVersion() => navigation.NavigateTo(SecureUri.ToString(), forceLoad: true);
+}

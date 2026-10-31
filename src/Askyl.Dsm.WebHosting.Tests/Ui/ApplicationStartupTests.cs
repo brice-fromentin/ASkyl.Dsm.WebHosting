@@ -1,10 +1,20 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using AngleSharp.Html.Parser;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Constants.DSM.System;
+using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Constants.WebApi;
+using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
+using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
+using Askyl.Dsm.WebHosting.Data.Results;
+using Askyl.Dsm.WebHosting.Ui.Components;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Net.Http.Headers;
 
 namespace Askyl.Dsm.WebHosting.Tests.Ui;
@@ -28,6 +38,85 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
 
     static readonly string ProtectedRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, FileManagementRoutes.SharedFoldersFullRoute);
 
+    static readonly string DiagnosticReportRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, DsmDiagnosticRoutes.ReportFullRoute);
+
+    static readonly string DiagnosticRecheckRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, DsmDiagnosticRoutes.RecheckFullRoute);
+
+    static readonly string LoginRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, AuthenticationRoutes.LoginFullRoute);
+
+    [Fact]
+    public async Task Application_StartsWithoutSynoInfoConf()
+    {
+        // A developer machine has no synoinfo.conf. The host used to die resolving DsmSettingsService at
+        // startup, with the reason only in a log the next start truncates.
+        using var withoutSynoInfo = factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration(configuration => configuration.AddInMemoryCollection(
+            new Dictionary<string, string?> { [ApplicationHostFactory.ConfigPathSettingKey] = Path.Combine(factory.StateDirectory, "missing-synoinfo.conf") })));
+
+        var response = await withoutSynoInfo.CreateClient().GetAsync(ApplicationConstants.ApplicationUrlSubPath);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>
+    /// A host whose DSM web configuration names a loopback port nothing listens on. Its configuration is
+    /// added after the factory's own, so it wins.
+    /// </summary>
+    (WebApplicationFactory<App> Host, int Port) WithClosedLoopbackDsm()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+
+        listener.Start();
+
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+        listener.Stop();
+        Directory.CreateDirectory(factory.StateDirectory);
+
+        var webConfigPath = Path.Combine(factory.StateDirectory, $"DSM-{port}.json");
+
+        File.WriteAllText(webConfigPath, $"{{\"ssl\":{{\"port\":{port}}}}}");
+
+        return (factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration(configuration => configuration.AddInMemoryCollection(
+            new Dictionary<string, string?> { [ApplicationHostFactory.WebConfigPathSettingKey] = webConfigPath }))), port);
+    }
+
+    [Fact]
+    public async Task DsmDiagnostic_AnswersAnonymously_ReachingDsmOverLoopback()
+    {
+        var (host, port) = WithClosedLoopbackDsm();
+
+        using var loopback = host;
+
+        var result = await loopback.CreateClient().GetFromJsonAsync<DsmConnectionReportResult>(DiagnosticReportRoute, JsonOptionsCache.Options);
+
+        Assert.NotNull(result?.Value);
+        Assert.False(result.Value.IsHealthy);
+        Assert.Equal(SystemDefaults.LoopbackAddress, result.Value.Host);
+        Assert.Equal(port, result.Value.Port);
+        Assert.Equal(new DsmConnectionCheckResult(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.PortRefused), result.Value.Checks[0]);
+        Assert.All(result.Value.Checks.Skip(1), check => Assert.Equal(DsmCheckStatus.Skipped, check.Status));
+    }
+
+    [Fact]
+    public async Task DsmDiagnosticRecheck_IsThrottled_WithoutSpendingLoginAttempts()
+    {
+        using var loopback = WithClosedLoopbackDsm().Host;
+        var client = loopback.CreateClient();
+
+        for (var attempt = 0; attempt < ApplicationConstants.LoginRateLimitPermitLimit; attempt++)
+        {
+            Assert.Equal(HttpStatusCode.OK, (await client.PostAsync(DiagnosticRecheckRoute, null)).StatusCode);
+        }
+
+        var throttled = await client.PostAsync(DiagnosticRecheckRoute, null);
+
+        // Empty credentials fail validation before any DSM call, so only the throttle can refuse them
+        var login = await client.PostAsJsonAsync(LoginRoute, new LoginCredentials(String.Empty, String.Empty, null));
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, throttled.StatusCode);
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, login.StatusCode);
+    }
+
     [Fact]
     public async Task Application_Starts_AndServesTheRootPage()
     {
@@ -39,6 +128,16 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task Application_HostPage_PassesDsmHttpsPortToTheClient()
+    {
+        var html = await factory.CreateClient().GetStringAsync(ApplicationConstants.ApplicationUrlSubPath);
+
+        // The factory gives no DSM.json, so loopback mode falls back to DSM's default port
+        Assert.Contains(ApplicationConstants.DsmHttpsPortEnvironmentVariable, html, StringComparison.Ordinal);
+        Assert.Contains($"'{SystemDefaults.DefaultHttpsPort}'", html, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
@@ -8,9 +9,9 @@ using Moq;
 namespace Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
 
 /// <summary>
-/// Builds a <see cref="DsmSettingsService"/> over an in-memory synoinfo.conf.
-/// Tests must never construct it with <see cref="SystemFileReader"/>: that reads the host's real
-/// /etc/synoinfo.conf, which is absent on clean machines and CI, and carries live NAS details when present.
+/// Builds a <see cref="DsmSettingsService"/> over an in-memory synoinfo.conf and a synthetic ADWH_DSM_URL.
+/// Tests must never construct it with <see cref="SystemFileReader"/> or the process environment: those read
+/// the machine's real files and a developer's real ADWH_DSM_URL, which carry live NAS details when present.
 /// </summary>
 internal static class FakeDsmSettings
 {
@@ -25,13 +26,12 @@ internal static class FakeDsmSettings
     {
         var fileReader = new Mock<IFileReader>();
         fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
-        fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
-                  .Returns([
-                      $"{SystemDefaults.KeyExternalHostIp}=\"{Server}\"",
-                      $"{SystemDefaults.KeyExternalHttpsPort}=\"{Port}\"",
-                      $"{SystemDefaults.KeyLanguage}=\"{Language}\""
-                  ]);
+        fileReader.Setup(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath)).Returns([$"{SystemDefaults.KeyLanguage}=\"{Language}\""]);
 
-        return new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object, fileReader.Object, new ConfigurationBuilder().Build());
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [ApplicationConstants.DsmUrlEnvironmentVariable] = $"https://{Server}:{Port}" })
+            .Build();
+
+        return new DsmSettingsService(new Mock<ILogger<ILogDsmSettingsService>>().Object, fileReader.Object, configuration);
     }
 }

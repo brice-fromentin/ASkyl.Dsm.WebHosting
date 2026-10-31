@@ -18,7 +18,7 @@ namespace Askyl.Dsm.WebHosting.Tools.Network;
 public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsService settingsService, ILogger<ILogDsmApiClient> logger)
     : ISemaphoreOwner, IAsyncDisposable
 {
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.DsmHttpClientName);
 
     public ApiInformationCollection ApiInformations { get; } = new();
 
@@ -35,7 +35,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
     public async Task<R?> ExecuteAsync<R>(string? sid, IApiParameters parameters, CancellationToken cancellationToken = default)
         where R : IApiResponse
     {
-        await EnsureInitializedAsync();
+        await EnsureInitializedAsync(cancellationToken);
 
         var path = (parameters.Name == ApiConstants.Info)
             ? ApiConstants.Handshake
@@ -62,32 +62,65 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
     public async Task<ApiResponseBase<object>?> ExecuteSimpleAsync(string? sid, IApiParameters parameters, CancellationToken cancellationToken = default)
         => await ExecuteAsync<ApiResponseBase<object>>(sid, parameters, cancellationToken);
 
-    private async Task EnsureInitializedAsync()
+    /// <summary>
+    /// Sends the SYNO.API.Info request for the connection diagnostic, leaving the handshake cache alone.
+    /// </summary>
+    /// <returns>Whether DSM answered with its API list, and the HTTP status it answered with.</returns>
+    public async Task<(bool Answered, int StatusCode)> ProbeAsync(CancellationToken cancellationToken)
+    {
+        var parameters = new InformationsQueryParameters();
+        var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, ApiConstants.Handshake);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = parameters.ToForm() };
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        var statusCode = (int)response.StatusCode;
+
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            return (false, statusCode);
+        }
+
+        try
+        {
+            var result = JsonSerializer.Deserialize<ApiInformationResponse>(await response.Content.ReadAsStringAsync(cancellationToken));
+
+            return (result is { Success: true, Data.Count: > 0 }, statusCode);
+        }
+        catch (JsonException)
+        {
+            // Something other than DSM answered on that port
+            return (false, statusCode);
+        }
+    }
+
+    private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
     {
         if (ApiInformations.Get(ApiConstants.Auth) is not null)
         {
             return;
         }
 
-        using var @lock = await SemaphoreLock.AcquireAsync(this);
+        // The caller's token, so a DSM that never answers cannot hold a login past its budget
+        using var @lock = await SemaphoreLock.AcquireAsync(this, cancellationToken: cancellationToken);
 
         if (ApiInformations.Get(ApiConstants.Auth) is not null)
         {
             return;
         }
 
-        if (!await HandShakeAsync())
+        if (!await HandShakeAsync(cancellationToken))
         {
             throw new InvalidOperationException("DSM API handshake failed");
         }
     }
 
-    private async Task<bool> HandShakeAsync()
+    private async Task<bool> HandShakeAsync(CancellationToken cancellationToken)
     {
         var parameters = new InformationsQueryParameters();
         var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, ApiConstants.Handshake);
 
-        var result = await ExecuteFormAsync<ApiInformationResponse>(null, url, parameters, CancellationToken.None);
+        var result = await ExecuteFormAsync<ApiInformationResponse>(null, url, parameters, cancellationToken);
 
         if (result?.Success != true || result.Data is null || result.Data.Count == 0)
         {

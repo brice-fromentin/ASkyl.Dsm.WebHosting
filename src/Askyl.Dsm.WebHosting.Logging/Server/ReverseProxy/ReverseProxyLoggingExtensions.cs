@@ -77,13 +77,13 @@ public static partial class ReverseProxyLoggingExtensions
     /// <summary>
     /// Logs successful reverse proxy deletion.
     /// </summary>
-    [LoggerMessage(EventId = 1700011, Level = LogLevel.Information, Message = "Deleted reverse proxy {Uuid} successfully")]
+    [LoggerMessage(EventId = 1700010, Level = LogLevel.Information, Message = "Deleted reverse proxy {Uuid} successfully")]
     public static partial void ReverseProxyDeleted(this ILogger<ILogReverseProxyManagerService> logger, Guid? uuid);
 
     /// <summary>
     /// Logs that reverse proxy was already deleted (idempotent delete).
     /// </summary>
-    [LoggerMessage(EventId = 1700014, Level = LogLevel.Information, Message = "Reverse proxy for site {SiteName} already deleted (idempotent)")]
+    [LoggerMessage(EventId = 1700013, Level = LogLevel.Information, Message = "Reverse proxy for site {SiteName} already deleted (idempotent)")]
     public static partial void ReverseProxyAlreadyDeleted(this ILogger<ILogReverseProxyManagerService> logger, string siteName);
 
     #endregion
@@ -93,13 +93,13 @@ public static partial class ReverseProxyLoggingExtensions
     /// <summary>
     /// Logs failure to update a reverse proxy.
     /// </summary>
-    [LoggerMessage(EventId = 1700012, Level = LogLevel.Error, Message = "Failed to update reverse proxy for site {SiteName}")]
+    [LoggerMessage(EventId = 1700011, Level = LogLevel.Error, Message = "Failed to update reverse proxy for site {SiteName}")]
     public static partial void FailedToUpdateReverseProxy(this ILogger<ILogReverseProxyManagerService> logger, Exception ex, string siteName);
 
     /// <summary>
     /// Logs failure to delete a reverse proxy.
     /// </summary>
-    [LoggerMessage(EventId = 1700013, Level = LogLevel.Error, Message = "Failed to delete reverse proxy {Uuid} for site {SiteName}")]
+    [LoggerMessage(EventId = 1700012, Level = LogLevel.Error, Message = "Failed to delete reverse proxy {Uuid} for site {SiteName}")]
     public static partial void FailedToDeleteReverseProxy(this ILogger<ILogReverseProxyManagerService> logger, Exception ex, Guid? uuid, string siteName);
 
     #endregion

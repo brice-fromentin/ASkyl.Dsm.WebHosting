@@ -28,27 +28,28 @@ public static partial class AuthenticationLoggingExtensions
     [LoggerMessage(EventId = 1000003, Level = LogLevel.Information, Message = "User logged out")]
     public static partial void UserLoggedOut(this ILogger<ILogAuthenticationService> logger);
 
-    /// <summary>
-    /// Logs an error that occurred during logout.
-    /// </summary>
-    [LoggerMessage(EventId = 1000004, Level = LogLevel.Error, Message = "Error during logout")]
-    public static partial void LogoutError(this ILogger<ILogAuthenticationService> logger, Exception ex);
 
     /// <summary>
     /// Logs that the DSM session was validated successfully against the server.
     /// </summary>
-    [LoggerMessage(EventId = 1000005, Level = LogLevel.Debug, Message = "DSM session is valid")]
+    [LoggerMessage(EventId = 1000004, Level = LogLevel.Debug, Message = "DSM session is valid")]
     public static partial void SessionValidationSuccess(this ILogger<ILogAuthenticationService> logger);
 
     /// <summary>
     /// Logs that the DSM session validation failed — session is expired or invalid on the server.
     /// </summary>
-    [LoggerMessage(EventId = 1000006, Level = LogLevel.Warning, Message = "DSM session validation failed — session expired or invalid on server")]
+    [LoggerMessage(EventId = 1000005, Level = LogLevel.Warning, Message = "DSM session validation failed — session expired or invalid on server")]
     public static partial void SessionValidationFailed(this ILogger<ILogAuthenticationService> logger);
 
     /// <summary>
     /// Logs that an invalid DSM session was detected and cleared from the local session store.
     /// </summary>
-    [LoggerMessage(EventId = 1000007, Level = LogLevel.Information, Message = "Invalid DSM session detected — cleared from local session")]
+    [LoggerMessage(EventId = 1000006, Level = LogLevel.Information, Message = "Invalid DSM session detected — cleared from local session")]
     public static partial void SessionInvalidated(this ILogger<ILogAuthenticationService> logger);
+
+    /// <summary>
+    /// Logs a login that failed before DSM answered.
+    /// </summary>
+    [LoggerMessage(EventId = 1000007, Level = LogLevel.Warning, Message = "Login for user {Login} failed before DSM answered")]
+    public static partial void LoginTransportFailed(this ILogger<ILogAuthenticationService> logger, string login, Exception exception);
 }

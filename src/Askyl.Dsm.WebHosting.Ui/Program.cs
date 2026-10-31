@@ -40,6 +40,11 @@ builder.Services.AddSession(options =>
 });
 
 builder.Services.AddHttpClient();
+
+// DSM gets its own client: only it may accept DSM's certificate, and only for a loopback IP literal whose port a root-owned listener holds
+builder.Services.AddSingleton<IRootListenerProbe, ProcNetTcpRootListenerProbe>();
+builder.Services.AddSingleton<DsmCertificatePolicy>();
+builder.Services.AddHttpClient(ApplicationConstants.DsmHttpClientName).ConfigurePrimaryHttpMessageHandler(provider => provider.GetRequiredService<DsmCertificatePolicy>().CreateHandler());
 builder.Services.AddFluentUIComponentsWithDefaults();
 
 // Add globalization/localization services
@@ -68,13 +73,19 @@ builder.Services.AddRazorComponents()
 // Register file reader abstraction (singleton - stateless file system wrapper)
 builder.Services.AddSingleton<IFileReader, SystemFileReader>();
 
-// Register DSM settings service (singleton - reads /etc/synoinfo.conf once at startup)
+// Register DSM settings service (singleton - reads DSM's endpoint and language at startup, again on each diagnostic run
+// and whenever DSM's web configuration changes)
 builder.Services.AddSingleton<IDsmSettingsService, DsmSettingsService>();
+builder.Services.AddHostedService<DsmWebConfigurationWatcher>();
 
-// Register DSM API client and authentication facade
+// Register DSM API client and authentication facade (the clock times the login's DSM budget)
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<DsmApiClient>();
 builder.Services.AddScoped<IDsmSession, DsmSession>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+
+// Register the DSM connection diagnostic (singleton - caches the latest report for every visitor)
+builder.Services.AddSingleton<IDsmConnectionDiagnosticService, DsmConnectionDiagnosticService>();
 
 // Register platform info service (singleton - platform detection happens once at startup)
 builder.Services.AddSingleton<PlatformInfoService>();
@@ -127,12 +138,15 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Add(IPAddress.IPv6Loopback);
 });
 
-// Rate limiting for login endpoint (brute-force protection), partitioned per client address
+// Rate limiting for the login and diagnostic re-check throttles (brute-force protection), partitioned per client address
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
     options.AddPolicy(ApplicationConstants.RateLimitPolicyLogin, LoginRateLimitPolicy.Partition);
+
+    // Its own bucket, so re-checking the DSM connection never spends a login attempt
+    options.AddPolicy(ApplicationConstants.RateLimitPolicyDiagnostic, LoginRateLimitPolicy.Partition);
 });
 
 var app = builder.Build();
@@ -171,9 +185,10 @@ app.UseRateLimiter();
 
 app.UseStatusCodePagesWithReExecute(ApplicationConstants.NotFoundPagePath, ApplicationConstants.NotFoundPageQueryFormat, createScopeForStatusCodePages: true);
 
-// No UseHttpsRedirection: DSM's nginx terminates TLS and owns the http-to-https redirect, and nothing
-// binds an HTTPS port in this process, so the middleware could only log "Failed to determine the https
-// port for redirect" and pass the request through. Reporting the scheme truthfully is this app's job.
+// No UseHttpsRedirection: nothing binds an HTTPS port in this process, so the middleware could only log
+// "Failed to determine the https port for redirect" and pass the request through. DSM's nginx does not
+// redirect /adwh either (measured; DSM's own redirect is a script on its desktop page), so the login page
+// detects plain HTTP and offers the HTTPS version. The cookies stay Secure on purpose.
 
 // Security headers
 app.Use((context, next) =>

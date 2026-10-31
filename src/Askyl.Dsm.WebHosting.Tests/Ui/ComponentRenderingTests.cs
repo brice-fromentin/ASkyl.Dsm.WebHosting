@@ -1,19 +1,25 @@
 using System.Globalization;
+using System.Net;
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.Globalization;
 using Askyl.Dsm.WebHosting.Constants.UI;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Extensions;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
+using Askyl.Dsm.WebHosting.Ui.Client.Components.Controls;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Dialogs;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Pages;
+using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState;
 using Askyl.Dsm.WebHosting.Ui.Client.Extensions;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Bunit;
 using FluentValidation;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Moq;
@@ -67,10 +73,14 @@ public class ComponentRenderingTests : IAsyncLifetime
 
     const string FrenchCulture = "fr-FR";
 
+    const int DsmPort = 5001;
+
     readonly BunitContext _ctx = new();
     readonly Mock<IAuthenticationService> _authService = new();
     readonly Mock<IWebSiteHostingService> _hostingService = new();
     readonly Mock<ILicenseService> _licenseService = new();
+    readonly Mock<IDsmConnectionDiagnosticService> _diagnosticService = new();
+    readonly ManualTimeProvider _time = new();
     readonly ILocalizer _localizer;
 
     public ComponentRenderingTests()
@@ -82,9 +92,13 @@ public class ComponentRenderingTests : IAsyncLifetime
         _ctx.Services.AddSingleton(_authService.Object);
         _ctx.Services.AddSingleton(_hostingService.Object);
         _ctx.Services.AddSingleton(_licenseService.Object);
+        _ctx.Services.AddSingleton(_diagnosticService.Object);
         _ctx.Services.AddSingleton(Mock.Of<ICultureManager>());
+        _ctx.Services.AddSingleton(new DsmHttpsEndpoint(5001));
+        _ctx.Services.AddSingleton<TimeProvider>(_time);
 
         _authService.Setup(service => service.IsAuthenticatedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(ApiResultBool.CreateSuccess(false));
+        _diagnosticService.Setup(service => service.GetReportAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: true));
         _hostingService.Setup(service => service.GetAllWebsitesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(WebSiteInstancesResult.CreateSuccess([new() { Configuration = new() { Name = SiteName } }]));
 
@@ -119,6 +133,180 @@ public class ComponentRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public void Login_OverPlainHttp_OffersTheHttpsVersion_InsteadOfTheForm()
+    {
+        var navigation = _ctx.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("http://nas.test:5000/adwh/login");
+
+        var cut = _ctx.Render<Login>();
+
+        Assert.Contains(_localizer[LK.Login.InsecureTitle], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
+        Assert.Empty(cut.FindAll("[name=username]"));
+        _authService.Verify(service => service.IsAuthenticatedAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _diagnosticService.Verify(service => service.GetReportAsync(It.IsAny<CancellationToken>()), Times.Never);
+
+        cut.Find("fluent-button[appearance=primary]").Click();
+
+        Assert.Equal("https://nas.test:5001/adwh/login", navigation.Uri);
+    }
+
+    [Fact]
+    public void Login_ShowsTheDiagnostic_InsteadOfTheForm_WhenDsmIsUnreachable()
+    {
+        _diagnosticService.Setup(service => service.GetReportAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: false));
+
+        var cut = _ctx.Render<Login>();
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Diagnostic.FailurePortRefused, DsmPort], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll("[name=username]"));
+    }
+
+    [Fact]
+    public void Login_SwitchesToTheDiagnostic_WhenTheLoginFindsDsmUnreachable()
+    {
+        _diagnosticService.SetupSequence(service => service.GetReportAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Report(isHealthy: true))
+            .ReturnsAsync(Report(isHealthy: false));
+        _authService.Setup(service => service.LoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(AuthenticationResult.CreateDsmUnreachable("unreachable"));
+
+        var cut = _ctx.Render<Login>();
+
+        cut.Find("[name=username]").Input("admin");
+        cut.Find("[name=password]").Input("password123");
+        cut.Find("form").Submit();
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Diagnostic.FailurePortRefused, DsmPort], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll("[name=username]"));
+        _authService.Verify(service => service.LoginAsync("admin", "password123", It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void Login_WhenTheServerCannotBeReached_StillShowsTheForm_AndSaysWhy()
+    {
+        var toasts = CaptureToasts();
+        _authService.Setup(service => service.IsAuthenticatedAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new HttpRequestException());
+
+        var cut = _ctx.Render<Login>();
+
+        cut.WaitForAssertion(() => VerifyToldTheServerDidNotAnswer(toasts));
+        Assert.False(cut.Instance.IsWorking);
+        Assert.Single(cut.FindAll("[name=username]"));
+    }
+
+    [Fact]
+    public void Login_WhenTheServerNeverAnswersTheSignIn_SaysSo()
+    {
+        var toasts = CaptureToasts();
+        _authService.Setup(service => service.LoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(HttpClientTimeout());
+
+        var cut = _ctx.Render<Login>();
+
+        cut.Find("[name=username]").Input("admin");
+        cut.Find("[name=password]").Input("password123");
+        cut.Find("form").Submit();
+
+        cut.WaitForAssertion(() => VerifyToldTheServerDidNotAnswer(toasts));
+        Assert.False(cut.Instance.IsWorking);
+        Assert.Single(cut.FindAll("[name=username]"));
+    }
+
+    [Fact]
+    public void Login_WhenTheReCheckNeverAnswers_KeepsTheDiagnostic_AndSaysSo()
+    {
+        var toasts = CaptureToasts();
+        _diagnosticService.Setup(service => service.GetReportAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: false));
+        _diagnosticService.Setup(service => service.RecheckAsync(It.IsAny<CancellationToken>())).ThrowsAsync(HttpClientTimeout());
+
+        var cut = _ctx.Render<Login>();
+
+        // The panel's re-check is the page's only primary button
+        cut.WaitForAssertion(() => cut.Find("fluent-button[appearance=primary]").Click());
+
+        cut.WaitForAssertion(() => VerifyToldTheServerDidNotAnswer(toasts));
+        Assert.False(cut.Instance.IsWorking);
+        Assert.Contains(_localizer[LK.Diagnostic.FailurePortRefused, DsmPort], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Renders where FluentUI shows its toasts, so a test can see what the user was told. Moq cannot stand in for
+    /// INotificationService: it has a setter Castle cannot implement.
+    /// </summary>
+    IRenderedComponent<FluentToastProvider> CaptureToasts() => _ctx.Render<FluentToastProvider>();
+
+    void VerifyToldTheServerDidNotAnswer(IRenderedComponent<FluentToastProvider> toasts)
+        => Assert.Contains(_localizer[LK.Error.ServerNotResponding], WebUtility.HtmlDecode(toasts.Markup), StringComparison.Ordinal);
+
+    // What HttpClient throws when its own Timeout runs out
+    static TaskCanceledException HttpClientTimeout() => new(null, new TimeoutException());
+
+    [Fact]
+    public void DsmDiagnosticPanel_ListsTheThreeChecks()
+    {
+        var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters.Add(panel => panel.Report, Report(isHealthy: false).Value!));
+
+        var text = WebUtility.HtmlDecode(cut.Markup);
+        List<int> positions = [.. new[] { LK.Diagnostic.CheckPortAnswers, LK.Diagnostic.CheckConnectionTrusted, LK.Diagnostic.CheckApiAnswers }
+            .Select(key => text.IndexOf(_localizer[key], StringComparison.Ordinal))];
+
+        Assert.DoesNotContain(-1, positions);
+        Assert.Equal(positions.Order(), positions);
+    }
+
+    [Fact]
+    public void DsmDiagnosticPanel_ReCheck_RaisesTheCallback()
+    {
+        var rechecked = false;
+
+        var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters
+            .Add(panel => panel.Report, Report(isHealthy: false).Value!)
+            .Add(panel => panel.OnRecheck, () => rechecked = true));
+
+        // The message bar's dismiss button is a fluent-button too; the re-check one is the primary
+        cut.Find("fluent-button[appearance=primary]").Click();
+
+        Assert.True(rechecked);
+    }
+
+    [Fact]
+    public void DsmDiagnosticPanel_AnUntrustedConnection_NamesThePort()
+    {
+        var report = new DsmConnectionReport(false, DateTimeOffset.UtcNow, "127.0.0.1", DsmPort,
+        [
+            new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Passed),
+            new(DsmConnectionCheck.ConnectionTrusted, DsmCheckStatus.Failed, DsmCheckFailure.NotTrusted),
+            new(DsmConnectionCheck.ApiAnswers, DsmCheckStatus.Skipped)
+        ]);
+
+        var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters.Add(panel => panel.Report, report));
+
+        // Decoded, since the markup writes > as &gt;
+        Assert.Contains(_localizer[LK.Diagnostic.FailureNotTrusted, DsmPort], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DsmDiagnosticPanel_FailureBar_CannotBeDismissed()
+    {
+        // The bar holds the only remedy on the page; FluentMessageBar offers a dismiss button by default
+        var cut = _ctx.Render<DsmDiagnosticPanel>(parameters => parameters.Add(panel => panel.Report, Report(isHealthy: false).Value!));
+
+        Assert.Single(cut.FindAll("fluent-message-bar"));
+        Assert.Empty(cut.FindAll("fluent-message-bar fluent-button"));
+        Assert.Single(cut.FindAll("fluent-button[appearance=primary]"));
+    }
+
+    static DsmConnectionReportResult Report(bool isHealthy)
+        => DsmConnectionReportResult.CreateSuccess(isHealthy
+            ? new DsmConnectionReport(true, DateTimeOffset.UtcNow, null, 0, [])
+            : new DsmConnectionReport(false, DateTimeOffset.UtcNow, "127.0.0.1", DsmPort,
+            [
+                new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.PortRefused),
+                .. Enum.GetValues<DsmConnectionCheck>().Skip(1).Select(check => new DsmConnectionCheckResult(check, DsmCheckStatus.Skipped))
+            ]));
+
+    [Fact]
     public void Home_ListsTheWebsitesAndNamesItsIconOnlyButtons()
     {
         var cut = _ctx.Render<Home>();
@@ -129,6 +317,79 @@ public class ComponentRenderingTests : IAsyncLifetime
 
         Assert.Contains(_localizer[LK.Home.StartButton], names);
         Assert.Contains(_localizer[LK.Home.StopButton], names);
+    }
+
+    [Fact]
+    public void Home_Logout_CoversThePageUntilTheServerAnswers()
+    {
+        var logout = new TaskCompletionSource<ApiResult>();
+        _authService.Setup(service => service.LogoutAsync(It.IsAny<CancellationToken>())).Returns(logout.Task);
+
+        var cut = _ctx.Render<Home>();
+        cut.WaitForAssertion(() => Assert.Contains(SiteName, cut.Markup, StringComparison.Ordinal));
+
+        cut.FindAll("fluent-button").Single(button => button.TextContent.Contains(_localizer[LK.Home.LogoutButton], StringComparison.Ordinal)).Click();
+
+        Assert.True(cut.Instance.IsWorking);
+        Assert.Contains(_localizer[LK.Loading.LoggingOut], WebUtility.HtmlDecode(cut.Find("fluent-overlay").TextContent), StringComparison.Ordinal);
+
+        logout.SetResult(ApiResult.CreateSuccess());
+
+        cut.WaitForAssertion(() => Assert.False(cut.Instance.IsWorking));
+    }
+
+    [Fact]
+    public void LoadingOverlay_CountsTheSecondsOutLoud_OnceTheWaitGetsLong()
+    {
+        const int threshold = ApplicationConstants.LoadingElapsedThresholdSeconds;
+        var worker = new Worker { IsWorking = true, Message = SiteName };
+        var cut = _ctx.Render<LoadingOverlay>(parameters => parameters.Add(overlay => overlay.WorkingState, worker));
+
+        _time.Advance(TimeSpan.FromSeconds(threshold - 1));
+
+        Assert.DoesNotContain(_localizer[LK.Loading.StillWorking, threshold - 1], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
+
+        _time.Advance(TimeSpan.FromSeconds(8));
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Loading.StillWorking, threshold + 7], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void LoadingOverlay_CountsEachWaitFromItsOwnStart()
+    {
+        var worker = new Worker { IsWorking = true, Message = SiteName };
+        var cut = _ctx.Render<LoadingOverlay>(parameters => parameters.Add(overlay => overlay.WorkingState, worker));
+
+        _time.Advance(TimeSpan.FromSeconds(30));
+        worker.IsWorking = false;
+        cut.Render();
+        worker.IsWorking = true;
+        cut.Render();
+        _time.Advance(TimeSpan.FromSeconds(6));
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Loading.StillWorking, 6], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task LoadingOverlay_LeavesNoTimerBehind()
+    {
+        // Including when its page goes away mid-wait, as the login page does once signed in
+        var worker = new Worker { IsWorking = true, Message = SiteName };
+        var cut = _ctx.Render<LoadingOverlay>(parameters => parameters.Add(overlay => overlay.WorkingState, worker));
+
+        // Guard: a clock that never saw the timer would pass both checks below
+        Assert.Equal(1, _time.ActiveTimers);
+
+        worker.IsWorking = false;
+        cut.Render();
+
+        Assert.Equal(0, _time.ActiveTimers);
+
+        worker.IsWorking = true;
+        cut.Render();
+        await _ctx.DisposeComponentsAsync();
+
+        Assert.Equal(0, _time.ActiveTimers);
     }
 
     [Fact]
@@ -322,6 +583,58 @@ public class ComponentRenderingTests : IAsyncLifetime
                 }
 
                 return _inner[key, arguments];
+            }
+        }
+    }
+
+    /// <summary>
+    /// The state a page hands its loading overlay, without the page.
+    /// </summary>
+    sealed class Worker : WorkingStateBase;
+
+    /// <summary>
+    /// A clock that moves only when told to, and fires every timer it created each time it does.
+    /// </summary>
+    sealed class ManualTimeProvider : TimeProvider
+    {
+        readonly List<ManualTimer> _timers = [];
+        long _timestamp;
+
+        public int ActiveTimers => _timers.Count;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => _timestamp;
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            var timer = new ManualTimer(() => callback(state), stopped => _timers.Remove(stopped));
+            _timers.Add(timer);
+            return timer;
+        }
+
+        public void Advance(TimeSpan duration)
+        {
+            _timestamp += duration.Ticks;
+
+            foreach (var timer in _timers.ToArray())
+            {
+                timer.Fire();
+            }
+        }
+
+        sealed class ManualTimer(Action fire, Action<ManualTimer> stop) : ITimer
+        {
+            public void Fire() => fire();
+
+            public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+
+            public void Dispose() => stop(this);
+
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
             }
         }
     }

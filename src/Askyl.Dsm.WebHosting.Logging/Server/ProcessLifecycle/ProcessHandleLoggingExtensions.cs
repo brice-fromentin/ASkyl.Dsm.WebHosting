@@ -28,15 +28,10 @@ public static partial class ProcessHandleLoggingExtensions
     [LoggerMessage(EventId = 2600003, Level = LogLevel.Information, Message = "Process {ProcessId} exited with code {ExitCode}")]
     public static partial void ProcessExited(this ILogger<ILogSystemProcessHandle> logger, int processId, int exitCode);
 
-    /// <summary>
-    /// Logs process wait timeout.
-    /// </summary>
-    [LoggerMessage(EventId = 2600004, Level = LogLevel.Warning, Message = "Process {ProcessId} did not exit within {TimeoutMs}ms")]
-    public static partial void ProcessWaitTimeout(this ILogger<ILogSystemProcessHandle> logger, int processId, long timeoutMs);
 
     /// <summary>
     /// Logs SIGKILL signal sent to process.
     /// </summary>
-    [LoggerMessage(EventId = 2600005, Level = LogLevel.Warning, Message = "Sending SIGKILL to process {ProcessId}")]
+    [LoggerMessage(EventId = 2600004, Level = LogLevel.Warning, Message = "Sending SIGKILL to process {ProcessId}")]
     public static partial void SigKillSent(this ILogger<ILogSystemProcessHandle> logger, int processId);
 }

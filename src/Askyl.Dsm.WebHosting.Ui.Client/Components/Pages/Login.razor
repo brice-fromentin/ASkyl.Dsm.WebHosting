@@ -5,14 +5,18 @@
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @using Askyl.Dsm.WebHosting.Constants.Application
 @using Askyl.Dsm.WebHosting.Data.Domain.Authentication
+@using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics
+@using Askyl.Dsm.WebHosting.Data.Results
 @using Askyl.Dsm.WebHosting.Data.Contracts
 @using Askyl.Dsm.WebHosting.Globalization
 
 @inject IAuthenticationService authService
 @inject INotificationService ToastService
 @inject NavigationManager navigation
+@inject IDsmConnectionDiagnosticService diagnosticService
 @inject ILocalizer localizer
 @inject ICultureManager cultureManager
+@inject DsmHttpsEndpoint httpsEndpoint
 
 <PageTitle>@localizer[LK.Login.PageTitle]</PageTitle>
 
@@ -21,19 +25,30 @@
 @* A page, not a modal dialog: a modal overlay blocked everything outside it, the header included *@
 <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center" VerticalAlignment="VerticalAlignment.Center" Class="full-height">
     <FluentCard Class="login-card">
-        <EditForm Model="@Model" OnValidSubmit="Authenticate">
-            <FluentValidator />
+        @if (SecureUri is not null)
+        {
+            <InsecureConnectionPanel SecureUri="@SecureUri" />
+        }
+        else if (Report is { IsHealthy: false })
+        {
+            <DsmDiagnosticPanel Report="@Report" OnRecheck="Recheck" />
+        }
+        else
+        {
+            <EditForm Model="@Model" OnValidSubmit="Authenticate">
+                <FluentValidator />
 
-            <FluentStack Orientation="Orientation.Vertical">
-                <h2>@localizer[LK.Login.DialogTitle]</h2>
-                <RealTimeTextField @bind-Value="Model.Login" Label="@localizer[LK.Login.LoginLabel]" Class="full-size" Autofocus="true" Name="username" />
-                <FluentValidationMessage For="(() => Model.Login)" />
-                <RealTimeTextField @bind-Value="Model.Password" TextInputType="TextInputType.Password" Label="@localizer[LK.Login.PasswordLabel]" Class="full-size" Name="password" />
-                <FluentValidationMessage For="(() => Model.Password)" />
-                <RealTimeTextField @bind-Value="Model.OtpCode" Label="@localizer[LK.Login.OTPLabel]" Class="full-size" Name="otp" />
-                <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary">@localizer[LK.Common.OK]</FluentButton>
-            </FluentStack>
-        </EditForm>
+                <FluentStack Orientation="Orientation.Vertical">
+                    <h2>@localizer[LK.Login.DialogTitle]</h2>
+                    <RealTimeTextField @bind-Value="Model.Login" Label="@localizer[LK.Login.LoginLabel]" Class="full-size" Autofocus="true" Name="username" />
+                    <FluentValidationMessage For="(() => Model.Login)" />
+                    <RealTimeTextField @bind-Value="Model.Password" TextInputType="TextInputType.Password" Label="@localizer[LK.Login.PasswordLabel]" Class="full-size" Name="password" />
+                    <FluentValidationMessage For="(() => Model.Password)" />
+                    <RealTimeTextField @bind-Value="Model.OtpCode" Label="@localizer[LK.Login.OTPLabel]" Class="full-size" Name="otp" />
+                    <FluentButton Type="ButtonType.Submit" Appearance="ButtonAppearance.Primary">@localizer[LK.Common.OK]</FluentButton>
+                </FluentStack>
+            </EditForm>
+        }
     </FluentCard>
 </FluentStack>
 
@@ -41,12 +56,40 @@
 {
     private LoginCredentials Model = new();
 
+    // Null until read, and when reading failed: the form then shows as it always did
+    private DsmConnectionReport? Report;
+
+    // Set when the page was opened over plain HTTP: the browser would drop the session cookies, so nothing else can work
+    private Uri? SecureUri;
+
     protected override async Task OnInitializedAsync()
     {
-        var isAuthenticatedResult = await authService.IsAuthenticatedAsync();
-        if (isAuthenticatedResult.Success && isAuthenticatedResult.Value == true)
+        var pageUri = new Uri(navigation.Uri);
+
+        if (httpsEndpoint.IsInsecure(pageUri))
         {
-            navigation.NavigateTo(ApplicationConstants.HomePagePath);
+            SecureUri = httpsEndpoint.ToHttps(pageUri);
+            return;
+        }
+
+        // The overlay covers the form until the report is known, so it cannot flash under a user who started typing
+        using var worker = this.CreateWorkingState(localizer[LK.Diagnostic.Checking]);
+
+        try
+        {
+            var isAuthenticatedResult = await authService.IsAuthenticatedAsync();
+            if (isAuthenticatedResult.Success && isAuthenticatedResult.Value == true)
+            {
+                navigation.NavigateTo(ApplicationConstants.HomePagePath);
+                return;
+            }
+
+            Report = (await diagnosticService.GetReportAsync()).Value;
+        }
+        catch (Exception exception) when (IsNoAnswer(exception))
+        {
+            // Report stays null, so the form shows, as when the report could not be read
+            await ToastService.ShowErrorToastAsync(localizer[LK.Error.ServerNotResponding]);
         }
     }
 
@@ -59,20 +102,69 @@
 
         using var worker = this.CreateWorkingState(localizer[LK.Login.Authenticating]);
 
-        var result = await authService.LoginAsync(Model.Login, Model.Password, Model.OtpCode);
-
-        if (!result.Success || !result.IsAuthenticated)
+        try
         {
-            // failed - either HTTP call failed or credentials invalid
-            var errorMessage = result.Message?.Trim() ?? localizer[LK.Error.AuthenticationFailed];
-            await ToastService.ShowErrorToastAsync(errorMessage);
+            var result = await authService.LoginAsync(Model.Login, Model.Password, Model.OtpCode);
+
+            if (!result.Success || !result.IsAuthenticated)
+            {
+                if (result.ErrorCode == ApiErrorCode.DsmUnreachable)
+                {
+                    // The server re-ran the checks before answering; the panel says more than a toast
+                    Report = (await diagnosticService.GetReportAsync()).Value;
+
+                    if (Report is { IsHealthy: false })
+                    {
+                        return;
+                    }
+                }
+
+                // failed - either HTTP call failed or credentials invalid
+                var errorMessage = result.Message?.Trim() ?? localizer[LK.Error.AuthenticationFailed];
+                await ToastService.ShowErrorToastAsync(errorMessage);
+                return;
+            }
+
+            // Initialize culture from login response (user preference or system fallback)
+            cultureManager.InitializeFromLogin(result.Culture, result.DateFormat, result.TimeFormat);
+
+            await ToastService.ShowSuccessToastAsync(localizer[LK.Success.AuthenticationSuccessful]);
+            navigation.NavigateTo(ApplicationConstants.HomePagePath);
+        }
+        catch (Exception exception) when (IsNoAnswer(exception))
+        {
+            await ToastService.ShowErrorToastAsync(localizer[LK.Error.ServerNotResponding]);
+        }
+    }
+
+    private async Task Recheck()
+    {
+        if (IsWorking)
+        {
             return;
         }
 
-        // Initialize culture from login response (user preference or system fallback)
-        cultureManager.InitializeFromLogin(result.Culture, result.DateFormat, result.TimeFormat);
+        using var worker = this.CreateWorkingState(localizer[LK.Diagnostic.Checking]);
 
-        await ToastService.ShowSuccessToastAsync(localizer[LK.Success.AuthenticationSuccessful]);
-        navigation.NavigateTo(ApplicationConstants.HomePagePath);
+        try
+        {
+            var result = await diagnosticService.RecheckAsync();
+
+            if (!result.Success)
+            {
+                await ToastService.ShowErrorToastAsync(result.Message ?? localizer[LK.Diagnostic.Unavailable]);
+                return;
+            }
+
+            Report = result.Value;
+        }
+        catch (Exception exception) when (IsNoAnswer(exception))
+        {
+            await ToastService.ShowErrorToastAsync(localizer[LK.Error.ServerNotResponding]);
+        }
     }
+
+    // What the browser's HttpClient throws once its wait runs out (TaskCanceledException), or when the server
+    // cannot be reached at all; without a catch, either one ends on Blazor's "An unhandled error has occurred" bar
+    private static bool IsNoAnswer(Exception exception) => exception is TaskCanceledException or HttpRequestException;
 }

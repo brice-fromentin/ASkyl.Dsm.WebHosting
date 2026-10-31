@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Logging;
 using Askyl.Dsm.WebHosting.Tests.Tools.Infrastructure;
@@ -38,7 +39,9 @@ public sealed class ApplicationHostFactory : WebApplicationFactory<App>
     /// </summary>
     const string TestingEnvironmentName = "Testing";
 
-    const string ConfigPathSettingKey = "DsmSettings:ConfigPath";
+    internal const string ConfigPathSettingKey = "DsmSettings:ConfigPath";
+
+    internal const string WebConfigPathSettingKey = SystemDefaults.ConfigKeyWebConfigPath;
 
     #endregion
 
@@ -49,6 +52,11 @@ public sealed class ApplicationHostFactory : WebApplicationFactory<App>
     #endregion
 
     #region Properties
+
+    /// <summary>
+    /// The throwaway directory holding every file this factory writes; deleted with the factory.
+    /// </summary>
+    public string StateDirectory => _stateDirectory;
 
     /// <summary>
     /// Absolute path of the synthetic DSM settings file this factory writes for the host to read.
@@ -65,9 +73,17 @@ public sealed class ApplicationHostFactory : WebApplicationFactory<App>
 
         builder.UseEnvironment(TestingEnvironmentName);
 
-        // Added last so it wins over appsettings.json, which points at /etc/synoinfo.conf.
+        // Added last so it wins over appsettings.json, which points at /etc/synoinfo.conf, and over the
+        // environment, where a developer's ADWH_DSM_URL names a real NAS: null hides it, so the host runs
+        // in loopback mode as on the NAS.
         builder.ConfigureAppConfiguration(configuration => configuration.AddInMemoryCollection(
-            new Dictionary<string, string?> { [ConfigPathSettingKey] = SynoInfoPath }));
+            new Dictionary<string, string?>
+            {
+                [ConfigPathSettingKey] = SynoInfoPath,
+                // Never written: no machine's real DSM.json may give the tests a port
+                [WebConfigPathSettingKey] = Path.Combine(_stateDirectory, "DSM.json"),
+                [ApplicationConstants.DsmUrlEnvironmentVariable] = null
+            }));
 
         builder.ConfigureServices(services =>
         {
@@ -83,12 +99,7 @@ public sealed class ApplicationHostFactory : WebApplicationFactory<App>
     {
         Directory.CreateDirectory(_stateDirectory);
 
-        File.WriteAllLines(SynoInfoPath,
-        [
-            $"{SystemDefaults.KeyExternalHostIp}=\"{FakeDsmSettings.Server}\"",
-            $"{SystemDefaults.KeyExternalHttpsPort}=\"{FakeDsmSettings.Port}\"",
-            $"{SystemDefaults.KeyLanguage}=\"{FakeDsmSettings.Language}\""
-        ]);
+        File.WriteAllLines(SynoInfoPath, [$"{SystemDefaults.KeyLanguage}=\"{FakeDsmSettings.Language}\""]);
     }
 
     #endregion
