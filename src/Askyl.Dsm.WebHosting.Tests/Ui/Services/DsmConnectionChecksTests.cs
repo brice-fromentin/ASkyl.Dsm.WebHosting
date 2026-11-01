@@ -94,7 +94,8 @@ public class DsmConnectionChecksTests
             var port = ((IPEndPoint)listener.LocalEndpoint).Port;
             var stopwatch = Stopwatch.StartNew();
 
-            var (failure, _, cause) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, port, Policy(rootListens: true), TimeSpan.FromMilliseconds(300));
+            // Bounded from outside too: without its own timeout the check would hang the whole run instead of failing
+            var (failure, _, cause) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, port, Policy(rootListens: true), TimeSpan.FromMilliseconds(300)).WaitAsync(TimeSpan.FromSeconds(5));
 
             Assert.Equal(DsmCheckFailure.HandshakeFailed, failure);
             Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2));

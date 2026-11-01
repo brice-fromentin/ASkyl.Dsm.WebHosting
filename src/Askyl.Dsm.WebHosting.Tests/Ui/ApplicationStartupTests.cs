@@ -133,11 +133,16 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
     [Fact]
     public async Task Application_HostPage_PassesDsmHttpsPortToTheClient()
     {
-        var html = await factory.CreateClient().GetStringAsync(ApplicationConstants.ApplicationUrlSubPath);
+        // A port DSM.json names, never the default: the page must pass the one DSM really uses
+        var (host, port) = WithClosedLoopbackDsm();
 
-        // The factory gives no DSM.json, so loopback mode falls back to DSM's default port
+        using var loopback = host;
+
+        var html = await loopback.CreateClient().GetStringAsync(ApplicationConstants.ApplicationUrlSubPath);
+
+        Assert.NotEqual(SystemDefaults.DefaultHttpsPort, port);
         Assert.Contains(ApplicationConstants.DsmHttpsPortEnvironmentVariable, html, StringComparison.Ordinal);
-        Assert.Contains($"'{SystemDefaults.DefaultHttpsPort}'", html, StringComparison.Ordinal);
+        Assert.Contains($"'{port}'", html, StringComparison.Ordinal);
     }
 
     [Fact]

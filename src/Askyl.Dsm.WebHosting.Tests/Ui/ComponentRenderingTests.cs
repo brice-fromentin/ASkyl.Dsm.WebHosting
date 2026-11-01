@@ -78,6 +78,11 @@ public class ComponentRenderingTests : IAsyncLifetime
 
     const int DsmPort = 5001;
 
+    /// <summary>
+    /// A DSM HTTPS port moved off the default, so the HTTPS link can only be right if it uses the configured one.
+    /// </summary>
+    const int MovedDsmHttpsPort = 5443;
+
     readonly BunitContext _ctx = new();
     readonly Mock<IAuthenticationService> _authService = new();
     readonly Mock<IWebSiteHostingService> _hostingService = new();
@@ -99,7 +104,7 @@ public class ComponentRenderingTests : IAsyncLifetime
         _ctx.Services.AddSingleton(_diagnosticService.Object);
         _ctx.Services.AddSingleton(_navigationGuard.Object);
         _ctx.Services.AddSingleton(Mock.Of<ICultureManager>());
-        _ctx.Services.AddSingleton(new DsmHttpsEndpoint(5001));
+        _ctx.Services.AddSingleton(new DsmHttpsEndpoint(MovedDsmHttpsPort));
         _ctx.Services.AddSingleton<TimeProvider>(_time);
 
         _authService.Setup(service => service.IsAuthenticatedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(ApiResultBool.CreateSuccess(false));
@@ -153,7 +158,7 @@ public class ComponentRenderingTests : IAsyncLifetime
 
         cut.Find("fluent-button[appearance=primary]").Click();
 
-        Assert.Equal("https://nas.test:5001/adwh/login", navigation.Uri);
+        Assert.Equal($"https://nas.test:{MovedDsmHttpsPort}/adwh/login", navigation.Uri);
     }
 
     [Fact]
@@ -369,7 +374,9 @@ public class ComponentRenderingTests : IAsyncLifetime
         var worker = new Worker { IsWorking = true, Message = SiteName };
         var cut = _ctx.Render<LoadingOverlay>(parameters => parameters.Add(overlay => overlay.WorkingState, worker));
 
+        // The timer is not due yet, so nothing would re-render the overlay: render it, as any other change would
         _time.Advance(TimeSpan.FromSeconds(threshold - 1));
+        cut.Render();
 
         Assert.DoesNotContain(_localizer[LK.Loading.StillWorking, threshold - 1], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
 
