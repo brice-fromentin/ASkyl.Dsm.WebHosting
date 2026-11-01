@@ -45,7 +45,7 @@ public class DsmConnectionChecksTests
         // The guarantee that the check observes validation instead of bypassing it: localhost is a name, never relaxed
         await using var server = SelfSignedServer();
 
-        var (failure, errors) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, server.Port, Policy(rootListens: true), Timeout);
+        var (failure, errors, _) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, server.Port, Policy(rootListens: true), Timeout);
 
         Assert.Equal(DsmCheckFailure.NotTrusted, failure);
         Assert.True(errors.HasFlag(SslPolicyErrors.RemoteCertificateChainErrors));
@@ -56,7 +56,7 @@ public class DsmConnectionChecksTests
     {
         await using var server = SelfSignedServer();
 
-        var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, server.Port, Policy(rootListens: true), Timeout);
+        var (failure, _, _) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, server.Port, Policy(rootListens: true), Timeout);
 
         Assert.Equal(DsmCheckFailure.None, failure);
     }
@@ -66,7 +66,7 @@ public class DsmConnectionChecksTests
     {
         await using var server = SelfSignedServer();
 
-        var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, server.Port, Policy(rootListens: false), Timeout);
+        var (failure, _, _) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, server.Port, Policy(rootListens: false), Timeout);
 
         Assert.Equal(DsmCheckFailure.NotTrusted, failure);
     }
@@ -78,7 +78,7 @@ public class DsmConnectionChecksTests
         var policy = new DsmCertificatePolicy(Mock.Of<IRootListenerProbe>(), TestCertificates.Pin(certificate.GetCertHashString(HashAlgorithmName.SHA256)));
         await using var server = LocalTlsServer.Start(certificate);
 
-        var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, server.Port, policy, Timeout);
+        var (failure, _, _) = await DsmConnectionChecks.InspectCertificateAsync(NetworkConstants.Localhost, server.Port, policy, Timeout);
 
         Assert.Equal(DsmCheckFailure.None, failure);
     }
@@ -94,10 +94,13 @@ public class DsmConnectionChecksTests
             var port = ((IPEndPoint)listener.LocalEndpoint).Port;
             var stopwatch = Stopwatch.StartNew();
 
-            var (failure, _) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, port, Policy(rootListens: true), TimeSpan.FromMilliseconds(300));
+            var (failure, _, cause) = await DsmConnectionChecks.InspectCertificateAsync(LoopbackAddress, port, Policy(rootListens: true), TimeSpan.FromMilliseconds(300));
 
             Assert.Equal(DsmCheckFailure.HandshakeFailed, failure);
             Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2));
+
+            // The failure kind alone cannot tell a stalled server from a protocol mismatch; the log needs the cause
+            Assert.IsAssignableFrom<OperationCanceledException>(cause);
         }
         finally
         {

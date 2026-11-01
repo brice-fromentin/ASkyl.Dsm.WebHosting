@@ -82,11 +82,15 @@ public sealed class DsmConnectionDiagnosticService(
 
             if (LastPassed(results))
             {
-                var (failure, errors) = await DsmConnectionChecks.InspectCertificateAsync(settings.Server, settings.Port, certificatePolicy, StepTimeout);
+                var (failure, errors, cause) = await DsmConnectionChecks.InspectCertificateAsync(settings.Server, settings.Port, certificatePolicy, StepTimeout);
 
                 if (failure == DsmCheckFailure.NotTrusted)
                 {
                     logger.DsmConnectionNotTrusted(settings.Server, settings.Port, errors);
+                }
+                else if (cause is not null)
+                {
+                    logger.DsmConnectionCheckCause(DsmConnectionCheck.ConnectionTrusted.ToString(), cause);
                 }
 
                 results.Add(Result(DsmConnectionCheck.ConnectionTrusted, failure));
@@ -126,6 +130,8 @@ public sealed class DsmConnectionDiagnosticService(
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or TimeoutException)
         {
+            logger.DsmConnectionCheckCause(DsmConnectionCheck.ApiAnswers.ToString(), ex);
+
             return new(DsmConnectionCheck.ApiAnswers, DsmCheckStatus.Failed, DsmCheckFailure.UnexpectedResponse);
         }
     }
@@ -140,7 +146,7 @@ public sealed class DsmConnectionDiagnosticService(
             return;
         }
 
-        logger.DsmConnectionFailed(failed.Check.ToString(), failed.Failure.ToString(), report.Host ?? String.Empty, report.Port);
+        logger.DsmConnectionFailed(failed.Check.ToString(), failed.Failure.ToString(), failed.HttpStatus, report.Host ?? String.Empty, report.Port);
     }
 
     static DsmConnectionCheckResult Result(DsmConnectionCheck check, DsmCheckFailure failure)

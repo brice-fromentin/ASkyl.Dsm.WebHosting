@@ -20,8 +20,8 @@ public static partial class DsmConnectionDiagnosticLoggingExtensions
     /// <summary>
     /// Logs the first failing check of the DSM connection and why it failed.
     /// </summary>
-    [LoggerMessage(EventId = 3100002, Level = LogLevel.Warning, Message = "DSM connection check {Check} failed ({Failure}) for {Host}:{Port}")]
-    public static partial void DsmConnectionFailed(this ILogger<ILogDsmConnectionDiagnosticService> logger, string check, string failure, string host, int port);
+    [LoggerMessage(EventId = 3100002, Level = LogLevel.Warning, Message = "DSM connection check {Check} failed ({Failure}, HTTP status {HttpStatus}) for {Host}:{Port}")]
+    public static partial void DsmConnectionFailed(this ILogger<ILogDsmConnectionDiagnosticService> logger, string check, string failure, int? httpStatus, string host, int port);
 
     /// <summary>
     /// Logs a check that threw instead of reporting a failure.
@@ -34,4 +34,10 @@ public static partial class DsmConnectionDiagnosticLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 3100004, Level = LogLevel.Warning, Message = "DSM connection not trusted on {Host}:{Port}: {SslPolicyErrors}")]
     public static partial void DsmConnectionNotTrusted(this ILogger<ILogDsmConnectionDiagnosticService> logger, string host, int port, SslPolicyErrors sslPolicyErrors);
+
+    /// <summary>
+    /// Logs the exception behind a failed API probe or TLS handshake, which the failure kind alone cannot tell apart.
+    /// </summary>
+    [LoggerMessage(EventId = 3100005, Level = LogLevel.Debug, Message = "DSM connection check {Check} failed on")]
+    public static partial void DsmConnectionCheckCause(this ILogger<ILogDsmConnectionDiagnosticService> logger, string check, Exception exception);
 }

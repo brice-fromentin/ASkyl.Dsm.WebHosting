@@ -42,8 +42,8 @@ internal static class DsmConnectionChecks
     /// Runs a TLS handshake under the application's own certificate policy (default validation everywhere
     /// except a loopback IP literal with a root-owned listener, or the certificate a developer pinned).
     /// </summary>
-    /// <returns>The failure, and the certificate errors the policy saw, for the log.</returns>
-    internal static async Task<(DsmCheckFailure Failure, SslPolicyErrors Errors)> InspectCertificateAsync(string host, int port, DsmCertificatePolicy policy, TimeSpan timeout)
+    /// <returns>The failure, and for the log the certificate errors the policy saw and what ended the handshake.</returns>
+    internal static async Task<(DsmCheckFailure Failure, SslPolicyErrors Errors, Exception? Cause)> InspectCertificateAsync(string host, int port, DsmCertificatePolicy policy, TimeSpan timeout)
     {
         using var cancellation = new CancellationTokenSource(timeout);
 
@@ -72,11 +72,11 @@ internal static class DsmConnectionChecks
             await using var stream = new SslStream(client.GetStream());
             await stream.AuthenticateAsClientAsync(options, cancellation.Token).WaitAsync(cancellation.Token);
 
-            return (DsmCheckFailure.None, errors);
+            return (DsmCheckFailure.None, errors, null);
         }
         catch (Exception ex) when (ex is AuthenticationException or IOException or SocketException or OperationCanceledException)
         {
-            return (refused ? DsmCheckFailure.NotTrusted : DsmCheckFailure.HandshakeFailed, errors);
+            return (refused ? DsmCheckFailure.NotTrusted : DsmCheckFailure.HandshakeFailed, errors, ex);
         }
     }
 }
