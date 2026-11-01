@@ -14,8 +14,10 @@ namespace Askyl.Dsm.WebHosting.Tools.Network;
 /// unprivileged process cannot impersonate DSM's root-owned listener. A name, even <c>localhost</c>, is
 /// never relaxed. The trust assumption: DSM is whoever root-owns the loopback listener on DSM's port. A stale
 /// port fails closed unless another root-owned listener (say a reverse-proxy rule an administrator created)
-/// now holds it, which is no escalation. The probe runs in the certificate callback, after the TCP connect,
-/// so a small time-of-check window remains; <c>SocketsHttpHandler.ConnectCallback</c> could close it.
+/// now holds it; a login then confirms DSM with SYNO.API.Info before sending the password, so a listener that
+/// does not answer as DSM never receives it, and one that imitates DSM would. The probe runs in the
+/// certificate callback, after the TCP connect, so a small time-of-check window remains;
+/// <c>SocketsHttpHandler.ConnectCallback</c> could close it.
 /// For local debugging, ADWH_DSM_CERT_SHA256 also trusts the one certificate whose fingerprint it names.
 /// </summary>
 /// <param name="probe">Tells whether a root-owned socket listens on a loopback address and port.</param>

@@ -109,13 +109,22 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
             return;
         }
 
-        if (!await HandShakeAsync(cancellationToken))
-        {
-            throw new InvalidOperationException("DSM API handshake failed");
-        }
+        await HandShakeAsync(cancellationToken);
     }
 
-    private async Task<bool> HandShakeAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Runs the SYNO.API.Info handshake again, whatever the cache holds. A login calls it before sending the
+    /// password: DSM's port may have changed hands since the cached handshake, and whatever does not answer as
+    /// DSM then never receives it. A service that imitates DSM's answer still would.
+    /// </summary>
+    public async Task ConfirmDsmAsync(CancellationToken cancellationToken)
+    {
+        using var @lock = await SemaphoreLock.AcquireAsync(this, cancellationToken: cancellationToken);
+
+        await HandShakeAsync(cancellationToken);
+    }
+
+    private async Task HandShakeAsync(CancellationToken cancellationToken)
     {
         var parameters = new InformationsQueryParameters();
         var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, ApiConstants.Handshake);
@@ -125,13 +134,11 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
         if (result?.Success != true || result.Data is null || result.Data.Count == 0)
         {
             logger.HandshakeFailure();
-            return false;
+            throw new InvalidOperationException("DSM API handshake failed");
         }
 
         ApiInformations.Replace(result.Data);
         logger.HandshakeSuccess();
-
-        return true;
     }
 
     #endregion

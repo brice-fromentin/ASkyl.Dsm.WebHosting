@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
@@ -58,16 +59,21 @@ public class DsmSessionTests : IDisposable
 
         var client = new DsmApiClient(factory.Object, _settingsService, _clientLogger.Object);
 
-        client.ApiInformations.Replace(new Dictionary<string, ApiInformation>
-        {
-            { ApiConstants.Auth, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
-            { ApiConstants.CoreUser, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
-            { ApiConstants.CoreUserSettings, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
-            { "test", new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } }
-        });
+        client.ApiInformations.Replace(KnownApis);
 
         return client;
     }
+
+    static readonly Dictionary<string, ApiInformation> KnownApis = new()
+    {
+        { ApiConstants.Auth, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
+        { ApiConstants.CoreUser, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
+        { ApiConstants.CoreUserSettings, new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } },
+        { "test", new ApiInformation { Path = "entry.cgi", MinVersion = 1, MaxVersion = 7 } }
+    };
+
+    // What DSM answers to SYNO.API.Info, listing the same APIs as the cache the client starts with
+    static readonly string HandshakeJson = JsonSerializer.Serialize(new { success = true, data = KnownApis });
 
     DsmSession CreateSession()
     {
@@ -249,6 +255,22 @@ public class DsmSessionTests : IDisposable
         Assert.Null(_session.Get(ApplicationConstants.DsmSessionKey));
         Assert.Null(_session.Get(ApplicationConstants.DsmUsernameKey));
         Assert.Null(_session.Get(ApplicationConstants.SessionBindingKey));
+    }
+
+    [Fact]
+    public async Task ConnectAsync_WhenSomethingElseNowHoldsDsmsPort_NeverSendsThePassword()
+    {
+        // The handshake was cached by an earlier login; since then DSM's port went to another service, here a web page
+        List<string> sentBodies = [];
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Callback<HttpRequestMessage, CancellationToken>((request, _) => sentBodies.Add(request.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? String.Empty))
+            .ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("<html></html>") });
+
+        await Assert.ThrowsAnyAsync<Exception>(() => CreateSession().ConnectAsync(new LoginCredentials("admin", "s3cret", null)));
+
+        Assert.NotEmpty(sentBodies);
+        Assert.DoesNotContain(sentBodies, body => body.Contains("s3cret", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -514,6 +536,22 @@ public class DsmSessionTests : IDisposable
             {
                 Content = new StringContent(json)
             });
+
+        AnswerTheHandshake();
+    }
+
+    /// <summary>
+    /// Answers SYNO.API.Info as DSM does, whatever the other setups queue: a login confirms DSM first. Set up
+    /// last, since Moq takes the most recent matching setup.
+    /// </summary>
+    void AnswerTheHandshake()
+    {
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(request => request.RequestUri!.AbsolutePath.Contains($"/{ApiConstants.Handshake}/", StringComparison.Ordinal)),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(HandshakeJson) });
     }
 
     /// <summary>
@@ -551,6 +589,8 @@ public class DsmSessionTests : IDisposable
                 Content = new StringContent(json)
             });
 
+        AnswerTheHandshake();
+
         return captured;
     }
 
@@ -572,6 +612,8 @@ public class DsmSessionTests : IDisposable
                 Content = new StringContent(json)
             });
         }
+
+        AnswerTheHandshake();
     }
 
     sealed class TestParameters : IApiParameters
