@@ -539,8 +539,9 @@ production; approval for one run does not extend to the next. The disposable vDS
 
 ### The Disposable vDSM
 
-The maintainer runs a Virtual DSM reserved for the assistant: production's DSM version, no real data, a
-throwaway administrator account. Its host, ports and credentials live in the gitignored
+The maintainer runs a Virtual DSM reserved for the assistant: DSM 7.2.2, on the package's minimum 7.2 line,
+while the production NAS runs 7.4, so the two cover both ends; no real data, a throwaway administrator account.
+Its host, ports and credentials live in the gitignored
 `dev-mock/vdsm.env`, the only place an assistant reads them from. An assistant may sign in with that account,
 use SSH and `sudo` on the instance, and launch the application against it without asking — but only with
 `ADWH_DSM_URL` set on the command itself from that file, never inherited from the shell, which may name
