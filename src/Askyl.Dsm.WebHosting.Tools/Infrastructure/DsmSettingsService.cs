@@ -30,7 +30,16 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
 
     public string Language => _preferences.Language;
 
-    public void Reload() => _preferences = ReadSettings(logger, fileReader, configuration);
+    // The watcher and a diagnostic run both reload: one at a time, or the one that read the older file could land last
+    private readonly Lock _reloadLock = new();
+
+    public void Reload()
+    {
+        lock (_reloadLock)
+        {
+            _preferences = ReadSettings(logger, fileReader, configuration);
+        }
+    }
 
     /// <summary>
     /// The path of DSM's web configuration (DSM.json), or the override in DsmSettings:WebConfigPath.
