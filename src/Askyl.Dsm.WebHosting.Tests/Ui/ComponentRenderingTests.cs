@@ -10,16 +10,19 @@ using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Globalization.Extensions;
 using Askyl.Dsm.WebHosting.Globalization.Resources;
+using Askyl.Dsm.WebHosting.Ui.Client;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Controls;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Dialogs;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Pages;
 using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState;
+using Askyl.Dsm.WebHosting.Ui.Client.Contracts;
 using Askyl.Dsm.WebHosting.Ui.Client.Extensions;
 using Askyl.Dsm.WebHosting.Ui.Client.Interfaces;
 using Askyl.Dsm.WebHosting.Ui.Client.Services;
 using Bunit;
 using FluentValidation;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.FluentUI.AspNetCore.Components;
 using Moq;
@@ -80,6 +83,7 @@ public class ComponentRenderingTests : IAsyncLifetime
     readonly Mock<IWebSiteHostingService> _hostingService = new();
     readonly Mock<ILicenseService> _licenseService = new();
     readonly Mock<IDsmConnectionDiagnosticService> _diagnosticService = new();
+    readonly Mock<INavigationGuard> _navigationGuard = new();
     readonly ManualTimeProvider _time = new();
     readonly ILocalizer _localizer;
 
@@ -93,6 +97,7 @@ public class ComponentRenderingTests : IAsyncLifetime
         _ctx.Services.AddSingleton(_hostingService.Object);
         _ctx.Services.AddSingleton(_licenseService.Object);
         _ctx.Services.AddSingleton(_diagnosticService.Object);
+        _ctx.Services.AddSingleton(_navigationGuard.Object);
         _ctx.Services.AddSingleton(Mock.Of<ICultureManager>());
         _ctx.Services.AddSingleton(new DsmHttpsEndpoint(5001));
         _ctx.Services.AddSingleton<TimeProvider>(_time);
@@ -336,6 +341,25 @@ public class ComponentRenderingTests : IAsyncLifetime
         logout.SetResult(ApiResult.CreateSuccess());
 
         cut.WaitForAssertion(() => Assert.False(cut.Instance.IsWorking));
+    }
+
+    [Fact]
+    public void Routes_CoversThePageUntilTheServerSaysWhoIsSignedIn()
+    {
+        // The guard asks the server before any page renders, and that wait used to show nothing at all
+        var check = new TaskCompletionSource();
+        _navigationGuard.Setup(guard => guard.OnNavigateAsync(It.IsAny<NavigationContext>())).Returns(check.Task);
+        _ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("notfound");
+
+        var cut = _ctx.Render<Routes>();
+
+        Assert.True(cut.Instance.IsWorking);
+        Assert.Contains(_localizer[LK.Loading.Page], WebUtility.HtmlDecode(cut.Find("fluent-overlay").TextContent), StringComparison.Ordinal);
+
+        check.SetResult();
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.NotFound.Content], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        Assert.False(cut.Instance.IsWorking);
     }
 
     [Fact]

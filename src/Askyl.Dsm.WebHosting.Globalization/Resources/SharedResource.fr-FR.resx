@@ -428,6 +428,9 @@
   <data name="Loading_LoggingOut" xml:space="preserve">
     <value>Déconnexion...</value>
   </data>
+  <data name="Loading_Page" xml:space="preserve">
+    <value>Chargement de la page...</value>
+  </data>
   <data name="Loading_StillWorking" xml:space="preserve">
     <value>Toujours en cours... {0} s</value>
   </data>

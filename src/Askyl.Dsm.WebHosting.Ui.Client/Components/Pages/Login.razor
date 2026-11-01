@@ -86,7 +86,7 @@
 
             Report = (await diagnosticService.GetReportAsync()).Value;
         }
-        catch (Exception exception) when (IsNoAnswer(exception))
+        catch (Exception exception) when (exception.IsNoAnswer)
         {
             // Report stays null, so the form shows, as when the report could not be read
             await ToastService.ShowErrorToastAsync(localizer[LK.Error.ServerNotResponding]);
@@ -131,7 +131,7 @@
             await ToastService.ShowSuccessToastAsync(localizer[LK.Success.AuthenticationSuccessful]);
             navigation.NavigateTo(ApplicationConstants.HomePagePath);
         }
-        catch (Exception exception) when (IsNoAnswer(exception))
+        catch (Exception exception) when (exception.IsNoAnswer)
         {
             await ToastService.ShowErrorToastAsync(localizer[LK.Error.ServerNotResponding]);
         }
@@ -158,13 +158,9 @@
 
             Report = result.Value;
         }
-        catch (Exception exception) when (IsNoAnswer(exception))
+        catch (Exception exception) when (exception.IsNoAnswer)
         {
             await ToastService.ShowErrorToastAsync(localizer[LK.Error.ServerNotResponding]);
         }
     }
-
-    // What the browser's HttpClient throws once its wait runs out (TaskCanceledException), or when the server
-    // cannot be reached at all; without a catch, either one ends on Blazor's "An unhandled error has occurred" bar
-    private static bool IsNoAnswer(Exception exception) => exception is TaskCanceledException or HttpRequestException;
 }

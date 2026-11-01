@@ -428,6 +428,9 @@
   <data name="Loading_LoggingOut" xml:space="preserve">
     <value>Signing out...</value>
   </data>
+  <data name="Loading_Page" xml:space="preserve">
+    <value>Loading the page...</value>
+  </data>
   <data name="Loading_StillWorking" xml:space="preserve">
     <value>Still working... {0} s</value>
   </data>

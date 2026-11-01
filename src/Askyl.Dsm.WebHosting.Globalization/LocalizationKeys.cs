@@ -197,6 +197,7 @@ public static class LK
         public const string UpdatingWebsite = "Loading_UpdatingWebsite";
         public const string CreatingWebsite = "Loading_CreatingWebsite";
         public const string LoggingOut = "Loading_LoggingOut";
+        public const string Page = "Loading_Page";
         public const string StillWorking = "Loading_StillWorking";
     }
 
