@@ -110,9 +110,9 @@ internal sealed class LocalTlsServer(X509Certificate2 certificate, bool answerHt
             {
                 client = await _listener.AcceptTcpClientAsync();
             }
-            catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+            catch (Exception ex) when (ex is SocketException or ObjectDisposedException or InvalidOperationException)
             {
-                // Disposed: the listener stopped
+                // Disposed: the listener stopped, during the wait or before it began (InvalidOperationException)
                 return;
             }
 
