@@ -118,7 +118,6 @@ public static partial class WebsiteLoggingExtensions
     [LoggerMessage(EventId = 1800015, Level = LogLevel.Information, Message = "Instance added for site: {SiteName}")]
     public static partial void InstanceAdded(this ILogger<ILogWebSiteHostingService> logger, string siteName);
 
-
     /// <summary>
     /// Logs site stopping due to disable or restart requirement.
     /// </summary>
@@ -225,7 +224,6 @@ public static partial class WebsiteLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1800031, Level = LogLevel.Error, Message = "No website was initialized: the configuration could not be read. The host starts so the interface and logs stay reachable, and no write is attempted over an unreadable file")]
     public static partial void InstanceInitializationSkipped(this ILogger<ILogWebSiteHostingService> logger, Exception ex);
-
 
     #endregion
 }

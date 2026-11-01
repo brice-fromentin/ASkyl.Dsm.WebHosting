@@ -28,7 +28,6 @@ public static partial class AuthenticationLoggingExtensions
     [LoggerMessage(EventId = 1000003, Level = LogLevel.Information, Message = "User logged out")]
     public static partial void UserLoggedOut(this ILogger<ILogAuthenticationService> logger);
 
-
     /// <summary>
     /// Logs that the DSM session was validated successfully against the server.
     /// </summary>

@@ -28,7 +28,6 @@ public static partial class ProcessHandleLoggingExtensions
     [LoggerMessage(EventId = 2600003, Level = LogLevel.Information, Message = "Process {ProcessId} exited with code {ExitCode}")]
     public static partial void ProcessExited(this ILogger<ILogSystemProcessHandle> logger, int processId, int exitCode);
 
-
     /// <summary>
     /// Logs SIGKILL signal sent to process.
     /// </summary>

@@ -10,7 +10,6 @@ public interface ILogDsmSession { }
 /// </summary>
 public static partial class DsmSessionLoggingExtensions
 {
-
     /// <summary>
     /// Logs that authentication succeeded for the given login.
     /// </summary>
@@ -28,8 +27,6 @@ public static partial class DsmSessionLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 2900003, Level = LogLevel.Debug, Message = "Failed to fetch user preferences")]
     public static partial void FetchUserPreferencesFailed(this ILogger<ILogDsmSession> logger, Exception exception);
-
-
 
     /// <summary>
     /// Logs that a user authenticated against DSM but lacks administrator rights.

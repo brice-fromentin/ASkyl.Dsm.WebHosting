@@ -10,23 +10,17 @@ public interface ILogDsmApiClient { }
 /// </summary>
 public static partial class DsmApiLoggingExtensions
 {
-
     /// <summary>
     /// Logs a DSM API request with method, URL, and duration.
     /// </summary>
     [LoggerMessage(EventId = 2000001, Level = LogLevel.Debug, Message = "DSM API request: {Method} {Url} - Status {StatusCode} ({Duration}ms)")]
     public static partial void ApiRequest(this ILogger<ILogDsmApiClient> logger, string method, string url, int statusCode, long duration);
 
-
     /// <summary>
     /// Logs a DSM API error response with error code.
     /// </summary>
     [LoggerMessage(EventId = 2000002, Level = LogLevel.Error, Message = "DSM API error: {ErrorMessage} (Code: {ErrorCode})")]
     public static partial void ApiError(this ILogger<ILogDsmApiClient> logger, string errorMessage, int? errorCode);
-
-
-
-
 
     /// <summary>
     /// Logs successful handshake with the DSM API.

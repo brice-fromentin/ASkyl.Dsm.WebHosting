@@ -44,15 +44,11 @@ public static partial class ClientLoggingExtensions
     [LoggerMessage(EventId = 7600001, Level = LogLevel.Debug, Message = "Culture resolved from login response: {Culture}")]
     public static partial void CultureResolvedFromLogin(this ILogger<ILogCultureManager> logger, string culture);
 
-
-
     /// <summary>
     /// Logs the final culture applied to the thread.
     /// </summary>
     [LoggerMessage(EventId = 7600002, Level = LogLevel.Debug, Message = "Culture applied to thread: {Culture}")]
     public static partial void CultureApplied(this ILogger<ILogCultureManager> logger, string culture);
-
-
 
     /// <summary>
     /// Logs the culture reset to DSM system resolution (on logout).
