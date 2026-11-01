@@ -41,7 +41,8 @@ internal static class TestCertificates
 }
 
 /// <summary>
-/// Serves one TLS handshake on loopback with the given certificate, optionally answering one HTTP request after it.
+/// Serves TLS handshakes on loopback with the given certificate, one connection at a time until disposed, optionally
+/// answering one HTTP request after each. The diagnostic connects twice: once to see the port answer, once for TLS.
 /// </summary>
 internal sealed class LocalTlsServer(X509Certificate2 certificate, bool answerHttp) : IAsyncDisposable
 {
@@ -58,7 +59,7 @@ internal sealed class LocalTlsServer(X509Certificate2 certificate, bool answerHt
     public static LocalTlsServer Start(X509Certificate2 certificate, bool answerHttp = false)
     {
         var server = new LocalTlsServer(certificate, answerHttp);
-        server._handshake = server.ServeOneHandshakeAsync();
+        server._handshake = server.ServeAsync();
 
         return server;
     }
@@ -99,11 +100,33 @@ internal sealed class LocalTlsServer(X509Certificate2 certificate, bool answerHt
         await stream.FlushAsync();
     }
 
-    async Task ServeOneHandshakeAsync()
+    async Task ServeAsync()
+    {
+        while (true)
+        {
+            TcpClient client;
+
+            try
+            {
+                client = await _listener.AcceptTcpClientAsync();
+            }
+            catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+            {
+                // Disposed: the listener stopped
+                return;
+            }
+
+            using (client)
+            {
+                await ServeOneHandshakeAsync(client);
+            }
+        }
+    }
+
+    async Task ServeOneHandshakeAsync(TcpClient client)
     {
         try
         {
-            using var client = await _listener.AcceptTcpClientAsync();
             await using var stream = new SslStream(client.GetStream());
             await stream.AuthenticateAsServerAsync(certificate);
 
@@ -114,7 +137,7 @@ internal sealed class LocalTlsServer(X509Certificate2 certificate, bool answerHt
         }
         catch (Exception ex) when (ex is AuthenticationException or IOException or SocketException or ObjectDisposedException)
         {
-            // Expected: the client refuses the certificate and aborts the handshake
+            // Expected: the client refuses the certificate and aborts the handshake, or only checked that the port answers
         }
     }
 }

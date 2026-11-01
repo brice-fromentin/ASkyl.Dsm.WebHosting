@@ -3,10 +3,12 @@ using System.Net.Sockets;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
 using Askyl.Dsm.WebHosting.Logging;
+using Askyl.Dsm.WebHosting.Tests.Tools.Network;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Askyl.Dsm.WebHosting.Ui.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Moq.Protected;
 
 namespace Askyl.Dsm.WebHosting.Tests.Ui.Services;
 
@@ -28,13 +30,40 @@ public class DsmConnectionDiagnosticServiceTests
         _settings.SetupGet(s => s.Port).Returns(closedPort);
     }
 
-    DsmConnectionDiagnosticService CreateService()
+    DsmConnectionDiagnosticService CreateService(bool rootListens = false, HttpMessageHandler? dsmApi = null)
     {
-        // The API probe is never reached by these tests: every one stops at the first check
-        var apiClient = new DsmApiClient(Mock.Of<IHttpClientFactory>(), _settings.Object, Mock.Of<ILogger<ILogDsmApiClient>>());
+        // Without a DSM API to answer, the probe has no client: only a run that stops before it can use this
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(() => dsmApi is null ? null! : new HttpClient(dsmApi));
 
-        return new DsmConnectionDiagnosticService(_settings.Object, apiClient, new DsmCertificatePolicy(Mock.Of<IRootListenerProbe>(), TestCertificates.Pin(null)), Mock.Of<ILogger<ILogDsmConnectionDiagnosticService>>());
+        var apiClient = new DsmApiClient(factory.Object, _settings.Object, Mock.Of<ILogger<ILogDsmApiClient>>());
+        var probe = Mock.Of<IRootListenerProbe>(listener => listener.IsRootListening(It.IsAny<IPAddress>(), It.IsAny<int>()) == rootListens);
+
+        return new DsmConnectionDiagnosticService(_settings.Object, apiClient, new DsmCertificatePolicy(probe, TestCertificates.Pin(null)), Mock.Of<ILogger<ILogDsmConnectionDiagnosticService>>());
     }
+
+    /// <summary>
+    /// Points the checks at a local TLS server with a self-signed certificate, as DSM's default one is.
+    /// </summary>
+    LocalTlsServer StartDsm()
+    {
+        var server = LocalTlsServer.Start(TestCertificates.CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1)));
+        _settings.SetupGet(s => s.Port).Returns(server.Port);
+
+        return server;
+    }
+
+    static HttpMessageHandler DsmApi(Func<Task<HttpResponseMessage>> answer)
+    {
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns(answer);
+
+        return handler.Object;
+    }
+
+    static HttpMessageHandler HealthyDsmApi() => DsmApi(() => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(DsmApiClientTests.ApiInformationJson) }));
 
     #region Ordering
 
@@ -54,6 +83,57 @@ public class DsmConnectionDiagnosticServiceTests
                 new DsmConnectionCheckResult(DsmConnectionCheck.ApiAnswers, DsmCheckStatus.Skipped)
             ],
             report.Checks);
+    }
+
+    [Fact]
+    public async Task GetReportAsync_WhenEveryCheckPasses_IsHealthy()
+    {
+        // Otherwise every visitor gets the diagnostic in place of the login form
+        await using var server = StartDsm();
+
+        var report = (await CreateService(rootListens: true, HealthyDsmApi()).GetReportAsync()).Value;
+
+        // And, healthy, it tells an anonymous visitor nothing more
+        Assert.NotNull(report);
+        Assert.True(report.IsHealthy);
+        Assert.Empty(report.Checks);
+        Assert.Null(report.Host);
+    }
+
+    [Fact]
+    public async Task GetReportAsync_AnUntrustedConnection_NeverAsksTheApi()
+    {
+        // DSM's API answers, but the policy refused the connection the login would use
+        await using var server = StartDsm();
+
+        var report = (await CreateService(rootListens: false, HealthyDsmApi()).GetReportAsync()).Value;
+
+        Assert.NotNull(report);
+        Assert.Equal(
+            [
+                new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Passed),
+                new(DsmConnectionCheck.ConnectionTrusted, DsmCheckStatus.Failed, DsmCheckFailure.NotTrusted),
+                new DsmConnectionCheckResult(DsmConnectionCheck.ApiAnswers, DsmCheckStatus.Skipped)
+            ],
+            report.Checks);
+    }
+
+    [Fact]
+    public async Task GetReportAsync_WhenTheApiNeverAnswers_GivesUpWithinItsStep()
+    {
+        // DSM's API frozen behind a live nginx; a stall that ignores its token too, as a blocking DNS lookup does.
+        // Unbounded, the login's diagnostic outlasted the browser's wait
+        await using var server = StartDsm();
+        var api = DsmApi(async () =>
+        {
+            await Task.Delay(Timeout.Infinite);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var report = (await CreateService(rootListens: true, api).GetReportAsync().WaitAsync(TimeSpan.FromSeconds(10))).Value;
+
+        Assert.NotNull(report);
+        Assert.Equal(new DsmConnectionCheckResult(DsmConnectionCheck.ApiAnswers, DsmCheckStatus.Failed, DsmCheckFailure.UnexpectedResponse), report.Checks[^1]);
     }
 
     [Fact]

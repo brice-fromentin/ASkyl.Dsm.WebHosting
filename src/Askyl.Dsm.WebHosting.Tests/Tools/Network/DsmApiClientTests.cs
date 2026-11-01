@@ -346,7 +346,7 @@ public class DsmApiClientTests : IDisposable
 
     #region Probe
 
-    const string ApiInformationJson = """{"success":true,"data":{"SYNO.API.Auth":{"path":"entry.cgi","minVersion":1,"maxVersion":7}}}""";
+    internal const string ApiInformationJson = """{"success":true,"data":{"SYNO.API.Auth":{"path":"entry.cgi","minVersion":1,"maxVersion":7}}}""";
 
     DsmApiClient CreateClientWithEmptyCache(HttpStatusCode status, string body)
     {
