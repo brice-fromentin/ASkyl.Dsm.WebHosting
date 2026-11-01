@@ -438,6 +438,8 @@ load-bearing: nginx terminates TLS, so without it `Request.IsHttps` is false and
 - **Interfaces/** — client-side service interfaces: `ILicenseService` (GetLicensesAsync),  
   `ITreeContentService` (LoadChildDirectoriesAsync for FluentTreeView lazy loading).
 - **Extensions/** — C# 14 scoped extensions: `List<FsEntry>`/`FsEntry` → TreeViewItem conversion with lazy loading;
+  `Exception.IsNoAnswer`, the failures that mean the server never answered (the browser's timeout, an unreachable
+  server), shared by the login page and the navigation guard;
   `AddFluentUIComponentsWithDefaults()`, the one FluentUI registration (both `Program.cs` and the rendering tests),
   which restores FluentUI 4's 10px `FluentStack` gap; and the `Show*TextAsync` message boxes. FluentUI 5 renders a
   message box's text as sanitized HTML and throws on an angle bracket, so the helpers encode it and every call goes
@@ -447,7 +449,9 @@ load-bearing: nginx terminates TLS, so without it `Request.IsHttps` is false and
   `AuthenticationNavigationGuard` (Router OnNavigateAsync guard),  
   `CultureManager` (resolves culture at login, clones with date/time formats),
   `FluentUILocalizer` (FluentUI's built-in strings from SharedResource `FluentUI_*` entries, English fallback).
-- **Routes.razor** — Router with OnNavigateAsync auth guard
+- **Routes.razor** — Router with OnNavigateAsync auth guard. The guard's wait shows a `LoadingOverlay` placed
+  outside the layout: the Router's own `Navigating` content replaces `MainLayout`, and with it the toast
+  provider, so a toast raised just before a navigation would vanish
 - **Program.cs** — WASM entry point, service registration
 
 **JavaScript interop:** two usages — FileSelectionDialog calls `selectChildItem` (`wwwroot/js/tree-navigation.js`) for
@@ -673,7 +677,10 @@ anything from `ConnectAsync` except the caller's own cancellation, and gives it 
 the `SYNO.API.Info` handshake included) so that a DSM that never answers still ends on the diagnostic inside the
 browser's `HttpClientTimeoutSeconds` (25 s). DSM takes seconds to refuse a wrong password, which bounds the budget
 from below. When the browser gives up anyway, or cannot reach the server at all, the login page says so in a toast
-(`Error_ServerNotResponding`) instead of Blazor's "An unhandled error has occurred" bar.
+(`Error_ServerNotResponding`) instead of Blazor's "An unhandled error has occurred" bar. The navigation guard
+treats such a failure (`IsNoAnswer`) as nobody signed in and sends to the login page: a timeout that escaped it
+read to Blazor as a cancelled task, which `ComponentBase` drops, so the Router rendered the page anyway (measured
+in Chrome, the home page shown to a visitor who never signed in).
 
 `ConnectAsync` returns an `ApiResult` rather than a bool so the caller can distinguish invalid credentials
 (`ApiErrorCode.Unauthorized`) from a valid non-administrator (`ApiErrorCode.Forbidden`) and localize each.
@@ -832,7 +839,9 @@ compiles. What the move established, for whoever touches the UI or the next majo
 
 ### Authentication & Session Management
 
-1. **Router-Level Navigation Guard** — `AuthenticationNavigationGuard` intercepts all navigation via `<Router OnNavigateAsync>`; async auth check before any component renders; no cached state
+1. **Router-Level Navigation Guard** — `AuthenticationNavigationGuard` intercepts all navigation via `<Router OnNavigateAsync>`; async auth check before any component renders; no cached state;
+   a server that never answers counts as nobody signed in. It is a convenience, not the boundary: every API
+   controller but authentication and the diagnostic checks the session on the server
 2. **Server-Side Session Storage** — DSM SID in server session (not client); HttpOnly cookies; SameSite=Strict;
    the session is bound to the browser that signed in by a per-login token, since its key cannot be rotated
 3. **Server-Side Session Validation** — `IsAuthenticatedAsync()` validates session keys + calls

@@ -293,6 +293,13 @@ not read the same everywhere. Read from code, not measured:
 - **The licenses dialog** never fails: `LicenseService` swallows each file's failure, so the dialog opens empty,
   and keeps that empty list until the page reloads (`_loadLicensesTask`).
 - **The installed-runtimes dialog** has its own inline indicator (`IsLoading`), without the elapsed seconds.
+- **Signing in, then no answer on the way to the home page.** The guard sends back to the login page, but Blazor
+  keeps the login page's instance when the route lands on the page already shown, so it runs no check of its own
+  and says nothing: the form is back after the overlay, without a word. Reasoned from the Router's code, not
+  measured; it needs the server to stop answering between a successful sign-in and the next request.
+- **A guard overtaken by another navigation** still sends to the login page once its own check fails, the same as
+  before for a check that answers "not signed in". The overlay covers the page meanwhile, so only the browser's
+  back and forward buttons can start a second navigation.
 
 ### The UI language changes between the login and the next click
 
