@@ -617,7 +617,9 @@ public class ComponentRenderingTests : IAsyncLifetime
     sealed class Worker : WorkingStateBase;
 
     /// <summary>
-    /// A clock that moves only when told to, and fires every timer it created each time it does.
+    /// A clock that moves only when told to, and fires each timer it created at its due time, then once per period,
+    /// setting its own time to each firing as a real clock would. Firing every timer on every move hid a timer that
+    /// never repeats.
     /// </summary>
     sealed class ManualTimeProvider : TimeProvider
     {
@@ -632,26 +634,44 @@ public class ComponentRenderingTests : IAsyncLifetime
 
         public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
         {
-            var timer = new ManualTimer(() => callback(state), stopped => _timers.Remove(stopped));
+            var timer = new ManualTimer(() => callback(state), () => _timestamp, stopped => _timers.Remove(stopped));
+            timer.Change(dueTime, period);
             _timers.Add(timer);
             return timer;
         }
 
         public void Advance(TimeSpan duration)
         {
-            _timestamp += duration.Ticks;
+            var end = _timestamp + duration.Ticks;
 
-            foreach (var timer in _timers.ToArray())
+            while (_timers.Where(timer => timer.DueAt <= end).MinBy(timer => timer.DueAt) is { } due)
             {
-                timer.Fire();
+                _timestamp = due.DueAt;
+                due.Fire();
             }
+
+            _timestamp = end;
         }
 
-        sealed class ManualTimer(Action fire, Action<ManualTimer> stop) : ITimer
+        sealed class ManualTimer(Action fire, Func<long> now, Action<ManualTimer> stop) : ITimer
         {
-            public void Fire() => fire();
+            TimeSpan _period;
 
-            public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+            public long DueAt { get; private set; } = Int64.MaxValue;
+
+            public void Fire()
+            {
+                // A period that is not positive, Timeout.InfiniteTimeSpan included, fires once, as System.Threading.Timer does
+                DueAt = _period > TimeSpan.Zero ? DueAt + _period.Ticks : Int64.MaxValue;
+                fire();
+            }
+
+            public bool Change(TimeSpan dueTime, TimeSpan period)
+            {
+                DueAt = dueTime == Timeout.InfiniteTimeSpan ? Int64.MaxValue : now() + dueTime.Ticks;
+                _period = period;
+                return true;
+            }
 
             public void Dispose() => stop(this);
 
