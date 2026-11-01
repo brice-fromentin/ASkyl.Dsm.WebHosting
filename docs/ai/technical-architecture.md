@@ -358,6 +358,8 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 - Strategy pattern for Form vs JSON serialization
 - Structured logging: request timing, auth failures, API errors via `[LoggerMessage]` extensions
 - `ProbeAsync` sends `SYNO.API.Info` for the connection diagnostic without touching the handshake cache
+- `ConfirmDsmAsync` re-runs the handshake whatever the cache holds; a login calls it before sending the password, so
+  a listener that took DSM's port since the cached handshake and does not answer as DSM never receives it
 - Uses its own named client (`DsmHttpClientName`) whose handler (`DsmCertificatePolicy.CreateHandler`) never uses a proxy
   and never follows redirects, and applies `DsmCertificatePolicy`: default validation everywhere except a loopback IP
   literal whose port a root-owned listener holds (`IRootListenerProbe`, reading `/proc/net/tcp`, IPv4 only); a name, even

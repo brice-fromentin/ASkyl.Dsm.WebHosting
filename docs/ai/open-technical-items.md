@@ -265,7 +265,9 @@ browser, it redirects DSM's desktop (a script in DSM's page; nginx's generated c
 Remedy: the login page detects non-loopback plain HTTP (`http://localhost` is a secure context and keeps working) and
 shows a card with a button to the HTTPS version on DSM's port, which the host page passes to the client as
 `ADWH_DSM_HTTPS_PORT`. Not covered: the card is client-side, so it appears only once the WebAssembly runtime has
-loaded over HTTP.
+loaded over HTTP. And its button keeps the host the browser used but takes DSM's local HTTPS port, so behind a
+router or a reverse proxy that publishes DSM's HTTPS on another port the link misses (`DsmHttpsEndpoint`; found in
+review, reasoned from the code, not measured).
 
 ### Cosmetic: packaging leaves precompressed development settings behind
 
@@ -366,9 +368,12 @@ How loopback mode works, and what was measured:
 - Trust assumption: DSM is whoever root-owns the loopback listener on DSM's port. `DsmWebConfigurationWatcher`
   reloads the port when `DSM.json` changes. A port still stale (the watch failed, or the change lands between the
   file and nginx) fails closed, and the diagnostic reloads `DSM.json` on its next run, unless another root-owned
-  listener now holds it, such as a reverse-proxy rule an administrator created: no escalation, since only an administrator can
-  create one. A small time-of-check window remains, because the probe runs in the certificate callback after the
-  TCP connect; `SocketsHttpHandler.ConnectCallback` could close it.
+  listener now holds it, such as a reverse-proxy rule or a published container an administrator created. A login
+  used to send the password straight there, since the `SYNO.API.Info` handshake was cached once for good (found in
+  review, read from the code). It now re-runs the handshake before every login, so a listener that does not answer
+  as DSM never receives the password; one that imitates DSM's answer still would. A small time-of-check window
+  remains, because the probe runs in the certificate callback after the TCP connect;
+  `SocketsHttpHandler.ConnectCallback` could close it.
 - Measured end to end on the Virtual DSM 7.4.1 on 2026-10-26, hostname cleared and the default certificate in
   place: login, `SYNO.Core.User.get` (the admin check) and logout succeed against `127.0.0.1`, the diagnostic is
   healthy, a real sign-in reaches the home page, and every DSM call in the log goes to `https://127.0.0.1:5001`.
