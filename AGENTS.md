@@ -62,7 +62,7 @@ External code contributions are not accepted (translations only) — see `CONTRI
 ### This repository is public — describe local state, never transcribe it
 
 Documentation, commit messages and pull request descriptions publish the moment they are pushed, and a PR
-description is mailed to every watcher. Gitignored files — `dev-mock/synoinfo.conf`, `websites.json`,
+description is mailed to every watcher. Gitignored files — anything under `.local/`, `websites.json`,
 `logs/`, `logs-review/`, anything under `bin/` — hold the maintainer's real infrastructure, and are
 gitignored precisely so it stays out of the repository.
 
@@ -542,14 +542,14 @@ production; approval for one run does not extend to the next. The disposable vDS
 The maintainer runs a Virtual DSM reserved for the assistant: DSM 7.2.2, on the package's minimum 7.2 line,
 while the production NAS runs 7.4, so the two cover both ends; no real data, a throwaway administrator account.
 Its host, ports and credentials live in the gitignored
-`dev-mock/vdsm.env`, the only place an assistant reads them from. An assistant may sign in with that account,
+`.local/vdsm.env` at the repository root, outside every .NET project, the only place an assistant reads them from. An assistant may sign in with that account,
 use SSH and `sudo` on the instance, and launch the application against it without asking — but only with
 `ADWH_DSM_URL` set on the command itself from that file, never inherited from the shell, which may name
 production. The instance keeps DSM's self-signed certificate, so the same file holds its fingerprint
 (`VDSM_CERT_SHA256`, read from DSM's certificate file over SSH, never from the network alone):
 
 ```bash
-. src/Askyl.Dsm.WebHosting.Ui/dev-mock/vdsm.env && ADWH_DSM_URL="https://$VDSM_HOST:$VDSM_HTTPS_PORT" ADWH_DSM_CERT_SHA256="$VDSM_CERT_SHA256" dotnet run --project src/Askyl.Dsm.WebHosting.Ui --no-build --launch-profile https
+. .local/vdsm.env && ADWH_DSM_URL="https://$VDSM_HOST:$VDSM_HTTPS_PORT" ADWH_DSM_CERT_SHA256="$VDSM_CERT_SHA256" dotnet run --project src/Askyl.Dsm.WebHosting.Ui --no-build --launch-profile https
 ```
 
 Its values are local infrastructure exactly as production's are: §3 applies in full, and
@@ -576,10 +576,13 @@ directory is also the content root: from anywhere but the output directory ASP.N
 `appsettings*.json` at all** — a missing configuration that reads as something else.
 
 **`ADWH_DSM_URL` is inherited.** Set it on the command, as above, or in an IDE launch profile that reads it
-from a gitignored file (VS Code's `envFile` pointing into `dev-mock/`, for instance); never commit its value,
+from a gitignored file (VS Code's `envFile` pointing into `.local/`, for instance); never commit its value,
 which names local infrastructure (§3). A drifted value inherited from a shell or a launch profile is exactly
 the kind of silent override that once made a whole session conclude the application could not start.
-`dev-mock/synoinfo.conf` and its template are no longer read by the application.
+
+**The system language.** A NAS reads it from `/etc/synoinfo.conf`; a local run reads `.local/synoinfo.conf`
+instead (`appsettings.Development.json`). Without that file the page follows the browser's language, as DSM's
+default does; one line, `language="fre"` for instance, reproduces a DSM's language.
 
 ### Deployment Log Review
 
