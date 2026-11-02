@@ -24,7 +24,7 @@ cosmetic: DSM rejects the wrong one. Established by working code, per API below.
 | `SYNO.API.Auth` | 6 | `login` | Form | |
 | `SYNO.API.Auth` | 6 | `logout` | Form | Returns HTTP 200; see below |
 | `SYNO.Core.User` | 1 | `get` | Form | Administrator-only; see below |
-| `SYNO.Core.UserSettings` | 1 | `get` | Form | |
+| `SYNO.Core.UserSettings` | 1 | `get` | Form | Refuses a new account; see below |
 | `SYNO.Core.ACL` | 1 | `set` | Form | |
 | `SYNO.Core.AppPortal.ReverseProxy` | 1 | `list` | Form | |
 | `SYNO.Core.AppPortal.ReverseProxy` | 1 | `create` | **Json** | |
@@ -50,6 +50,14 @@ without replacing the privilege check first.
 Version 6 matches `login`, which is the version the application already negotiates successfully for this
 API. The call returns HTTP 200 and invalidates the SID on the NAS. Established on the deployed NAS
 during PR #38; the shape was previously unverified.
+
+## `SYNO.Core.UserSettings.get` refuses a new account
+
+On the Virtual DSM 7.2.2, on 2026-11-02, an administrator account just created with `synouser --add` was refused
+with code `117` on each of its two sign-ins, while an established account's call succeeded the same day. The
+sign-in itself is unaffected: the application keeps its default language and formats, and the refusal is a Debug
+line (event 2000002). Why is not established. The likely reason is that such an account has no personal settings
+until it first opens DSM's desktop, which was not tried.
 
 ## Error codes
 
