@@ -508,8 +508,9 @@ The UI moved from 4.14.5 to 5.0.1 in 0.8.0. What the move taught is in `technica
   column menu, can still show in English.
 - **The data grid's loading spinner never shows.** `AutoDataGrid` gives `FluentDataGrid` its rows through
   `Items` and sets neither `Loading` nor an `ItemsProvider`, and FluentUI renders `LoadingContent` only for one of
-  those. Observed on the Virtual DSM on 2026-11-02: across a sign-in and the home page load, no spinner appeared in
-  the grid, while the overlay's and both dialogs' did. Either wire `Loading` or delete the template.
+  those. Observed on the Virtual DSM on 2026-11-02: across a sign-in, the home page load and the framework
+  installation dialog (opening, installing, uninstalling), no spinner appeared in a grid; every wait showed the
+  loading overlay's. Either wire `Loading` or delete the template.
 
 ### No release has ever been published
 
