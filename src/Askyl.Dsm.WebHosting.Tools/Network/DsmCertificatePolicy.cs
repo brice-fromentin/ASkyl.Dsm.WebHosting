@@ -3,6 +3,7 @@ using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Askyl.Dsm.WebHosting.Constants.Application;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Microsoft.Extensions.Configuration;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;

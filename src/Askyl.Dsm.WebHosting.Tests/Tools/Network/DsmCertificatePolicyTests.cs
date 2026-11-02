@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Tests.Ui.Services;
 using Askyl.Dsm.WebHosting.Tools.Network;
 using Moq;

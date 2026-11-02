@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Askyl.Dsm.WebHosting.Tools.Network;
+namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 /// <summary>
 /// Tells who owns the socket listening on a loopback address, so a port an unprivileged process could have

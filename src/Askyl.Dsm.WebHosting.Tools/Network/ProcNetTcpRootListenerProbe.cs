@@ -1,5 +1,6 @@
 using System.Net;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 namespace Askyl.Dsm.WebHosting.Tools.Network;
