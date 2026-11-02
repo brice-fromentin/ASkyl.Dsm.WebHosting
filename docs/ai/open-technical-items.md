@@ -245,7 +245,7 @@ local build — plus the release metadata, for as long as the package is install
 
 `src/Askyl.Dsm.WebHosting.Ui/websites.json` is gitignored — it is written by local runs and holds the local site
 configuration — but the Web SDK's default content glob publishes it into `admin-ui/`, and `build-spk.sh` cleans only
-`*Development.json` and `dev-mock`. Measured without reading the file: the published copy is byte-identical to the
+`*Development.json`. Measured without reading the file: the published copy is byte-identical to the
 source (`cmp`), and the last locally built SPK lists `admin-ui/websites.json` in its `package.tgz`.
 
 A fresh install from such a package starts with that site list; an upgrade restores the NAS's own copy through
