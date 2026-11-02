@@ -539,6 +539,12 @@ parity — which undercuts the "drop in a `.resx`, zero code changes" story.
 100 ms. It measured 106 ms once on a loaded machine on 2026-10-26, and passed on the next two runs: an upper
 bound on wall-clock time is a flake waiting for a busy CI runner.
 
+`DsmConnectionChecksTests.ConnectAsync_AClosedPort_ReportsPortRefused` and the constructor of
+`DsmConnectionDiagnosticServiceTests` reserve an ephemeral loopback port, release it, and expect nothing to listen
+there when the check runs. Anything that asks for port 0 in between, another test included, can be handed that
+port, and the check then reports something other than a refusal. Not seen to fail yet. The fix a review proposed,
+keeping the socket bound without listening, was measured on macOS to time out instead of refusing, so it is not one.
+
 ## Prerequisite for a roadmap feature
 
 ### Harden `ArchiveExtractorService` before it extracts anything user-supplied
