@@ -722,7 +722,6 @@ check at login so non-administrators are refused there rather than on their next
 
 #### Connection Diagnostic
 
-Design: `docs/ai/specs/2026-10-25-dsm-connection-diagnostic-design.md`, superseded in part on 2026-10-26.
 `DsmConnectionDiagnosticService` (Singleton, `Ui/Services/`) runs three checks in order and stops at the first
 failure: DSM answers on its HTTPS port, the connection is trusted, `SYNO.API.Info` answers. The checks themselves
 are stateless (`DsmConnectionChecks`) and connect to `IDsmSettingsService.Server` and `Port`.
