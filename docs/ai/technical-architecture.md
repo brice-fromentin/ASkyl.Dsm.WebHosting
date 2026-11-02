@@ -356,7 +356,10 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 - Singleton, implements `ISemaphoreOwner` for thread-safe lazy `ApiInformations` initialization
 - `ExecuteAsync<R>` with compile-time `where R : IApiResponse` constraint (no reflection)
 - Strategy pattern for Form vs JSON serialization
-- Structured logging: request timing, auth failures, API errors via `[LoggerMessage]` extensions
+- Structured logging: request timing, auth failures, API errors via `[LoggerMessage]` extensions. A refused call
+  (`ApiError`, 2000002) is logged at Debug with the API's name: each caller reports the outcome at the level it
+  deserves, since a wrong password, a non-administrator or an expired session is expected. Logged as an error, every
+  typo counted as one in a log review
 - `ProbeAsync` sends `SYNO.API.Info` for the connection diagnostic without touching the handshake cache
 - `ConfirmDsmAsync` re-runs the handshake whatever the cache holds; a login calls it before sending the password, so
   a listener that took DSM's port since the cached handshake and does not answer as DSM never receives it
