@@ -56,7 +56,8 @@ during PR #38; the shape was previously unverified.
 On the Virtual DSM 7.2.2, on 2026-11-02, an administrator account just created with `synouser --add` was refused
 with code `117` on each of its first two sign-ins through the application, while an established account's call
 succeeded the same day. Signing in through `SYNO.API.Auth` does not create the settings; opening DSM's desktop
-once as that account does, and every later call succeeded. The sign-in itself is never affected: until then the
+once as that account does, and every later call succeeded. DSM writes them about 3 s after the desktop shows: a
+fresh account whose visit ended at once, or after 2 s, had none. The sign-in itself is never affected: until then the
 application keeps its default language and formats, and the refusal is a Debug line (event 2000002).
 
 ## Error codes
