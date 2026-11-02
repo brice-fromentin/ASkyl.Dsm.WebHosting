@@ -171,6 +171,16 @@ names. A reinstalled package does not list them, but recreating a site with the 
 protocol reuses the rule (`ReverseProxyAlreadyExists`, then normal operation), and deleting that site
 removes it. A rule whose site is never recreated stays until it is removed in DSM by hand.
 
+### An upgrade after a reinstall brings back the sites the uninstall removed
+
+`preupgrade` copies `websites.json` into `/var/packages/AskylWebHosting/var/upgrade-backup`, which lives in
+`@appdata` and survives an uninstall; `backup_file` (`spk-project/scripts/common-functions.sh`) leaves an older copy
+in place when there is nothing to back up, and `postupgrade` restores whatever it finds. Measured on 2026-11-02 and
+03 on the Virtual DSM: after an uninstall and a fresh install, the package had no `websites.json` until a site was
+added; the next upgrade logged "No file to backup", then restored the copy taken before the uninstall, and the four
+sites deleted with it were back in the grid, failing to start (`ApplicationBinaryNotFound`, their folders gone).
+Deleting the backup when there is nothing to back up, or after restoring it, closes it.
+
 ### The website lifecycle path still drops the cancellation token
 
 `Ui/Services/WebSiteHostingService.cs`. `AddWebsiteAsync` and `UpdateWebsiteAsync` now hand their token to
