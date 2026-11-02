@@ -266,9 +266,12 @@ and **ITreeContentService** (`LoadChildDirectoriesAsync()`), both implemented in
 
 **Structure:**
 
-- **Contracts/** — service interfaces shared between server and WASM client. 17 interfaces defining the boundary
-  between Data (contracts) and Ui/Tools (implementations). The table above lists each interface's key methods; the
-  interfaces themselves hold the full signatures.
+- **Contracts/** — the application's service interfaces, most of them shared between server and WASM client and
+  some server-only (`IDsmSettingsService`, `IGlobalizationSettings`). 17 interfaces defining the boundary between Data
+  (contracts) and Ui/Tools (implementations). The table above lists each interface's key methods; the interfaces
+  themselves hold the full signatures. A thin seam over the operating system, which exists only so tests can fake it
+  (`IProcessRunner`, `IProcessHandle`, `IFileReader`, `IRootListenerProbe`), stays in Tools beside its
+  implementation instead.
 - **Domain/** — model classes organized by subsystem: Authentication (login credentials), FileSystem (FsEntry),
   Licensing (license info), Runtime (.NET framework/release models), System (DSM endpoint and language),
   WebSites (website configuration, instances, process state). New domain? Add a subdirectory.
