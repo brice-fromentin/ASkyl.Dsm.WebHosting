@@ -102,5 +102,11 @@ public static partial class ReverseProxyLoggingExtensions
     [LoggerMessage(EventId = 1700012, Level = LogLevel.Error, Message = "Failed to delete reverse proxy {Uuid} for site {SiteName}")]
     public static partial void FailedToDeleteReverseProxy(this ILogger<ILogReverseProxyManagerService> logger, Exception ex, Guid? uuid, string siteName);
 
+    /// <summary>
+    /// Logs that DSM refused or failed the reverse proxy list, which then reads as empty.
+    /// </summary>
+    [LoggerMessage(EventId = 1700014, Level = LogLevel.Error, Message = "Failed to list reverse proxies (DSM error code {ErrorCode}); treating the list as empty")]
+    public static partial void FailedToListReverseProxies(this ILogger<ILogReverseProxyManagerService> logger, int? errorCode);
+
     #endregion
 }

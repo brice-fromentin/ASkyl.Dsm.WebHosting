@@ -30,12 +30,12 @@ public class DsmApiClientTests : IDisposable
         _logger = new Mock<ILogger<ILogDsmApiClient>>();
     }
 
-    DsmApiClient CreateClient()
+    DsmApiClient CreateClient(ILogger<ILogDsmApiClient>? logger = null)
     {
         var factory = new Mock<IHttpClientFactory>();
         factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
 
-        var client = new DsmApiClient(factory.Object, _settingsService, _logger.Object);
+        var client = new DsmApiClient(factory.Object, _settingsService, logger ?? _logger.Object);
 
         client.ApiInformations.Replace(new Dictionary<string, ApiInformation>
         {
@@ -292,6 +292,25 @@ public class DsmApiClientTests : IDisposable
     #endregion
 
     #region Failure Propagation
+
+    [Fact]
+    public async Task ExecuteAsync_WhenDsmRefusesTheCall_LeavesTheSeverityToTheCaller()
+    {
+        // A wrong password, a non-administrator or an expired session is an expected refusal that the caller reports
+        // at its own level; logged as an error here as well, every typo counted as an error in a log review
+        var recorder = new CapturingLogger<ILogDsmApiClient>();
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"success":false,"error":{"code":400}}""") });
+
+        var result = await CreateClient(recorder).ExecuteSimpleAsync(null, new TestFormParameters());
+
+        Assert.False(result?.Success);
+        Assert.DoesNotContain(recorder.Entries, entry => entry.Level >= LogLevel.Warning);
+
+        // Still in the log, which keeps the application's Debug lines, naming the API that refused
+        Assert.Single(recorder.Entries, entry => entry.Level == LogLevel.Debug && entry.Message.Contains("test", StringComparison.Ordinal) && entry.Message.Contains("400", StringComparison.Ordinal));
+    }
 
     [Fact]
     public async Task ExecuteAsync_WhenTheSendThrows_SurfacesTheOriginalException()

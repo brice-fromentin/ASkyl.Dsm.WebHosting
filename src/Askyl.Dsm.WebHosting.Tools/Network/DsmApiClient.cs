@@ -18,6 +18,9 @@ namespace Askyl.Dsm.WebHosting.Tools.Network;
 public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsService settingsService, ILogger<ILogDsmApiClient> logger)
     : ISemaphoreOwner, IAsyncDisposable
 {
+    // DSM gives a reason for few of its error codes
+    private const string NoReasonGiven = "no reason given";
+
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.DsmHttpClientName);
 
     public ApiInformationCollection ApiInformations { get; } = new();
@@ -54,7 +57,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
                 => throw new NotSupportedException($"SerializationFormat : {parameters.SerializationFormat} not supported.")
         };
 
-        LogApiErrorIfFailed(result, logger);
+        LogApiErrorIfFailed(result, parameters.Name, logger);
 
         return result;
     }
@@ -145,12 +148,12 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
 
     #region HTTP Helpers
 
-    private static void LogApiErrorIfFailed<R>(R? result, ILogger<ILogDsmApiClient> logger)
+    private static void LogApiErrorIfFailed<R>(R? result, string apiName, ILogger<ILogDsmApiClient> logger)
         where R : IApiResponse
     {
         if (result is { Success: false, Error: { } error })
         {
-            logger.ApiError(error.Errors?.Reason ?? "Unknown error", error.Code);
+            logger.ApiError(apiName, error.Code, error.Errors?.Reason ?? NoReasonGiven);
         }
     }
 

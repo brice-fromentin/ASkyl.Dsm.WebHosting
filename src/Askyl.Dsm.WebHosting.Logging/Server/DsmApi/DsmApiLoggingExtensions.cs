@@ -17,10 +17,11 @@ public static partial class DsmApiLoggingExtensions
     public static partial void ApiRequest(this ILogger<ILogDsmApiClient> logger, string method, string url, int statusCode, long duration);
 
     /// <summary>
-    /// Logs a DSM API error response with error code.
+    /// Logs that DSM refused a call. Debug, because each caller reports the outcome at the level it deserves: a wrong
+    /// password, a non-administrator or an expired session is an expected refusal, not an application error.
     /// </summary>
-    [LoggerMessage(EventId = 2000002, Level = LogLevel.Error, Message = "DSM API error: {ErrorMessage} (Code: {ErrorCode})")]
-    public static partial void ApiError(this ILogger<ILogDsmApiClient> logger, string errorMessage, int? errorCode);
+    [LoggerMessage(EventId = 2000002, Level = LogLevel.Debug, Message = "DSM API {ApiName} refused the call with code {ErrorCode}: {ErrorMessage}")]
+    public static partial void ApiError(this ILogger<ILogDsmApiClient> logger, string apiName, int? errorCode, string errorMessage);
 
     /// <summary>
     /// Logs successful handshake with the DSM API.
