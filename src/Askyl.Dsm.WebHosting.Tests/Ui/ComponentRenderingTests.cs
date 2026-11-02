@@ -140,6 +140,8 @@ public class ComponentRenderingTests : IAsyncLifetime
         Assert.Single(cut.FindAll("[name=username]"));
         Assert.Single(cut.FindAll("[name=password]"));
         Assert.Single(cut.FindAll("[name=otp]"));
+        // A healthy report needs no second opinion: re-checking on every load would cost a run per visitor
+        _diagnosticService.Verify(service => service.RecheckAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -228,7 +230,10 @@ public class ComponentRenderingTests : IAsyncLifetime
     {
         var toasts = CaptureToasts();
         _diagnosticService.Setup(service => service.GetReportAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: false));
-        _diagnosticService.Setup(service => service.RecheckAsync(It.IsAny<CancellationToken>())).ThrowsAsync(HttpClientTimeout());
+        // The page's own re-check on opening finds DSM still down; the one the button asks for never answers
+        _diagnosticService.SetupSequence(service => service.RecheckAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Report(isHealthy: false))
+            .ThrowsAsync(HttpClientTimeout());
 
         var cut = _ctx.Render<Login>();
 
@@ -238,6 +243,47 @@ public class ComponentRenderingTests : IAsyncLifetime
         cut.WaitForAssertion(() => VerifyToldTheServerDidNotAnswer(toasts));
         Assert.False(cut.Instance.IsWorking);
         Assert.Contains(_localizer[LK.Diagnostic.FailurePortRefused, DsmPort], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Login_ReChecksAFailureKeptFromEarlier_AndShowsTheFormOnceDsmIsBack()
+    {
+        // The server keeps the last report, so a failure seen during an earlier login outlives DSM's recovery
+        _diagnosticService.Setup(service => service.GetReportAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: false));
+        _diagnosticService.Setup(service => service.RecheckAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: true));
+
+        var cut = _ctx.Render<Login>();
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[name=username]")));
+    }
+
+    [Fact]
+    public void Login_KeepsTheFailureKeptFromEarlier_WhenItsReCheckIsRefused()
+    {
+        _diagnosticService.Setup(service => service.GetReportAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: false));
+        _diagnosticService.Setup(service => service.RecheckAsync(It.IsAny<CancellationToken>())).ReturnsAsync(DsmConnectionReportResult.CreateFailure("throttled"));
+
+        var cut = _ctx.Render<Login>();
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Diagnostic.FailurePortRefused, DsmPort], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll("[name=username]"));
+    }
+
+    [Fact]
+    public void Login_ReCheckFindingDsmBack_BringsTheFormBack()
+    {
+        _diagnosticService.Setup(service => service.GetReportAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Report(isHealthy: false));
+        // Still down when the page opens, back by the time the button is pressed
+        _diagnosticService.SetupSequence(service => service.RecheckAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Report(isHealthy: false))
+            .ReturnsAsync(Report(isHealthy: true));
+
+        var cut = _ctx.Render<Login>();
+
+        // The panel's only way out
+        cut.WaitForAssertion(() => cut.Find("fluent-button[appearance=primary]").Click());
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("[name=username]")));
     }
 
     /// <summary>
@@ -283,7 +329,7 @@ public class ComponentRenderingTests : IAsyncLifetime
     [Fact]
     public void DsmDiagnosticPanel_AnUntrustedConnection_NamesThePort()
     {
-        var report = new DsmConnectionReport(false, DateTimeOffset.UtcNow, "127.0.0.1", DsmPort,
+        var report = new DsmConnectionReport(false, DateTimeOffset.UtcNow, DsmPort,
         [
             new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Passed),
             new(DsmConnectionCheck.ConnectionTrusted, DsmCheckStatus.Failed, DsmCheckFailure.NotTrusted),
@@ -309,8 +355,8 @@ public class ComponentRenderingTests : IAsyncLifetime
 
     static DsmConnectionReportResult Report(bool isHealthy)
         => DsmConnectionReportResult.CreateSuccess(isHealthy
-            ? new DsmConnectionReport(true, DateTimeOffset.UtcNow, null, 0, [])
-            : new DsmConnectionReport(false, DateTimeOffset.UtcNow, "127.0.0.1", DsmPort,
+            ? new DsmConnectionReport(true, DateTimeOffset.UtcNow, 0, [])
+            : new DsmConnectionReport(false, DateTimeOffset.UtcNow, DsmPort,
             [
                 new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.PortRefused),
                 .. Enum.GetValues<DsmConnectionCheck>().Skip(1).Select(check => new DsmConnectionCheckResult(check, DsmCheckStatus.Skipped))
@@ -358,6 +404,8 @@ public class ComponentRenderingTests : IAsyncLifetime
 
         var cut = _ctx.Render<Routes>();
 
+        // The overlay re-renders the Router on every change of its working state: the page must still wait
+        Assert.DoesNotContain(_localizer[LK.NotFound.Content], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
         Assert.True(cut.Instance.IsWorking);
         Assert.Contains(_localizer[LK.Loading.Page], WebUtility.HtmlDecode(cut.Find("fluent-overlay").TextContent), StringComparison.Ordinal);
 

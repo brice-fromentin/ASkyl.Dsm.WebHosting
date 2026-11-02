@@ -112,7 +112,8 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
 
         Assert.NotNull(result?.Value);
         Assert.False(result.Value.IsHealthy);
-        Assert.Equal(SystemDefaults.LoopbackAddress, result.Value.Host);
+        // The report no longer names the address: the host's own settings say where it checked
+        Assert.Equal(SystemDefaults.LoopbackAddress, loopback.Services.GetRequiredService<IDsmSettingsService>().Server);
         Assert.Equal(port, result.Value.Port);
         Assert.Equal(new DsmConnectionCheckResult(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Failed, DsmCheckFailure.PortRefused), result.Value.Checks[0]);
         Assert.All(result.Value.Checks.Skip(1), check => Assert.Equal(DsmCheckStatus.Skipped, check.Status));

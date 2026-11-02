@@ -41,7 +41,7 @@ public class AuthenticationServiceTests
 
     void DiagnosticReports(bool isHealthy)
         => _diagnostic.Setup(d => d.RecheckAsync(It.IsAny<CancellationToken>()))
-                      .ReturnsAsync(DsmConnectionReportResult.CreateSuccess(new DsmConnectionReport(isHealthy, DateTimeOffset.UtcNow, null, 0, [])));
+                      .ReturnsAsync(DsmConnectionReportResult.CreateSuccess(new DsmConnectionReport(isHealthy, DateTimeOffset.UtcNow, 0, [])));
 
     [Fact]
     public async Task LoginAsync_WhenDsmCannotBeReached_SaysSoInsteadOfThrowing()
@@ -113,6 +113,48 @@ public class AuthenticationServiceTests
 
         // Assert
         Assert.Equal(ApiErrorCode.DsmUnreachable, result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task IsAuthenticatedAsync_WhenDsmNeverAnswers_FailsClosedInTimeToSaySo()
+    {
+        // Arrange — the check behind every navigation used to wait out the HTTP client's 100 s, so the browser gave up
+        // first, then the login page asked again and waited as long
+        _time = new ExpiredTimeProvider();
+        _dsmSession.SetupGet(s => s.HasSession).Returns(true);
+        _dsmSession.Setup(s => s.ValidateSessionAsync(It.IsAny<CancellationToken>()))
+            .Returns(async (CancellationToken token) =>
+            {
+                await Task.Delay(Timeout.Infinite, token);
+                return true;
+            });
+        DiagnosticReports(isHealthy: false);
+
+        // Act — WaitAsync turns a check that never gives up into a failure, not a hang
+        var result = await CreateService().IsAuthenticatedAsync().WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Assert — refused; cleared, so the login page's own check answers at once; and the report it reads refreshed
+        Assert.False(result.Value);
+        _dsmSession.Verify(s => s.Disconnect(), Times.Once);
+        _diagnostic.Verify(d => d.RecheckAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task IsAuthenticatedAsync_CancelledByTheCaller_PropagatesWithoutADiagnostic()
+    {
+        _dsmSession.SetupGet(s => s.HasSession).Returns(true);
+        _dsmSession.Setup(s => s.ValidateSessionAsync(It.IsAny<CancellationToken>()))
+            .Returns(async (CancellationToken token) =>
+            {
+                await Task.Delay(Timeout.Infinite, token);
+                return true;
+            });
+
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateService().IsAuthenticatedAsync(cancellation.Token));
+        _diagnostic.Verify(d => d.RecheckAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

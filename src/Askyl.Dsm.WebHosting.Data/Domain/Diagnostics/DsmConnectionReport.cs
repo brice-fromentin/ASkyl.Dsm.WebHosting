@@ -7,13 +7,11 @@ namespace Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
 /// </summary>
 /// <param name="IsHealthy">Whether every check passed.</param>
 /// <param name="CheckedAt">When the run started.</param>
-/// <param name="Host">The DSM address checked; null in a healthy report.</param>
 /// <param name="Port">The DSM HTTPS port checked; 0 in a healthy report.</param>
 /// <param name="Checks">Every check, in order; empty in a healthy report.</param>
 public record DsmConnectionReport(
     bool IsHealthy,
     DateTimeOffset CheckedAt,
-    string? Host,
     int Port,
     IReadOnlyList<DsmConnectionCheckResult> Checks)
 {
@@ -21,5 +19,5 @@ public record DsmConnectionReport(
     /// Initializes an empty report for deserialization.
     /// </summary>
     [JsonConstructor]
-    public DsmConnectionReport() : this(false, default, null, 0, []) { }
+    public DsmConnectionReport() : this(false, default, 0, []) { }
 }

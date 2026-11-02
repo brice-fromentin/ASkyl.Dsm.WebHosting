@@ -32,8 +32,8 @@ public class AuthenticationNavigationGuard(IAuthenticationService authService, N
         }
     }
 
-    // A server that never answered vouches for no one: let through, its timeout reads to Blazor as a cancelled
-    // navigation, and the page renders anyway
+    // A server that never answered vouches for no one, so this denies. Were the exception left uncaught, Blazor would
+    // read its timeout as a cancelled navigation and render the page anyway
     private async Task<bool> IsSignedInAsync()
     {
         try

@@ -93,7 +93,8 @@ public class AuthenticationNavigationGuardTests : IDisposable
     [Fact]
     public async Task OnNavigateAsync_WhenTheServerNeverAnswers_SendsToLogin()
     {
-        // Let through, the browser's timeout reads to Blazor as a cancelled navigation, and the page renders anyway
+        // Were the exception left uncaught, Blazor would read the browser's timeout as a cancelled navigation and render
+        // the page anyway
         _authService.Setup(a => a.IsAuthenticatedAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TaskCanceledException(null, new TimeoutException()));
 
@@ -106,7 +107,7 @@ public class AuthenticationNavigationGuardTests : IDisposable
     [Fact]
     public async Task OnNavigateAsync_WhenTheServerCannotBeReached_SendsToLogin()
     {
-        // Let through, it ends on Blazor's "An unhandled error has occurred" bar
+        // Were the exception left uncaught, it would end on Blazor's "An unhandled error has occurred" bar
         _authService.Setup(a => a.IsAuthenticatedAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException());
 

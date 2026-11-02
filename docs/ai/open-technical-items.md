@@ -433,7 +433,9 @@ How loopback mode works, and what was measured:
   listener now holds it, such as a reverse-proxy rule or a published container an administrator created. A login
   used to send the password straight there, since the `SYNO.API.Info` handshake was cached once for good (found in
   review, read from the code). It now re-runs the handshake before every login, so a listener that does not answer
-  as DSM never receives the password; one that imitates DSM's answer still would. A small time-of-check window
+  as DSM never receives the password; one that imitates DSM's answer still would. Sessions already signed in are
+  not covered: their calls, the admin check included, carry the SID to that listener with no handshake first, and a
+  DSM SID is an administrator's session (read from the code, not measured). A small time-of-check window
   remains, because the probe runs in the certificate callback after the TCP connect;
   `SocketsHttpHandler.ConnectCallback` could close it.
 - Measured end to end on the Virtual DSM 7.4.1 on 2026-10-26, hostname cleared and the default certificate in

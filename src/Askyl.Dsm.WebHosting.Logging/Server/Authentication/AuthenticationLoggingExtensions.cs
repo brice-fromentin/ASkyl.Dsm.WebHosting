@@ -51,4 +51,10 @@ public static partial class AuthenticationLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1000007, Level = LogLevel.Warning, Message = "Login for user {Login} failed before DSM answered")]
     public static partial void LoginTransportFailed(this ILogger<ILogAuthenticationService> logger, string login, Exception exception);
+
+    /// <summary>
+    /// Logs a session validation that failed before DSM answered.
+    /// </summary>
+    [LoggerMessage(EventId = 1000008, Level = LogLevel.Warning, Message = "Session validation failed before DSM answered")]
+    public static partial void SessionValidationTransportFailed(this ILogger<ILogAuthenticationService> logger, Exception exception);
 }

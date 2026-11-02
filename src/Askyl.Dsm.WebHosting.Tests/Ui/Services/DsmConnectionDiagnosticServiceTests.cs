@@ -74,7 +74,6 @@ public class DsmConnectionDiagnosticServiceTests
 
         Assert.NotNull(report);
         Assert.False(report.IsHealthy);
-        Assert.Equal(IPAddress.Loopback.ToString(), report.Host);
         Assert.Equal(_settings.Object.Port, report.Port);
         Assert.Equal(
             [
@@ -91,13 +90,20 @@ public class DsmConnectionDiagnosticServiceTests
         // Otherwise every visitor gets the diagnostic in place of the login form
         await using var server = StartDsm();
 
-        var report = (await CreateService(rootListens: true, HealthyDsmApi()).GetReportAsync()).Value;
+        var service = CreateService(rootListens: true, HealthyDsmApi());
+        var report = (await service.GetReportAsync()).Value;
 
-        // And, healthy, it tells an anonymous visitor nothing more
+        // And, healthy, it tells an anonymous visitor nothing more, whichever way it was asked
         Assert.NotNull(report);
         Assert.True(report.IsHealthy);
         Assert.Empty(report.Checks);
-        Assert.Null(report.Host);
+
+        var rechecked = (await service.RecheckAsync()).Value;
+
+        Assert.NotNull(rechecked);
+        Assert.True(rechecked.IsHealthy);
+        Assert.Equal(0, rechecked.Port);
+        Assert.Empty(rechecked.Checks);
     }
 
     [Fact]
@@ -225,13 +231,12 @@ public class DsmConnectionDiagnosticServiceTests
     public void ForAnonymousVisitor_AHealthyReport_TellsNothingButThat()
     {
         var checkedAt = DateTimeOffset.UtcNow;
-        var healthy = new DsmConnectionReport(true, checkedAt, IPAddress.Loopback.ToString(), DsmPort, [new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Passed)]);
+        var healthy = new DsmConnectionReport(true, checkedAt, DsmPort, [new(DsmConnectionCheck.PortAnswers, DsmCheckStatus.Passed)]);
 
         var visible = DsmConnectionDiagnosticService.ForAnonymousVisitor(healthy);
 
         Assert.True(visible.IsHealthy);
         Assert.Equal(checkedAt, visible.CheckedAt);
-        Assert.Null(visible.Host);
         Assert.Equal(0, visible.Port);
         Assert.Empty(visible.Checks);
     }
@@ -239,7 +244,7 @@ public class DsmConnectionDiagnosticServiceTests
     [Fact]
     public void ForAnonymousVisitor_AnUnhealthyReport_KeepsItsDetails()
     {
-        var unhealthy = new DsmConnectionReport(false, DateTimeOffset.UtcNow, IPAddress.Loopback.ToString(), DsmPort, []);
+        var unhealthy = new DsmConnectionReport(false, DateTimeOffset.UtcNow, DsmPort, []);
 
         Assert.Same(unhealthy, DsmConnectionDiagnosticService.ForAnonymousVisitor(unhealthy));
     }

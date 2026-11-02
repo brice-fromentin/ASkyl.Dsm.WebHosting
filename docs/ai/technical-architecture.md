@@ -706,6 +706,11 @@ in Chrome, the home page shown to a visitor who never signed in).
 5. Anything other than an explicit success → clear session keys, return false
 6. Cache result for 1 minute
 
+The DSM call gets the login's budget, `DsmLoginTimeoutSeconds`. A DSM that takes connections and never answers
+used to hold every navigation until the browser gave up, then the login page asked again and waited as long, and
+landed on the form with a misleading toast. Past the budget, or on any failure before DSM answers, the validation
+fails closed like step 5 and re-runs the connection diagnostic, so the login page opens on it.
+
 **API Choice:** `SYNO.API.Auth` only has `login`/`logout`. `SYNO.Core.User.get` is the lightest API that validates session state.
 
 #### Session Revocation
@@ -744,11 +749,14 @@ are stateless (`DsmConnectionChecks`) and connect to `IDsmSettingsService.Server
   that run. Runs ignore the caller's token, so a cancelled request cannot poison the shared result.
 - **Always a report:** a catch-all turns anything a check does not classify — a `Reload()` that throws included —
   into `DsmCheckFailure.Unexpected` (event 3100003), so a run ends in a cached report, never an error.
-- **Triggers:** the first login-page visit computes the report; the re-check endpoint and a failed login recompute it.
+- **Triggers:** the first login-page visit computes the report; the re-check endpoint, a failed login and a session
+  validation DSM never answered recompute it. A login page that receives an unhealthy report asks for one re-check
+  before showing it, since the failure may be over; a refused re-check (throttled) leaves the kept report.
 - **What anonymous visitors see:** a healthy report reaches them as nothing but `IsHealthy` and `CheckedAt`.
   `Login.razor` shows `DsmDiagnosticPanel` (a non-dismissible error bar whose remedies name the port and DSM's own
   _Control Panel > Login Portal > DSM_ setting, in English and French) in place of the form while the report is
-  unhealthy. An unhealthy report carries the endpoint checked, `127.0.0.1` and DSM's port in production.
+  unhealthy. An unhealthy report carries DSM's port and every check, never the address checked, which only the
+  log names.
 
 #### FileStation Operations
 

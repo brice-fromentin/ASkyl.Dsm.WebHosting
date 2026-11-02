@@ -177,7 +177,7 @@
     <value>DSM n'a pas répondu à temps sur le port {0}. Vérifiez que DSM fonctionne, ainsi que son port HTTPS dans Panneau de configuration &gt; Portail de connexion &gt; DSM &gt; Port DSM (HTTPS), puis revérifiez.</value>
   </data>
   <data name="Diagnostic_FailureNotTrusted" xml:space="preserve">
-    <value>Le port {0} n'est pas tenu par DSM : la connexion ne peut pas être considérée comme sûre. Si le port HTTPS de DSM vient d'être modifié, revérifiez dans un instant.</value>
+    <value>Le port {0} n'est pas celui de DSM : la connexion ne peut pas être considérée comme sûre. Si le port HTTPS de DSM vient d'être modifié, revérifiez dans un instant.</value>
   </data>
   <data name="Diagnostic_FailureHandshakeFailed" xml:space="preserve">
     <value>Le port {0} a accepté la connexion sans terminer la négociation TLS. Vérifiez qu'il s'agit bien du port HTTPS de DSM dans Panneau de configuration &gt; Portail de connexion &gt; DSM &gt; Port DSM (HTTPS).</value>

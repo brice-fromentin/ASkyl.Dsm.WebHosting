@@ -42,7 +42,7 @@ public sealed class DsmConnectionDiagnosticService(
     /// A healthy DSM needs no explanation, so an anonymous visitor learns nothing about it.
     /// </summary>
     internal static DsmConnectionReport ForAnonymousVisitor(DsmConnectionReport report)
-        => report.IsHealthy ? new(true, report.CheckedAt, null, 0, []) : report;
+        => report.IsHealthy ? new(true, report.CheckedAt, 0, []) : report;
 
     async Task<DsmConnectionReport> RunAsync(bool reuseAnyReport)
     {
@@ -112,7 +112,7 @@ public sealed class DsmConnectionDiagnosticService(
 
         results.AddRange(Enum.GetValues<DsmConnectionCheck>().Skip(results.Count).Select(check => new DsmConnectionCheckResult(check, DsmCheckStatus.Skipped)));
 
-        return new(results.TrueForAll(result => result.Status == DsmCheckStatus.Passed), checkedAt, settings.Server, settings.Port, results);
+        return new(results.TrueForAll(result => result.Status == DsmCheckStatus.Passed), checkedAt, settings.Port, results);
     }
 
     async Task<DsmConnectionCheckResult> ProbeApiAsync()
@@ -142,11 +142,11 @@ public sealed class DsmConnectionDiagnosticService(
 
         if (failed is null)
         {
-            logger.DsmConnectionHealthy(report.Host ?? String.Empty, report.Port);
+            logger.DsmConnectionHealthy(settings.Server, report.Port);
             return;
         }
 
-        logger.DsmConnectionFailed(failed.Check.ToString(), failed.Failure.ToString(), failed.HttpStatus, report.Host ?? String.Empty, report.Port);
+        logger.DsmConnectionFailed(failed.Check.ToString(), failed.Failure.ToString(), failed.HttpStatus, settings.Server, report.Port);
     }
 
     static DsmConnectionCheckResult Result(DsmConnectionCheck check, DsmCheckFailure failure)

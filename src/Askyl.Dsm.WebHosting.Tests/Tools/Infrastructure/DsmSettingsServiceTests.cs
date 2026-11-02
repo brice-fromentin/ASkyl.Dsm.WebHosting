@@ -129,6 +129,23 @@ public class DsmSettingsServiceTests
         Assert.Equal(5443, service.Port);
     }
 
+    [Fact]
+    public void Reload_LeavesTheLanguageReadAtStartup()
+    {
+        // The culture it sets is applied once, at startup: reading synoinfo.conf on every reload changed nothing
+        _fileReader.Setup(f => f.FileExists(SystemDefaults.SynoInfoConfPath)).Returns(true);
+        _fileReader.SetupSequence(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath))
+                   .Returns(["language=\"fre\""])
+                   .Returns(["language=\"ger\""]);
+
+        var service = Create();
+
+        service.Reload();
+
+        Assert.Equal("fre", service.Language);
+        _fileReader.Verify(f => f.ReadAllLines(SystemDefaults.SynoInfoConfPath), Times.Once);
+    }
+
     #endregion
 
     #region ADWH_DSM_URL

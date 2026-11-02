@@ -102,8 +102,26 @@ public class AuthenticationService(
         // Captured before validating: a caller who never signed in is not a failure, and warning that
         // their session "expired or is invalid on server" would be false as well as noisy.
         var hadSession = dsmSession.HasSession;
+        bool isValid;
 
-        if (!await dsmSession.ValidateSessionAsync(cancellationToken))
+        try
+        {
+            // Bounded like the login: a DSM that takes connections and never answers would otherwise hold every
+            // navigation past the browser's own wait
+            using var timeout = new CancellationTokenSource(DsmTimeout, timeProvider);
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeout.Token);
+            isValid = await dsmSession.ValidateSessionAsync(linked.Token);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            // Fails closed, as any validation short of an explicit success; the refreshed report sends the login
+            // page straight to the diagnostic
+            logger.SessionValidationTransportFailed(ex);
+            await diagnosticService.RecheckAsync(CancellationToken.None);
+            isValid = false;
+        }
+
+        if (!isValid)
         {
             if (hadSession)
             {

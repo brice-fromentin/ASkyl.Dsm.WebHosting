@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Askyl.Dsm.WebHosting.Tools.Infrastructure;
 
 /// <summary>
-/// Reads the DSM endpoint and system language at startup and again on <see cref="Reload"/>. On the NAS, DSM is
+/// Reads the DSM endpoint at startup and again on <see cref="Reload"/>, the system language at startup only. On the NAS, DSM is
 /// reached over loopback on the HTTPS port of its web configuration (DSM.json), or DSM's default port when that
 /// file cannot give one. A developer machine names DSM's URL in ADWH_DSM_URL instead. The language comes from
 /// /etc/synoinfo.conf, or the default when that file is missing or unreadable.
@@ -37,7 +37,8 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
     {
         lock (_reloadLock)
         {
-            _preferences = ReadSettings(logger, fileReader, configuration);
+            // The language is kept: the culture it sets is applied once, at startup
+            _preferences = ReadSettings(logger, fileReader, configuration, _preferences.Language);
         }
     }
 
@@ -46,9 +47,9 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
     /// </summary>
     public static string WebConfigPath(IConfiguration configuration) => configuration.GetValue<string>(SystemDefaults.ConfigKeyWebConfigPath) ?? SystemDefaults.DsmWebConfigPath;
 
-    static DsmSystemPreferences ReadSettings(ILogger<ILogDsmSettingsService> logger, IFileReader fileReader, IConfiguration configuration)
+    static DsmSystemPreferences ReadSettings(ILogger<ILogDsmSettingsService> logger, IFileReader fileReader, IConfiguration configuration, string? knownLanguage = null)
     {
-        var language = ReadLanguage(logger, fileReader, configuration);
+        var language = knownLanguage ?? ReadLanguage(logger, fileReader, configuration);
 
         if (configuration[ApplicationConstants.DsmUrlEnvironmentVariable] is { Length: > 0 } url)
         {

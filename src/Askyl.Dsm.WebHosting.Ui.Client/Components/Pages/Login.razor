@@ -85,10 +85,17 @@
             }
 
             Report = (await diagnosticService.GetReportAsync()).Value;
+
+            // The server keeps its last report, so a failure seen earlier may be over. One re-check settles it; when
+            // that is refused (throttled), the kept report stays
+            if (Report is { IsHealthy: false } && await diagnosticService.RecheckAsync() is { Success: true, Value: { } current })
+            {
+                Report = current;
+            }
         }
         catch (Exception exception) when (exception.IsNoAnswer)
         {
-            // Report stays null, so the form shows, as when the report could not be read
+            // The form shows, as when the report could not be read, or the kept report when only its re-check failed
             await ToastService.ShowErrorToastAsync(localizer[LK.Error.ServerNotResponding]);
         }
     }
