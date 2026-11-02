@@ -52,6 +52,10 @@ internal sealed class LocalTlsServer(X509Certificate2 certificate, bool answerHt
 
     readonly TcpListener _listener = Listen();
 
+    // Ends a handshake or a read still waiting when the test is over: stopping the listener leaves accepted sockets
+    // open, so a client that never speaks would otherwise hold the disposal forever
+    readonly CancellationTokenSource _stopping = new();
+
     Task _handshake = Task.CompletedTask;
 
     public int Port => ((IPEndPoint)_listener.LocalEndpoint).Port;
@@ -66,8 +70,10 @@ internal sealed class LocalTlsServer(X509Certificate2 certificate, bool answerHt
 
     public async ValueTask DisposeAsync()
     {
+        await _stopping.CancelAsync();
         _listener.Stop();
         await _handshake;
+        _stopping.Dispose();
         certificate.Dispose();
     }
 
@@ -79,14 +85,14 @@ internal sealed class LocalTlsServer(X509Certificate2 certificate, bool answerHt
         return listener;
     }
 
-    static async Task AnswerAsync(SslStream stream)
+    static async Task AnswerAsync(SslStream stream, CancellationToken cancellationToken)
     {
         var request = new StringBuilder();
         var buffer = new byte[1024];
 
         while (!request.ToString().Contains(EndOfHeaders, StringComparison.Ordinal))
         {
-            var read = await stream.ReadAsync(buffer);
+            var read = await stream.ReadAsync(buffer, cancellationToken);
 
             if (read == 0)
             {
@@ -96,8 +102,8 @@ internal sealed class LocalTlsServer(X509Certificate2 certificate, bool answerHt
             request.Append(Encoding.ASCII.GetString(buffer, 0, read));
         }
 
-        await stream.WriteAsync(Encoding.ASCII.GetBytes(EmptyOkResponse));
-        await stream.FlushAsync();
+        await stream.WriteAsync(Encoding.ASCII.GetBytes(EmptyOkResponse), cancellationToken);
+        await stream.FlushAsync(cancellationToken);
     }
 
     async Task ServeAsync()
@@ -128,16 +134,17 @@ internal sealed class LocalTlsServer(X509Certificate2 certificate, bool answerHt
         try
         {
             await using var stream = new SslStream(client.GetStream());
-            await stream.AuthenticateAsServerAsync(certificate);
+            await stream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions { ServerCertificate = certificate }, _stopping.Token);
 
             if (answerHttp)
             {
-                await AnswerAsync(stream);
+                await AnswerAsync(stream, _stopping.Token);
             }
         }
-        catch (Exception ex) when (ex is AuthenticationException or IOException or SocketException or ObjectDisposedException)
+        catch (Exception ex) when (ex is AuthenticationException or IOException or SocketException or ObjectDisposedException or OperationCanceledException)
         {
-            // Expected: the client refuses the certificate and aborts the handshake, or only checked that the port answers
+            // Expected: the client refuses the certificate and aborts the handshake, only checked that the port answers,
+            // or never spoke before the test ended
         }
     }
 }

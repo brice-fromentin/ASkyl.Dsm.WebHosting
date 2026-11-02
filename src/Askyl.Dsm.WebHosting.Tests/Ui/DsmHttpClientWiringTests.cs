@@ -52,6 +52,18 @@ public class DsmHttpClientWiringTests(ApplicationHostFactory factory) : IClassFi
     }
 
     [Fact]
+    public async Task DsmClient_RejectsTheSelfSignedCertificate_ForALoopbackLiteralNoRootProcessHolds()
+    {
+        // The registered probe, not a fake: the test's own listener belongs to an unprivileged user, so the one
+        // relaxation the client allows must not apply to it
+        await using var server = LocalTlsServer.Start(TestCertificates.CreateCertificate(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1)));
+
+        var failure = await GetFailureAsync(factory, IPAddress.Loopback.ToString(), server.Port);
+
+        Assert.True(HasInner<AuthenticationException>(failure), failure.ToString());
+    }
+
+    [Fact]
     public async Task DsmClient_GetsPastTls_ForARootOwnedLoopbackLiteral()
     {
         using var host = WithRootListener();

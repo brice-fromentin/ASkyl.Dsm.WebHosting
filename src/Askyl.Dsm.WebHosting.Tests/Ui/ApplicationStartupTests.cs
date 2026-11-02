@@ -7,6 +7,7 @@ using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.System;
 using Askyl.Dsm.WebHosting.Constants.JSON;
 using Askyl.Dsm.WebHosting.Constants.WebApi;
+using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Authentication;
 using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
 using Askyl.Dsm.WebHosting.Data.Results;
@@ -15,6 +16,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
 
 namespace Askyl.Dsm.WebHosting.Tests.Ui;
@@ -36,6 +39,11 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
     /// </summary>
     const string ProxiedBaseAddress = "http://nas.example.test";
 
+    /// <summary>
+    /// A reserved name that never resolves, so even a broken gate reaches nothing.
+    /// </summary>
+    const string DevelopersNasUrl = "https://nas.invalid:5001";
+
     static readonly string ProtectedRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, FileManagementRoutes.SharedFoldersFullRoute);
 
     static readonly string DiagnosticReportRoute = String.Join("/", ApplicationConstants.ApplicationUrlSubPath, DsmDiagnosticRoutes.ReportFullRoute);
@@ -55,6 +63,19 @@ public class ApplicationStartupTests(ApplicationHostFactory factory) : IClassFix
         var response = await withoutSynoInfo.CreateClient().GetAsync(ApplicationConstants.ApplicationUrlSubPath);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public void Application_IgnoresADevelopersDsmUrl_AndStaysOnLoopback()
+    {
+        // A developer's ADWH_DSM_URL names a real NAS, and the gate runs without approval only because it never
+        // reaches one. Placed below every other source, as the environment sits below the factory's own.
+        using var withDevelopersNas = factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration(configuration
+            => configuration.Sources.Insert(0, new MemoryConfigurationSource { InitialData = [new(ApplicationConstants.DsmUrlEnvironmentVariable, DevelopersNasUrl)] })));
+
+        var settings = withDevelopersNas.Services.GetRequiredService<IDsmSettingsService>();
+
+        Assert.Equal(SystemDefaults.LoopbackAddress, settings.Server);
     }
 
     /// <summary>
