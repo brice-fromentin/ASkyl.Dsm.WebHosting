@@ -34,7 +34,8 @@ Key structural facts that span multiple projects:
 - **DSM communication chain**: Client service → Controller → `Ui/Services` → `IDsmSession` (Scoped; SID/username in ASP.NET session, TTL-cached
   validation serialized by a `SemaphoreSlim`; validation calls the admin-only `SYNO.Core.User.get` and **fails closed**, which is also the app's
   only administrator check — do not relax it) → `DsmApiClient` (Singleton in `Tools/Network/`; stateless — SID passed per call; lazy
-  `SYNO.API.Info` handshake guarded by `SemaphoreLock`). URL building and serialization format (Form vs Json) are driven by the `IApiParameters`
+  `SYNO.API.Info` handshake guarded by `SemaphoreLock`, re-run before every login so a listener that took DSM's port never
+  receives a password). URL building and serialization format (Form vs Json) are driven by the `IApiParameters`
   implementation. Facts established about the undocumented DSM APIs are recorded in `docs/ai/dsm-api-notes.md`.
 - **Website hosting subsystem**: `WebSiteHostingService` (Singleton + BackgroundService) owns a `ConcurrentDictionary` of sites; each site's
   `SiteLifecycleManager` serializes start/stop/state/dispose through a bounded `Channel<LifecycleCommand>` with `TaskCompletionSource`-carrying
