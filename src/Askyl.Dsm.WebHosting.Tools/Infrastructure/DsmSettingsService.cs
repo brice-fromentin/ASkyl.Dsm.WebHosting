@@ -75,7 +75,7 @@ public sealed class DsmSettingsService(ILogger<ILogDsmSettingsService> logger, I
 
     static string ReadLanguage(ILogger<ILogDsmSettingsService> logger, IFileReader fileReader, IConfiguration configuration)
     {
-        var configuredPath = configuration.GetValue<string>("DsmSettings:ConfigPath");
+        var configuredPath = configuration.GetValue<string>(SystemDefaults.ConfigKeySynoInfoPath);
         var configPath = configuredPath ?? SystemDefaults.SynoInfoConfPath;
 
         logger.ResolvingConfigPath(configPath, configuredPath != null);

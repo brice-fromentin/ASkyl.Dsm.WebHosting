@@ -47,6 +47,11 @@ public static class SystemDefaults
     public const string ConfigKeyWebConfigPath = "DsmSettings:WebConfigPath";
 
     /// <summary>
+    /// Configuration key overriding <see cref="SynoInfoConfPath"/>.
+    /// </summary>
+    public const string ConfigKeySynoInfoPath = "DsmSettings:ConfigPath";
+
+    /// <summary>
     /// Address of DSM on the NAS itself, where nothing on the network can intercept the traffic.
     /// </summary>
     public const string LoopbackAddress = "127.0.0.1";

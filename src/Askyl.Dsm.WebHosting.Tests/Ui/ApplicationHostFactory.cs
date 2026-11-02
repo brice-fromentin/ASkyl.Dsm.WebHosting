@@ -39,7 +39,7 @@ public sealed class ApplicationHostFactory : WebApplicationFactory<App>
     /// </summary>
     const string TestingEnvironmentName = "Testing";
 
-    internal const string ConfigPathSettingKey = "DsmSettings:ConfigPath";
+    internal const string ConfigPathSettingKey = SystemDefaults.ConfigKeySynoInfoPath;
 
     internal const string WebConfigPathSettingKey = SystemDefaults.ConfigKeyWebConfigPath;
 
