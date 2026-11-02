@@ -588,8 +588,9 @@ could: the `SYNO.API.Auth.logout` call shape (PR #38), and the validation cache 
 because `IDsmSession` is Scoped — invisible in a class that looks correct, stated plainly in the log
 (PR #39).
 
-Deploy, download the log archive from the application's own log page, drop it in the gitignored
-`logs-review/` beside the previous one, then run the `📊 Logs` task in VS Code or:
+Download the previous archive before upgrading: an upgrade erases the package's logs, so the running build's
+set is lost once the new one is installed. Then deploy, download the new archive from the application's own log
+page the same way, drop both in the gitignored `logs-review/`, and run the `📊 Logs` task in VS Code or:
 
 ```bash
 ./src/scripts/compare-logs.sh
