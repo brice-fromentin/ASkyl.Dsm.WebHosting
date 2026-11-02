@@ -736,6 +736,9 @@ are stateless (`DsmConnectionChecks`) and connect to `IDsmSettingsService.Server
   DSM client, so it accepts exactly what the application would. A refusal is `NotTrusted` — on the NAS, DSM does
   not hold the loopback port; from a developer machine, the certificate fails validation — and its
   `SslPolicyErrors` go to the log (event 3100004). A handshake that breaks without a refusal is `HandshakeFailed`.
+  Its exception, like that of a failed `SYNO.API.Info` probe, goes to the log at Debug (event 3100005), and the
+  line reporting the failed check (3100002) carries the HTTP status the API answered with: a frozen DSM, an nginx
+  502 and another service answering no longer log the same line.
 - **Cached, serialized, coalesced:** every run starts with `Reload()`, which re-reads `DSM.json`, so a port changed
   in DSM is picked up. Runs are serialized, and a caller that queued behind a run started after it asked reuses
   that run. Runs ignore the caller's token, so a cancelled request cannot poison the shared result.
