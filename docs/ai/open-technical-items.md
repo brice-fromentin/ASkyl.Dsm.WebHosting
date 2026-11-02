@@ -76,38 +76,100 @@ would be the change if the trade is judged otherwise.
 
 ## Reliability
 
-### The package stop timeout is shorter than the application's own shutdown
+### The package stop kills hosted sites instead of letting them shut down
 
-`spk-project/scripts/start-stop-status:88-94` sends SIGTERM, sleeps **2 seconds**, then sends SIGKILL.
+`spk-project/scripts/start-stop-status:88-94` sends SIGTERM, sleeps **2 seconds**, then sends SIGKILL. The
+host's graceful shutdown awaits `StopAllSitesAsync`, which gives each site
+`WebSiteConstants.DefaultProcessTimeoutSeconds` — **10 seconds**, configurable to 120 — so the host is
+SIGKILLed long before a slow site has drained.
 
-The host's graceful shutdown awaits `StopAllSitesAsync`, which stops each hosted site with a timeout of
-`WebSiteConstants.DefaultProcessTimeoutSeconds` — **10 seconds**, configurable to 120. Any site that takes
-longer than about two seconds to drain means the host is SIGKILLed mid-shutdown, and hosted site processes
-are children, so they are orphaned rather than stopped.
+The consequence predicted here until 2026-11-02, sites **orphaned**, does not happen on DSM 7. Measured on the
+Virtual DSM 7.2.2: the package runs as the systemd unit `pkgctl-AskylWebHosting.service` with
+`KillMode=control-group`, and the hosted sites sit in the same cgroup. With three sites running, one of them
+built to take 20 s to drain, `synopkg stop` returned after 3.0 s with every process gone; `start-stop-status`
+logged "Process still running, force killing" at 2 s, and the application logged no site stop at all. Sites are
+killed rather than stopped: none gets its graceful shutdown. At the next start every enabled autostart site came
+back. Raising the script's wait above the configured site timeout is still the fix.
 
-This is the orphaning the 2026-07-25 assessment attributed to `SiteLifecycleManager.Dispose`. That
-attribution was wrong — `StopAllSitesAsync` does await each stop — but the outcome it predicted is real,
-with the script's timeout as the actual cause. Raising the script's wait above the configured site timeout
-is the fix.
+### `pkill -f` matches a bare pattern
 
-### `pkill -f` runs as root against a bare pattern
+`spk-project/scripts/common-functions.sh:159` — `pkill -f "$pattern" || true`. `-f` matches the entire command
+line, so any process whose arguments happen to contain the pattern is killed. A PID file is already maintained
+and should be preferred.
 
-`spk-project/scripts/common-functions.sh:159` — `pkill -f "$pattern" || true`. As root, `-f` matches the
-entire command line, so any process whose arguments happen to contain the pattern is killed. A PID file is
-already maintained and should be preferred.
+The scripts do **not** run as root, as this entry used to say: `spk-project/conf/privilege` sets
+`"run-as": "package"`, and every script logged the package user's uid on 2026-11-02. A root process whose
+command line contained the pattern survived an uninstall. The reach is therefore the package user's own
+processes — the hosted sites among them.
 
 ### No lifecycle script uses `set -e`, `-u` or `pipefail`
 
-All eight scripts under `spk-project/scripts/` run as root on the user's NAS, and every one of them
+All eight scripts under `spk-project/scripts/` run on the user's NAS as the package user, and every one of them
 continues past a failed command. `build-spk.sh` gets this right at line 3 — the packaging scripts simply
 never adopted it.
 
-**TODO, prerequisite for the three SPK items above: a disposable DSM instance.** None of them can be
-confirmed or fixed with confidence by reading — they need an install, a stop and an upgrade actually run.
-Mocking cannot substitute, since `synopkg` and the package lifecycle are the thing under test. A Virtual
-DSM under Virtual Machine Manager is the candidate (one free instance per host, Btrfs volume required).
-Recorded, not planned: it shares its physical machine with production, and reachable credentials are a
-separate decision from the hardware.
+The disposable DSM this entry and the two above waited for now exists (AGENTS.md §13). The two above were
+measured on it on 2026-11-02; this one was not, since no failing command was provoked.
+
+### The `http` group permission a new site depends on is never applied
+
+`Ui/Services/FileSystemService.cs:115` — `SetHttpGroupPermissionsAsync` sends `SYNO.Core.ACL set` with the
+site folder's real path (`/volume1/...`) in `file_path`, `files` **and** `dirPaths`. DSM answers success with
+a task id, and the task changes nothing. Measured on the Virtual DSM 7.2.2 on 2026-11-02, through the package
+and replayed from outside through DSM's name, on a folder copied over SSH (Linux permissions) and on one
+uploaded through File Station (inherited ACL): the ACL was the same before and after, and the package user
+was refused the application's DLL. Not a regression of loopback mode — the call predates it and fails the same
+way through DSM's name.
+
+What the user sees: the site is created without a message, then shows as stopped with no framework and never
+starts. The failed autostart is reported nowhere in the UI, and the log says `ApplicationBinaryNotFound`
+(1600004) for a file that exists but cannot be read. Sites work today only where the `http` group can
+already read the folder: a shared folder it is granted, or Linux permissions that let others read.
+
+Three measured facts constrain the fix (details in `dsm-api-notes.md`):
+
+1. `dirPaths` must be the share path (`/<share>/<folder>`): the same call then applies the entry.
+2. `rules` replaces the folder's **explicit** entries — one added by hand was gone after the call. Correcting
+   `dirPaths` alone would start deleting users' own permissions on their site folders: the call has to read
+   the folder's ACL and send it back with the `http` entry added, as DSM's own permission editor does.
+3. A folder entry is not enough under a shared folder that denies traversal: the package user, a member of
+   `http`, could not enter a share only administrators may traverse, and read the DLL only once a traverse
+   entry was added at the share root and the folder in between. Granting traversal, or telling the user to, is
+   a decision.
+
+### Editing a site's ports, host name or protocol fails
+
+`Ui/Services/ReverseProxyManagerService.cs:74` — `UpdateAsync` finds the DSM rule with
+`FindByCompositeKeyAsync(config)`: internal port, host name, public port and protocol, taken from the **new**
+configuration. DSM still holds the old values, so any edit of those four fields throws
+`ReverseProxyNotFoundException` and the user reads that the reverse proxy update failed. Measured on
+2026-11-02: changing the internal port failed this way; changing only the environment, and toggling HSTS,
+succeeded, HSTS read back from DSM's rule. Nothing is left half-done: the configuration is not persisted and
+the site keeps running as before.
+
+The lookup needs the previous configuration, which `UpdateWebsiteAsync` already holds
+(`WebSiteHostingService.cs:161`). Its rollback at line 208 has the mirror image of the defect: after a
+successful update, the rule carries the new key and the rollback looks it up with the old one.
+
+### A package upgrade deletes the ASP.NET runtimes installed from the application
+
+Runtimes installed through the framework dialog land in `<target>/runtimes/shared`, DSM replaces `target` on
+upgrade, and `preupgrade`/`postupgrade` carry over `websites.json` only. Measured on 2026-11-02: with ASP.NET
+9.0.22 installed from the application and a .NET 9 site running, the upgrade left `10.0.14` alone. The .NET 9
+site stayed stopped (`SiteStartBlockedIncompatible`, 1600005) and its host name answered 502, while the three
+.NET 10 sites restarted and `websites.json` came back intact. The grid shows that site as stopped, with no hint
+until Start is pressed. Either the runtimes live outside `target`, or the upgrade carries them over.
+
+Same gap in a smaller form: a site whose missing framework is installed from its own creation dialog is not
+started afterwards, autostart notwithstanding.
+
+### Uninstalling leaves the sites' reverse-proxy rules in DSM
+
+`preuninst` stops the application, and nothing removes the rules created for sites. Measured on 2026-11-02:
+after an uninstall with two sites configured, both rules were still in DSM, answering 502 for their host
+names. A reinstalled package does not list them, but recreating a site with the same host name, ports and
+protocol reuses the rule (`ReverseProxyAlreadyExists`, then normal operation), and deleting that site
+removes it. A rule whose site is never recreated stays until it is removed in DSM by hand.
 
 ### The website lifecycle path still drops the cancellation token
 
