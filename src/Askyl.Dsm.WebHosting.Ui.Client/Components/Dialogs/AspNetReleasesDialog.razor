@@ -1,5 +1,6 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.Runtime
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Data.Results
 @using Askyl.Dsm.WebHosting.Globalization
 
 @inherits WorkingStateBase
@@ -211,9 +212,13 @@
 
         try
         {
-            using var worker = this.CreateWorkingState(localizer[LK.Loading.Installing]);
+            InstallationResult result;
 
-            var result = await ManagementService.InstallFrameworkAsync(SelectedItem.Version, SelectedChannel?.ProductVersion ?? String.Empty);
+            // Ended before the message: kept up, the overlay came over it once its counter showed
+            using (this.CreateWorkingState(localizer[LK.Loading.Installing]))
+            {
+                result = await ManagementService.InstallFrameworkAsync(SelectedItem.Version, SelectedChannel?.ProductVersion ?? String.Empty);
+            }
 
             if (result.Success)
             {
@@ -248,9 +253,13 @@
 
         try
         {
-            using var worker = this.CreateWorkingState(localizer[LK.Loading.Uninstalling]);
+            InstallationResult uninstallResult;
 
-            var uninstallResult = await ManagementService.UninstallFrameworkAsync(SelectedItem.Version);
+            // Ended before the message, as for an installation
+            using (this.CreateWorkingState(localizer[LK.Loading.Uninstalling]))
+            {
+                uninstallResult = await ManagementService.UninstallFrameworkAsync(SelectedItem.Version);
+            }
 
             if (uninstallResult.Success)
             {

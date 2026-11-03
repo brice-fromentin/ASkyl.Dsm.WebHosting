@@ -739,6 +739,33 @@ public class ComponentRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task WebsiteDialog_EndsItsWait_BeforeAskingToInstallTheMissingFramework()
+    {
+        // Kept up, the dialog's overlay came over this question once its counter showed, and nothing could be clicked
+        // (measured on the Virtual DSM)
+        _hostingService.Setup(service => service.AddWebsiteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(WebSiteInstanceResult.CreateSuccess(new WebSiteInstance { RequiredFramework = MissingChannel }, MissingChannel));
+        var site = new WebSiteInstance(new WebSiteConfiguration
+        {
+            Name = SiteName,
+            ApplicationPath = "/web/site/App.dll",
+            ApplicationRealPath = "/volume1/web/site/App.dll",
+            InternalPort = 18110,
+            HostName = "site.example"
+        });
+        var cut = _ctx.Render<FluentDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+
+        await cut.InvokeAsync(() => { _ = dialogService.ShowDialogAsync<WebSiteConfigurationDialog>(options => options.Parameters[nameof(WebSiteConfigurationDialog.Content)] = site); });
+        cut.WaitForAssertion(() => cut.Find("form").Submit());
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.WebsiteConfig.FrameworkNotInstalled, MissingChannel], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        Assert.False(cut.FindComponent<WebSiteConfigurationDialog>().Instance.IsWorking);
+    }
+
+    const string MissingChannel = "9.0";
+
+    [Fact]
     public async Task WebsiteDialog_OpensWithoutLoadingAMaskScript()
     {
         var cut = _ctx.Render<FluentDialogProvider>();
