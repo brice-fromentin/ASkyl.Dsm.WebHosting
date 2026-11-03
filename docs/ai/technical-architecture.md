@@ -830,7 +830,11 @@ compiles. What the move established, for whoever touches the UI or the next majo
     test awaits a dialog that never closes.
 - **Overlay.** Without `FullScreen`, `FluentOverlay` centres its content on its parent, which inside a dialog
   is a 0x0 box in a corner of the screen. Its content sits in a native `<dialog>` that gives text the
-  browser's own colour, so `LoadingOverlay` sets `Color.Default`.
+  browser's own colour, so `LoadingOverlay` sets `Color.Default`. **End a wait before any message or question
+  it leads to.** Once its elapsed counter shows, a live overlay comes back over dialogs opened after it, and
+  nothing under it can be clicked: measured on the Virtual DSM with the site dialog's overlay over the framework
+  releases dialog, uncovered for 4 s, covered from the counter on. `WebSiteConfigurationDialog` and the framework
+  install and uninstall therefore close their working state before showing the outcome.
 - **Toasts.** Moq cannot stand in for `INotificationService` (Castle cannot implement one of its setters): a
   bUnit test renders a `FluentToastProvider` and reads its markup. `ShowErrorToastAsync` says it waits for the
   close result, yet a page's overlay was gone while its error toast still showed, in bUnit and in Chrome.
