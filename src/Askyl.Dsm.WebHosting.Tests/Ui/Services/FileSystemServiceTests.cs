@@ -339,6 +339,47 @@ public class FileSystemServiceTests
     }
 
     [Fact]
+    public async Task GrantSiteAccessAsync_TurnsItsOwnPassageIntoRead_WhenThatFolderNowHoldsASite()
+    {
+        // A site in /data/websites/blog left passage-only on /data/websites; a second site's dll sits in /data/websites
+        // itself. Left alone, that entry kept the dll unreadable right after the user said yes
+        var service = CreateService();
+        CoreAclRule passage = new()
+        {
+            OwnerType = AclConstants.OwnerTypeGroup,
+            OwnerName = AclConstants.OwnerNameHttp,
+            OwnerId = 1023,
+            PermissionType = AclConstants.PermissionTypeAllow,
+            Permission = new() { ExeFile = true },
+            Inherit = new() { ThisFolder = true },
+            Level = 0
+        };
+        SetupAcls(Acl(isInherited: false, Entry("administrators", 0), passage), Acl(isInherited: true, Entry("administrators", 1), passage));
+
+        var result = await service.GrantSiteAccessAsync(new("/data/websites/App.dll", "/volume1/data/websites/App.dll"));
+
+        // The shared folder keeps its passage; the site's folder trades it for Read, nothing else changes
+        Assert.True(result.Success);
+        var set = Assert.Single(SetCalls());
+        Assert.Equal("/data/websites", set.DirPaths);
+        var http = Assert.Single(set.Rules);
+        Assert.True(http.Permission.ReadData);
+        Assert.True(http.Inherit.AllDescendants);
+    }
+
+    [Fact]
+    public async Task GrantSiteAccessAsync_RefusesAnApplicationAtTheRootOfItsShare()
+    {
+        // Its folder is the share itself: Read there would open every file in it
+        var service = CreateService();
+
+        var result = await service.GrantSiteAccessAsync(new("/data/App.dll", "/volume1/data/App.dll"));
+
+        Assert.False(result.Success);
+        Assert.Empty(_dsmSession.ExecuteCalls);
+    }
+
+    [Fact]
     public async Task GrantSiteAccessAsync_StopsAtTheFirstRefusal()
     {
         var service = CreateService();

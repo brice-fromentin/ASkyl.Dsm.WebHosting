@@ -221,7 +221,9 @@
     {
         var folders = Configuration.ApplicationPath.Split(FileStationDefaults.PathSeparator, StringSplitOptions.RemoveEmptyEntries)[..^1];
 
-        if (folders.Length == 0)
+        // A dll at the root of its share has the share itself for its folder: nothing narrow to offer, so no question
+        // that would promise it; the refusal tells the user what to grant in File Station
+        if (folders.Length < 2)
         {
             return null;
         }

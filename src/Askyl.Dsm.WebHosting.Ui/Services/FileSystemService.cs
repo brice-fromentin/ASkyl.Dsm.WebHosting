@@ -110,7 +110,9 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
         var volume = realPath[..^applicationPath.Length];
         var folders = applicationPath.Split(FileStationDefaults.PathSeparator, StringSplitOptions.RemoveEmptyEntries)[..^1];
 
-        if (folders.Length == 0)
+        // At least the share and a folder in it: with the dll at the share's root, the site's folder is the share
+        // itself, and Read there would open every file in it — the opposite of what the user agreed to
+        if (folders.Length < 2)
         {
             logger.PathValidationFailed(applicationPath);
             return ApiResult.CreateFailure(localizer[LK.Validation.PathTraversalDetected]);
@@ -172,9 +174,14 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
         }
 
         List<CoreAclRule> explicitRules = [.. current.Data.Acl.Where(r => r.Level == AclConstants.ExplicitLevel).Select(r => r with { Level = null })];
+        var httpRule = explicitRules.FirstOrDefault(r => r.OwnerType == AclConstants.OwnerTypeGroup && r.OwnerName == AclConstants.OwnerNameHttp);
 
-        // An http entry someone set is theirs: replacing it could take away what they gave, or lift what they denied
-        if (explicitRules.Any(r => r.OwnerType == AclConstants.OwnerTypeGroup && r.OwnerName == AclConstants.OwnerNameHttp))
+        // An http entry someone set is theirs: replacing it could take away what they gave, or lift what they denied.
+        // The exception is this method's own passage-only entry, on a folder that now holds a site and needs Read
+        var ownPassage = httpRule is not null && httpRule.PermissionType == HttpTraverseRule.PermissionType
+            && httpRule.Permission == HttpTraverseRule.Permission && httpRule.Inherit == HttpTraverseRule.Inherit;
+
+        if (httpRule is not null && !(isSiteFolder && ownPassage))
         {
             logger.SiteAccessLeftAlone(sharePath);
             return true;
@@ -188,7 +195,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
             ChangeAcl = true,
             Inherited = current.Data.IsInherited,
             AclRecur = false,
-            Rules = [.. explicitRules, isSiteFolder ? HttpReadRule : HttpTraverseRule]
+            Rules = [.. explicitRules.Where(r => !ReferenceEquals(r, httpRule)), isSiteFolder ? HttpReadRule : HttpTraverseRule]
         };
 
         var response = await dsmSession.ExecuteAsync<CoreAclSetResponse>(new CoreAclSetParameters(aclSet), cancellationToken);

@@ -790,7 +790,9 @@ consent calls `IFileSystemService.GrantSiteAccessAsync` (`POST api/v1/files/site
 once. The grant is the least the site needs: passage only on the shared folder and each folder in between, Read
 on the site's folder, each written the way DSM's own editor does (`get`, every explicit entry sent back with the
 new one, `set`, `status` until finished, `stop`; `dsm-api-notes.md`). A folder that already holds an explicit
-`http` entry is left as it is. Declined, or still unreadable after it, the dialog shows the refusal and stays open.
+`http` entry is left as it is, except the grant's own passage-only entry on a folder that now holds a site, which
+becomes Read. A dll at the root of its share is never offered: its folder is the share, and Read there would open
+all of it. Declined, or still unreadable after it, the dialog shows the refusal and stays open.
 
 ---
 

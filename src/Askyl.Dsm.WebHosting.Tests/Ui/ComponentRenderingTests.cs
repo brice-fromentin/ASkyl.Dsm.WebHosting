@@ -813,6 +813,26 @@ public class ComponentRenderingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task WebsiteDialog_AsksNothing_ForAnApplicationAtTheRootOfItsShare()
+    {
+        // Its folder is the share itself: no narrow grant exists, so no question may promise one
+        var refused = new WebSiteInstanceResult(false, _localizer[LK.Error.ApplicationNotReadable, "/web/App.dll"], null, ApiErrorCode.ApplicationNotReadable);
+        _hostingService.Setup(service => service.AddWebsiteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>())).ReturnsAsync(refused);
+        var site = UnreadableSite();
+        site.Configuration.ApplicationPath = "/web/App.dll";
+        site.Configuration.ApplicationRealPath = "/volume1/web/App.dll";
+        var cut = _ctx.Render<FluentDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+
+        await cut.InvokeAsync(() => { _ = dialogService.ShowDialogAsync<WebSiteConfigurationDialog>(options => options.Parameters[nameof(WebSiteConfigurationDialog.Content)] = site); });
+        cut.WaitForAssertion(() => cut.Find("form").Submit());
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Error.ApplicationNotReadable, "/web/App.dll"], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        Assert.DoesNotContain(_localizer[LK.WebsiteConfig.GrantAccessQuestion, "/web/App.dll", "/web", "web"], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
+        _fileSystemService.Verify(service => service.GrantSiteAccessAsync(It.IsAny<SiteAccessRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task WebsiteDialog_ShowsTheRefusal_WhenAccessIsDeclined()
     {
         var cut = await SubmitUnreadableSiteAsync();

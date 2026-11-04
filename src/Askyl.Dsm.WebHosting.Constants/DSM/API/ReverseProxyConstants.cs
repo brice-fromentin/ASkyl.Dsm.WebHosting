@@ -20,7 +20,6 @@ public static class ReverseProxyConstants
     /// </summary>
     public const int DefaultProxyHttpVersion = 1;
 
-
     #region Error Codes
 
     /// <summary>

@@ -27,7 +27,9 @@ public interface IFileSystemService
     /// <summary>
     /// Gives DSM's http group the least a site needs: Read on the application's folder, and passage only through
     /// each folder above it, up to and including the shared folder. Each folder keeps its own entries; one that
-    /// already holds an explicit http entry is left as it is. Called only once the user has agreed to it.
+    /// already holds an explicit http entry is left as it is, unless it is this method's own passage-only entry on
+    /// the folder that now holds the site. Refused for a dll at the root of its share, whose folder is the share.
+    /// Called only once the user has agreed to it.
     /// </summary>
     /// <param name="request">The application's share path and real path.</param>
     /// <param name="cancellationToken">Cancellation token.</param>

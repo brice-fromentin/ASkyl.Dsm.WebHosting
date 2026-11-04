@@ -154,10 +154,6 @@ public static partial class WebsiteLoggingExtensions
 
     #endregion
 
-    #region Permissions
-
-    #endregion
-
     #region Reverse proxy rules
 
     /// <summary>
