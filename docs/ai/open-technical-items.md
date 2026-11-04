@@ -390,14 +390,20 @@ async flow, while Blazor runs each later event under its own captured context. W
 was not measured. Under FluentUI 5, the switch also reordered the home grid's columns until every column got
 a `ColumnId` (`UiSourceAuditTests` now requires one).
 
-### A localized string still reaches a logger at autostart
+### A localized string still reaches a logger
 
-`Ui/Services/WebSiteHostingService.cs:368`. `StartEligibleSitesAsync` logs `SitesFailedToStart` (EventId
-1800014, Warning) with `String.Join(", ", failures.Select(f => f.Message))`, and those messages are built
-by the `localizer` — `LK.Error.SiteNotFound`, `LK.Error.OperationFailed` and the lifecycle manager's own.
-PR #60 moved the one call it found off a localized string and said the class was closed; this one was
-missed. Not measured on a NAS: whether the hosted service's thread carries the DSM culture at that point,
-and so whether the line is actually written in French.
+`Ui/Services/WebSiteHostingService.cs`. PR #60 moved the one call it found off a localized string and said the
+class was closed; two kinds of call were missed, both logging a message the `localizer` built:
+
+- **Autostart**, line 368: `StartEligibleSitesAsync` logs `SitesFailedToStart` (EventId 1800014, Warning) with
+  `String.Join(", ", failures.Select(f => f.Message))` — `LK.Error.SiteNotFound`, `LK.Error.OperationFailed` and
+  the lifecycle manager's own. Measured on the Virtual DSM on 2026-11-03, DSM's system language left at its
+  default: written in English. Not measured with a French system language.
+- **Creating, updating and removing a site**, lines 95, 104, 185, 194 and 472: the permission and reverse-proxy
+  failures log the `ApiResult.Message` their helpers built, in the language of the browser that asked. Measured
+  the same day: `ReverseProxyUpdateFailed` (1800006, Error) written in French for a French browser.
+
+A log line's language then depends on who triggered it, which defeats searching the archive for a message.
 
 ### `application.log` is truncated on every start
 

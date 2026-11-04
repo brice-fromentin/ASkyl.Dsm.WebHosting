@@ -106,9 +106,10 @@ Askyl.Dsm.WebHosting.slnx
 ### Test Project (`Askyl.Dsm.WebHosting.Tests`)
 
 **Purpose:** Unit tests for analyzers, domain models, globalization, tools, and UI services, plus one in-memory
-startup test class: `ApplicationStartupTests` (six tests) boots the real `Program.cs` through `ApplicationHostFactory`
-(`WebApplicationFactory<App>`) and asserts on the served host page, the security headers, the 404 page, HSTS
-behind the proxy, and the session gate on the API.
+startup test class: `ApplicationStartupTests` (eleven tests) boots the real `Program.cs` through `ApplicationHostFactory`
+(`WebApplicationFactory<App>`) and asserts on the served host page and the DSM HTTPS port it hands the client, the
+security headers, the 404 page, HSTS behind the proxy, the session gate on the API, a start without synoinfo.conf,
+a developer's `ADWH_DSM_URL` ignored, and the anonymous diagnostic over loopback with its own re-check throttle.
 
 **Frameworks:** xUnit, Moq, coverlet (code coverage), bunit (BunitContext), Microsoft.AspNetCore.Mvc.Testing,
 AngleSharp. Analyzer testing via Microsoft.CodeAnalysis.Analyzer.Testing ecosystem.
@@ -117,16 +118,20 @@ AngleSharp. Analyzer testing via Microsoft.CodeAnalysis.Analyzer.Testing ecosyst
 
 Tests mirror source structure: Analyzers (blank lines, logger calls, string/static pattern), Data/Domain (model classes),
 Data/Results (result types + serialization), Globalization (culture management, localization, validators),
-Tools (converters, diagnostics, extensions, infrastructure services, network client, runtime detection, threading),
-Ui (startup, component rendering, the UI source audit, the WebAssembly output check), Ui/Authorization, Ui/Endpoints, Ui/Infrastructure, and Ui/Services (server services — DSM session,
+Tools (converters, diagnostics, extensions, infrastructure services, network client, certificate policy and root-listener
+probe, runtime detection, threading),
+Ui (startup, the DSM client's TLS wiring, component rendering, the UI source audit, the WebAssembly output check),
+Ui/Authorization, Ui/Endpoints, Ui/Infrastructure, and Ui/Services (server services — DSM session,
 authentication, file system, website hosting, configuration and lifecycle, framework and version management, log
-download, reverse proxy — plus the client-side license, tree-content and navigation-guard services). `LogEventIdRegistryTests` sits at
+download, reverse proxy, the connection diagnostic and its checks, the DSM.json watcher — plus the client-side license,
+tree-content, navigation-guard, connection-diagnostic and HTTPS-endpoint services). `LogEventIdRegistryTests` sits at
 the project root.
 
 **Design:** controllers are thin routing wrappers with no business logic — all behavior delegated to services which are tested directly.  
 Three UI test classes cover what the build cannot see (see [FluentUI 5 Notes](#fluentui-5-notes)):
 
-- `ComponentRenderingTests` renders the pages, the website and licenses dialogs and the message boxes with bUnit and
+- `ComponentRenderingTests` renders the pages, `Routes`, `LoadingOverlay`, `DsmDiagnosticPanel`, the website and licenses
+  dialogs and the message boxes with bUnit and
   the real FluentUI services. The other dialogs are not rendered by any test.
 - `UiSourceAuditTests` reads the `.razor`, `.css` and `.js` sources and rejects:
   - an attribute that is not a parameter of its component;
@@ -224,7 +229,8 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
   validation limits and path-traversal literals (the messages live in Globalization resources), website lifecycle defaults
 - **DSM/API/** — DSM API names, methods, version ranges, error codes, PHP→.NET format token mappings, serialization formats (Form/Json enum)
 - **DSM/FileStation/** — FileStation listing defaults, sorting, file type enum (File/Directory)
-- **DSM/System/** — DSM 3-letter language code data, config paths, external ports
+- **DSM/System/** — DSM 3-letter language code data; the synoinfo.conf and DSM.json paths and their override keys; the
+  loopback address, the `/proc/net/tcp` constants and DSM's default HTTPS port (5001)
 - **Globalization/** — default culture, text direction (LTR/RTL), environment variable names
 - **JSON/** — static `JsonSerializerOptions` cache (camelCase, ignore nulls)
 - **Logging/** — EventId `Base`/`Last` pairs per service for `[LoggerMessage]` extensions, held to the assembly by `LogEventIdRegistryTests`
@@ -259,7 +265,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | **IAssemblyRuntimeDetector** | Detect() | Tools.Runtime (Singleton) |
 | **IDsmSession** | ConnectAsync(), ValidateSessionAsync(), ExecuteAsync(), ExecuteSimpleAsync(), DisconnectAsync(), Disconnect(); properties: HasSession, UserLanguage, UserDateFormat, UserTimeFormat | Ui.Services.DsmSession |
 | **IDsmSettingsService** | Server, Port, Language, Reload() | Tools.Infrastructure |
-| **IDsmConnectionDiagnosticService** | GetReportAsync(), RecheckAsync() | Ui.Services (Singleton) |
+| **IDsmConnectionDiagnosticService** | GetReportAsync(), RecheckAsync() | Ui.Services (Singleton) + Ui.Client |
 
 Two client-only interfaces live in `Ui.Client/Interfaces/`, not in Data: **ILicenseService** (`GetLicensesAsync()`)
 and **ITreeContentService** (`LoadChildDirectoriesAsync()`), both implemented in `Ui.Client.Services`.
@@ -274,6 +280,7 @@ and **ITreeContentService** (`LoadChildDirectoriesAsync()`), both implemented in
   implementation instead.
 - **Domain/** — model classes organized by subsystem: Authentication (login credentials), FileSystem (FsEntry),
   Licensing (license info), Runtime (.NET framework/release models), System (DSM endpoint and language),
+  Diagnostics (the connection report, its check results, statuses and failures),
   WebSites (website configuration, instances, process state). New domain? Add a subdirectory.
 - **DsmApi/** — DSM API integration layer:
   - **Models/** — immutable C# records with `init` setters for the DSM API payload types, organized by API namespace
@@ -352,7 +359,7 @@ _binding_ failures — malformed JSON, wrong types — which is separate from th
 | **VersionsDetectorService** | `IVersionsDetectorService` | Singleton | Smart caching for dotnet --info (implements `ISemaphoreOwner` for the cache lock) | ILogger |
 | **SystemProcessRunner** | `IProcessRunner` | Singleton | Spawns OS processes, drains their redirected output | ILogger, ILoggerFactory |
 | **SystemProcessHandle** | `IProcessHandle` | Not registered | Wraps `Process`; created per process by `SystemProcessRunner` | ILogger<ILogSystemProcessHandle> |
-| **DsmSettingsService** | `IDsmSettingsService` | Singleton | DSM endpoint (loopback on the port of DSM.json, or ADWH_DSM_URL) and language (synoinfo.conf), read via IFileReader at startup and on Reload() | ILogger, IFileReader, IConfiguration |
+| **DsmSettingsService** | `IDsmSettingsService` | Singleton | DSM endpoint (loopback on the port of DSM.json, or ADWH_DSM_URL) read via IFileReader at startup and on Reload(); language (synoinfo.conf), read once at startup | ILogger, IFileReader, IConfiguration |
 
 **DsmApiClient Key Features:**
 
@@ -430,6 +437,8 @@ load-bearing: nginx terminates TLS, so without it `Request.IsHttps` is false and
   `LoadingOverlay` (full-screen overlay for WorkingState disposable pattern; once a wait passes
   `LoadingElapsedThresholdSeconds`, 5 s, it adds a "Still working... N s" line, so a 10 to 25 s wait never
   looks frozen),  
+  `DsmDiagnosticPanel` (the login page's connection diagnostic: the checks, their remedies, Re-check),
+  `InsecureConnectionPanel` (the card offering HTTPS when the page was opened over plain HTTP),
   `RealTimeNumberField` and `RealTimeTextField` (numeric/text input with real-time validation). Both wrap
   `FluentTextInput`; the number field deliberately avoids `FluentNumberInput`, which loads IMask from unpkg.com
   on first render and is refused by the CSP.
@@ -454,7 +463,8 @@ load-bearing: nginx terminates TLS, so without it `Request.IsHttps` is false and
   through them (enforced by `UiSourceAuditTests`).
 - **Services/** — HTTP client wrappers that call server API endpoints: authentication, connection diagnostic, file system, framework management,  
   runtime versions, website hosting. Plus `AcceptLanguageHandler` (DelegatingHandler attaches Accept-Language from ICultureManager),  
-  `AuthenticationNavigationGuard` (Router OnNavigateAsync guard),  
+  `AuthenticationNavigationGuard` (Router OnNavigateAsync guard),
+  `DsmHttpsEndpoint` (whether the page came over plain HTTP on a host that drops Secure cookies, and its HTTPS URL),  
   `CultureManager` (resolves culture at login, clones with date/time formats),
   `FluentUILocalizer` (FluentUI's built-in strings from SharedResource `FluentUI_*` entries, English fallback).
 - **Routes.razor** — Router with OnNavigateAsync auth guard. The guard's wait shows a `LoadingOverlay` placed
@@ -480,7 +490,7 @@ server/client folder separation.
 
 - **Server/** — one extension file per service domain, organized by subsystem:
   - _Authentication/_ — AuthenticationService
-  - _DsmApi/_ — DsmApiClient + DsmSession
+  - _DsmApi/_ — DsmApiClient, DsmSession, DsmConnectionDiagnosticService
   - _FileManagement/_ — FileManagerService, FileSystemService, LogDownloadService
   - _Framework/_ — DotnetVersionService, FrameworkManagementService
   - _Infrastructure/_ — ArchiveExtractor, AssemblyRuntimeDetector, Downloader, DsmSettingsService, GlobalizationSettings, PlatformInfo, VersionsDetector
@@ -521,15 +531,18 @@ All services use `[LoggerMessage]` extensions — zero CA2254 warnings.
 
 **Patterns Used:**
 
-- **Singleton:** DsmApiClient, PlatformInfoService, VersionsDetectorService, WebSiteHostingService, IAssemblyRuntimeDetector
+- **Singleton:** DsmApiClient, DsmCertificatePolicy, IRootListenerProbe, DsmConnectionDiagnosticService, PlatformInfoService,
+  VersionsDetectorService, WebSiteHostingService, IAssemblyRuntimeDetector
 - **Scoped:** FileManagerService (factory lambda for root path), ArchiveExtractorService, DownloaderService, UI services
-- **Background Service:** WebSiteHostingService implements IHostedService
+- **Background Service:** WebSiteHostingService implements IHostedService; DsmWebConfigurationWatcher is a second one,
+  reloading the DSM settings when DSM.json changes
 
 **Architectural Trade-off — Singleton `DsmApiClient`:**
 
 `DsmApiClient` is a pure HTTP client with no per-session state (SID passed per-call via `HttpRequestMessage` cookie). Singleton because:
 
-1. **Shared `ApiInformations`:** API metadata cached via lazy-init with `SemaphoreLock` — fetched once, forever
+1. **Shared `ApiInformations`:** API metadata cached via lazy-init with `SemaphoreLock` — fetched lazily, and again before
+   every login (`ConfirmDsmAsync`)
 2. **`HttpClient` reuse:** Named client with connection pooling
 3. **`BackgroundService` anchor:** `WebSiteHostingService` (Singleton) depends on services using `DsmApiClient`
 
@@ -549,6 +562,8 @@ Singleton
 ├── VersionsDetectorService (smart caching)
 ├── AssemblyRuntimeDetector
 ├── DsmConnectionDiagnosticService
+├── DsmCertificatePolicy
+├── IRootListenerProbe (ProcNetTcpRootListenerProbe)
 └── WebSiteHostingService (BackgroundService)
     └── SiteLifecycleManager (per-instance)
 
@@ -657,10 +672,12 @@ response is disposed first.
 
 ```text
 1. Client → LoginCredentials { Login, Password, [OtpCode] }
-2. DsmSettingsService → endpoint and language read at startup and again on each diagnostic run: 127.0.0.1 on
+2. DsmSettingsService → endpoint read at startup, on each diagnostic run and whenever DSM.json changes; language read
+   once at startup. Endpoint: 127.0.0.1 on
    the HTTPS port of DSM.json (default 5001), or the host and port of ADWH_DSM_URL when set; the language from
    DsmSettings:ConfigPath (default /etc/synoinfo.conf), falling back to the default when the file is missing
-3. DsmApiClient.EnsureInitializedAsync() → SYNO.API.Info query (lazy-init, SemaphoreLock)
+3. DsmApiClient.ConfirmDsmAsync() → SYNO.API.Info re-run before every login under SemaphoreLock (other calls use the
+   lazy EnsureInitializedAsync())
 4. DsmSession.AuthenticateAsync() → auth.login API call
 5. Response: SID stored per-request via HttpRequestMessage cookie header
 6. Session persisted in ASP.NET Core session (DsmSid + DsmUsername)
@@ -669,7 +686,8 @@ response is disposed first.
 8. Binding issued → a fresh 32-byte token stored in the session (SessionBinding) and sent as the
    `ADWH.Binding` cookie (HttpOnly, Secure, SameSite=Strict); replaced on every login, removed on disconnect
    Both cookies are `Secure`, which browsers refuse to store over plain HTTP, so the login page shows a
-   "connection not secure" card with a link to the HTTPS version instead of the form (`DsmHttpsEndpoint`, DSM's
+   "connection not secure" card with a link to the HTTPS version instead of the form, except on a loopback host, where
+   browsers keep Secure cookies (`DsmHttpsEndpoint`, DSM's
    HTTPS port arriving as `ADWH_DSM_HTTPS_PORT`)
 ```
 
@@ -709,7 +727,8 @@ in Chrome, the home page shown to a visitor who never signed in).
 The DSM call gets the login's budget, `DsmLoginTimeoutSeconds`. A DSM that takes connections and never answers
 used to hold every navigation until the browser gave up, then the login page asked again and waited as long, and
 landed on the form with a misleading toast. Past the budget, or on any failure before DSM answers, the validation
-fails closed like step 5 and re-runs the connection diagnostic, so the login page opens on it.
+fails closed like step 5 (event 1000008, `SessionValidationTransportFailed`) and re-runs the connection diagnostic, so
+the login page opens on it.
 
 **API Choice:** `SYNO.API.Auth` only has `login`/`logout`. `SYNO.Core.User.get` is the lightest API that validates session state.
 
@@ -974,11 +993,13 @@ supported culture → the unmatched browser culture (`en-US` only if it cannot b
 
 - Single named `HttpClient` instance for DSM API calls via `DsmApiClient` (Singleton)
 - Default connection pool sizing from .NET runtime defaults (`MaxConnectionsPerServer` is unlimited — `int.MaxValue`)
-- No custom `SocketsHttpHandler` configuration — relies on framework defaults for local DSM communication
+- No custom `SocketsHttpHandler`: the DSM client's primary handler is the `HttpClientHandler` from
+  `DsmCertificatePolicy.CreateHandler()` (no proxy, no redirect, the certificate policy); pool sizing stays at the defaults
 
 ### Caching Strategy
 
-- **ApiInformations Cache:** Lazy-init with `SemaphoreLock` double-checked locking in `DsmApiClient`; fetched once, cached forever
+- **ApiInformations Cache:** Lazy-init with `SemaphoreLock` double-checked locking in `DsmApiClient`; fetched again before
+  every login, so a listener that took DSM's port never receives a password
 - **Session Validation Cache:** 1-minute absolute TTL, held in `IMemoryCache` keyed by SID. It must be
   shared, not instance state: `IDsmSession` is Scoped, so fields reset every request and each request
   paid a DSM round trip while the log claimed the result was cached.
@@ -1174,7 +1195,8 @@ the injected `IConfiguration`.
 (`DsmSettings:ConfigPath`), and falls back to the default (`def`, the browser's language) when the file is missing
 or unreadable.
 
-**Local debugging:** a developer machine has neither file, so it names DSM's URL in the `ADWH_DSM_URL` environment
+**Local debugging:** a developer machine has no DSM.json (its language comes from the gitignored `.local/synoinfo.conf`,
+named in `appsettings.Development.json`), so it names DSM's URL in the `ADWH_DSM_URL` environment
 variable (`ApplicationConstants.DsmUrlEnvironmentVariable`), read through `IConfiguration`, for example
 `https://nas.example:5001`. The application then connects to that URL's host and port under the same certificate
 policy — full validation for a name, the root-listener rule only for a loopback literal — so DSM needs a trusted

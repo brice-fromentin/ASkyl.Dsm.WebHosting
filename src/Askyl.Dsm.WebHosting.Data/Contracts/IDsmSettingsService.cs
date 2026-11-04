@@ -1,7 +1,7 @@
 namespace Askyl.Dsm.WebHosting.Data.Contracts;
 
 /// <summary>
-/// The DSM endpoint and system language, read at startup and again on <see cref="Reload"/>. On the NAS, DSM is
+/// The DSM endpoint, read at startup and again on <see cref="Reload"/>, and the system language, read once at startup. On the NAS, DSM is
 /// reached over loopback on the HTTPS port of its web configuration (DSM.json); a developer machine names DSM's
 /// URL in the ADWH_DSM_URL environment variable instead.
 /// </summary>
