@@ -239,6 +239,7 @@ public static class LK
         public const string FailedToQueueStop = "Error_FailedToQueueStop";
         public const string SiteAlreadyRunning = "Error_SiteAlreadyRunning";
         public const string ApplicationBinaryNotFound = "Error_ApplicationBinaryNotFound";
+        public const string ApplicationNotReadable = "Error_ApplicationNotReadable";
         public const string RuntimeNotInstalled = "Error_RuntimeNotInstalled";
         public const string RuntimeDetectionFailed = "Error_RuntimeDetectionFailed";
         public const string InstanceNotFound = "Error_InstanceNotFound";

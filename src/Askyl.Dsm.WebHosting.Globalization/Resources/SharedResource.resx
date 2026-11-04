@@ -541,6 +541,9 @@
   <data name="Error_ApplicationBinaryNotFound" xml:space="preserve">
     <value>Application binary not found: {0}</value>
   </data>
+  <data name="Error_ApplicationNotReadable" xml:space="preserve">
+    <value>The package cannot read {0}: DSM's http group has no access to it. In File Station, open the properties of the shared folder that holds it, give the http group Read access, then try again.</value>
+  </data>
   <data name="Error_RuntimeNotInstalled" xml:space="preserve">
     <value>Requires .NET {0}, but this runtime is not installed</value>
   </data>

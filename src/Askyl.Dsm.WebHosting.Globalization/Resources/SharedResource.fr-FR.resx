@@ -541,6 +541,9 @@
   <data name="Error_ApplicationBinaryNotFound" xml:space="preserve">
     <value>Binaire de l'application introuvable : {0}</value>
   </data>
+  <data name="Error_ApplicationNotReadable" xml:space="preserve">
+    <value>Le paquet ne peut pas lire {0} : le groupe http de DSM n'y a pas accès. Dans File Station, ouvrez les propriétés du dossier partagé qui le contient, donnez au groupe http l'accès en lecture, puis réessayez.</value>
+  </data>
   <data name="Error_RuntimeNotInstalled" xml:space="preserve">
     <value>Requiert .NET {0}, mais ce runtime n'est pas installé</value>
   </data>

@@ -65,7 +65,7 @@ static class LogEventIds
 
     /// <summary>WebSiteHostingService.</summary>
     public const int WebsiteHostingBase = 1800000;
-    public const int WebsiteHostingLast = 1800031;
+    public const int WebsiteHostingLast = 1800032;
 
     #endregion
 

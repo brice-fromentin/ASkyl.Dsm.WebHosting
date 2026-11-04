@@ -121,10 +121,16 @@ uploaded through File Station (inherited ACL): the ACL was the same before and a
 was refused the application's DLL. Not a regression of loopback mode — the call predates it and fails the same
 way through DSM's name.
 
-What the user sees: the site is created without a message, then shows as stopped with no framework and never
-starts. The failed autostart is reported nowhere in the UI, and the log says `ApplicationBinaryNotFound`
-(1600004) for a file that exists but cannot be read. Sites work today only where the `http` group can
-already read the folder: a shared folder it is granted, or Linux permissions that let others read.
+What the user saw until 0.8.2: the site was created without a message, then showed as stopped with no framework
+and never started; the log said `ApplicationBinaryNotFound` (1600004) for a file that exists but cannot be read.
+Since 0.8.2, adding or updating a site whose application this process cannot open is **refused before any side
+effect**, with a message naming the remedy (`WebSiteHostingService.ValidateApplicationReadable`, event 1800032).
+The check opens the file rather than reading ACLs: sites run under this process's account, so the open measures
+their effective access — folder ACL, traversal of the shared folder, Linux mode — in one call. Only a refusal
+blocks; a missing file passes as before, which local runs need. The grant itself is still the user's to make
+(the wiki's *Hosting a Website*, step 3, measured on the Virtual DSM: Read for `http` on the shared folder), so this
+entry stays open. Sites work only where the `http` group can already read the folder: a shared folder it is
+granted, or Linux permissions that let others read.
 
 Three measured facts constrain the fix (details in `dsm-api-notes.md`):
 

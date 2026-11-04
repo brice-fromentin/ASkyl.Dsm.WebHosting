@@ -225,5 +225,11 @@ public static partial class WebsiteLoggingExtensions
     [LoggerMessage(EventId = 1800031, Level = LogLevel.Error, Message = "No website was initialized: the configuration could not be read. The host starts so the interface and logs stay reachable, and no write is attempted over an unreadable file")]
     public static partial void InstanceInitializationSkipped(this ILogger<ILogWebSiteHostingService> logger, Exception ex);
 
+    /// <summary>
+    /// Logs a site refused because this process, which its process would run as, cannot read its application.
+    /// </summary>
+    [LoggerMessage(EventId = 1800032, Level = LogLevel.Warning, Message = "Site '{SiteName}' refused: this process cannot read {Path}, so the site could not start from it")]
+    public static partial void ApplicationNotReadable(this ILogger<ILogWebSiteHostingService> logger, string siteName, string path);
+
     #endregion
 }

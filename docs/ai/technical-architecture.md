@@ -786,7 +786,8 @@ permissions. No upload, download, delete, mkdir, move or copy operation is imple
 application directory (its parent when the path is a `.dll`). It grants the `http` group read, write, execute and
 delete rights — everything but change-permission and take-ownership — inherited by all descendants. It runs as the
 first side-effecting step of adding or updating a website, after the configuration and environment variables are
-validated.
+validated. DSM applies none of it (`open-technical-items.md`), so validation first opens the application file from
+this process, whose account the sites share, and refuses a site it cannot read (`ValidateApplicationReadable`).
 
 ---
 

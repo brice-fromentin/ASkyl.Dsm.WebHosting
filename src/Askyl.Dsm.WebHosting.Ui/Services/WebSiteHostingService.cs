@@ -682,7 +682,36 @@ public class WebSiteHostingService(
     {
         var validation = await configurationValidator.ValidateAsync(configuration, cancellationToken);
 
-        return validation.IsValid ? null : WebSiteInstanceResult.CreateFailure(validation.ToMessage());
+        return validation.IsValid ? ValidateApplicationReadable(configuration) : WebSiteInstanceResult.CreateFailure(validation.ToMessage());
+    }
+
+    /// <summary>
+    /// Refuses an application this process cannot open: sites run under its account, so they could not either.
+    /// Opening the file measures the effective access — the folder's ACL, traversal of the shared folder above it and
+    /// Linux permissions alike — where reading DSM's ACLs would have to reimplement all three.
+    /// </summary>
+    private WebSiteInstanceResult? ValidateApplicationReadable(WebSiteConfiguration configuration)
+    {
+        if (String.IsNullOrEmpty(configuration.ApplicationRealPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            File.OpenRead(configuration.ApplicationRealPath).Dispose();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            logger.ApplicationNotReadable(configuration.Name, configuration.ApplicationRealPath);
+            return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.ApplicationNotReadable, configuration.ApplicationPath]);
+        }
+        catch (IOException)
+        {
+            // A missing file keeps the behaviour it always had: a local run has no NAS path to find
+        }
+
+        return null;
     }
 
     /// <summary>
