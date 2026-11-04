@@ -1,0 +1,70 @@
+@using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics
+@using Askyl.Dsm.WebHosting.Globalization
+
+@inject ILocalizer localizer
+
+<FluentStack Orientation="Orientation.Vertical">
+    <FluentText As="TextTag.H2" Size="TextSize.Size600" Weight="TextWeight.Semibold">@localizer[LK.Diagnostic.Title]</FluentText>
+    <FluentText>@localizer[LK.Diagnostic.Intro]</FluentText>
+
+    @foreach (var check in Report.Checks)
+    {
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center">
+            <FluentIcon Value="@StatusIcon(check.Status)" Title="@localizer[StatusKey(check.Status)]" />
+            <FluentLabel>@localizer[CheckKey(check.Check)]</FluentLabel>
+        </FluentStack>
+
+        @if (check.Status == DsmCheckStatus.Failed)
+        {
+            <FluentMessageBar Intent="MessageBarIntent.Error" AllowDismiss="false">
+                <FluentText>@FailureText(check)</FluentText>
+            </FluentMessageBar>
+        }
+    }
+
+    <FluentLabel>@localizer[LK.Diagnostic.CheckedAt, Report.CheckedAt.ToLocalTime()]</FluentLabel>
+    <FluentButton Appearance="ButtonAppearance.Primary" OnClick="OnRecheck">@localizer[LK.Diagnostic.Recheck]</FluentButton>
+</FluentStack>
+
+@code
+{
+    /// <summary>The report to show; the panel is only rendered for an unhealthy one.</summary>
+    [Parameter, EditorRequired]
+    public DsmConnectionReport Report { get; set; } = new();
+
+    /// <summary>Raised by the re-check button.</summary>
+    [Parameter]
+    public EventCallback OnRecheck { get; set; }
+
+    private static Icon StatusIcon(DsmCheckStatus status) => status switch
+    {
+        DsmCheckStatus.Passed => new IconsRegular20.CheckmarkCircle().WithColor(Color.Success),
+        DsmCheckStatus.Failed => new IconsRegular20.DismissCircle().WithColor(Color.Error),
+        _ => new IconsRegular20.Circle().WithColor(Color.Disabled)
+    };
+
+    private static string StatusKey(DsmCheckStatus status) => status switch
+    {
+        DsmCheckStatus.Passed => LK.Diagnostic.StatusPassed,
+        DsmCheckStatus.Failed => LK.Diagnostic.StatusFailed,
+        _ => LK.Diagnostic.StatusSkipped
+    };
+
+    private static string CheckKey(DsmConnectionCheck check) => check switch
+    {
+        DsmConnectionCheck.PortAnswers => LK.Diagnostic.CheckPortAnswers,
+        DsmConnectionCheck.ConnectionTrusted => LK.Diagnostic.CheckConnectionTrusted,
+        _ => LK.Diagnostic.CheckApiAnswers
+    };
+
+    private string FailureText(DsmConnectionCheckResult check) => check.Failure switch
+    {
+        DsmCheckFailure.PortRefused => localizer[LK.Diagnostic.FailurePortRefused, Report.Port],
+        DsmCheckFailure.PortTimedOut => localizer[LK.Diagnostic.FailurePortTimedOut, Report.Port],
+        DsmCheckFailure.NotTrusted => localizer[LK.Diagnostic.FailureNotTrusted, Report.Port],
+        DsmCheckFailure.HandshakeFailed => localizer[LK.Diagnostic.FailureHandshakeFailed, Report.Port],
+        DsmCheckFailure.UnexpectedResponse when check.HttpStatus is { } status => localizer[LK.Diagnostic.FailureUnexpectedResponse, status],
+        DsmCheckFailure.Unexpected => localizer[LK.Diagnostic.FailureUnexpected],
+        _ => localizer[LK.Diagnostic.FailureNoResponse]
+    };
+}

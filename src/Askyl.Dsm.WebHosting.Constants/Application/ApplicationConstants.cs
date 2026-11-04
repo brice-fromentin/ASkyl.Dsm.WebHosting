@@ -33,9 +33,29 @@ public static class ApplicationConstants
     public const string HttpClientName = "UiClient";
 
     /// <summary>
-    /// HTTP client timeout in seconds. Must exceed <see cref="WebSiteConstants.DefaultProcessTimeoutSeconds"/> to avoid client-side timeouts during stop operations. SIGTERM + ASP.NET Core drain completes in ~1-3 seconds; 15s provides headroom for the full request/response roundtrip.
+    /// Name of the HTTP client that reaches DSM, the only one with the loopback certificate policy.
     /// </summary>
-    public const int HttpClientTimeoutSeconds = 15;
+    public const string DsmHttpClientName = "Dsm";
+
+    /// <summary>
+    /// HTTP client timeout in seconds. Must exceed <see cref="WebSiteConstants.DefaultProcessTimeoutSeconds"/> to avoid client-side timeouts during stop operations, and a login's
+    /// <see cref="DsmLoginTimeoutSeconds"/> plus a full diagnostic, so that a login against a DSM that never answers still ends on the diagnostic.
+    /// </summary>
+    public const int HttpClientTimeoutSeconds = 25;
+
+    /// <summary>
+    /// Time allowed to each network step of the DSM connection diagnostic. Three such steps run in sequence,
+    /// and together they must fit inside <see cref="HttpClientTimeoutSeconds"/>, the client's wait for the result.
+    /// </summary>
+    public const int DsmDiagnosticStepTimeoutSeconds = 3;
+
+    /// <summary>
+    /// Time allowed to the DSM calls of a login. On a Virtual DSM a login took under a second, but DSM took 4.5 to
+    /// 6.6 s to refuse a wrong password, and a refusal must not read as an outage. A login that runs out of it runs
+    /// the diagnostic next, and both must fit inside <see cref="HttpClientTimeoutSeconds"/>, or the browser gives
+    /// up before it can show why.
+    /// </summary>
+    public const int DsmLoginTimeoutSeconds = 10;
 
     #endregion
 
@@ -136,6 +156,12 @@ public static class ApplicationConstants
     public const string RateLimitPolicyLogin = "login-throttle";
 
     /// <summary>
+    /// Rate limiting policy name for re-running the DSM connection diagnostic. Its own bucket, with the login
+    /// partitioning, so a re-check never spends a login attempt.
+    /// </summary>
+    public const string RateLimitPolicyDiagnostic = "diagnostic-throttle";
+
+    /// <summary>
     /// Login attempts allowed per client within <see cref="LoginRateLimitWindowMinutes"/>.
     /// </summary>
     public const int LoginRateLimitPermitLimit = 5;
@@ -159,6 +185,12 @@ public static class ApplicationConstants
     /// Double-click detection timeout in milliseconds for UI components.
     /// </summary>
     public const int DoubleClickTimeoutMilliseconds = 400;
+
+    /// <summary>
+    /// Wait, in seconds, after which the loading overlay starts counting the seconds out loud. A login alone may
+    /// take <see cref="DsmLoginTimeoutSeconds"/>, and a still screen that long reads as a frozen one.
+    /// </summary>
+    public const int LoadingElapsedThresholdSeconds = 5;
 
     #endregion
 
@@ -201,6 +233,23 @@ public static class ApplicationConstants
     /// Address of a commit in the public repository; the full commit hash is the argument.
     /// </summary>
     public const string RepositoryCommitUrlFormat = "https://github.com/brice-fromentin/ASkyl.Dsm.WebHosting/commit/{0}";
+
+    /// <summary>
+    /// Environment variable name for DSM's HTTPS port passed from server to WASM client via <c>Blazor.start()</c>.
+    /// </summary>
+    public const string DsmHttpsPortEnvironmentVariable = "ADWH_DSM_HTTPS_PORT";
+
+    /// <summary>
+    /// Environment variable naming DSM's URL (e.g. https://nas.example:5001) for local debugging. Unset on the
+    /// NAS, where DSM is reached over loopback.
+    /// </summary>
+    public const string DsmUrlEnvironmentVariable = "ADWH_DSM_URL";
+
+    /// <summary>
+    /// Environment variable naming, for local debugging, the SHA-256 fingerprint (64 hex digits, no colons) of a DSM
+    /// certificate the developer machine does not trust, such as DSM's default self-signed one. Unset on the NAS.
+    /// </summary>
+    public const string DsmCertificateSha256EnvironmentVariable = "ADWH_DSM_CERT_SHA256";
 
     #endregion
 }

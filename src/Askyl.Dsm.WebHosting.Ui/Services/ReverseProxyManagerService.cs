@@ -158,6 +158,12 @@ public partial class ReverseProxyManagerService(
         var parameters = new ReverseProxyListParameters();
         var response = await dsmSession.ExecuteAsync<ReverseProxyListResponse>(parameters, cancellationToken);
 
+        // Nothing else reports it: the DSM client leaves the severity of a refusal to its callers
+        if (response?.Success != true)
+        {
+            logger.FailedToListReverseProxies(response?.Error?.Code);
+        }
+
         return response?.Data?.Entries ?? [];
     }
 

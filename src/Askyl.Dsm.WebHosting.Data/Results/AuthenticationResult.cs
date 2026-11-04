@@ -61,4 +61,11 @@ public sealed class AuthenticationResult : ApiResult
     /// <param name="message">Error message describing the authentication failure.</param>
     public static AuthenticationResult CreateNotAuthenticated(string message)
         => new(false, message, null, null, null, ApiErrorCode.Failure);
+
+    /// <summary>
+    /// Creates a failure result for a login that never reached DSM.
+    /// </summary>
+    /// <param name="message">Error message saying DSM cannot be reached.</param>
+    public static AuthenticationResult CreateDsmUnreachable(string message)
+        => new(false, message, null, null, null, ApiErrorCode.DsmUnreachable);
 }

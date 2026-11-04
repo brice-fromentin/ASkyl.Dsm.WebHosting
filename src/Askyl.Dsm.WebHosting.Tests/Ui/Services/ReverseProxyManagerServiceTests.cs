@@ -276,6 +276,21 @@ public class ReverseProxyManagerServiceTests
     }
 
     [Fact]
+    public async Task DeleteAsync_WhenDsmRefusesTheList_SaysSo()
+    {
+        // The list fell back to empty without a word: the deletion became a quiet no-op, and the only trace was the
+        // DSM client's own line, which leaves the severity to its callers
+        var recorder = new CapturingLogger<ILogReverseProxyManagerService>();
+        _dsmSession
+            .Setup(s => s.ExecuteAsync<ReverseProxyListResponse>(It.IsAny<IApiParameters>()))
+            .ReturnsAsync(new ReverseProxyListResponse { Success = false, Error = new ApiError { Code = DsmConstants.ErrorCodePermissionDenied } });
+
+        await new ReverseProxyManagerService(recorder, _dsmSession.Object).DeleteAsync(CreateSite());
+
+        Assert.Single(recorder.Entries, entry => entry.Level == LogLevel.Error && entry.Message.Contains($"{DsmConstants.ErrorCodePermissionDenied}", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task DeleteAsync_AlreadyDeletedExternally_IsGraceful()
     {
         // Arrange

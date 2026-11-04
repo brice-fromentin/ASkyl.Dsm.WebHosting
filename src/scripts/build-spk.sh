@@ -384,7 +384,6 @@ find "$UI_PUBLISH_DIR" -name "*.pdb" -delete
 # Remove development-only files from publish output
 echo "🧹 Removing development artifacts..."
 find "$UI_PUBLISH_DIR" -name "*Development.json" -delete 2>/dev/null || true
-rm -rf "$UI_PUBLISH_DIR/dev-mock" 2>/dev/null || true
 
 # Clean package artifacts
 clean_package_artifacts "$SPK_DIR/package"

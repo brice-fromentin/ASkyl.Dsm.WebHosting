@@ -18,7 +18,10 @@ namespace Askyl.Dsm.WebHosting.Tools.Network;
 public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsService settingsService, ILogger<ILogDsmApiClient> logger)
     : ISemaphoreOwner, IAsyncDisposable
 {
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.HttpClientName);
+    // DSM gives a reason for few of its error codes
+    private const string NoReasonGiven = "no reason given";
+
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(ApplicationConstants.DsmHttpClientName);
 
     public ApiInformationCollection ApiInformations { get; } = new();
 
@@ -35,7 +38,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
     public async Task<R?> ExecuteAsync<R>(string? sid, IApiParameters parameters, CancellationToken cancellationToken = default)
         where R : IApiResponse
     {
-        await EnsureInitializedAsync();
+        await EnsureInitializedAsync(cancellationToken);
 
         var path = (parameters.Name == ApiConstants.Info)
             ? ApiConstants.Handshake
@@ -54,7 +57,7 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
                 => throw new NotSupportedException($"SerializationFormat : {parameters.SerializationFormat} not supported.")
         };
 
-        LogApiErrorIfFailed(result, logger);
+        LogApiErrorIfFailed(result, parameters.Name, logger);
 
         return result;
     }
@@ -62,55 +65,95 @@ public class DsmApiClient(IHttpClientFactory httpClientFactory, IDsmSettingsServ
     public async Task<ApiResponseBase<object>?> ExecuteSimpleAsync(string? sid, IApiParameters parameters, CancellationToken cancellationToken = default)
         => await ExecuteAsync<ApiResponseBase<object>>(sid, parameters, cancellationToken);
 
-    private async Task EnsureInitializedAsync()
-    {
-        if (ApiInformations.Get(ApiConstants.Auth) is not null)
-        {
-            return;
-        }
-
-        using var @lock = await SemaphoreLock.AcquireAsync(this);
-
-        if (ApiInformations.Get(ApiConstants.Auth) is not null)
-        {
-            return;
-        }
-
-        if (!await HandShakeAsync())
-        {
-            throw new InvalidOperationException("DSM API handshake failed");
-        }
-    }
-
-    private async Task<bool> HandShakeAsync()
+    /// <summary>
+    /// Sends the SYNO.API.Info request for the connection diagnostic, leaving the handshake cache alone.
+    /// </summary>
+    /// <returns>Whether DSM answered with its API list, and the HTTP status it answered with.</returns>
+    public async Task<(bool Answered, int StatusCode)> ProbeAsync(CancellationToken cancellationToken)
     {
         var parameters = new InformationsQueryParameters();
         var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, ApiConstants.Handshake);
 
-        var result = await ExecuteFormAsync<ApiInformationResponse>(null, url, parameters, CancellationToken.None);
+        using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = parameters.ToForm() };
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        var statusCode = (int)response.StatusCode;
+
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            return (false, statusCode);
+        }
+
+        try
+        {
+            var result = JsonSerializer.Deserialize<ApiInformationResponse>(await response.Content.ReadAsStringAsync(cancellationToken));
+
+            return (result is { Success: true, Data.Count: > 0 }, statusCode);
+        }
+        catch (JsonException)
+        {
+            // Something other than DSM answered on that port
+            return (false, statusCode);
+        }
+    }
+
+    private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
+    {
+        if (ApiInformations.Get(ApiConstants.Auth) is not null)
+        {
+            return;
+        }
+
+        // The caller's token, so a DSM that never answers cannot hold a login past its budget
+        using var @lock = await SemaphoreLock.AcquireAsync(this, cancellationToken: cancellationToken);
+
+        if (ApiInformations.Get(ApiConstants.Auth) is not null)
+        {
+            return;
+        }
+
+        await HandShakeAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs the SYNO.API.Info handshake again, whatever the cache holds. A login calls it before sending the
+    /// password: DSM's port may have changed hands since the cached handshake, and whatever does not answer as
+    /// DSM then never receives it. A service that imitates DSM's answer still would.
+    /// </summary>
+    public async Task ConfirmDsmAsync(CancellationToken cancellationToken)
+    {
+        using var @lock = await SemaphoreLock.AcquireAsync(this, cancellationToken: cancellationToken);
+
+        await HandShakeAsync(cancellationToken);
+    }
+
+    private async Task HandShakeAsync(CancellationToken cancellationToken)
+    {
+        var parameters = new InformationsQueryParameters();
+        var url = parameters.BuildUrl(settingsService.Server, settingsService.Port, ApiConstants.Handshake);
+
+        var result = await ExecuteFormAsync<ApiInformationResponse>(null, url, parameters, cancellationToken);
 
         if (result?.Success != true || result.Data is null || result.Data.Count == 0)
         {
             logger.HandshakeFailure();
-            return false;
+            throw new InvalidOperationException("DSM API handshake failed");
         }
 
         ApiInformations.Replace(result.Data);
         logger.HandshakeSuccess();
-
-        return true;
     }
 
     #endregion
 
     #region HTTP Helpers
 
-    private static void LogApiErrorIfFailed<R>(R? result, ILogger<ILogDsmApiClient> logger)
+    private static void LogApiErrorIfFailed<R>(R? result, string apiName, ILogger<ILogDsmApiClient> logger)
         where R : IApiResponse
     {
         if (result is { Success: false, Error: { } error })
         {
-            logger.ApiError(error.Errors?.Reason ?? "Unknown error", error.Code);
+            logger.ApiError(apiName, error.Code, error.Errors?.Reason ?? NoReasonGiven);
         }
     }
 

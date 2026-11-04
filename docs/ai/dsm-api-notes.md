@@ -24,8 +24,8 @@ cosmetic: DSM rejects the wrong one. Established by working code, per API below.
 | `SYNO.API.Auth` | 6 | `login` | Form | |
 | `SYNO.API.Auth` | 6 | `logout` | Form | Returns HTTP 200; see below |
 | `SYNO.Core.User` | 1 | `get` | Form | Administrator-only; see below |
-| `SYNO.Core.UserSettings` | 1 | `get` | Form | |
-| `SYNO.Core.ACL` | 1 | `set` | Form | |
+| `SYNO.Core.UserSettings` | 1 | `get` | Form | Refuses an account that never opened DSM; see below |
+| `SYNO.Core.ACL` | 1 | `set` | Form | `dirPaths` is a share path; replaces explicit entries; see below |
 | `SYNO.Core.AppPortal.ReverseProxy` | 1 | `list` | Form | |
 | `SYNO.Core.AppPortal.ReverseProxy` | 1 | `create` | **Json** | |
 | `SYNO.Core.AppPortal.ReverseProxy` | 1 | `update` | **Json** | |
@@ -50,6 +50,34 @@ without replacing the privilege check first.
 Version 6 matches `login`, which is the version the application already negotiates successfully for this
 API. The call returns HTTP 200 and invalidates the SID on the NAS. Established on the deployed NAS
 during PR #38; the shape was previously unverified.
+
+## `SYNO.Core.UserSettings.get` refuses an account that never opened DSM
+
+On the Virtual DSM 7.2.2, on 2026-11-02, an administrator account just created with `synouser --add` was refused
+with code `117` on each of its first two sign-ins through the application, while an established account's call
+succeeded the same day. Signing in through `SYNO.API.Auth` does not create the settings; opening DSM's desktop
+once as that account does, and every later call succeeded. DSM writes them about 3 s after the desktop shows: a
+fresh account whose visit ended at once, or after 2 s, had none. The sign-in itself is never affected: until then the
+application keeps its default language and formats, and the refusal is a Debug line (event 2000002).
+
+## `SYNO.Core.ACL.set` takes a share path in `dirPaths`, and replaces the explicit entries
+
+Established on the Virtual DSM 7.2.2 on 2026-11-02, by replaying the call with `curl` and reading the result
+with `synoacltool -get`.
+
+- **Parameters, as DSM's own permission editor sends them** (`webman/modules/Share/PermissionDialog.js`):
+  `file_path` and `files` carry the real path (`/volume1/<share>/<folder>`), `dirPaths` the share path
+  (`/<share>/<folder>`; for a file, its parent folder). `rules` lists the entries, `inherited` keeps the
+  inherited ones; `acl_recur` comes from an editor checkbox (`acl_privilage_recur`) and was not exercised.
+- **A real path in `dirPaths` is accepted and does nothing**: success, a `task_id`, and an unchanged ACL. The
+  same call with the share path in `dirPaths` applied the entry within 5 s, explicit on the folder and
+  inherited by its files.
+- **A share path in `file_path`** is refused at once with code `403`.
+- **`rules` is the complete explicit list, not an addition**: an explicit entry present before the call was
+  gone after it; inherited entries stayed. The editor reads the ACL and sends every explicit entry back with the
+  change.
+- **The call is asynchronous**: it returns a `task_id` before the ACL changes. Nothing in this application polls
+  it, and no status method has been tried.
 
 ## Error codes
 

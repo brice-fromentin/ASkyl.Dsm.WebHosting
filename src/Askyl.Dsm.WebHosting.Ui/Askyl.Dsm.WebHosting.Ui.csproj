@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.14" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="5.0.1" />
     <PackageReference Include="Roslynator.Analyzers" Version="5.0.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -39,12 +39,6 @@
   <ItemGroup>
     <Folder Include="Authorization/" />
     <Folder Include="Services/" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="dev-mock/**/*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>

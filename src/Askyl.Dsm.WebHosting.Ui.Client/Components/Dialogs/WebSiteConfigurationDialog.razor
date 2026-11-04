@@ -3,6 +3,7 @@
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
 @using Askyl.Dsm.WebHosting.Data.Domain.WebSites
 @using Askyl.Dsm.WebHosting.Data.Contracts
+@using Askyl.Dsm.WebHosting.Data.Results
 @using Askyl.Dsm.WebHosting.Globalization
 
 @inherits WorkingStateBase
@@ -152,11 +153,15 @@
                 return;
             }
 
-           using var worker = this.CreateWorkingState(localizer[IsEditMode ? LK.Loading.UpdatingWebsite : LK.Loading.CreatingWebsite, Configuration.Name]);
+            WebSiteInstanceResult result;
 
-            var result = IsEditMode
-                ? await HostingService.UpdateWebsiteAsync(Configuration)
-                : await HostingService.AddWebsiteAsync(Configuration);
+            // Ended before any message below: kept up, the overlay came over them once its counter showed
+            using (this.CreateWorkingState(localizer[IsEditMode ? LK.Loading.UpdatingWebsite : LK.Loading.CreatingWebsite, Configuration.Name]))
+            {
+                result = IsEditMode
+                    ? await HostingService.UpdateWebsiteAsync(Configuration)
+                    : await HostingService.AddWebsiteAsync(Configuration);
+            }
 
             if (!result.Success)
             {

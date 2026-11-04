@@ -30,12 +30,12 @@ public class DsmApiClientTests : IDisposable
         _logger = new Mock<ILogger<ILogDsmApiClient>>();
     }
 
-    DsmApiClient CreateClient()
+    DsmApiClient CreateClient(ILogger<ILogDsmApiClient>? logger = null)
     {
         var factory = new Mock<IHttpClientFactory>();
         factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
 
-        var client = new DsmApiClient(factory.Object, _settingsService, _logger.Object);
+        var client = new DsmApiClient(factory.Object, _settingsService, logger ?? _logger.Object);
 
         client.ApiInformations.Replace(new Dictionary<string, ApiInformation>
         {
@@ -294,6 +294,25 @@ public class DsmApiClientTests : IDisposable
     #region Failure Propagation
 
     [Fact]
+    public async Task ExecuteAsync_WhenDsmRefusesTheCall_LeavesTheSeverityToTheCaller()
+    {
+        // A wrong password, a non-administrator or an expired session is an expected refusal that the caller reports
+        // at its own level; logged as an error here as well, every typo counted as an error in a log review
+        var recorder = new CapturingLogger<ILogDsmApiClient>();
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"success":false,"error":{"code":400}}""") });
+
+        var result = await CreateClient(recorder).ExecuteSimpleAsync(null, new TestFormParameters());
+
+        Assert.False(result?.Success);
+        Assert.DoesNotContain(recorder.Entries, entry => entry.Level >= LogLevel.Warning);
+
+        // Still in the log, which keeps the application's Debug lines, naming the API that refused
+        Assert.Single(recorder.Entries, entry => entry.Level == LogLevel.Debug && entry.Message.Contains("test", StringComparison.Ordinal) && entry.Message.Contains("400", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenTheSendThrows_SurfacesTheOriginalException()
     {
         // The request timer reports on disposal, which happens while this exception is unwinding. A
@@ -314,6 +333,83 @@ public class DsmApiClientTests : IDisposable
             () => client.ExecuteAsync<TestResponse>("test-session-id", parameters));
 
         Assert.Equal("network down", exception.Message);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheHandshakeNeverAnswers_GivesUpWithTheCaller()
+    {
+        // The first call after startup runs the SYNO.API.Info handshake. It used to ignore the caller's
+        // token, so a DSM that never answered held a login for the HttpClient's 100 s default.
+        using var caller = new CancellationTokenSource();
+
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns(async (HttpRequestMessage _, CancellationToken token) =>
+            {
+                caller.Cancel();
+                await Task.Delay(Timeout.Infinite, token);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
+
+        var client = new DsmApiClient(factory.Object, _settingsService, _logger.Object);
+
+        // Act & Assert — WaitAsync turns a token that never reaches the handshake into a failure, not a hang
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.ExecuteAsync<TestResponse>(null, new TestFormParameters(), caller.Token).WaitAsync(TimeSpan.FromSeconds(5)));
+    }
+
+    #endregion
+
+    #region Probe
+
+    internal const string ApiInformationJson = """{"success":true,"data":{"SYNO.API.Auth":{"path":"entry.cgi","minVersion":1,"maxVersion":7}}}""";
+
+    DsmApiClient CreateClientWithEmptyCache(HttpStatusCode status, string body)
+    {
+        _httpHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => new HttpResponseMessage(status) { Content = new StringContent(body) });
+
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_httpClient);
+
+        return new DsmApiClient(factory.Object, _settingsService, _logger.Object);
+    }
+
+    [Fact]
+    public async Task ProbeAsync_WhenDsmAnswers_ReportsItWithoutTouchingTheCache()
+    {
+        var client = CreateClientWithEmptyCache(HttpStatusCode.OK, ApiInformationJson);
+
+        var (answered, statusCode) = await client.ProbeAsync(CancellationToken.None);
+
+        Assert.True(answered);
+        Assert.Equal((int)HttpStatusCode.OK, statusCode);
+        Assert.Null(client.ApiInformations.Get(ApiConstants.Auth));
+    }
+
+    [Fact]
+    public async Task ProbeAsync_WhenSomethingElseAnswers_ReportsItsStatus()
+    {
+        var client = CreateClientWithEmptyCache(HttpStatusCode.BadGateway, String.Empty);
+
+        var (answered, statusCode) = await client.ProbeAsync(CancellationToken.None);
+
+        Assert.False(answered);
+        Assert.Equal((int)HttpStatusCode.BadGateway, statusCode);
+    }
+
+    [Fact]
+    public async Task ProbeAsync_WhenAPageAnswers_ReportsNotDsm()
+    {
+        var client = CreateClientWithEmptyCache(HttpStatusCode.OK, "<html></html>");
+
+        var (answered, _) = await client.ProbeAsync(CancellationToken.None);
+
+        Assert.False(answered);
     }
 
     #endregion

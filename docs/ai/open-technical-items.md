@@ -15,6 +15,43 @@ added above it. Line numbers are the first thing to go stale here; re-run the sw
 
 ## Security
 
+### A hosted site runs as the package user, which owns the admin UI's files
+
+`SiteLifecycleManager.CreateProcessStartInfo` sets no `UserName`, so every hosted site runs as the package user
+(`conf/privilege`, `run-as` `package`), like the admin UI. Measured on the Virtual DSM (7.2.2): the admin UI's
+directory and assembly belong to that user (`755` and `644`), and the kernel has no Yama `ptrace_scope`. A hosted
+site that gets compromised — the part of the package exposed to the internet by design — can therefore replace the
+admin UI's assembly, which then runs at the next start and receives the administrator's DSM password at the next
+sign-in. Without Yama it can presumably also attach to the running admin UI (inferred, not tried).
+
+This bounds the loopback certificate rule: its root-listener check keeps another user's process, or a hosted site
+that happens to listen on DSM's former port, from receiving a login; it cannot stop a hostile hosted site. Separating
+the two needs either a second user for the hosted sites or admin UI files the package user cannot write. Whether
+DSM 7 offers either to a package running as `package` is not checked.
+
+### Every sign-in through the package is one DSM client
+
+DSM sees every login the package makes come from `127.0.0.1` with no user agent, so its two defences against
+password guessing cannot tell one browser from another. Measured on the Virtual DSM (7.2.2) on 2026-10-31, with
+DSM's Auto Block on at its defaults (10 attempts in 5 minutes, never expiring) and Account Protection switched on at
+its defaults:
+
+- **Auto Block exempts loopback.** 100 failed logins through the package in 35 s, from 20 simulated client
+  addresses, left DSM's deny list empty. The same attempts from a non-loopback address of the NAS were refused with
+  `407` (blocked address) from the 10th on. DSM never sees a guesser's own address, so only the package's limit,
+  5 logins a minute per client address, slows one down.
+- **Account Protection locks the package out.** After one successful sign-in through the package, DSM trusts that
+  single client; 10 failed logins on an account within a minute jail it for 30 minutes (table `tjail` of
+  `/var/lib/synosmartblock/db.sqlite`). Every sign-in to that account through the package then failed with `401`,
+  the right password included, while the same account still signed in to DSM directly from another address. Two
+  client addresses at the package's rate limit are enough to keep an administrator out of the package.
+- Not introduced by loopback mode: before it, DSM saw every login come from the NAS's own address, one client all
+  the same (inferred, not measured).
+
+Fix candidates, none tried: return the `did` (device id) that every successful `SYNO.API.Auth` login answers with,
+and the package ignores, once per browser, if DSM keys its trusted clients on it; or forward the browser's address,
+if DSM honours one from a proxy it trusts. A lockout of the package's own would only move the denial of service.
+
 ### The application listens on every IPv4 interface, not only behind nginx
 
 `spk-project/scripts/start-stop-status:9` exports `ASPNETCORE_URLS="http://0.0.0.0:7120"`, and
@@ -39,38 +76,110 @@ would be the change if the trade is judged otherwise.
 
 ## Reliability
 
-### The package stop timeout is shorter than the application's own shutdown
+### The package stop kills hosted sites instead of letting them shut down
 
-`spk-project/scripts/start-stop-status:88-94` sends SIGTERM, sleeps **2 seconds**, then sends SIGKILL.
+`spk-project/scripts/start-stop-status:88-94` sends SIGTERM, sleeps **2 seconds**, then sends SIGKILL. The
+host's graceful shutdown awaits `StopAllSitesAsync`, which gives each site
+`WebSiteConstants.DefaultProcessTimeoutSeconds` — **10 seconds**, configurable to 120 — so the host is
+SIGKILLed long before a slow site has drained.
 
-The host's graceful shutdown awaits `StopAllSitesAsync`, which stops each hosted site with a timeout of
-`WebSiteConstants.DefaultProcessTimeoutSeconds` — **10 seconds**, configurable to 120. Any site that takes
-longer than about two seconds to drain means the host is SIGKILLed mid-shutdown, and hosted site processes
-are children, so they are orphaned rather than stopped.
+The consequence predicted here until 2026-11-02, sites **orphaned**, does not happen on DSM 7. Measured on the
+Virtual DSM 7.2.2: the package runs as the systemd unit `pkgctl-AskylWebHosting.service` with
+`KillMode=control-group`, and the hosted sites sit in the same cgroup. With three sites running, one of them
+built to take 20 s to drain, `synopkg stop` returned after 3.0 s with every process gone; `start-stop-status`
+logged "Process still running, force killing" at 2 s, and the application logged no site stop at all. Sites are
+killed rather than stopped: none gets its graceful shutdown. At the next start every enabled autostart site came
+back. Raising the script's wait above the configured site timeout is still the fix.
 
-This is the orphaning the 2026-07-25 assessment attributed to `SiteLifecycleManager.Dispose`. That
-attribution was wrong — `StopAllSitesAsync` does await each stop — but the outcome it predicted is real,
-with the script's timeout as the actual cause. Raising the script's wait above the configured site timeout
-is the fix.
+### `pkill -f` matches a bare pattern
 
-### `pkill -f` runs as root against a bare pattern
+`spk-project/scripts/common-functions.sh:159` — `pkill -f "$pattern" || true`. `-f` matches the entire command
+line, so any process whose arguments happen to contain the pattern is killed. A PID file is already maintained
+and should be preferred.
 
-`spk-project/scripts/common-functions.sh:159` — `pkill -f "$pattern" || true`. As root, `-f` matches the
-entire command line, so any process whose arguments happen to contain the pattern is killed. A PID file is
-already maintained and should be preferred.
+The scripts do **not** run as root, as this entry used to say: `spk-project/conf/privilege` sets
+`"run-as": "package"`, and every script logged the package user's uid on 2026-11-02. A root process whose
+command line contained the pattern survived an uninstall. The reach is therefore the package user's own
+processes — the hosted sites among them.
 
 ### No lifecycle script uses `set -e`, `-u` or `pipefail`
 
-All eight scripts under `spk-project/scripts/` run as root on the user's NAS, and every one of them
+All eight scripts under `spk-project/scripts/` run on the user's NAS as the package user, and every one of them
 continues past a failed command. `build-spk.sh` gets this right at line 3 — the packaging scripts simply
 never adopted it.
 
-**TODO, prerequisite for the three SPK items above: a disposable DSM instance.** None of them can be
-confirmed or fixed with confidence by reading — they need an install, a stop and an upgrade actually run.
-Mocking cannot substitute, since `synopkg` and the package lifecycle are the thing under test. A Virtual
-DSM under Virtual Machine Manager is the candidate (one free instance per host, Btrfs volume required).
-Recorded, not planned: it shares its physical machine with production, and reachable credentials are a
-separate decision from the hardware.
+The disposable DSM this entry and the two above waited for now exists (AGENTS.md §13). The two above were
+measured on it on 2026-11-02; this one was not, since no failing command was provoked.
+
+### The `http` group permission a new site depends on is never applied
+
+`Ui/Services/FileSystemService.cs:115` — `SetHttpGroupPermissionsAsync` sends `SYNO.Core.ACL set` with the
+site folder's real path (`/volume1/...`) in `file_path`, `files` **and** `dirPaths`. DSM answers success with
+a task id, and the task changes nothing. Measured on the Virtual DSM 7.2.2 on 2026-11-02, through the package
+and replayed from outside through DSM's name, on a folder copied over SSH (Linux permissions) and on one
+uploaded through File Station (inherited ACL): the ACL was the same before and after, and the package user
+was refused the application's DLL. Not a regression of loopback mode — the call predates it and fails the same
+way through DSM's name.
+
+What the user sees: the site is created without a message, then shows as stopped with no framework and never
+starts. The failed autostart is reported nowhere in the UI, and the log says `ApplicationBinaryNotFound`
+(1600004) for a file that exists but cannot be read. Sites work today only where the `http` group can
+already read the folder: a shared folder it is granted, or Linux permissions that let others read.
+
+Three measured facts constrain the fix (details in `dsm-api-notes.md`):
+
+1. `dirPaths` must be the share path (`/<share>/<folder>`): the same call then applies the entry.
+2. `rules` replaces the folder's **explicit** entries — one added by hand was gone after the call. Correcting
+   `dirPaths` alone would start deleting users' own permissions on their site folders: the call has to read
+   the folder's ACL and send it back with the `http` entry added, as DSM's own permission editor does.
+3. A folder entry is not enough under a shared folder that denies traversal: the package user, a member of
+   `http`, could not enter a share only administrators may traverse, and read the DLL only once a traverse
+   entry was added at the share root and the folder in between. Granting traversal, or telling the user to, is
+   a decision.
+
+### Editing a site's ports, host name or protocol fails
+
+`Ui/Services/ReverseProxyManagerService.cs:74` — `UpdateAsync` finds the DSM rule with
+`FindByCompositeKeyAsync(config)`: internal port, host name, public port and protocol, taken from the **new**
+configuration. DSM still holds the old values, so any edit of those four fields throws
+`ReverseProxyNotFoundException` and the user reads that the reverse proxy update failed. Measured on
+2026-11-02: changing the internal port failed this way; changing only the environment, and toggling HSTS,
+succeeded, HSTS read back from DSM's rule. Nothing is left half-done: the configuration is not persisted and
+the site keeps running as before.
+
+The lookup needs the previous configuration, which `UpdateWebsiteAsync` already holds
+(`WebSiteHostingService.cs:161`). Its rollback at line 208 has the mirror image of the defect: after a
+successful update, the rule carries the new key and the rollback looks it up with the old one.
+
+### A package upgrade deletes the ASP.NET runtimes installed from the application
+
+Runtimes installed through the framework dialog land in `<target>/runtimes/shared`, DSM replaces `target` on
+upgrade, and `preupgrade`/`postupgrade` carry over `websites.json` only. Measured on 2026-11-02: with ASP.NET
+9.0.22 installed from the application and a .NET 9 site running, the upgrade left `10.0.14` alone. The .NET 9
+site stayed stopped (`SiteStartBlockedIncompatible`, 1600005) and its host name answered 502, while the three
+.NET 10 sites restarted and `websites.json` came back intact. The grid shows that site as stopped, with no hint
+until Start is pressed. Either the runtimes live outside `target`, or the upgrade carries them over.
+
+Same gap in a smaller form: a site whose missing framework is installed from its own creation dialog is not
+started afterwards, autostart notwithstanding.
+
+### Uninstalling leaves the sites' reverse-proxy rules in DSM
+
+`preuninst` stops the application, and nothing removes the rules created for sites. Measured on 2026-11-02:
+after an uninstall with two sites configured, both rules were still in DSM, answering 502 for their host
+names. A reinstalled package does not list them, but recreating a site with the same host name, ports and
+protocol reuses the rule (`ReverseProxyAlreadyExists`, then normal operation), and deleting that site
+removes it. A rule whose site is never recreated stays until it is removed in DSM by hand.
+
+### An upgrade after a reinstall brings back the sites the uninstall removed
+
+`preupgrade` copies `websites.json` into `/var/packages/AskylWebHosting/var/upgrade-backup`, which lives in
+`@appdata` and survives an uninstall; `backup_file` (`spk-project/scripts/common-functions.sh`) leaves an older copy
+in place when there is nothing to back up, and `postupgrade` restores whatever it finds. Measured on 2026-11-02 and
+03 on the Virtual DSM: after an uninstall and a fresh install, the package had no `websites.json` until a site was
+added; the next upgrade logged "No file to backup", then restored the copy taken before the uninstall, and the four
+sites deleted with it were back in the grid, failing to start (`ApplicationBinaryNotFound`, their folders gone).
+Deleting the backup when there is nothing to back up, or after restoring it, closes it.
 
 ### The website lifecycle path still drops the cancellation token
 
@@ -208,13 +317,29 @@ local build — plus the release metadata, for as long as the package is install
 
 `src/Askyl.Dsm.WebHosting.Ui/websites.json` is gitignored — it is written by local runs and holds the local site
 configuration — but the Web SDK's default content glob publishes it into `admin-ui/`, and `build-spk.sh` cleans only
-`*Development.json` and `dev-mock`. Measured without reading the file: the published copy is byte-identical to the
+`*Development.json`. Measured without reading the file: the published copy is byte-identical to the
 source (`cmp`), and the last locally built SPK lists `admin-ui/websites.json` in its `package.tgz`.
 
 A fresh install from such a package starts with that site list; an upgrade restores the NAS's own copy through
 `preupgrade`/`postupgrade`, so the developer's own NAS is unaffected. CI releases build from a clean checkout and do
 not carry it, but none has ever been published (see *No release has ever been published*), so every SPK
 installed so far was built locally. Excluding it from publish in the `.csproj`, or deleting it in `build-spk.sh`, closes it.
+
+### Signing in over plain HTTP succeeds on the server but the user stays on the login page
+
+Measured on the Virtual DSM on 2026-10-26: opened as `http://<nas>:5000/adwh/login`, a sign-in succeeds server-side,
+yet the next request carries no session. The session and binding cookies are `Secure`, and browsers refuse to store a
+`Secure` cookie received over plain HTTP, so the navigation guard sends the user back to the login. Over the HTTPS
+port it works. DSM's own "redirect HTTP to HTTPS" setting (`enable_https_redirect`) does not help: measured in a real
+browser, it redirects DSM's desktop (a script in DSM's page; nginx's generated configuration has no 30x) but not
+`/adwh/login`. The cookies stay `Secure`: the session must not travel in clear.
+
+Remedy: the login page detects non-loopback plain HTTP (`http://localhost` is a secure context and keeps working) and
+shows a card with a button to the HTTPS version on DSM's port, which the host page passes to the client as
+`ADWH_DSM_HTTPS_PORT`. Not covered: the card is client-side, so it appears only once the WebAssembly runtime has
+loaded over HTTP. And its button keeps the host the browser used but takes DSM's local HTTPS port, so behind a
+router or a reverse proxy that publishes DSM's HTTPS on another port the link misses (`DsmHttpsEndpoint`; found in
+review, reasoned from the code, not measured).
 
 ### Cosmetic: packaging leaves precompressed development settings behind
 
@@ -232,6 +357,24 @@ culture, and the first `Accept-Language` tag is compared as a whole against two-
 does not. It only decides the server-rendered `lang`/`dir` until the client sets its own
 (`Ui.Client/Services/CultureManager.cs`). How often real installs run with `def` has not been measured.
 
+### Cosmetic: a server that never answers reads differently on each screen
+
+The login page and the overlay's elapsed-seconds line cover the waits; what follows a wait that ends badly does
+not read the same everywhere. Read from code, not measured:
+
+- **Home and the dialogs** catch the browser giving up, but their toast or error dialog shows the exception's own
+  message, which is English and technical whatever the UI language.
+- **The licenses dialog** never fails: `LicenseService` swallows each file's failure, so the dialog opens empty,
+  and keeps that empty list until the page reloads (`_loadLicensesTask`).
+- **The installed-runtimes dialog** has its own inline indicator (`IsLoading`), without the elapsed seconds.
+- **Signing in, then no answer on the way to the home page.** The guard sends back to the login page, but Blazor
+  keeps the login page's instance when the route lands on the page already shown, so it runs no check of its own
+  and says nothing: the form is back after the overlay, without a word. Reasoned from the Router's code, not
+  measured; it needs the server to stop answering between a successful sign-in and the next request.
+- **A guard overtaken by another navigation** still sends to the login page once its own check fails, the same as
+  before for a check that answers "not signed in". The overlay covers the page meanwhile, so only the browser's
+  back and forward buttons can start a second navigation.
+
 ### The UI language changes between the login and the next click
 
 Seen in a browser on 2026-10-23, with the FluentUI 5 branch, though none of the culture code differs from
@@ -247,14 +390,20 @@ async flow, while Blazor runs each later event under its own captured context. W
 was not measured. Under FluentUI 5, the switch also reordered the home grid's columns until every column got
 a `ColumnId` (`UiSourceAuditTests` now requires one).
 
-### A localized string still reaches a logger at autostart
+### A localized string still reaches a logger
 
-`Ui/Services/WebSiteHostingService.cs:368`. `StartEligibleSitesAsync` logs `SitesFailedToStart` (EventId
-1800014, Warning) with `String.Join(", ", failures.Select(f => f.Message))`, and those messages are built
-by the `localizer` — `LK.Error.SiteNotFound`, `LK.Error.OperationFailed` and the lifecycle manager's own.
-PR #60 moved the one call it found off a localized string and said the class was closed; this one was
-missed. Not measured on a NAS: whether the hosted service's thread carries the DSM culture at that point,
-and so whether the line is actually written in French.
+`Ui/Services/WebSiteHostingService.cs`. PR #60 moved the one call it found off a localized string and said the
+class was closed; two kinds of call were missed, both logging a message the `localizer` built:
+
+- **Autostart**, line 368: `StartEligibleSitesAsync` logs `SitesFailedToStart` (EventId 1800014, Warning) with
+  `String.Join(", ", failures.Select(f => f.Message))` — `LK.Error.SiteNotFound`, `LK.Error.OperationFailed` and
+  the lifecycle manager's own. Measured on the Virtual DSM on 2026-11-03, DSM's system language left at its
+  default: written in English. Not measured with a French system language.
+- **Creating, updating and removing a site**, lines 95, 104, 185, 194 and 472: the permission and reverse-proxy
+  failures log the `ApiResult.Message` their helpers built, in the language of the browser that asked. Measured
+  the same day: `ReverseProxyUpdateFailed` (1800006, Error) written in French for a French browser.
+
+A log line's language then depends on who triggered it, which defeats searching the archive for a message.
 
 ### `application.log` is truncated on every start
 
@@ -264,51 +413,101 @@ before Serilog was up — an unhandled startup exception, for instance — survi
 and a host that fails to boot produces no downloadable archive at all. Appending (`>>`) with a size bound
 would keep it.
 
-### The package needs a DSM hostname and a matching certificate, and says so nowhere
+### Resolved by loopback mode: the package needed a DSM hostname and a matching certificate
 
-The application reaches its own DSM at `https://{external_host_ip}:{external_port_dsm_https}`
-(`Data/DsmApi/Parameters/ApiParametersBase.cs:58`, called from `Tools/Network/DsmApiClient.cs:45,88`), through
-the default `HttpClient` (`Ui/Program.cs:42`), so with full certificate validation. That works only if DSM has a
-hostname under *External Access*, its certificate covers that name, the name resolves from the NAS itself, and
-the external port reaches DSM from inside. The README names none of it, and each missing link fails differently:
+The application used to reach its own DSM at `https://{external_host_ip}:{external_port_dsm_https}` with full
+certificate validation. That worked only if DSM had a hostname under *External Access*, its certificate covered
+that name, the name resolved from the NAS itself, and the external port reached DSM from inside — none of which
+the README said. Measured on a Virtual DSM on 2026-10-24: a fresh instance has no `external_host_ip` at all and
+serves DSM's default self-signed certificate, issued to `synology`. From inside it, `https://127.0.0.1:5001`
+fails strict validation, since no DSM certificate names `127.0.0.1` or `localhost`.
 
-- **No hostname: the package does not start.** `Ui/Program.cs:143` applies the DSM culture before `app.Run()`,
-  which resolves `DsmSettingsService`, whose constructor throws (`Tools/Infrastructure/DsmSettingsService.cs:82`).
-  The reason reaches only the log, and `application.log` is truncated at the next start (entry above).
-  Confirmed by the maintainer on 2026-10-24; what Package Center shows the user was not checked.
-- **A name the certificate does not cover** — an IP, or DSM's default self-signed certificate, issued to
-  `synology` — lets the host start and fails every DSM call. Measured on a Virtual DSM on 2026-10-24: a fresh
-  instance has no `external_host_ip` at all and serves that default certificate. What the login page then shows
-  was not checked.
-- **The last two links are inferred, not tried**: resolution from the NAS, and an external port that differs
-  from DSM's own.
-- **Any later change in DSM needs a package restart**: `DsmSettingsService` is a Singleton that reads
-  `synoinfo.conf` once.
+**Decided with the maintainer on 2026-10-26** (PR #82): production reaches DSM over loopback only, and the
+hostname mode is deleted. The earlier two-step plan — diagnose, then discover the name from DSM's certificate —
+is superseded: its first step became the connection diagnostic, now three checks (port, trust, `SYNO.API.Info`),
+and its second is no longer needed. A developer machine names DSM's URL in `ADWH_DSM_URL` instead of a
+`synoinfo.conf` mock.
 
-Loopback does not remove the constraint by itself. From inside the Virtual DSM, `http://127.0.0.1:5000` answers
-and `https://127.0.0.1:5001` fails strict validation, since no DSM certificate names `127.0.0.1` or `localhost`.
-Plain HTTP or a loopback-only certificate bypass would both drop the rule that nothing bypasses validation.
+How loopback mode works, and what was measured:
 
-**Decided with the maintainer on 2026-10-24**, as two changes in this order:
-
-1. **Diagnose instead of crashing.** The host starts whatever the settings say and, in place of the login, lists
-   each link checked live — hostname set, name resolves, port answers, certificate covers the name (showing the
-   names it does cover and its issuer), `SYNO.API.Info` answers — each with its remedy, plus a re-check that
-   re-reads `synoinfo.conf` without a restart.
-2. **Discover the name from DSM's own certificate.** Read the certificate DSM presents on loopback, take an exact
-   name from its SAN, then connect to that name with full validation. A self-signed or wildcard-only certificate
-   falls back to the diagnostic. Nothing bypasses validation.
-
-Open for the design of step 2: connecting to `127.0.0.1` through `SocketsHttpHandler.ConnectCallback` while the
-URL keeps the name would validate against the name and drop the resolution and port links. Not yet verified:
-that the TLS target name still comes from the URL. Applying it when a hostname *is* set would also change a
-path that works today.
+- DSM's HTTPS port is not in `synoinfo.conf`; it is `ssl.port` in `/usr/syno/etc/www/DSM.json`, world-readable,
+  and changing the port in DSM changes exactly that value. When the file cannot give a port, the application
+  uses DSM's default 5001.
+- `synoinfo.conf` is no fallback either (DSM 7.2.2, 2026-10-26): moving DSM's HTTPS port left both
+  `/etc/synoinfo.conf` and `/etc.defaults/synoinfo.conf` byte-identical. Its only DSM port keys,
+  `external_port_dsm_http` and `external_port_dsm_https`, back what DSM's own strings call *Router Port*: the
+  public port of a router's port forwarding, to enter "only if different from default". Where set, it is
+  therefore likely to differ from the local port, and 5001 is the better guess.
+- DSM's certificate files are `0400 root`, so the package cannot pin the exact certificate. `DsmCertificatePolicy`
+  accepts the certificate only for a loopback IP literal whose port a root-owned listener holds (read from
+  `/proc/net/tcp`, which any user can read; IPv4 only, since DSM is reached on `127.0.0.1`); a name, even
+  `localhost`, keeps full validation. The DSM client uses no proxy (an environment proxy would otherwise read the
+  login body) and follows no redirect.
+- Trust assumption: DSM is whoever root-owns the loopback listener on DSM's port. `DsmWebConfigurationWatcher`
+  reloads the port when `DSM.json` changes. A port still stale (the watch failed, or the change lands between the
+  file and nginx) fails closed, and the diagnostic reloads `DSM.json` on its next run, unless another root-owned
+  listener now holds it, such as a reverse-proxy rule or a published container an administrator created. A login
+  used to send the password straight there, since the `SYNO.API.Info` handshake was cached once for good (found in
+  review, read from the code). It now re-runs the handshake before every login, so a listener that does not answer
+  as DSM never receives the password; one that imitates DSM's answer still would. Sessions already signed in are
+  not covered: their calls, the admin check included, carry the SID to that listener with no handshake first, and a
+  DSM SID is an administrator's session (read from the code, not measured). A small time-of-check window
+  remains, because the probe runs in the certificate callback after the TCP connect;
+  `SocketsHttpHandler.ConnectCallback` could close it.
+- Measured end to end on the Virtual DSM 7.4.1 on 2026-10-26, hostname cleared and the default certificate in
+  place: login, `SYNO.Core.User.get` (the admin check) and logout succeed against `127.0.0.1`, the diagnostic is
+  healthy, a real sign-in reaches the home page, and every DSM call in the log goes to `https://127.0.0.1:5001`.
+  After moving DSM's HTTPS port to 5443 without a re-check, the next sign-in failed closed with the generic error
+  and reloaded `DSM.json`; the one after it succeeded over `127.0.0.1:5443`. The port was then moved back.
+- The same facts were measured again on a Virtual DSM rebuilt on DSM 7.2.2 (build 72806; the package's
+  `os_min_ver` is 7.2-64561): `DSM.json` exists with the same structure and is world-readable, `ssl.port` follows
+  a port change, `synoinfo.conf` has no port key, `/proc/net/tcp` shows DSM's listeners as uid 0, and the
+  certificate files are root-only. The SPK installs and runs there, and the loopback sign-in, a healthy diagnostic
+  and the plain-HTTP card all work. The DSM menu labels the remedies quote are identical to 7.4.1's.
+- The re-check throttle answered 429 through DSM's nginx while the login stayed unthrottled (2026-10-26).
+- Local debugging against a DSM on its self-signed default (the Virtual DSM, 2026-10-26): with `ADWH_DSM_URL`
+  alone, the diagnostic stops at *connection trusted*, and the log names `RemoteCertificateNameMismatch,
+  RemoteCertificateChainErrors`. With that certificate's SHA-256 in `ADWH_DSM_CERT_SHA256`, read from DSM's
+  certificate file over SSH and matching what the network served, the diagnostic is healthy, and a sign-in from
+  Chrome reaches the home page and signs out.
+- The `DSM.json` watcher on the Virtual DSM (7.2.2, package built at `daf5c7b`): moving DSM's HTTPS port through
+  Control Panel's API replaced the file (new inode) and only reloaded nginx; the running package reloaded the new
+  port 5 ms later, once. A sign-in right after succeeded at the first attempt with every DSM call on the new port,
+  and moving the port back was picked up the same way.
 
 Not chosen: calling the host the browser used. The `Host` header is client-controlled, and calling it would send
-the DSM password wherever a forged request points. It may appear on the diagnostic page as a suggestion only.
+the DSM password wherever a forged request points.
 
-The Virtual DSM stays in its current state until step 1 lands: it is exactly the case to diagnose. A trusted
-certificate goes on it afterwards, for the positive path of step 2.
+Not chosen: depending on DSM's nginx to keep the port fresh, and checking the listener once at startup. Measured
+on the Virtual DSM (7.2.2): `start_dep_services="nginx.service"` becomes `Requisite=` and `After=nginx.service` in
+a package's systemd unit, as for File Station. Restarting nginx restarts such a package; reloading it does not. Moving
+DSM's HTTPS port through `SYNO.Core.Web.DSM` (Control Panel's API) only reloads nginx: same main PID, File Station
+not restarted, listeners moved. The dependency would not follow a port change, and every nginx restart would restart
+the package with its hosted sites (inferred from File Station). A check made once at startup would keep trusting a
+port whose holder can change later — an nginx crash or a reload that moves the port frees it for any process —
+while the check at each handshake reads one small file per new pooled connection. `DsmWebConfigurationWatcher`
+watches `DSM.json` instead, so a moved port is picked up without a restart.
+
+Still open:
+
+- **Untested DSM versions**: 7.2.0 and 7.3 were not tested.
+- **Account protection**: measured, and a weakness; see *Every sign-in through the package is one DSM client*.
+- **Misleading remedy under `ADWH_DSM_URL`**: *not trusted* names the loopback cause ("the port is not held by
+  DSM") even when the cause is a certificate the developer machine does not trust. The log names the errors.
+
+Known behaviour of the diagnostic:
+
+- An unhealthy report stays cached, so one transient failure during a login keeps the diagnostic in front of
+  every visitor until someone presses Re-check. By design: the report is computed on demand, never on a timer.
+- A login gives DSM 10 s (`DsmLoginTimeoutSeconds`) before the diagnostic runs, and the browser waits 25 s, enough
+  for both; `AuthenticationServiceTests` asserts the sum. Measured on the Virtual DSM (7.2.2) on 2026-10-27 with
+  DSM's web API frozen (`synoscgi` stopped with `SIGSTOP`): before, DSM's own nginx ended the call after 60 s and the
+  `/adwh` proxy answered 504; now the login answers `DsmUnreachable` after 13 s, including when the frozen call is
+  the first `SYNO.API.Info` handshake, and Chrome shows the diagnostic. DSM took 4.5 to 6.6 s to refuse a wrong
+  password, which is why the budget is not shorter: at 5 s, two refusals in three ran the diagnostic. Other DSM
+  calls have no budget of their own.
+- A login whose budget runs out after DSM accepted the password leaves that SID live on DSM, and unbound here,
+  until DSM expires it, as any transport failure at that point already did (read from the code, not measured).
 
 ## Tooling and dependencies
 
@@ -333,12 +532,12 @@ The mechanics behind that, each checked against the script:
 - **Section 4 never finds the application's boot in production.** It brackets on the literal
   `Application started`, which `Microsoft.Hosting.Lifetime` writes at Information and `Microsoft: Warning`
   filters out. The only such text left is a hosted site's own stdout relayed as 2500002, so the section
-  brackets site boots. The application's boot runs from 2800006 `ResolvingConfigPath` to 1800010
+  brackets site boots. The application's boot runs from 2800004 `ResolvingConfigPath` to 1800010
   `HostingServiceStarted`. Since 0.7.0 (#76) it opens one line earlier, with 3000001 `ApplicationStarting`.
   That line also names the build (`x.y.z+<sha>`), which is the bracket section 4 needs and the way to tell two
   archives apart. Its position comes from reading `Program.cs`: no real archive has shown it yet.
 - **Section 5 times DSM calls, not requests.** Production logs no request duration. The `Nms` pattern
-  catches 2000004 `ApiRequest`, the 1600019 timeout setting and relayed site output, and `cut -c1-150` cuts
+  catches 2000001 `ApiRequest`, the 1600019 timeout setting and relayed site output, and `cut -c1-150` cuts
   each line before the API name and the duration. The comment saying PR #39 "looked exactly like this" is
   false.
 - **Section 2 drops rows silently** past `head -12`, ranked by absolute delta, so a 0 → 1 error sinks under
@@ -351,7 +550,7 @@ The mechanics behind that, each checked against the script:
 - **The no-argument mode orders by modification time**, which a plain `cp` resets, and ignores the timestamp
   the archive name carries; it skips directories although its comment says "whatever their form".
 
-Until those are fixed, a real review needs by hand: the 2800006 → 1800010 block of each archive (3000001 →
+Until those are fixed, a real review needs by hand: the 2800004 → 1800010 block of each archive (3000001 →
 1800010 from 0.7.0, its first line naming the build); each
 section-3 id opened with its exception and the lines before it; WRN/ERR lines without an id; 2500002 lines
 carrying `fail:` or `warn:`; the arguments of log lines checked against reality; and `package-logs/`.
@@ -387,6 +586,11 @@ The UI moved from 4.14.5 to 5.0.1 in 0.8.0. What the move taught is in `technica
   `EveryFluentUIStringTheScreensAskFor_HasAFrenchTranslation` requires a French entry for every key the
   rendered screens ask for. A string only a screen without a rendering test asks for, such as the grid's
   column menu, can still show in English.
+- **The data grid's loading spinner never shows.** `AutoDataGrid` gives `FluentDataGrid` its rows through
+  `Items` and sets neither `Loading` nor an `ItemsProvider`, and FluentUI renders `LoadingContent` only for one of
+  those. Observed on the Virtual DSM on 2026-11-02: across a sign-in, the home page load and the framework
+  installation dialog (opening, installing, uninstalling), no spinner appeared in a grid; every wait showed the
+  loading overlay's. Either wire `Loading` or delete the template.
 
 ### No release has ever been published
 
@@ -415,6 +619,16 @@ any test.
 
 `ResourceCompletenessTests` hardcodes `fr-FR`, so a newly added culture would be silently untested for key
 parity — which undercuts the "drop in a `.resx`, zero code changes" story.
+
+`OperationTimerTests.UsingScope_WithEarlyReturn_CallbackInvoked` asserts that a 5 ms sleep measures at most
+100 ms. It measured 106 ms once on a loaded machine on 2026-10-26, and passed on the next two runs: an upper
+bound on wall-clock time is a flake waiting for a busy CI runner.
+
+`DsmConnectionChecksTests.ConnectAsync_AClosedPort_ReportsPortRefused` and the constructor of
+`DsmConnectionDiagnosticServiceTests` reserve an ephemeral loopback port, release it, and expect nothing to listen
+there when the check runs. Anything that asks for port 0 in between, another test included, can be handed that
+port, and the check then reports something other than a refusal. Not seen to fail yet. The fix a review proposed,
+keeping the socket bound without listening, was measured on macOS to time out instead of refusing, so it is not one.
 
 ## Prerequisite for a roadmap feature
 

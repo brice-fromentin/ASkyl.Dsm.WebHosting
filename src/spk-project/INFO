@@ -1,5 +1,5 @@
 package="AskylWebHosting"
-version="0.8.0"
+version="0.8.1"
 os_min_ver="7.2-64561"
 description="Provides the ability to host and manage .NET Web sites."
 arch="armv7 armv8 x86_64"
@@ -17,5 +17,6 @@ report_url="https://github.com/brice-fromentin/ASkyl.Dsm.WebHosting/wiki"
 silent_install="yes"
 silent_upgrade="yes"
 silent_uninstall="yes"
+startstop_restart_services="nginx.service"
 thirdparty="yes"
 

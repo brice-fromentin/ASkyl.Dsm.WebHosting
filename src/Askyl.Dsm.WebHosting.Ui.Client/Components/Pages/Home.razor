@@ -271,6 +271,9 @@
 
     private async Task Logout()
     {
+        // Signing out revokes the SID on DSM, which may take as long as any other DSM call
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.LoggingOut]);
+
         try
         {
             var result = await AuthService.LogoutAsync();

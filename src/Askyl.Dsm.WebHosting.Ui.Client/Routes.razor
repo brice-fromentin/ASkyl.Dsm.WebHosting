@@ -1,13 +1,28 @@
-﻿@using Askyl.Dsm.WebHosting.Ui.Client.Contracts
+﻿@inherits WorkingStateBase
 
-<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(NotFound)" OnNavigateAsync="AuthGuard.OnNavigateAsync">
+@using Askyl.Dsm.WebHosting.Globalization
+@using Askyl.Dsm.WebHosting.Ui.Client.Contracts
+
+@inject ILocalizer localizer
+
+<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(NotFound)" OnNavigateAsync="OnNavigateAsync">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector=".toolbar fluent-button" />
     </Found>
 </Router>
 
+@* Outside the layout, which holds the toasts: the Router's own Navigating content would replace the layout and drop them *@
+<LoadingOverlay WorkingState="@this" />
+
 @code
 {
     [Inject] private INavigationGuard AuthGuard { get; set; } = default!;
+
+    // The guard asks the server who is signed in before any page renders; until then the previous page stays as it was
+    private async Task OnNavigateAsync(NavigationContext context)
+    {
+        using var worker = this.CreateWorkingState(localizer[LK.Loading.Page]);
+        await AuthGuard.OnNavigateAsync(context);
+    }
 }

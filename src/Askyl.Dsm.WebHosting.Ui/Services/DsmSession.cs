@@ -318,6 +318,9 @@ public sealed class DsmSession(DsmApiClient client, IHttpContextAccessor httpCon
 
     private async Task<string?> AuthenticateAsync(LoginCredentials model, CancellationToken cancellationToken)
     {
+        // DSM's port may have changed hands since the cached handshake: whatever holds it must answer as DSM first
+        await _client.ConfirmDsmAsync(cancellationToken);
+
         var login = new AuthenticateLogin(model.Login, model.Password, model.OtpCode);
         var parameters = new AuthLoginParameters(login);
         var response = await _client.ExecuteAsync<AuthLoginResponse>(null, parameters, cancellationToken);

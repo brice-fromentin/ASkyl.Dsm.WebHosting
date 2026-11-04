@@ -1,6 +1,7 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Ui.Client.Contracts;
+using Askyl.Dsm.WebHosting.Ui.Client.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 
@@ -25,11 +26,24 @@ public class AuthenticationNavigationGuard(IAuthenticationService authService, N
             return;
         }
 
-        var result = await authService.IsAuthenticatedAsync();
-
-        if (!(result.Success && result.Value == true))
+        if (!await IsSignedInAsync())
         {
             navigation.NavigateTo(ApplicationConstants.LoginPagePath, forceLoad: false);
+        }
+    }
+
+    // A server that never answered vouches for no one, so this denies. Were the exception left uncaught, Blazor would
+    // read its timeout as a cancelled navigation and render the page anyway
+    private async Task<bool> IsSignedInAsync()
+    {
+        try
+        {
+            var result = await authService.IsAuthenticatedAsync();
+            return result.Success && result.Value == true;
+        }
+        catch (Exception exception) when (exception.IsNoAnswer)
+        {
+            return false;
         }
     }
 

@@ -91,6 +91,33 @@ public class AuthenticationNavigationGuardTests : IDisposable
     }
 
     [Fact]
+    public async Task OnNavigateAsync_WhenTheServerNeverAnswers_SendsToLogin()
+    {
+        // Were the exception left uncaught, Blazor would read the browser's timeout as a cancelled navigation and render
+        // the page anyway
+        _authService.Setup(a => a.IsAuthenticatedAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TaskCanceledException(null, new TimeoutException()));
+
+        var context = CreateNavigationContext("");
+        await _guard.OnNavigateAsync(context);
+
+        Assert.EndsWith("/login", _navigation.Uri);
+    }
+
+    [Fact]
+    public async Task OnNavigateAsync_WhenTheServerCannotBeReached_SendsToLogin()
+    {
+        // Were the exception left uncaught, it would end on Blazor's "An unhandled error has occurred" bar
+        _authService.Setup(a => a.IsAuthenticatedAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException());
+
+        var context = CreateNavigationContext("");
+        await _guard.OnNavigateAsync(context);
+
+        Assert.EndsWith("/login", _navigation.Uri);
+    }
+
+    [Fact]
     public async Task OnNavigateAsync_LoginPathCaseInsensitive_AllowsWithoutAuth()
     {
         var context = CreateNavigationContext("LOGIN");
