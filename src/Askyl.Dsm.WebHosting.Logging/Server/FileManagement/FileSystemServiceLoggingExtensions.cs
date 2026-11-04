@@ -53,32 +53,44 @@ public static partial class FileSystemServiceLoggingExtensions
     public static partial void ErrorRetrievingDirectory(this ILogger<ILogFileSystemService> logger, Exception ex, string path);
 
     /// <summary>
-    /// Logs setting of HTTP group permissions for a virtual path.
-    /// </summary>
-    [LoggerMessage(EventId = 1100008, Level = LogLevel.Debug, Message = "Setting HTTP group permissions for virtual path: {Path}")]
-    public static partial void SettingHttpGroupPermissions(this ILogger<ILogFileSystemService> logger, string path);
-
-    /// <summary>
     /// Logs path validation failure.
     /// </summary>
     [LoggerMessage(EventId = 1100009, Level = LogLevel.Warning, Message = "Path validation failed: {Path}")]
     public static partial void PathValidationFailed(this ILogger<ILogFileSystemService> logger, string path);
 
     /// <summary>
-    /// Logs the target path and directory status.
+    /// Logs the http group given access to one folder of a site's path.
     /// </summary>
-    [LoggerMessage(EventId = 1100010, Level = LogLevel.Debug, Message = "Target path: {TargetPath}, IsDirectory: {IsDirectory}")]
-    public static partial void TargetPathInfo(this ILogger<ILogFileSystemService> logger, string targetPath, bool isDirectory);
+    [LoggerMessage(EventId = 1100013, Level = LogLevel.Information, Message = "http group given access to {SharePath} (Read: {Read}; passage only otherwise)")]
+    public static partial void SiteAccessGranted(this ILogger<ILogFileSystemService> logger, string sharePath, bool read);
 
     /// <summary>
-    /// Logs ACL permission failure with error details.
+    /// Logs a folder left as it is because it already holds an explicit http entry.
     /// </summary>
-    [LoggerMessage(EventId = 1100011, Level = LogLevel.Error, Message = "Failed to set ACL permissions for {Path}: Success={Success}, ErrorCode={ErrorCode}")]
-    public static partial void FailedToSetAclPermissions(this ILogger<ILogFileSystemService> logger, string path, bool? success, int? errorCode);
+    [LoggerMessage(EventId = 1100014, Level = LogLevel.Information, Message = "{SharePath} already holds an explicit http entry, left as it is")]
+    public static partial void SiteAccessLeftAlone(this ILogger<ILogFileSystemService> logger, string sharePath);
 
     /// <summary>
-    /// Logs successful ACL permission setting with task ID.
+    /// Logs DSM refusing one step of a grant.
     /// </summary>
-    [LoggerMessage(EventId = 1100012, Level = LogLevel.Information, Message = "ACL permissions set successfully for {Path}, TaskId: {TaskId}")]
-    public static partial void AclPermissionsSet(this ILogger<ILogFileSystemService> logger, string path, string taskId);
+    [LoggerMessage(EventId = 1100015, Level = LogLevel.Error, Message = "DSM refused the ACL {Step} on {SharePath}: error code {ErrorCode}")]
+    public static partial void SiteAccessRefused(this ILogger<ILogFileSystemService> logger, string sharePath, string step, int? errorCode);
+
+    /// <summary>
+    /// Logs an ACL task DSM did not finish in time.
+    /// </summary>
+    [LoggerMessage(EventId = 1100016, Level = LogLevel.Error, Message = "DSM's ACL task on {SharePath} did not finish within {Seconds} s")]
+    public static partial void AclTaskTimedOut(this ILogger<ILogFileSystemService> logger, string sharePath, int seconds);
+
+    /// <summary>
+    /// Logs an ACL task that could not be released once over.
+    /// </summary>
+    [LoggerMessage(EventId = 1100017, Level = LogLevel.Debug, Message = "Could not release DSM's ACL task {TaskId}")]
+    public static partial void AclTaskReleaseFailed(this ILogger<ILogFileSystemService> logger, Exception ex, string taskId);
+
+    /// <summary>
+    /// Logs a grant that failed on an exception.
+    /// </summary>
+    [LoggerMessage(EventId = 1100018, Level = LogLevel.Error, Message = "Granting the http group access for {ApplicationPath} failed")]
+    public static partial void SiteAccessGrantError(this ILogger<ILogFileSystemService> logger, Exception ex, string applicationPath);
 }

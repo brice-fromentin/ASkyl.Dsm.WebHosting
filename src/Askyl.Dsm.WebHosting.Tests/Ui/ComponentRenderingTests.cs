@@ -5,6 +5,7 @@ using Askyl.Dsm.WebHosting.Constants.Globalization;
 using Askyl.Dsm.WebHosting.Constants.UI;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Diagnostics;
+using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Askyl.Dsm.WebHosting.Data.Domain.WebSites;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
@@ -86,6 +87,7 @@ public class ComponentRenderingTests : IAsyncLifetime
     readonly BunitContext _ctx = new();
     readonly Mock<IAuthenticationService> _authService = new();
     readonly Mock<IWebSiteHostingService> _hostingService = new();
+    readonly Mock<IFileSystemService> _fileSystemService = new();
     readonly Mock<ILicenseService> _licenseService = new();
     readonly Mock<IDsmConnectionDiagnosticService> _diagnosticService = new();
     readonly Mock<INavigationGuard> _navigationGuard = new();
@@ -100,6 +102,7 @@ public class ComponentRenderingTests : IAsyncLifetime
         _ctx.Services.AddValidatorsFromAssemblyContaining<SharedResource>();
         _ctx.Services.AddSingleton(_authService.Object);
         _ctx.Services.AddSingleton(_hostingService.Object);
+        _ctx.Services.AddSingleton(_fileSystemService.Object);
         _ctx.Services.AddSingleton(_licenseService.Object);
         _ctx.Services.AddSingleton(_diagnosticService.Object);
         _ctx.Services.AddSingleton(_navigationGuard.Object);
@@ -764,6 +767,62 @@ public class ComponentRenderingTests : IAsyncLifetime
     }
 
     const string MissingChannel = "9.0";
+
+    static WebSiteInstance UnreadableSite() => new(new WebSiteConfiguration
+    {
+        Name = SiteName,
+        ApplicationPath = "/web/site/App.dll",
+        ApplicationRealPath = "/volume1/web/site/App.dll",
+        InternalPort = 18110,
+        HostName = "site.example"
+    });
+
+    static string MessageBoxButton(string key)
+        => Localizer.SharedResource.GetString(GlobalizationConstants.FluentUIResourcePrefix + key, CultureInfo.CurrentUICulture)!;
+
+    async Task<IRenderedComponent<FluentDialogProvider>> SubmitUnreadableSiteAsync()
+    {
+        var refused = new WebSiteInstanceResult(false, _localizer[LK.Error.ApplicationNotReadable, "/web/site/App.dll"], null, ApiErrorCode.ApplicationNotReadable);
+        _hostingService.SetupSequence(service => service.AddWebsiteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(refused)
+            .ReturnsAsync(WebSiteInstanceResult.CreateSuccess(new WebSiteInstance()));
+        var cut = _ctx.Render<FluentDialogProvider>();
+        var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
+
+        await cut.InvokeAsync(() => { _ = dialogService.ShowDialogAsync<WebSiteConfigurationDialog>(options => options.Parameters[nameof(WebSiteConfigurationDialog.Content)] = UnreadableSite()); });
+        cut.WaitForAssertion(() => cut.Find("form").Submit());
+
+        // The question names the file, the site's folder and the shared folder; no wait is left over it
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.WebsiteConfig.GrantAccessQuestion, "/web/site/App.dll", "/web/site", "web"], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        Assert.False(cut.FindComponent<WebSiteConfigurationDialog>().Instance.IsWorking);
+
+        return cut;
+    }
+
+    [Fact]
+    public async Task WebsiteDialog_AsksBeforeGrantingAccess_ThenSavesAgain()
+    {
+        _fileSystemService.Setup(service => service.GrantSiteAccessAsync(It.IsAny<SiteAccessRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ApiResult.CreateSuccess());
+        var cut = await SubmitUnreadableSiteAsync();
+
+        cut.FindAll("fluent-button").Single(button => button.TextContent.Trim() == MessageBoxButton(MessageBoxYesKey)).Click();
+
+        cut.WaitForAssertion(() => _hostingService.Verify(service => service.AddWebsiteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()), Times.Exactly(2)));
+        _fileSystemService.Verify(service => service.GrantSiteAccessAsync(new("/web/site/App.dll", "/volume1/web/site/App.dll"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task WebsiteDialog_ShowsTheRefusal_WhenAccessIsDeclined()
+    {
+        var cut = await SubmitUnreadableSiteAsync();
+
+        cut.FindAll("fluent-button").Single(button => button.TextContent.Trim() == MessageBoxButton(MessageBoxNoKey)).Click();
+
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Error.ApplicationNotReadable, "/web/site/App.dll"], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        _fileSystemService.Verify(service => service.GrantSiteAccessAsync(It.IsAny<SiteAccessRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        _hostingService.Verify(service => service.AddWebsiteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
 
     [Fact]
     public async Task WebsiteDialog_OpensWithoutLoadingAMaskScript()

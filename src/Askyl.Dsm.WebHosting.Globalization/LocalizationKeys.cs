@@ -106,6 +106,7 @@ public static class LK
     {
         public const string EditTitle = "WebsiteConfig_EditTitle";
         public const string AddTitle = "WebsiteConfig_AddTitle";
+        public const string GrantAccessQuestion = "WebsiteConfig_GrantAccessQuestion";
         public const string NameLabel = "WebsiteConfig_NameLabel";
         public const string AppSettingsSection = "WebsiteConfig_AppSettingsSection";
         public const string AppPathLabel = "WebsiteConfig_AppPathLabel";
@@ -187,6 +188,7 @@ public static class LK
     {
         public const string SharedFolders = "Loading_SharedFolders";
         public const string DirectoryContents = "Loading_DirectoryContents";
+        public const string GrantingAccess = "Loading_GrantingAccess";
         public const string Installing = "Loading_Installing";
         public const string Channels = "Loading_Channels";
         public const string Releases = "Loading_Releases";
@@ -240,14 +242,12 @@ public static class LK
         public const string SiteAlreadyRunning = "Error_SiteAlreadyRunning";
         public const string ApplicationBinaryNotFound = "Error_ApplicationBinaryNotFound";
         public const string ApplicationNotReadable = "Error_ApplicationNotReadable";
+        public const string SiteAccessGrantFailed = "Error_SiteAccessGrantFailed";
         public const string RuntimeNotInstalled = "Error_RuntimeNotInstalled";
         public const string RuntimeDetectionFailed = "Error_RuntimeDetectionFailed";
         public const string InstanceNotFound = "Error_InstanceNotFound";
-        public const string NoApplicationPath = "Error_NoApplicationPath";
         public const string SiteNotFound = "Error_SiteNotFound";
-        public const string FailedToSetACL = "Error_FailedToSetACL";
         public const string SessionExpired = "Error_SessionExpired";
-        public const string FailedToSetPermissions = "Error_FailedToSetPermissions";
         public const string FailedToCreateReverseProxy = "Error_FailedToCreateReverseProxy";
         public const string FailedToUpdateReverseProxy = "Error_FailedToUpdateReverseProxy";
     }

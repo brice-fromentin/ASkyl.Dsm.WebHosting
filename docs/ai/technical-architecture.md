@@ -252,7 +252,7 @@ dotnet build /nr:false ./src/Askyl.Dsm.WebHosting.slnx
 | **IAuthenticationService** | LoginAsync(), LogoutAsync(), IsAuthenticatedAsync() | Ui + Ui.Client |
 | **ICultureManager** | InitializeFromLogin(), ResetToSystem(); properties: CurrentCulture, CurrentUICulture | Ui.Client.Services.CultureManager |
 | **IDotnetVersionService** | GetInstalledVersionsAsync(), GetChannelsAsync(), IsChannelInstalledAsync(), IsVersionInstalledAsync(), GetReleasesWithStatusAsync(), RefreshCacheAsync(), IsValidVersionFormat() | Ui + Ui.Client |
-| **IFileSystemService** | GetSharedFoldersAsync(), GetDirectoryContentsAsync(), SetHttpGroupPermissionsAsync() | Ui + Ui.Client |
+| **IFileSystemService** | GetSharedFoldersAsync(), GetDirectoryContentsAsync(), GrantSiteAccessAsync() | Ui + Ui.Client |
 | **IFrameworkManagementService** | InstallFrameworkAsync(), UninstallFrameworkAsync() | Ui + Ui.Client |
 | **IGlobalizationSettings** | SupportedCultures, SupportedCultureNamesJson, SystemCulture | Ui.Infrastructure.GlobalizationSettings |
 | **ILogDownloadService** | CreateLogZipStreamAsync() | Ui.Services |
@@ -782,12 +782,15 @@ are stateless (`DsmConnectionChecks`) and connect to `IDsmSettingsService.Server
 `SYNO.FileStation.List` (`list_share`, `list`) backs the directory browser, and `SYNO.Core.ACL` (`set`) backs
 permissions. No upload, download, delete, mkdir, move or copy operation is implemented.
 
-**HTTP Group Permissions:** `FileSystemService.SetHttpGroupPermissionsAsync` calls `SYNO.Core.ACL` `set` on the site's
-application directory (its parent when the path is a `.dll`). It grants the `http` group read, write, execute and
-delete rights — everything but change-permission and take-ownership — inherited by all descendants. It runs as the
-first side-effecting step of adding or updating a website, after the configuration and environment variables are
-validated. DSM applies none of it (`open-technical-items.md`), so validation first opens the application file from
-this process, whose account the sites share, and refuses a site it cannot read (`ValidateApplicationReadable`).
+**HTTP Group Permissions:** a hosted site runs under the package's account, a member of DSM's `http` group, and
+shared folders DSM creates are closed to that group. Validation of an added or updated site opens the application
+file from this process (`ValidateApplicationReadable`); refused, it answers `ApiErrorCode.ApplicationNotReadable`
+before any side effect. The dialog then asks the user, naming the site's folder and its shared folder, and on
+consent calls `IFileSystemService.GrantSiteAccessAsync` (`POST api/v1/files/site-access`), then saves again,
+once. The grant is the least the site needs: passage only on the shared folder and each folder in between, Read
+on the site's folder, each written the way DSM's own editor does (`get`, every explicit entry sent back with the
+new one, `set`, `status` until finished, `stop`; `dsm-api-notes.md`). A folder that already holds an explicit
+`http` entry is left as it is. Declined, or still unreadable after it, the dialog shows the refusal and stays open.
 
 ---
 

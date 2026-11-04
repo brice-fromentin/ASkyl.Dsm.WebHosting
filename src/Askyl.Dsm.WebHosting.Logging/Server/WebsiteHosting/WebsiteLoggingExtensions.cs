@@ -13,12 +13,6 @@ public static partial class WebsiteLoggingExtensions
     #region Add website
 
     /// <summary>
-    /// Logs permission setting failure during website addition.
-    /// </summary>
-    [LoggerMessage(EventId = 1800001, Level = LogLevel.Error, Message = "Permission setting failed for '{SiteName}': {ErrorMessage}")]
-    public static partial void PermissionSettingFailedAdd(this ILogger<ILogWebSiteHostingService> logger, string siteName, string? errorMessage);
-
-    /// <summary>
     /// Logs reverse proxy creation failure during website addition.
     /// </summary>
     [LoggerMessage(EventId = 1800002, Level = LogLevel.Error, Message = "Reverse proxy creation failed for '{SiteName}': {ErrorMessage}")]
@@ -39,12 +33,6 @@ public static partial class WebsiteLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1800004, Level = LogLevel.Error, Message = "Instance not found for site: {SiteName}")]
     public static partial void InstanceNotFoundUpdate(this ILogger<ILogWebSiteHostingService> logger, string siteName);
-
-    /// <summary>
-    /// Logs permission setting failure during website update.
-    /// </summary>
-    [LoggerMessage(EventId = 1800005, Level = LogLevel.Error, Message = "Permission setting failed for '{SiteName}': {ErrorMessage}")]
-    public static partial void PermissionSettingFailedUpdate(this ILogger<ILogWebSiteHostingService> logger, string siteName, string? errorMessage);
 
     /// <summary>
     /// Logs reverse proxy update failure during website update.
@@ -167,18 +155,6 @@ public static partial class WebsiteLoggingExtensions
     #endregion
 
     #region Permissions
-
-    /// <summary>
-    /// Logs that no application real path is configured for permission setting.
-    /// </summary>
-    [LoggerMessage(EventId = 1800023, Level = LogLevel.Warning, Message = "No application real path configured for '{SiteName}', skipping permission setting")]
-    public static partial void NoApplicationRealPath(this ILogger<ILogWebSiteHostingService> logger, string siteName);
-
-    /// <summary>
-    /// Logs setting of HTTP group permissions for a site.
-    /// </summary>
-    [LoggerMessage(EventId = 1800024, Level = LogLevel.Debug, Message = "Setting HTTP group permissions for '{SiteName}' at path: {Path} (IsDirectory: {IsDirectory})")]
-    public static partial void SettingHttpGroupPermissions(this ILogger<ILogWebSiteHostingService> logger, string siteName, string path, bool isDirectory);
 
     #endregion
 

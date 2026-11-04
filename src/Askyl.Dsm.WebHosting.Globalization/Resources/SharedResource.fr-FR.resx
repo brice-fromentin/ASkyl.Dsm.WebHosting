@@ -553,20 +553,11 @@
   <data name="Error_InstanceNotFound" xml:space="preserve">
     <value>Instance introuvable</value>
   </data>
-  <data name="Error_NoApplicationPath" xml:space="preserve">
-    <value>Aucun chemin d'application configuré</value>
-  </data>
   <data name="Error_SiteNotFound" xml:space="preserve">
     <value>Site avec l'ID '{0}' introuvable</value>
   </data>
-  <data name="Error_FailedToSetACL" xml:space="preserve">
-    <value>Échec de la configuration des permissions ACL pour {0} : Réussite={1}, Code d'erreur={2}</value>
-  </data>
   <data name="Error_SessionExpired" xml:space="preserve">
     <value>Session expirée sur le serveur</value>
-  </data>
-  <data name="Error_FailedToSetPermissions" xml:space="preserve">
-    <value>Échec de la configuration des permissions : {0}</value>
   </data>
   <data name="Error_FailedToCreateReverseProxy" xml:space="preserve">
     <value>Échec de la création du proxy inverse : {0}</value>
@@ -722,4 +713,13 @@
     <value>Information</value>
   </data>
 
+  <data name="Error_SiteAccessGrantFailed" xml:space="preserve">
+    <value>DSM n'a pas accordé l'accès à {0} au groupe http. Accordez-le dans File Station : ouvrez les propriétés du dossier partagé qui le contient et donnez au groupe http l'accès en lecture.</value>
+  </data>
+  <data name="WebsiteConfig_GrantAccessQuestion" xml:space="preserve">
+    <value>Le paquet ne peut pas lire {0}. Autoriser le groupe http de DSM à lire le dossier {1} et à traverser les dossiers au-dessus de lui dans le dossier partagé « {2} » ? Rien d'autre dans « {2} » ne devient lisible.</value>
+  </data>
+  <data name="Loading_GrantingAccess" xml:space="preserve">
+    <value>Attribution de l'accès...</value>
+  </data>
 </root>

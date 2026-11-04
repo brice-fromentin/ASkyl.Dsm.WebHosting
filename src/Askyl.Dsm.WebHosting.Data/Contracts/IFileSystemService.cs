@@ -1,3 +1,4 @@
+using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Askyl.Dsm.WebHosting.Data.Results;
 
 namespace Askyl.Dsm.WebHosting.Data.Contracts;
@@ -24,12 +25,12 @@ public interface IFileSystemService
     Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Sets HTTP group permissions for a file or directory.
-    /// Note: This is now handled internally by WebSiteHostingService and should not be called from client.
+    /// Gives DSM's http group the least a site needs: Read on the application's folder, and passage only through
+    /// each folder above it, up to and including the shared folder. Each folder keeps its own entries; one that
+    /// already holds an explicit http entry is left as it is. Called only once the user has agreed to it.
     /// </summary>
-    /// <param name="path">The path to set permissions for.</param>
-    /// <param name="isDirectory">Indicates if the target is a directory.</param>
+    /// <param name="request">The application's share path and real path.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>An ApiResult indicating success or failure.</returns>
-    Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory, CancellationToken cancellationToken = default);
+    Task<ApiResult> GrantSiteAccessAsync(SiteAccessRequest request, CancellationToken cancellationToken = default);
 }

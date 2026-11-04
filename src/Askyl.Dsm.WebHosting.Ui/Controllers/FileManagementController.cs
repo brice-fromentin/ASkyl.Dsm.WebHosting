@@ -1,5 +1,6 @@
 using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Ui.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -37,4 +38,13 @@ public class FileManagementController(IFileSystemService fileSystemService) : Co
     [HttpGet(FileManagementRoutes.DirectoryContentsRoute)]
     public async Task<ActionResult<DirectoryContentsResult>> GetDirectoryContentsAsync(string path, [FromQuery] bool directoryOnly, CancellationToken cancellationToken)
         => Ok(await fileSystemService.GetDirectoryContentsAsync(path, directoryOnly, cancellationToken));
+
+    /// <summary>
+    /// Grants DSM's http group the access a site's folder needs, once the user has agreed to it.
+    /// </summary>
+    /// <param name="request">The application's share path and real path.</param>
+    /// <returns>An ApiResult indicating success or failure.</returns>
+    [HttpPost(FileManagementRoutes.SiteAccessRoute)]
+    public async Task<ActionResult<ApiResult>> GrantSiteAccessAsync([FromBody] SiteAccessRequest request, CancellationToken cancellationToken)
+        => Ok(await fileSystemService.GrantSiteAccessAsync(request, cancellationToken));
 }

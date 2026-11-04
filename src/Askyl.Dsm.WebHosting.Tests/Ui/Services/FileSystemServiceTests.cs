@@ -1,6 +1,9 @@
+using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Models.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Models.FileStation;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters;
+using Askyl.Dsm.WebHosting.Data.DsmApi.Parameters.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.Core.Acl;
 using Askyl.Dsm.WebHosting.Data.DsmApi.Responses.FileStation;
@@ -245,78 +248,123 @@ public class FileSystemServiceTests
 
     #endregion
 
-    #region SetHttpGroupPermissionsAsync
+    #region GrantSiteAccessAsync
+
+    static CoreAclRule Entry(string owner, int level, bool readData = true) => new()
+    {
+        OwnerType = AclConstants.OwnerTypeGroup,
+        OwnerName = owner,
+        OwnerId = 101,
+        PermissionType = AclConstants.PermissionTypeAllow,
+        Permission = new() { ReadData = readData, ExeFile = true },
+        Inherit = new() { ThisFolder = true, ChildFiles = true, ChildFolders = true, AllDescendants = true },
+        Level = level
+    };
+
+    static CoreAclGetResponse Acl(bool isInherited, params CoreAclRule[] entries)
+        => new() { Success = true, Data = new() { IsInherited = isInherited, Acl = [.. entries] } };
+
+    void SetupAcls(params CoreAclGetResponse[] folders)
+    {
+        _dsmSession.SetupExecuteSequenceAsync(folders);
+        _dsmSession.SetupExecuteAsync(new CoreAclSetResponse { Success = true, Data = new() { TaskId = "task" } });
+        _dsmSession.SetupExecuteAsync(new CoreAclStatusResponse { Success = true, Data = new() { Finished = true } });
+        _localizer.Setup(l => l[LK.Error.SiteAccessGrantFailed, It.IsAny<object>()]).Returns("Grant failed");
+    }
+
+    List<CoreAclSet> SetCalls() => [.. _dsmSession.Parameters.OfType<CoreAclSetParameters>().Select(p => p.Parameters)];
 
     [Fact]
-    public async Task SetHttpGroupPermissionsAsync_Success_ReturnsSuccess()
+    public async Task GrantSiteAccessAsync_PassesThroughEachFolderAbove_ReadsTheSiteFolder_AndKeepsTheirEntries()
     {
-        // Arrange
+        // Arrange — the shared folder, a folder in between, the site's folder: as measured on the Virtual DSM
         var service = CreateService();
-        var aclResponse = new CoreAclSetResponse
-        {
-            Success = true,
-            Data = new CoreAclSetData { TaskId = "task-123" }
-        };
-
-        _dsmSession.SetupExecuteAsync<CoreAclSetResponse>(aclResponse);
+        var administrators = Entry("administrators", 0);
+        var someone = Entry("someone", 0, readData: false);
+        SetupAcls(
+            Acl(isInherited: false, administrators),
+            Acl(isInherited: true, administrators with { Level = 1 }),
+            Acl(isInherited: true, administrators with { Level = 2 }, someone));
 
         // Act
-        var result = await service.SetHttpGroupPermissionsAsync("/volume1/test/app.dll", isDirectory: false);
+        var result = await service.GrantSiteAccessAsync(new("/data/websites/blog/Blog.dll", "/volume1/data/websites/blog/Blog.dll"));
 
-        // Assert
+        // Assert — set replaces the explicit entries, so each one goes back; inherited ones are DSM's to keep
         Assert.True(result.Success);
-        Assert.Single(_dsmSession.ExecuteCalls);
+        var sets = SetCalls();
+        Assert.Equal(["/data", "/data/websites", "/data/websites/blog"], sets.Select(s => s.DirPaths));
+        Assert.Equal(["/volume1/data", "/volume1/data/websites", "/volume1/data/websites/blog"], sets.Select(s => s.FilePath));
+        Assert.Equal([false, true, true], sets.Select(s => s.Inherited));
+        Assert.Equal(["administrators", "http"], sets[0].Rules.Select(r => r.OwnerName));
+        Assert.Equal(["http"], sets[1].Rules.Select(r => r.OwnerName));
+        Assert.Equal(["someone", "http"], sets[2].Rules.Select(r => r.OwnerName));
+        Assert.All(sets.SelectMany(s => s.Rules), r => Assert.Null(r.Level));
+
+        // Folders above: passage only, on that folder only. The site's folder: Read, inherited by everything in it
+        var traverse = sets[0].Rules[^1];
+        Assert.Equal(new CoreAclPermission { ExeFile = true }, traverse.Permission);
+        Assert.Equal(new CoreAclInherit { ThisFolder = true }, traverse.Inherit);
+        Assert.Equal(traverse, sets[1].Rules[^1]);
+        var read = sets[2].Rules[^1];
+        Assert.Equal(new CoreAclPermission { ReadData = true, ExeFile = true, ReadAttr = true, ReadExtAttr = true, ReadPerm = true }, read.Permission);
+        Assert.Equal(new CoreAclInherit { ThisFolder = true, ChildFiles = true, ChildFolders = true, AllDescendants = true }, read.Inherit);
     }
 
     [Fact]
-    public async Task SetHttpGroupPermissionsAsync_ForAFile_LogsTheDirectoryItActedOn()
+    public async Task GrantSiteAccessAsync_SendsEveryPermissionKey_AndOwnerIdButNotLevel()
     {
-        // Given a file, the ACL is applied to its parent directory. The success line used to name the
-        // file instead, so a deployment log review — the habit that found two defects this repository
-        // still carries — read that permissions had been set on the assembly. They never were.
-        var recorder = new CapturingLogger<ILogFileSystemService>();
-        var service = new FileSystemService(_dsmSession, recorder, _localizer.Object);
-
-        _dsmSession.SetupExecuteAsync(new CoreAclSetResponse
-        {
-            Success = true,
-            Data = new CoreAclSetData { TaskId = "task-123" }
-        });
-
-        // Act
-        await service.SetHttpGroupPermissionsAsync("/volume1/test/app.dll", isDirectory: false);
-
-        // Assert
-        var success = Assert.Single(recorder.Messages, m => m.Contains("ACL permissions set successfully", StringComparison.Ordinal));
-
-        Assert.Contains("/volume1/test", success, StringComparison.Ordinal);
-        Assert.DoesNotContain("app.dll", success, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task SetHttpGroupPermissionsAsync_PathTraversal_ReturnsFailure()
-    {
-        // Arrange
+        // DSM refused a rule whose permission object lacked keys (403), and its own editor sends owner_id back
         var service = CreateService();
+        SetupAcls(Acl(isInherited: false, Entry("administrators", 0)), Acl(isInherited: true));
 
-        // Act
-        var result = await service.SetHttpGroupPermissionsAsync("/volume1/../../etc/passwd", isDirectory: false);
+        await service.GrantSiteAccessAsync(new("/data/blog/Blog.dll", "/volume1/data/blog/Blog.dll"));
 
-        // Assert
+        var form = Uri.UnescapeDataString(await _dsmSession.Parameters.OfType<CoreAclSetParameters>().First().ToForm().ReadAsStringAsync());
+        Assert.Contains("\"owner_id\":101", form, StringComparison.Ordinal);
+        Assert.Contains("\"write_data\":false", form, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"level\"", form, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GrantSiteAccessAsync_LeavesAFolderWithItsOwnHttpEntryAlone()
+    {
+        // An http entry someone set is theirs: replacing it could lift a deny or take away what they gave
+        var service = CreateService();
+        SetupAcls(Acl(isInherited: false, Entry("administrators", 0), Entry(AclConstants.OwnerNameHttp, 0)), Acl(isInherited: true));
+
+        var result = await service.GrantSiteAccessAsync(new("/data/blog/Blog.dll", "/volume1/data/blog/Blog.dll"));
+
+        Assert.True(result.Success);
+        Assert.Equal(["/data/blog"], SetCalls().Select(s => s.DirPaths));
+    }
+
+    [Fact]
+    public async Task GrantSiteAccessAsync_StopsAtTheFirstRefusal()
+    {
+        var service = CreateService();
+        SetupAcls(Acl(isInherited: false), Acl(isInherited: true));
+        _dsmSession.SetupExecuteAsync(new CoreAclSetResponse { Success = false });
+
+        var result = await service.GrantSiteAccessAsync(new("/data/blog/Blog.dll", "/volume1/data/blog/Blog.dll"));
+
         Assert.False(result.Success);
-        Assert.Empty(_dsmSession.ExecuteCalls);
+        Assert.Equal("Grant failed", result.Message);
+        Assert.Single(SetCalls());
     }
 
-    [Fact]
-    public async Task SetHttpGroupPermissionsAsync_DoubleEncodedPathTraversal_ReturnsFailure()
+    [Theory]
+    [InlineData("/data/blog/Blog.dll", "/volume1/other/blog/Blog.dll")]
+    [InlineData("/data/../etc/Blog.dll", "/volume1/data/../etc/Blog.dll")]
+    [InlineData("/data/%252e%252e/Blog.dll", "/volume1/data/%252e%252e/Blog.dll")]
+    [InlineData("data/blog/Blog.dll", "/volume1/data/blog/Blog.dll")]
+    [InlineData("/Blog.dll", "/volume1/Blog.dll")]
+    public async Task GrantSiteAccessAsync_RefusesPathsItCannotTrust_WithoutCallingDsm(string applicationPath, string realPath)
     {
-        // Arrange
+        // Both paths come from the browser: the share path must be the real path's tail, inside a shared folder
         var service = CreateService();
 
-        // Act
-        var result = await service.SetHttpGroupPermissionsAsync("/volume1/%252e%252e/etc/passwd", isDirectory: false);
+        var result = await service.GrantSiteAccessAsync(new(applicationPath, realPath));
 
-        // Assert
         Assert.False(result.Success);
         Assert.Empty(_dsmSession.ExecuteCalls);
     }
@@ -339,6 +387,7 @@ public class FileSystemServiceTests
         readonly Dictionary<string, Queue<object?>> _sequences = new();
 #pragma warning restore IDE0028
         public List<string> ExecuteCalls { get; } = [];
+        public List<IApiParameters> Parameters { get; } = [];
 
         public void SetupExecuteAsync<T>(T? response) where T : IApiResponse
         {
@@ -367,6 +416,7 @@ public class FileSystemServiceTests
 
             var key = typeof(R).Name;
             ExecuteCalls.Add($"{parameters.Name}/{parameters.Method}");
+            Parameters.Add(parameters);
 
             if (_sequences.TryGetValue(key, out var queue) && queue!.Count > 0)
             {

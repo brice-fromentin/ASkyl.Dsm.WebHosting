@@ -553,20 +553,11 @@
   <data name="Error_InstanceNotFound" xml:space="preserve">
     <value>Instance not found</value>
   </data>
-  <data name="Error_NoApplicationPath" xml:space="preserve">
-    <value>No application path configured</value>
-  </data>
   <data name="Error_SiteNotFound" xml:space="preserve">
     <value>Site with ID '{0}' not found</value>
   </data>
-  <data name="Error_FailedToSetACL" xml:space="preserve">
-    <value>Failed to set ACL permissions for {0}: Success={1}, ErrorCode={2}</value>
-  </data>
   <data name="Error_SessionExpired" xml:space="preserve">
     <value>Session expired on server</value>
-  </data>
-  <data name="Error_FailedToSetPermissions" xml:space="preserve">
-    <value>Failed to set permissions: {0}</value>
   </data>
   <data name="Error_FailedToCreateReverseProxy" xml:space="preserve">
     <value>Failed to create reverse proxy: {0}</value>
@@ -722,4 +713,13 @@
     <value>Information</value>
   </data>
 
+  <data name="Error_SiteAccessGrantFailed" xml:space="preserve">
+    <value>DSM did not grant the http group access to {0}. Grant it in File Station: open the properties of the shared folder that holds it and give the http group Read access.</value>
+  </data>
+  <data name="WebsiteConfig_GrantAccessQuestion" xml:space="preserve">
+    <value>The package cannot read {0}. Let DSM's http group read the folder {1}, and pass through the folders above it in the shared folder '{2}'? Nothing else in '{2}' becomes readable.</value>
+  </data>
+  <data name="Loading_GrantingAccess" xml:space="preserve">
+    <value>Granting access...</value>
+  </data>
 </root>

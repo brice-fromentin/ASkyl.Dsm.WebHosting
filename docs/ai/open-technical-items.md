@@ -111,38 +111,6 @@ never adopted it.
 The disposable DSM this entry and the two above waited for now exists (AGENTS.md §13). The two above were
 measured on it on 2026-11-02; this one was not, since no failing command was provoked.
 
-### The `http` group permission a new site depends on is never applied
-
-`Ui/Services/FileSystemService.cs:115` — `SetHttpGroupPermissionsAsync` sends `SYNO.Core.ACL set` with the
-site folder's real path (`/volume1/...`) in `file_path`, `files` **and** `dirPaths`. DSM answers success with
-a task id, and the task changes nothing. Measured on the Virtual DSM 7.2.2 on 2026-11-02, through the package
-and replayed from outside through DSM's name, on a folder copied over SSH (Linux permissions) and on one
-uploaded through File Station (inherited ACL): the ACL was the same before and after, and the package user
-was refused the application's DLL. Not a regression of loopback mode — the call predates it and fails the same
-way through DSM's name.
-
-What the user saw until 0.8.2: the site was created without a message, then showed as stopped with no framework
-and never started; the log said `ApplicationBinaryNotFound` (1600004) for a file that exists but cannot be read.
-Since 0.8.2, adding or updating a site whose application this process cannot open is **refused before any side
-effect**, with a message naming the remedy (`WebSiteHostingService.ValidateApplicationReadable`, event 1800032).
-The check opens the file rather than reading ACLs: sites run under this process's account, so the open measures
-their effective access — folder ACL, traversal of the shared folder, Linux mode — in one call. Only a refusal
-blocks; a missing file passes as before, which local runs need. The grant itself is still the user's to make
-(the wiki's *Hosting a Website*, step 3, measured on the Virtual DSM: Read for `http` on the shared folder), so this
-entry stays open. Sites work only where the `http` group can already read the folder: a shared folder it is
-granted, or Linux permissions that let others read.
-
-Three measured facts constrain the fix (details in `dsm-api-notes.md`):
-
-1. `dirPaths` must be the share path (`/<share>/<folder>`): the same call then applies the entry.
-2. `rules` replaces the folder's **explicit** entries — one added by hand was gone after the call. Correcting
-   `dirPaths` alone would start deleting users' own permissions on their site folders: the call has to read
-   the folder's ACL and send it back with the `http` entry added, as DSM's own permission editor does.
-3. A folder entry is not enough under a shared folder that denies traversal: the package user, a member of
-   `http`, could not enter a share only administrators may traverse, and read the DLL only once a traverse
-   entry was added at the share root and the folder in between. Granting traversal, or telling the user to, is
-   a decision.
-
 ### Editing a site's ports, host name or protocol fails
 
 `Ui/Services/ReverseProxyManagerService.cs:74` — `UpdateAsync` finds the DSM rule with
