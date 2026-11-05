@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
@@ -28,7 +29,6 @@ public class WebSiteHostingServiceTests : IDisposable
     readonly Mock<IAssemblyRuntimeDetector> _assemblyRuntimeDetector;
     readonly Mock<IVersionsDetectorService> _versionsDetector;
     readonly Mock<ILocalizer> _localizer;
-    readonly Mock<IFileSystemService> _fileSystemService;
     readonly Mock<IReverseProxyManagerService> _reverseProxyManager;
     readonly string _tempDir;
 
@@ -46,7 +46,6 @@ public class WebSiteHostingServiceTests : IDisposable
         _assemblyRuntimeDetector = new Mock<IAssemblyRuntimeDetector>();
         _versionsDetector = new Mock<IVersionsDetectorService>();
         _localizer = new Mock<ILocalizer>();
-        _fileSystemService = new Mock<IFileSystemService>();
         _reverseProxyManager = new Mock<IReverseProxyManagerService>();
 
         // CreateLogger<T>() wraps factory.CreateLogger(name); an unmocked factory produces a null-backed
@@ -66,11 +65,6 @@ public class WebSiteHostingServiceTests : IDisposable
         _serviceProvider.Setup(p => p.GetService(It.IsAny<Type>()))
             .Returns((Type type) =>
             {
-                if (type == typeof(IFileSystemService))
-                {
-                    return _fileSystemService.Object;
-                }
-
                 if (type == typeof(IReverseProxyManagerService))
                 {
                     return _reverseProxyManager.Object;
@@ -138,8 +132,6 @@ public class WebSiteHostingServiceTests : IDisposable
 
         _processRunner.Setup(r => r.Start(It.IsAny<ProcessStartInfo>())).Returns(handle.Object);
 
-        _fileSystemService.Setup(f => f.SetHttpGroupPermissionsAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ApiResult.CreateSuccess());
         _reverseProxyManager.Setup(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         _reverseProxyManager.Setup(r => r.UpdateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
@@ -321,7 +313,6 @@ public class WebSiteHostingServiceTests : IDisposable
 
         var services = new ServiceCollection();
 
-        services.AddScoped<IFileSystemService, AsyncOnlyFileSystemService>();
         services.AddScoped<IReverseProxyManagerService, AsyncOnlyReverseProxyManagerService>();
 
         await using var provider = services.BuildServiceProvider();
@@ -338,23 +329,6 @@ public class WebSiteHostingServiceTests : IDisposable
     /// <summary>
     /// Mirrors DsmSession: disposable only asynchronously, so a scope holding it cannot be disposed
     /// synchronously.
-    /// </summary>
-    sealed class AsyncOnlyFileSystemService : IFileSystemService, IAsyncDisposable
-    {
-        public Task<SharedFoldersResult> GetSharedFoldersAsync(CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<DirectoryContentsResult> GetDirectoryContentsAsync(string path, bool directoryOnly, CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory, CancellationToken cancellationToken = default)
-            => Task.FromResult(ApiResult.CreateSuccess());
-
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-    }
-
-    /// <summary>
-    /// Same shape, for the scopes the reverse proxy helpers open.
     /// </summary>
     sealed class AsyncOnlyReverseProxyManagerService : IReverseProxyManagerService, IAsyncDisposable
     {
@@ -538,10 +512,45 @@ public class WebSiteHostingServiceTests : IDisposable
 
         Assert.False(result.Success);
         Assert.Equal(expected, result.Message);
-        _fileSystemService.Verify(f => f.SetHttpGroupPermissionsAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
         _reverseProxyManager.Verify(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // The package runs on Linux only; Windows has no Unix file mode to close the folder with
+    [Fact]
+    [UnsupportedOSPlatform("windows")]
+    public async Task AddWebsiteAsync_RefusesAnApplicationThisProcessCannotRead_WithoutSideEffects()
+    {
+        // Arrange — a folder this process may not enter, as a shared folder closed to DSM's http group is to the package
+        var service = CreateService();
+        var config = CreateRunnableConfiguration();
+        var closed = Path.Combine(_tempDir, "closed");
+        Directory.CreateDirectory(closed);
+        config.ApplicationRealPath = Path.Combine(closed, "MyApp.dll");
+        File.WriteAllText(config.ApplicationRealPath, String.Empty);
+        File.SetUnixFileMode(closed, UnixFileMode.None);
+        _localizer.Setup(l => l[LK.Error.ApplicationNotReadable, It.IsAny<object>()]).Returns("Application not readable");
+
+        try
+        {
+            // The precondition the scenario needs: under root, the mode would not close the folder
+            Assert.Throws<UnauthorizedAccessException>(() => File.OpenRead(config.ApplicationRealPath).Dispose());
+
+            // Act
+            var result = await service.AddWebsiteAsync(config);
+
+            // Assert — refused before the reverse-proxy rule, so nothing is left behind, and marked so the dialog can
+            // offer to grant the access
+            Assert.False(result.Success);
+            Assert.Equal("Application not readable", result.Message);
+            Assert.Equal(ApiErrorCode.ApplicationNotReadable, result.ErrorCode);
+            _reverseProxyManager.Verify(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+        finally
+        {
+            // Reopened so Dispose can delete the temporary directory
+            File.SetUnixFileMode(closed, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+    }
 
     [Fact]
     public async Task AddWebsiteAsync_ReturnsFailure_WhenEnvVarKeyTooLong()
@@ -628,8 +637,6 @@ public class WebSiteHostingServiceTests : IDisposable
             HostName = "test.local"
         };
 
-        _fileSystemService.Setup(f => f.SetHttpGroupPermissionsAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ApiResult.CreateSuccess());
         _reverseProxyManager.Setup(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         _assemblyRuntimeDetector.Setup(d => d.Detect(config.ApplicationRealPath))
@@ -658,8 +665,6 @@ public class WebSiteHostingServiceTests : IDisposable
             HostName = "test.local"
         };
 
-        _fileSystemService.Setup(f => f.SetHttpGroupPermissionsAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ApiResult.CreateSuccess());
         _reverseProxyManager.Setup(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         _assemblyRuntimeDetector.Setup(d => d.Detect(config.ApplicationRealPath))
@@ -688,8 +693,6 @@ public class WebSiteHostingServiceTests : IDisposable
             HostName = "test.local"
         };
 
-        _fileSystemService.Setup(f => f.SetHttpGroupPermissionsAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(ApiResult.CreateSuccess());
         _reverseProxyManager.Setup(r => r.CreateAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         _assemblyRuntimeDetector.Setup(d => d.Detect(config.ApplicationRealPath))

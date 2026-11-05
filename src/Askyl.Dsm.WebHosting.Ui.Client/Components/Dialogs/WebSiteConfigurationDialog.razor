@@ -1,3 +1,4 @@
+@using Askyl.Dsm.WebHosting.Constants.DSM.FileStation
 @using Askyl.Dsm.WebHosting.Constants.Network
 @using Askyl.Dsm.WebHosting.Constants.UI
 @using Askyl.Dsm.WebHosting.Data.Domain.FileSystem
@@ -11,6 +12,7 @@
 @using Askyl.Dsm.WebHosting.Ui.Client.Components.Patterns.WorkingState
 @inject IDialogService DialogService
 @inject IWebSiteHostingService HostingService
+@inject IFileSystemService FileSystemService
 @inject ILocalizer localizer
 
 <LoadingOverlay WorkingState="@this" />
@@ -153,14 +155,24 @@
                 return;
             }
 
-            WebSiteInstanceResult result;
+            var result = await SaveAsync();
 
-            // Ended before any message below: kept up, the overlay came over them once its counter showed
-            using (this.CreateWorkingState(localizer[IsEditMode ? LK.Loading.UpdatingWebsite : LK.Loading.CreatingWebsite, Configuration.Name]))
+            // The package cannot read the application: offer, once, the least access the site needs, then try again.
+            // Declined, or still unreadable after it, the refusal below is what the user reads
+            if (result.ErrorCode == ApiErrorCode.ApplicationNotReadable)
             {
-                result = IsEditMode
-                    ? await HostingService.UpdateWebsiteAsync(Configuration)
-                    : await HostingService.AddWebsiteAsync(Configuration);
+                var granted = await OfferSiteAccessAsync();
+
+                if (granted is { Success: false })
+                {
+                    await DialogService.ShowErrorTextAsync(granted.Message ?? localizer[LK.Error.OperationFailed]);
+                    return;
+                }
+
+                if (granted is not null)
+                {
+                    result = await SaveAsync();
+                }
             }
 
             if (!result.Success)
@@ -190,6 +202,46 @@
     }
 
     private async Task CancelAsync() => await Dialog.CancelAsync();
+
+    private async Task<WebSiteInstanceResult> SaveAsync()
+    {
+        // Ended before any message: kept up, the overlay came over them once its counter showed
+        using (this.CreateWorkingState(localizer[IsEditMode ? LK.Loading.UpdatingWebsite : LK.Loading.CreatingWebsite, Configuration.Name]))
+        {
+            return IsEditMode
+                ? await HostingService.UpdateWebsiteAsync(Configuration)
+                : await HostingService.AddWebsiteAsync(Configuration);
+        }
+    }
+
+    /// <summary>
+    /// Asks before touching a shared folder's permissions. Null when the user declines, otherwise DSM's outcome.
+    /// </summary>
+    private async Task<ApiResult?> OfferSiteAccessAsync()
+    {
+        var folders = Configuration.ApplicationPath.Split(FileStationDefaults.PathSeparator, StringSplitOptions.RemoveEmptyEntries)[..^1];
+
+        // A dll at the root of its share has the share itself for its folder: nothing narrow to offer, so no question
+        // that would promise it; the refusal tells the user what to grant in File Station
+        if (folders.Length < 2)
+        {
+            return null;
+        }
+
+        var siteFolder = FileStationDefaults.PathSeparator + String.Join(FileStationDefaults.PathSeparator, folders);
+        var question = localizer[LK.WebsiteConfig.GrantAccessQuestion, Configuration.ApplicationPath, siteFolder, folders[0]];
+        var answer = await DialogService.ShowConfirmationTextAsync(question);
+
+        if (answer.Cancelled)
+        {
+            return null;
+        }
+
+        using (this.CreateWorkingState(localizer[LK.Loading.GrantingAccess]))
+        {
+            return await FileSystemService.GrantSiteAccessAsync(new(Configuration.ApplicationPath, Configuration.ApplicationRealPath));
+        }
+    }
 
     private async Task ShowAspNetReleasesDialogAsync(string channel)
     {

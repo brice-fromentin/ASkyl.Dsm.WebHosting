@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.DSM.API;
 using Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
@@ -93,75 +94,175 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
         }
     }
 
-    public async Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory, CancellationToken cancellationToken = default)
+    public async Task<ApiResult> GrantSiteAccessAsync(SiteAccessRequest request, CancellationToken cancellationToken = default)
     {
-        logger.SettingHttpGroupPermissions(path);
+        var applicationPath = request.ApplicationPath;
+        var realPath = request.ApplicationRealPath;
 
-        // Validate path to prevent path traversal attacks
-        if (!IsPathValid(path))
+        // Both come from the browser: the share path must be the real path's own tail, so only the volume differs
+        if (!IsPathValid(applicationPath) || !IsPathValid(realPath)
+            || applicationPath[0] != FileStationDefaults.PathSeparator || !realPath.EndsWith(applicationPath, StringComparison.Ordinal))
         {
-            logger.PathValidationFailed(path);
+            logger.PathValidationFailed(applicationPath);
             return ApiResult.CreateFailure(localizer[LK.Validation.PathTraversalDetected]);
         }
 
-        var targetPath = isDirectory ? path : Path.GetDirectoryName(path) ?? path;
+        var volume = realPath[..^applicationPath.Length];
+        var folders = applicationPath.Split(FileStationDefaults.PathSeparator, StringSplitOptions.RemoveEmptyEntries)[..^1];
 
-        logger.TargetPathInfo(targetPath, isDirectory);
+        // At least the share and a folder in it: with the dll at the share's root, the site's folder is the share
+        // itself, and Read there would open every file in it — the opposite of what the user agreed to
+        if (folders.Length < 2)
+        {
+            logger.PathValidationFailed(applicationPath);
+            return ApiResult.CreateFailure(localizer[LK.Validation.PathTraversalDetected]);
+        }
+
+        try
+        {
+            // Every folder is read before any is written, so a folder this method will not change leaves the others as
+            // they were. The shared folder first, the site's own folder last
+            List<(string RealPath, string SharePath, CoreAclGetData Acl)> path = [];
+
+            for (var depth = 1; depth <= folders.Length; depth++)
+            {
+                var sharePath = FileStationDefaults.PathSeparator + String.Join(FileStationDefaults.PathSeparator, folders[..depth]);
+                var current = await dsmSession.ExecuteAsync<CoreAclGetResponse>(new CoreAclGetParameters(new() { FilePath = volume + sharePath, Type = AclConstants.GetTypeAll, IncludeNonameRules = true }), cancellationToken);
+
+                if (current?.Success != true || current.Data is null)
+                {
+                    logger.SiteAccessRefused(sharePath, ApiConstants.MethodGet, current?.Error?.Code);
+                    return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, applicationPath]);
+                }
+
+                // Under Linux permissions there is no ACL to add to: writing one converts the folder, with entries DSM
+                // derives from its mode bits (root's ownership came back as the admin account's, measured), while the
+                // files in it keep their modes, so the dll stays unreadable anyway
+                if (!current.Data.IsAcl)
+                {
+                    logger.SiteFolderNotAcl(sharePath);
+                    return ApiResult.CreateFailure(localizer[LK.Error.SiteFolderNotAcl, applicationPath]);
+                }
+
+                path.Add((volume + sharePath, sharePath, current.Data));
+            }
+
+            for (var i = 0; i < path.Count; i++)
+            {
+                if (!await GrantHttpAccessAsync(path[i].RealPath, path[i].SharePath, path[i].Acl, i == path.Count - 1, cancellationToken))
+                {
+                    return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, applicationPath]);
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.SiteAccessGrantError(ex, applicationPath);
+            return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, applicationPath]);
+        }
+
+        return ApiResult.CreateSuccess();
+    }
+
+    private static readonly CoreAclRule HttpTraverseRule = new()
+    {
+        OwnerType = AclConstants.OwnerTypeGroup,
+        OwnerName = AclConstants.OwnerNameHttp,
+        PermissionType = AclConstants.PermissionTypeAllow,
+        Permission = new() { ExeFile = true },
+        Inherit = new() { ThisFolder = true }
+    };
+
+    private static readonly CoreAclRule HttpReadRule = HttpTraverseRule with
+    {
+        Permission = new() { ReadData = true, ExeFile = true, ReadAttr = true, ReadExtAttr = true, ReadPerm = true },
+        Inherit = new() { ThisFolder = true, ChildFiles = true, ChildFolders = true, AllDescendants = true }
+    };
+
+    /// <summary>
+    /// Adds one http entry to a folder the way DSM's own permission editor does: send every explicit entry of the ACL
+    /// just read back with the new one (<c>set</c> replaces them all), then wait for the task DSM answers with.
+    /// </summary>
+    private async Task<bool> GrantHttpAccessAsync(string realPath, string sharePath, CoreAclGetData current, bool isSiteFolder, CancellationToken cancellationToken)
+    {
+        List<CoreAclRule> explicitRules = [.. current.Acl.Where(r => r.Level == AclConstants.ExplicitLevel).Select(r => r with { Level = null })];
+        var httpRule = explicitRules.FirstOrDefault(r => r.OwnerType == AclConstants.OwnerTypeGroup && r.OwnerName == AclConstants.OwnerNameHttp);
+
+        // An http entry someone set is theirs: replacing it could take away what they gave, or lift what they denied.
+        // The exception is this method's own passage-only entry, on a folder that now holds a site and needs Read
+        var ownPassage = httpRule is not null && httpRule.PermissionType == HttpTraverseRule.PermissionType
+            && httpRule.Permission == HttpTraverseRule.Permission && httpRule.Inherit == HttpTraverseRule.Inherit;
+
+        if (httpRule is not null && !(isSiteFolder && ownPassage))
+        {
+            logger.SiteAccessLeftAlone(sharePath);
+            return true;
+        }
 
         var aclSet = new CoreAclSet
         {
-            FilePath = targetPath,
-            Files = targetPath,
-            DirPaths = targetPath,
+            FilePath = realPath,
+            Files = realPath,
+            DirPaths = sharePath,
             ChangeAcl = true,
-            Inherited = true,
+            Inherited = current.IsInherited,
             AclRecur = false,
-            Rules =
-            [
-                new()
-                {
-                    OwnerType = ReverseProxyConstants.AclOwnerTypeGroup,
-                    OwnerName = ReverseProxyConstants.AclOwnerNameHttp,
-                    PermissionType = ReverseProxyConstants.AclPermissionTypeAllow,
-                    Permission = new()
-                    {
-                        ReadData = true,
-                        WriteData = true,
-                        ExeFile = true,
-                        AppendData = true,
-                        Delete = true,
-                        DeleteSub = true,
-                        ReadAttr = true,
-                        WriteAttr = true,
-                        ReadExtAttr = true,
-                        WriteExtAttr = true,
-                        ReadPerm = true,
-                        ChangePerm = false,
-                        TakeOwnership = false
-                    },
-                    Inherit = new()
-                    {
-                        ChildFiles = true,
-                        ChildFolders = true,
-                        ThisFolder = true,
-                        AllDescendants = true
-                    }
-                }
-            ]
+            Rules = [.. explicitRules.Where(r => !ReferenceEquals(r, httpRule)), isSiteFolder ? HttpReadRule : HttpTraverseRule]
         };
 
-        var parameters = new CoreAclSetParameters(aclSet);
+        var response = await dsmSession.ExecuteAsync<CoreAclSetResponse>(new CoreAclSetParameters(aclSet), cancellationToken);
 
-        var response = await dsmSession.ExecuteAsync<CoreAclSetResponse>(parameters, cancellationToken);
-
-        if (response?.Success != true || response.Data?.TaskId is null)
+        if (response?.Success != true || String.IsNullOrEmpty(response.Data?.TaskId))
         {
-            logger.FailedToSetAclPermissions(targetPath, response?.Success, response?.Error?.Code);
-            return ApiResult.CreateFailure(localizer[LK.Error.FailedToSetACL, path, response?.Success ?? false, response?.Error?.Code ?? 0]);
+            logger.SiteAccessRefused(sharePath, ApiConstants.MethodSet, response?.Error?.Code);
+            return false;
         }
 
-        logger.AclPermissionsSet(targetPath, response.Data.TaskId);
-        return ApiResult.CreateSuccess();
+        if (!await WaitForAclTaskAsync(response.Data.TaskId, cancellationToken))
+        {
+            logger.AclTaskTimedOut(sharePath, AclConstants.TaskTimeoutSeconds);
+            return false;
+        }
+
+        logger.SiteAccessGranted(sharePath, isSiteFolder);
+        return true;
+    }
+
+    /// <summary>
+    /// Polls a <c>set</c> task until DSM reports it finished, then releases it as DSM's editor does.
+    /// </summary>
+    private async Task<bool> WaitForAclTaskAsync(string taskId, CancellationToken cancellationToken)
+    {
+        var task = new CoreAclTask { TaskId = taskId };
+        var started = Stopwatch.GetTimestamp();
+        var finished = false;
+
+        while (!finished && Stopwatch.GetElapsedTime(started).TotalSeconds < AclConstants.TaskTimeoutSeconds)
+        {
+            var status = await dsmSession.ExecuteAsync<CoreAclStatusResponse>(new CoreAclStatusParameters(task), cancellationToken);
+            finished = status?.Data?.Finished == true;
+
+            if (!finished)
+            {
+                await Task.Delay(AclConstants.TaskPollIntervalMilliseconds, cancellationToken);
+            }
+        }
+
+        try
+        {
+            await dsmSession.ExecuteSimpleAsync(new CoreAclStopParameters(task), cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Releasing the task is housekeeping: the ACL is already applied, or never will be
+            logger.AclTaskReleaseFailed(ex, taskId);
+        }
+
+        return finished;
     }
 
     private async Task<List<FileStationShare>> ExecuteFileStationListShareAsync(CancellationToken cancellationToken)

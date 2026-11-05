@@ -21,7 +21,7 @@ static class LogEventIds
 
     /// <summary>FileSystemService.</summary>
     public const int FileServiceBase = 1100000;
-    public const int FileServiceLast = 1100012;
+    public const int FileServiceLast = 1100019;
 
     /// <summary>FileManagerService.</summary>
     public const int FileManagerBase = 1200000;
@@ -65,7 +65,7 @@ static class LogEventIds
 
     /// <summary>WebSiteHostingService.</summary>
     public const int WebsiteHostingBase = 1800000;
-    public const int WebsiteHostingLast = 1800031;
+    public const int WebsiteHostingLast = 1800032;
 
     #endregion
 

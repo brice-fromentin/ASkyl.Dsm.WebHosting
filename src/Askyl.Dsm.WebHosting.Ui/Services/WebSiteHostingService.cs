@@ -87,16 +87,9 @@ public class WebSiteHostingService(
 
         try
         {
-            // STEP 1: Set HTTP group permissions BEFORE adding website (CRITICAL - must succeed)
-            var permissionResult = await SetHttpGroupPermissionsForApplicationAsync(configuration, cancellationToken);
-
-            if (!permissionResult.Success)
-            {
-                logger.PermissionSettingFailedAdd(configuration.Name, permissionResult.Message);
-                return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToSetPermissions, permissionResult.Message ?? localizer[LK.Error.Unknown]]);
-            }
-
-            // STEP 2: Create reverse proxy rule (CRITICAL - must succeed)
+            // STEP 1: Create reverse proxy rule (CRITICAL - must succeed). Validation has already proven the
+            // application readable; the access it takes was granted beforehand, with the user's consent
+            // (IFileSystemService.GrantSiteAccessAsync)
             var proxyResult = await CreateReverseProxyRuleAsync(configuration, cancellationToken);
 
             if (!proxyResult.Success)
@@ -105,14 +98,14 @@ public class WebSiteHostingService(
                 return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToCreateReverseProxy, proxyResult.Message ?? localizer[LK.Error.Unknown]]);
             }
 
-            // STEP 3: Add website configuration (persistent storage)
+            // STEP 2: Add website configuration (persistent storage)
             try
             {
                 await configService.AddSiteAsync(configuration, cancellationToken);
             }
             catch
             {
-                // The rule created at step 2 lives in DSM, which this application never lists, so one
+                // The rule created at step 1 lives in DSM, which this application never lists, so one
                 // left behind is invisible from here and has to be removed by hand. A duplicate name
                 // reaches this every time: AddSiteAsync rejects it, and the rule was already created.
                 // Compensation stops at persistence on purpose — once the configuration is on disk,
@@ -124,10 +117,10 @@ public class WebSiteHostingService(
                 throw;
             }
 
-            // STEP 4: Create instance
+            // STEP 3: Create instance
             var instance = await AddInstanceAsync(configuration);
 
-            // STEP 5: Detect framework from assembly and warn if incompatible
+            // STEP 4: Detect framework from assembly and warn if incompatible
             var result = AttachRuntimeInfo(instance, configuration.ApplicationRealPath);
 
             return result;
@@ -177,16 +170,7 @@ public class WebSiteHostingService(
 
         try
         {
-            // STEP 1: ALWAYS set HTTP group permissions (CRITICAL - must succeed, allows easy repairs)
-            var permissionResult = await SetHttpGroupPermissionsForApplicationAsync(configuration, cancellationToken);
-
-            if (!permissionResult.Success)
-            {
-                logger.PermissionSettingFailedUpdate(configuration.Name, permissionResult.Message);
-                return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToSetPermissions, permissionResult.Message ?? localizer[LK.Error.Unknown]]);
-            }
-
-            // STEP 2: Update reverse proxy rule (CRITICAL - must succeed)
+            // STEP 1: Update reverse proxy rule (CRITICAL - must succeed)
             var proxyResult = await UpdateReverseProxyRuleAsync(configuration, cancellationToken);
 
             if (!proxyResult.Success)
@@ -195,14 +179,14 @@ public class WebSiteHostingService(
                 return WebSiteInstanceResult.CreateFailure(localizer[LK.Error.FailedToUpdateReverseProxy, proxyResult.Message ?? localizer[LK.Error.Unknown]]);
             }
 
-            // STEP 3: Update configuration (persistent storage)
+            // STEP 2: Update configuration (persistent storage)
             try
             {
                 await configService.UpdateSiteAsync(configuration, cancellationToken);
             }
             catch
             {
-                // Step 2 already pointed DSM at the new configuration. Leaving it there would route
+                // Step 1 already pointed DSM at the new configuration. Leaving it there would route
                 // traffic by a configuration that is not the one on disk, and a restart would reload
                 // the old one without touching DSM.
                 await UpdateReverseProxyRuleAsync(previousConfiguration, CancellationToken.None);
@@ -210,10 +194,10 @@ public class WebSiteHostingService(
                 throw;
             }
 
-            // STEP 4: Update instance
+            // STEP 3: Update instance
             await UpdateInstanceAsync(entry, configuration);
 
-            // STEP 5: Detect framework from assembly and warn if incompatible
+            // STEP 4: Detect framework from assembly and warn if incompatible
             return AttachRuntimeInfo(existingInstance, configuration.ApplicationRealPath);
         }
         catch (OperationCanceledException)
@@ -545,35 +529,6 @@ public class WebSiteHostingService(
 
     #endregion
 
-    #region Permission Management
-
-    /// <summary>
-    /// Sets HTTP group permissions for the application path in the configuration.
-    /// </summary>
-    private async Task<ApiResult> SetHttpGroupPermissionsForApplicationAsync(WebSiteConfiguration configuration, CancellationToken cancellationToken)
-    {
-        if (String.IsNullOrEmpty(configuration.ApplicationRealPath))
-        {
-            logger.NoApplicationRealPath(configuration.Name);
-            return ApiResult.CreateFailure(localizer[LK.Error.NoApplicationPath]);
-        }
-
-        // Determine if the target is a directory (if ApplicationPath ends with .dll, set permissions on parent directory)
-        var isDirectory = !configuration.ApplicationRealPath.EndsWith(WebSiteConstants.DllFileExtension, StringComparison.OrdinalIgnoreCase);
-
-        logger.SettingHttpGroupPermissions(configuration.Name, configuration.ApplicationRealPath, isDirectory);
-
-        // Async scope, here and in every helper below: the scoped DSM services resolved inside depend on
-        // IDsmSession, which implements IAsyncDisposable and not IDisposable. Disposing such a scope
-        // synchronously throws, after the DSM call has already been made — so the work happened and the
-        // caller was told it failed.
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var fileSystemService = scope.ServiceProvider.GetRequiredService<IFileSystemService>();
-        return await fileSystemService.SetHttpGroupPermissionsAsync(configuration.ApplicationRealPath, isDirectory, cancellationToken);
-    }
-
-    #endregion
-
     #region Reverse Proxy Management
 
     /// <summary>
@@ -682,7 +637,36 @@ public class WebSiteHostingService(
     {
         var validation = await configurationValidator.ValidateAsync(configuration, cancellationToken);
 
-        return validation.IsValid ? null : WebSiteInstanceResult.CreateFailure(validation.ToMessage());
+        return validation.IsValid ? ValidateApplicationReadable(configuration) : WebSiteInstanceResult.CreateFailure(validation.ToMessage());
+    }
+
+    /// <summary>
+    /// Refuses an application this process cannot open: sites run under its account, so they could not either.
+    /// Opening the file measures the effective access — the folder's ACL, traversal of the shared folder above it and
+    /// Linux permissions alike — where reading DSM's ACLs would have to reimplement all three.
+    /// </summary>
+    private WebSiteInstanceResult? ValidateApplicationReadable(WebSiteConfiguration configuration)
+    {
+        if (String.IsNullOrEmpty(configuration.ApplicationRealPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            File.OpenRead(configuration.ApplicationRealPath).Dispose();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            logger.ApplicationNotReadable(configuration.Name, configuration.ApplicationRealPath);
+            return new(false, localizer[LK.Error.ApplicationNotReadable, configuration.ApplicationPath], null, ApiErrorCode.ApplicationNotReadable);
+        }
+        catch (IOException)
+        {
+            // A missing file keeps the behaviour it always had: a local run has no NAS path to find
+        }
+
+        return null;
     }
 
     /// <summary>
