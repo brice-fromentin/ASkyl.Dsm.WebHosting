@@ -101,6 +101,12 @@ Measured details:
   (`read_data`, `exe_file`, `read_attr`, `read_ext_attr`, `read_perm`, inherited by everything) on the site's
   folder. The application then reads its dll and lists its folder, and can neither list the shared folder nor the
   folder in between, nor read a file in another folder of the share.
+- **A folder under Linux permissions** (its ACL removed with `synoacltool -del`, as a copy over SSH leaves it):
+  `get` answers `is_acl: false` and lists entries derived from the mode bits — a root-owned `750` folder came back
+  as `user:admin` rwx and `group:administrators` rx, `admin` being the real account of uid 1024. Writing that list
+  back with `set` converted the folder to an ACL that gave the `admin` account root's rights, and the files inside
+  kept their Linux modes, so the dll stayed unreadable (measured 2026-11-05). The grant therefore reads every
+  folder first and changes none when one of them is not under ACL.
 
 ## Error codes
 

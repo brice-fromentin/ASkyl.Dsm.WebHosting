@@ -243,6 +243,7 @@ public static class LK
         public const string ApplicationBinaryNotFound = "Error_ApplicationBinaryNotFound";
         public const string ApplicationNotReadable = "Error_ApplicationNotReadable";
         public const string SiteAccessGrantFailed = "Error_SiteAccessGrantFailed";
+        public const string SiteFolderNotAcl = "Error_SiteFolderNotAcl";
         public const string RuntimeNotInstalled = "Error_RuntimeNotInstalled";
         public const string RuntimeDetectionFailed = "Error_RuntimeDetectionFailed";
         public const string InstanceNotFound = "Error_InstanceNotFound";

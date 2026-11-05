@@ -14,4 +14,10 @@ public class CoreAclGetData
 
     [JsonPropertyName("is_inherited")]
     public bool IsInherited { get; set; }
+
+    /// <summary>
+    /// False for a folder under Linux permissions: <c>acl</c> then lists entries DSM derives from its mode bits.
+    /// </summary>
+    [JsonPropertyName("is_acl")]
+    public bool IsAcl { get; set; }
 }

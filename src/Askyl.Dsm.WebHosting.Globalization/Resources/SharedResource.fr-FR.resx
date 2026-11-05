@@ -542,7 +542,7 @@
     <value>Binaire de l'application introuvable : {0}</value>
   </data>
   <data name="Error_ApplicationNotReadable" xml:space="preserve">
-    <value>Le paquet ne peut pas lire {0} : le groupe http de DSM n'y a pas accès. Dans File Station, ouvrez les propriétés du dossier partagé qui le contient, donnez au groupe http l'accès en lecture, puis réessayez.</value>
+    <value>Le paquet ne peut pas lire {0} : le groupe http de DSM n'y a pas accès. Dans File Station, donnez au groupe http « Lire » sur le dossier de l'application, et seulement « Traverser les dossiers/Exécuter les fichiers » sur chaque dossier au-dessus, jusqu'à son dossier partagé. Une application à la racine d'un dossier partagé exigerait que tout ce dossier soit lisible : placez-la d'abord dans un dossier à elle.</value>
   </data>
   <data name="Error_RuntimeNotInstalled" xml:space="preserve">
     <value>Requiert .NET {0}, mais ce runtime n'est pas installé</value>
@@ -714,12 +714,15 @@
   </data>
 
   <data name="Error_SiteAccessGrantFailed" xml:space="preserve">
-    <value>DSM n'a pas accordé l'accès à {0} au groupe http. Accordez-le dans File Station : ouvrez les propriétés du dossier partagé qui le contient et donnez au groupe http l'accès en lecture.</value>
+    <value>DSM n'a pas accordé l'accès à {0} au groupe http. Accordez-le dans File Station : « Lire » sur le dossier de l'application, et seulement « Traverser les dossiers/Exécuter les fichiers » sur chaque dossier au-dessus, jusqu'à son dossier partagé.</value>
   </data>
   <data name="WebsiteConfig_GrantAccessQuestion" xml:space="preserve">
     <value>Le paquet ne peut pas lire {0}. Autoriser le groupe http de DSM à lire le dossier {1} et à traverser les dossiers au-dessus de lui dans le dossier partagé « {2} » ? Rien d'autre dans « {2} » ne devient lisible.</value>
   </data>
   <data name="Loading_GrantingAccess" xml:space="preserve">
     <value>Attribution de l'accès...</value>
+  </data>
+  <data name="Error_SiteFolderNotAcl" xml:space="preserve">
+    <value>{0} se trouve dans un dossier aux permissions Linux plutôt qu'à celles de DSM, comme des fichiers copiés par SSH ; cette application ne les convertit pas. Copiez l'application avec File Station dans un dossier créé depuis File Station, puis réessayez.</value>
   </data>
 </root>

@@ -262,7 +262,7 @@ public class FileSystemServiceTests
     };
 
     static CoreAclGetResponse Acl(bool isInherited, params CoreAclRule[] entries)
-        => new() { Success = true, Data = new() { IsInherited = isInherited, Acl = [.. entries] } };
+        => new() { Success = true, Data = new() { IsAcl = true, IsInherited = isInherited, Acl = [.. entries] } };
 
     void SetupAcls(params CoreAclGetResponse[] folders)
     {
@@ -270,6 +270,7 @@ public class FileSystemServiceTests
         _dsmSession.SetupExecuteAsync(new CoreAclSetResponse { Success = true, Data = new() { TaskId = "task" } });
         _dsmSession.SetupExecuteAsync(new CoreAclStatusResponse { Success = true, Data = new() { Finished = true } });
         _localizer.Setup(l => l[LK.Error.SiteAccessGrantFailed, It.IsAny<object>()]).Returns("Grant failed");
+        _localizer.Setup(l => l[LK.Error.SiteFolderNotAcl, It.IsAny<object>()]).Returns("Linux permissions");
     }
 
     List<CoreAclSet> SetCalls() => [.. _dsmSession.Parameters.OfType<CoreAclSetParameters>().Select(p => p.Parameters)];
@@ -365,6 +366,23 @@ public class FileSystemServiceTests
         var http = Assert.Single(set.Rules);
         Assert.True(http.Permission.ReadData);
         Assert.True(http.Inherit.AllDescendants);
+    }
+
+    [Fact]
+    public async Task GrantSiteAccessAsync_WritesNothing_WhenAFolderUsesLinuxPermissions()
+    {
+        // Measured: writing an ACL converted such a folder, handing the admin account root's rights, while its files
+        // kept their modes and the dll stayed unreadable. The shared folder above, read first, is not touched either
+        var service = CreateService();
+        var linux = Acl(isInherited: false, Entry("admin", 0));
+        linux.Data!.IsAcl = false;
+        SetupAcls(Acl(isInherited: false, Entry("administrators", 0)), linux, Acl(isInherited: true));
+
+        var result = await service.GrantSiteAccessAsync(new("/data/copied/site/App.dll", "/volume1/data/copied/site/App.dll"));
+
+        Assert.False(result.Success);
+        Assert.Equal("Linux permissions", result.Message);
+        Assert.Empty(SetCalls());
     }
 
     [Fact]

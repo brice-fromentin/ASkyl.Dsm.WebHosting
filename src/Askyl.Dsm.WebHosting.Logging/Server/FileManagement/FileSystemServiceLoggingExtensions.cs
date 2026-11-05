@@ -93,4 +93,10 @@ public static partial class FileSystemServiceLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1100018, Level = LogLevel.Error, Message = "Granting the http group access for {ApplicationPath} failed")]
     public static partial void SiteAccessGrantError(this ILogger<ILogFileSystemService> logger, Exception ex, string applicationPath);
+
+    /// <summary>
+    /// Logs a grant refused because a folder of the path uses Linux permissions instead of an ACL.
+    /// </summary>
+    [LoggerMessage(EventId = 1100019, Level = LogLevel.Warning, Message = "{SharePath} uses Linux permissions, which the grant does not convert: nothing changed")]
+    public static partial void SiteFolderNotAcl(this ILogger<ILogFileSystemService> logger, string sharePath);
 }

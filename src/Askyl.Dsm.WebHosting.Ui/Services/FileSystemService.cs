@@ -120,12 +120,36 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
 
         try
         {
-            // The shared folder first, the site's own folder last: each folder above it is passed through, never read
+            // Every folder is read before any is written, so a folder this method will not change leaves the others as
+            // they were. The shared folder first, the site's own folder last
+            List<(string RealPath, string SharePath, CoreAclGetData Acl)> path = [];
+
             for (var depth = 1; depth <= folders.Length; depth++)
             {
                 var sharePath = FileStationDefaults.PathSeparator + String.Join(FileStationDefaults.PathSeparator, folders[..depth]);
+                var current = await dsmSession.ExecuteAsync<CoreAclGetResponse>(new CoreAclGetParameters(new() { FilePath = volume + sharePath, Type = AclConstants.GetTypeAll, IncludeNonameRules = true }), cancellationToken);
 
-                if (!await GrantHttpAccessAsync(volume + sharePath, sharePath, depth == folders.Length, cancellationToken))
+                if (current?.Success != true || current.Data is null)
+                {
+                    logger.SiteAccessRefused(sharePath, ApiConstants.MethodGet, current?.Error?.Code);
+                    return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, applicationPath]);
+                }
+
+                // Under Linux permissions there is no ACL to add to: writing one converts the folder, with entries DSM
+                // derives from its mode bits (root's ownership came back as the admin account's, measured), while the
+                // files in it keep their modes, so the dll stays unreadable anyway
+                if (!current.Data.IsAcl)
+                {
+                    logger.SiteFolderNotAcl(sharePath);
+                    return ApiResult.CreateFailure(localizer[LK.Error.SiteFolderNotAcl, applicationPath]);
+                }
+
+                path.Add((volume + sharePath, sharePath, current.Data));
+            }
+
+            for (var i = 0; i < path.Count; i++)
+            {
+                if (!await GrantHttpAccessAsync(path[i].RealPath, path[i].SharePath, path[i].Acl, i == path.Count - 1, cancellationToken))
                 {
                     return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, applicationPath]);
                 }
@@ -160,20 +184,12 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
     };
 
     /// <summary>
-    /// Adds one http entry to a folder the way DSM's own permission editor does: read the ACL, send every explicit
-    /// entry back with the new one (<c>set</c> replaces them all), then wait for the task DSM answers with.
+    /// Adds one http entry to a folder the way DSM's own permission editor does: send every explicit entry of the ACL
+    /// just read back with the new one (<c>set</c> replaces them all), then wait for the task DSM answers with.
     /// </summary>
-    private async Task<bool> GrantHttpAccessAsync(string realPath, string sharePath, bool isSiteFolder, CancellationToken cancellationToken)
+    private async Task<bool> GrantHttpAccessAsync(string realPath, string sharePath, CoreAclGetData current, bool isSiteFolder, CancellationToken cancellationToken)
     {
-        var current = await dsmSession.ExecuteAsync<CoreAclGetResponse>(new CoreAclGetParameters(new() { FilePath = realPath, Type = AclConstants.GetTypeAll, IncludeNonameRules = true }), cancellationToken);
-
-        if (current?.Success != true || current.Data is null)
-        {
-            logger.SiteAccessRefused(sharePath, ApiConstants.MethodGet, current?.Error?.Code);
-            return false;
-        }
-
-        List<CoreAclRule> explicitRules = [.. current.Data.Acl.Where(r => r.Level == AclConstants.ExplicitLevel).Select(r => r with { Level = null })];
+        List<CoreAclRule> explicitRules = [.. current.Acl.Where(r => r.Level == AclConstants.ExplicitLevel).Select(r => r with { Level = null })];
         var httpRule = explicitRules.FirstOrDefault(r => r.OwnerType == AclConstants.OwnerTypeGroup && r.OwnerName == AclConstants.OwnerNameHttp);
 
         // An http entry someone set is theirs: replacing it could take away what they gave, or lift what they denied.
@@ -193,7 +209,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
             Files = realPath,
             DirPaths = sharePath,
             ChangeAcl = true,
-            Inherited = current.Data.IsInherited,
+            Inherited = current.IsInherited,
             AclRecur = false,
             Rules = [.. explicitRules.Where(r => !ReferenceEquals(r, httpRule)), isSiteFolder ? HttpReadRule : HttpTraverseRule]
         };

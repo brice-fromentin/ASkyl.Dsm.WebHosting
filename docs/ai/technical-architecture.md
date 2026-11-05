@@ -792,7 +792,9 @@ on the site's folder, each written the way DSM's own editor does (`get`, every e
 new one, `set`, `status` until finished, `stop`; `dsm-api-notes.md`). A folder that already holds an explicit
 `http` entry is left as it is, except the grant's own passage-only entry on a folder that now holds a site, which
 becomes Read. A dll at the root of its share is never offered: its folder is the share, and Read there would open
-all of it. Declined, or still unreadable after it, the dialog shows the refusal and stays open.
+all of it. Every folder is read before any is written, and a folder under Linux permissions (`is_acl: false`, as a
+copy over SSH leaves it) stops the grant with nothing changed: writing an ACL there converts it with entries DSM
+derives from the mode bits, and the files inside stay unreadable. Declined, or still unreadable after it, the dialog shows the refusal and stays open.
 
 ---
 

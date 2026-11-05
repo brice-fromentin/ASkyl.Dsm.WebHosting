@@ -21,7 +21,7 @@ static class LogEventIds
 
     /// <summary>FileSystemService.</summary>
     public const int FileServiceBase = 1100000;
-    public const int FileServiceLast = 1100018;
+    public const int FileServiceLast = 1100019;
 
     /// <summary>FileManagerService.</summary>
     public const int FileManagerBase = 1200000;
