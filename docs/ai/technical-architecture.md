@@ -154,6 +154,13 @@ All projects share common build settings from `Directory.Build.props`:
 <EnablePreviewFeatures>true</EnablePreviewFeatures>  <!-- C# 14 scoped extension keyword -->
 ```
 
+**SDK:** `global.json` at the repository root pins the .NET 10 SDK band (`10.0.100`, `rollForward: latestFeature`,
+no previews): every command, from the root or from `src/`, takes the newest installed 10.0.x, as CI does
+(`setup-dotnet` `10.0.x`). Without it, a machine with a newer SDK silently builds with it — measured with 11.0.100
+installed: the local build diverged from CI, and a WebAssembly output left by the other SDK failed
+`WebAssemblyOutputTests` until `dotnet clean`. Raise it with the move to .NET 11, together with the `setup-dotnet`
+version and the analyzer's Roslyn ceiling below.
+
 **Analyzer Packages:**
 
 - **Roslynator.Analyzers** - Enhanced code style enforcement
