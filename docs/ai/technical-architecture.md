@@ -779,8 +779,8 @@ are stateless (`DsmConnectionChecks`) and connect to `IDsmSettingsService.Server
 
 #### FileStation Operations
 
-`SYNO.FileStation.List` (`list_share`, `list`) backs the directory browser, and `SYNO.Core.ACL` (`set`) backs
-permissions. No upload, download, delete, mkdir, move or copy operation is implemented.
+`SYNO.FileStation.List` (`list_share`, `list`) backs the directory browser, and `SYNO.Core.ACL` (`get`, `set`,
+`status`, `stop`) backs the site access grant. No upload, download, delete, mkdir, move or copy operation is implemented.
 
 **HTTP Group Permissions:** a hosted site runs under the package's account, a member of DSM's `http` group, and
 shared folders DSM creates are closed to that group. Validation of an added or updated site opens the application
@@ -792,7 +792,12 @@ on the site's folder, each written the way DSM's own editor does (`get`, every e
 new one, `set`, `status` until finished, `stop`; `dsm-api-notes.md`). A folder that already holds an explicit
 `http` entry is left as it is, except the grant's own passage-only entry on a folder that now holds a site, which
 becomes Read. A dll at the root of its share is never offered: its folder is the share, and Read there would open
-all of it. Every folder is read before any is written, and a folder under Linux permissions (`is_acl: false`, as a
+all of it. Nor is a path whose real path does not end with its share path, a home folder (`/home` is
+`/volume1/homes/<user>`) or a USB share: the grant derives each folder's real path from the share path, so it refuses
+those, and the dialog shows the refusal instead of a question. Starting a site opens its file the same way, so an
+unreadable one is reported as such (event 1600021) rather than as missing, which `File.Exists` answered before. An
+ACL answer without an entry `level` or `is_inherited` is refused before any write: `set` would otherwise drop the
+folder's own entries or its inheritance. Every folder is read before any is written, and a folder under Linux permissions (`is_acl: false`, as a
 copy over SSH leaves it) stops the grant with nothing changed: writing an ACL there converts it with entries DSM
 derives from the mode bits, and the files inside stay unreadable. Declined, or still unreadable after it, the dialog shows the refusal and stays open.
 
@@ -917,7 +922,8 @@ compiles. What the move established, for whoever touches the UI or the next majo
 
 ### File System Security
 
-- HTTP group permissions set before deployment
+- The `http` group's access to a site's folder is granted only with the user's consent, and only the least the site
+  needs (see _HTTP Group Permissions_)
 - Path traversal rejection via `IsPathValid()` — rejects empty paths, any `..`, and any URL-encoded or
   double-encoded dot or slash (`%2e`, `%2f`, `%252e`, `%252f`); there is no allow-list of directories
 
@@ -1234,7 +1240,7 @@ All routes prefixed `/api/v1/`. Controllers: `Authentication`, `WebsiteHosting`,
 
 **Authentication:** `SYNO.API.Auth` `login` (with an optional `otp_code` for two-factor accounts) and `logout`;
 `SYNO.Core.User` `get` doubles as the administrator check
-**FileStation:** `SYNO.FileStation.List` `list` and `list_share`; **ACL:** `SYNO.Core.ACL` `set`
+**FileStation:** `SYNO.FileStation.List` `list` and `list_share`; **ACL:** `SYNO.Core.ACL` `get`, `set`, `status`, `stop`
 **ReverseProxy:** `SYNO.Core.AppPortal.ReverseProxy` `list`, `create`, `update`, `delete`
 **User preferences:** `SYNO.Core.UserSettings` `get` (language, date and time format, read at login)
 **Handshake:** `SYNO.API.Info` `query`

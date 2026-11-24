@@ -221,9 +221,10 @@
     {
         var folders = Configuration.ApplicationPath.Split(FileStationDefaults.PathSeparator, StringSplitOptions.RemoveEmptyEntries)[..^1];
 
-        // A dll at the root of its share has the share itself for its folder: nothing narrow to offer, so no question
-        // that would promise it; the refusal tells the user what to grant in File Station
-        if (folders.Length < 2)
+        // A dll at the root of its share has the share itself for its folder: nothing narrow to offer. And the grant
+        // needs the real path to end with the share path, which a home folder or a USB share does not (/home is
+        // /volume1/homes/<user>): no question that the server would then refuse; the refusal says what to do by hand
+        if (folders.Length < 2 || !Configuration.ApplicationRealPath.EndsWith(Configuration.ApplicationPath, StringComparison.Ordinal))
         {
             return null;
         }

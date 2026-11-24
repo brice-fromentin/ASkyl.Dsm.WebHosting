@@ -99,4 +99,10 @@ public static partial class FileSystemServiceLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1100019, Level = LogLevel.Warning, Message = "{SharePath} uses Linux permissions, which the grant does not convert: nothing changed")]
     public static partial void SiteFolderNotAcl(this ILogger<ILogFileSystemService> logger, string sharePath);
+
+    /// <summary>
+    /// Logs a grant refused because DSM's ACL answer lacks a field the rewrite depends on.
+    /// </summary>
+    [LoggerMessage(EventId = 1100020, Level = LogLevel.Error, Message = "DSM's ACL answer for {SharePath} lacks an entry level or the inheritance flag: nothing changed")]
+    public static partial void AclAnswerIncomplete(this ILogger<ILogFileSystemService> logger, string sharePath);
 }

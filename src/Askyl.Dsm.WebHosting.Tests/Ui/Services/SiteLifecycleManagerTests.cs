@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Data.Contracts;
 using Askyl.Dsm.WebHosting.Data.Domain.Runtime;
@@ -151,6 +152,39 @@ public class SiteLifecycleManagerTests : IDisposable
         Assert.Empty(_startedProcesses);
 
         manager.Dispose();
+    }
+
+    [Fact]
+    [UnsupportedOSPlatform("windows")]
+    public async Task StartAsync_ApplicationNotReadable_SaysSoInsteadOfNotFound()
+    {
+        // A site created in a folder closed to DSM's http group: File.Exists answered false and the user read that a
+        // file which was there could not be found. Mode 000 closes the folder as the missing ACL entry does
+        var closed = Path.Combine(_tempDir, "closed");
+        Directory.CreateDirectory(closed);
+        _configuration.ApplicationRealPath = Path.Combine(closed, "MyApp.dll");
+        File.WriteAllText(_configuration.ApplicationRealPath, String.Empty);
+        File.SetUnixFileMode(closed, UnixFileMode.None);
+        _localizer.Setup(l => l[LK.Error.ApplicationNotReadable, It.IsAny<object>()]).Returns("Not readable");
+        _localizer.Setup(l => l[LK.Error.ApplicationBinaryNotFound, It.IsAny<object>()]).Returns("Not found");
+        var manager = CreateManager();
+
+        try
+        {
+            // Under root the mode would not close the folder
+            Assert.Throws<UnauthorizedAccessException>(() => File.OpenRead(_configuration.ApplicationRealPath).Dispose());
+
+            var result = await manager.StartAsync();
+
+            Assert.False(result.Success);
+            Assert.Equal("Not readable", result.Message);
+            Assert.Empty(_startedProcesses);
+        }
+        finally
+        {
+            manager.Dispose();
+            File.SetUnixFileMode(closed, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
     }
 
     [Fact]

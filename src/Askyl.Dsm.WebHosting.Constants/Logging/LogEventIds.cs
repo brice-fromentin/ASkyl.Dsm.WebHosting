@@ -21,7 +21,7 @@ static class LogEventIds
 
     /// <summary>FileSystemService.</summary>
     public const int FileServiceBase = 1100000;
-    public const int FileServiceLast = 1100019;
+    public const int FileServiceLast = 1100020;
 
     /// <summary>FileManagerService.</summary>
     public const int FileManagerBase = 1200000;
@@ -49,7 +49,7 @@ static class LogEventIds
 
     /// <summary>SiteLifecycleManager.</summary>
     public const int ProcessLifecycleBase = 1600000;
-    public const int ProcessLifecycleLast = 1600020;
+    public const int ProcessLifecycleLast = 1600021;
 
     #endregion
 

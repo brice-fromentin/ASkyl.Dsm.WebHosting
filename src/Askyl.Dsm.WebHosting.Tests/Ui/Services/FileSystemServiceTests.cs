@@ -385,6 +385,34 @@ public class FileSystemServiceTests
         Assert.Empty(SetCalls());
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GrantSiteAccessAsync_WritesNothing_WhenAnAclAnswerLacksWhatSetRelies(bool missingLevel)
+    {
+        // Without a level, every explicit entry would be dropped and set would wipe them; without is_inherited, the
+        // folder would be cut off from its parent. Neither shape was seen on DSM 7.2.2: refused, not guessed
+        var service = CreateService();
+        var incomplete = Acl(isInherited: true, Entry("administrators", 0));
+
+        if (missingLevel)
+        {
+            incomplete.Data!.Acl = [Entry("administrators", 0) with { Level = null }];
+        }
+        else
+        {
+            incomplete.Data!.IsInherited = null;
+        }
+
+        SetupAcls(Acl(isInherited: false, Entry("administrators", 0)), incomplete);
+
+        var result = await service.GrantSiteAccessAsync(new("/data/site/App.dll", "/volume1/data/site/App.dll"));
+
+        Assert.False(result.Success);
+        Assert.Equal("Grant failed", result.Message);
+        Assert.Empty(SetCalls());
+    }
+
     [Fact]
     public async Task GrantSiteAccessAsync_RefusesAnApplicationAtTheRootOfItsShare()
     {

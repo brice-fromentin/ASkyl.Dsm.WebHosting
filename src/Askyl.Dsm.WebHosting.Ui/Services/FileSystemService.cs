@@ -144,6 +144,14 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
                     return ApiResult.CreateFailure(localizer[LK.Error.SiteFolderNotAcl, applicationPath]);
                 }
 
+                // set replaces every explicit entry, picked out by level, and sets inheritance from is_inherited: an
+                // answer missing either would wipe the folder's own entries or cut it off from its parent
+                if (current.Data.IsInherited is null || current.Data.Acl.Any(r => r.Level is null))
+                {
+                    logger.AclAnswerIncomplete(sharePath);
+                    return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, applicationPath]);
+                }
+
                 path.Add((volume + sharePath, sharePath, current.Data));
             }
 
@@ -209,7 +217,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
             Files = realPath,
             DirPaths = sharePath,
             ChangeAcl = true,
-            Inherited = current.IsInherited,
+            Inherited = current.IsInherited == true,
             AclRecur = false,
             Rules = [.. explicitRules.Where(r => !ReferenceEquals(r, httpRule)), isSiteFolder ? HttpReadRule : HttpTraverseRule]
         };

@@ -812,23 +812,26 @@ public class ComponentRenderingTests : IAsyncLifetime
         _fileSystemService.Verify(service => service.GrantSiteAccessAsync(new("/web/site/App.dll", "/volume1/web/site/App.dll"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task WebsiteDialog_AsksNothing_ForAnApplicationAtTheRootOfItsShare()
+    [Theory]
+    [InlineData("/web/App.dll", "/volume1/web/App.dll")]
+    [InlineData("/home/www/site/App.dll", "/volume1/homes/admin/www/site/App.dll")]
+    public async Task WebsiteDialog_AsksNothing_WhenNoNarrowGrantFitsThePath(string applicationPath, string realPath)
     {
-        // Its folder is the share itself: no narrow grant exists, so no question may promise one
-        var refused = new WebSiteInstanceResult(false, _localizer[LK.Error.ApplicationNotReadable, "/web/App.dll"], null, ApiErrorCode.ApplicationNotReadable);
+        // At a share's root the folder is the share itself; under a home folder the real path does not end with the
+        // share path, which the grant requires: no question may promise what the server would refuse
+        var refused = new WebSiteInstanceResult(false, _localizer[LK.Error.ApplicationNotReadable, applicationPath], null, ApiErrorCode.ApplicationNotReadable);
         _hostingService.Setup(service => service.AddWebsiteAsync(It.IsAny<WebSiteConfiguration>(), It.IsAny<CancellationToken>())).ReturnsAsync(refused);
         var site = UnreadableSite();
-        site.Configuration.ApplicationPath = "/web/App.dll";
-        site.Configuration.ApplicationRealPath = "/volume1/web/App.dll";
+        site.Configuration.ApplicationPath = applicationPath;
+        site.Configuration.ApplicationRealPath = realPath;
         var cut = _ctx.Render<FluentDialogProvider>();
         var dialogService = _ctx.Services.GetRequiredService<IDialogService>();
 
         await cut.InvokeAsync(() => { _ = dialogService.ShowDialogAsync<WebSiteConfigurationDialog>(options => options.Parameters[nameof(WebSiteConfigurationDialog.Content)] = site); });
         cut.WaitForAssertion(() => cut.Find("form").Submit());
 
-        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Error.ApplicationNotReadable, "/web/App.dll"], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
-        Assert.DoesNotContain(_localizer[LK.WebsiteConfig.GrantAccessQuestion, "/web/App.dll", "/web", "web"], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal);
+        cut.WaitForAssertion(() => Assert.Contains(_localizer[LK.Error.ApplicationNotReadable, applicationPath], WebUtility.HtmlDecode(cut.Markup), StringComparison.Ordinal));
+        Assert.DoesNotContain(cut.FindAll("fluent-button"), button => button.TextContent.Trim() == MessageBoxButton(MessageBoxYesKey));
         _fileSystemService.Verify(service => service.GrantSiteAccessAsync(It.IsAny<SiteAccessRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
