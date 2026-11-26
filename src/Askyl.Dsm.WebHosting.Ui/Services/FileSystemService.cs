@@ -96,6 +96,54 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
 
     public async Task<ApiResult> GrantSiteAccessAsync(SiteAccessRequest request, CancellationToken cancellationToken = default)
     {
+        var paths = GetSiteFolderPaths(request);
+
+        if (paths is null)
+        {
+            logger.PathValidationFailed(request.ApplicationPath);
+            return ApiResult.CreateFailure(localizer[LK.Validation.PathTraversalDetected]);
+        }
+
+        try
+        {
+            // Every folder is read before any is written, so a folder this method will not change leaves the others as
+            // they were
+            var (folders, refusal) = await ReadSiteFolderAclsAsync(paths, cancellationToken);
+
+            if (refusal is not null)
+            {
+                return ApiResult.CreateFailure(localizer[refusal, request.ApplicationPath]);
+            }
+
+            if (!await GrantSiteFoldersAsync(folders, cancellationToken))
+            {
+                return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, request.ApplicationPath]);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.SiteAccessGrantError(ex, request.ApplicationPath);
+            return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, request.ApplicationPath]);
+        }
+
+        return ApiResult.CreateSuccess();
+    }
+
+    /// <summary>
+    /// One folder of a site's path, with the ACL read from DSM before any folder is written.
+    /// </summary>
+    private sealed record SiteFolder(string RealPath, string SharePath, CoreAclGetData Acl);
+
+    /// <summary>
+    /// The folders a grant covers, the shared folder first and the site's own folder last, or null for paths it cannot
+    /// trust or cover narrowly.
+    /// </summary>
+    private static List<(string RealPath, string SharePath)>? GetSiteFolderPaths(SiteAccessRequest request)
+    {
         var applicationPath = request.ApplicationPath;
         var realPath = request.ApplicationRealPath;
 
@@ -103,8 +151,7 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
         if (!IsPathValid(applicationPath) || !IsPathValid(realPath)
             || applicationPath[0] != FileStationDefaults.PathSeparator || !realPath.EndsWith(applicationPath, StringComparison.Ordinal))
         {
-            logger.PathValidationFailed(applicationPath);
-            return ApiResult.CreateFailure(localizer[LK.Validation.PathTraversalDetected]);
+            return null;
         }
 
         var volume = realPath[..^applicationPath.Length];
@@ -114,66 +161,68 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
         // itself, and Read there would open every file in it — the opposite of what the user agreed to
         if (folders.Length < 2)
         {
-            logger.PathValidationFailed(applicationPath);
-            return ApiResult.CreateFailure(localizer[LK.Validation.PathTraversalDetected]);
+            return null;
         }
 
-        try
+        return [.. Enumerable.Range(1, folders.Length)
+            .Select(depth => FileStationDefaults.PathSeparator + String.Join(FileStationDefaults.PathSeparator, folders[..depth]))
+            .Select(sharePath => (volume + sharePath, sharePath))];
+    }
+
+    /// <summary>
+    /// Reads every folder's ACL, and names the refusal (a resource key) as soon as one folder cannot take the grant.
+    /// </summary>
+    private async Task<(List<SiteFolder> Folders, string? Refusal)> ReadSiteFolderAclsAsync(List<(string RealPath, string SharePath)> paths, CancellationToken cancellationToken)
+    {
+        List<SiteFolder> folders = [];
+
+        foreach (var (realPath, sharePath) in paths)
         {
-            // Every folder is read before any is written, so a folder this method will not change leaves the others as
-            // they were. The shared folder first, the site's own folder last
-            List<(string RealPath, string SharePath, CoreAclGetData Acl)> path = [];
+            var current = await dsmSession.ExecuteAsync<CoreAclGetResponse>(new CoreAclGetParameters(new() { FilePath = realPath, Type = AclConstants.GetTypeAll, IncludeNonameRules = true }), cancellationToken);
 
-            for (var depth = 1; depth <= folders.Length; depth++)
+            if (current?.Success != true || current.Data is null)
             {
-                var sharePath = FileStationDefaults.PathSeparator + String.Join(FileStationDefaults.PathSeparator, folders[..depth]);
-                var current = await dsmSession.ExecuteAsync<CoreAclGetResponse>(new CoreAclGetParameters(new() { FilePath = volume + sharePath, Type = AclConstants.GetTypeAll, IncludeNonameRules = true }), cancellationToken);
-
-                if (current?.Success != true || current.Data is null)
-                {
-                    logger.SiteAccessRefused(sharePath, ApiConstants.MethodGet, current?.Error?.Code);
-                    return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, applicationPath]);
-                }
-
-                // Under Linux permissions there is no ACL to add to: writing one converts the folder, with entries DSM
-                // derives from its mode bits (root's ownership came back as the admin account's, measured), while the
-                // files in it keep their modes, so the dll stays unreadable anyway
-                if (!current.Data.IsAcl)
-                {
-                    logger.SiteFolderNotAcl(sharePath);
-                    return ApiResult.CreateFailure(localizer[LK.Error.SiteFolderNotAcl, applicationPath]);
-                }
-
-                // set replaces every explicit entry, picked out by level, and sets inheritance from is_inherited: an
-                // answer missing either would wipe the folder's own entries or cut it off from its parent
-                if (current.Data.IsInherited is null || current.Data.Acl.Any(r => r.Level is null))
-                {
-                    logger.AclAnswerIncomplete(sharePath);
-                    return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, applicationPath]);
-                }
-
-                path.Add((volume + sharePath, sharePath, current.Data));
+                logger.SiteAccessRefused(sharePath, ApiConstants.MethodGet, current?.Error?.Code);
+                return ([], LK.Error.SiteAccessGrantFailed);
             }
 
-            for (var i = 0; i < path.Count; i++)
+            // Under Linux permissions there is no ACL to add to: writing one converts the folder, with entries DSM
+            // derives from its mode bits (root's ownership came back as the admin account's, measured), while the
+            // files in it keep their modes, so the dll stays unreadable anyway
+            if (!current.Data.IsAcl)
             {
-                if (!await GrantHttpAccessAsync(path[i].RealPath, path[i].SharePath, path[i].Acl, i == path.Count - 1, cancellationToken))
-                {
-                    return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, applicationPath]);
-                }
+                logger.SiteFolderNotAcl(sharePath);
+                return ([], LK.Error.SiteFolderNotAcl);
             }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.SiteAccessGrantError(ex, applicationPath);
-            return ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, applicationPath]);
+
+            // set replaces every explicit entry, picked out by level, and sets inheritance from is_inherited: an
+            // answer missing either would wipe the folder's own entries or cut it off from its parent
+            if (current.Data.IsInherited is null || current.Data.Acl.Any(r => r.Level is null))
+            {
+                logger.AclAnswerIncomplete(sharePath);
+                return ([], LK.Error.SiteAccessGrantFailed);
+            }
+
+            folders.Add(new(realPath, sharePath, current.Data));
         }
 
-        return ApiResult.CreateSuccess();
+        return (folders, null);
+    }
+
+    /// <summary>
+    /// Writes the grant folder by folder, the shared folder first: passage on each, Read on the site's own folder.
+    /// </summary>
+    private async Task<bool> GrantSiteFoldersAsync(List<SiteFolder> folders, CancellationToken cancellationToken)
+    {
+        for (var i = 0; i < folders.Count; i++)
+        {
+            if (!await GrantHttpAccessAsync(folders[i], i == folders.Count - 1, cancellationToken))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static readonly CoreAclRule HttpTraverseRule = new()
@@ -195,8 +244,9 @@ public class FileSystemService(IDsmSession dsmSession, ILogger<ILogFileSystemSer
     /// Adds one http entry to a folder the way DSM's own permission editor does: send every explicit entry of the ACL
     /// just read back with the new one (<c>set</c> replaces them all), then wait for the task DSM answers with.
     /// </summary>
-    private async Task<bool> GrantHttpAccessAsync(string realPath, string sharePath, CoreAclGetData current, bool isSiteFolder, CancellationToken cancellationToken)
+    private async Task<bool> GrantHttpAccessAsync(SiteFolder folder, bool isSiteFolder, CancellationToken cancellationToken)
     {
+        var (realPath, sharePath, current) = folder;
         List<CoreAclRule> explicitRules = [.. current.Acl.Where(r => r.Level == AclConstants.ExplicitLevel).Select(r => r with { Level = null })];
         var httpRule = explicitRules.FirstOrDefault(r => r.OwnerType == AclConstants.OwnerTypeGroup && r.OwnerName == AclConstants.OwnerNameHttp);
 
