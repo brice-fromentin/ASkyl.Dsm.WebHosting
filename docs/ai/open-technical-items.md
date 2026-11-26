@@ -111,32 +111,6 @@ never adopted it.
 The disposable DSM this entry and the two above waited for now exists (AGENTS.md §13). The two above were
 measured on it on 2026-11-02; this one was not, since no failing command was provoked.
 
-### The `http` group permission a new site depends on is never applied
-
-`Ui/Services/FileSystemService.cs:115` — `SetHttpGroupPermissionsAsync` sends `SYNO.Core.ACL set` with the
-site folder's real path (`/volume1/...`) in `file_path`, `files` **and** `dirPaths`. DSM answers success with
-a task id, and the task changes nothing. Measured on the Virtual DSM 7.2.2 on 2026-11-02, through the package
-and replayed from outside through DSM's name, on a folder copied over SSH (Linux permissions) and on one
-uploaded through File Station (inherited ACL): the ACL was the same before and after, and the package user
-was refused the application's DLL. Not a regression of loopback mode — the call predates it and fails the same
-way through DSM's name.
-
-What the user sees: the site is created without a message, then shows as stopped with no framework and never
-starts. The failed autostart is reported nowhere in the UI, and the log says `ApplicationBinaryNotFound`
-(1600004) for a file that exists but cannot be read. Sites work today only where the `http` group can
-already read the folder: a shared folder it is granted, or Linux permissions that let others read.
-
-Three measured facts constrain the fix (details in `dsm-api-notes.md`):
-
-1. `dirPaths` must be the share path (`/<share>/<folder>`): the same call then applies the entry.
-2. `rules` replaces the folder's **explicit** entries — one added by hand was gone after the call. Correcting
-   `dirPaths` alone would start deleting users' own permissions on their site folders: the call has to read
-   the folder's ACL and send it back with the `http` entry added, as DSM's own permission editor does.
-3. A folder entry is not enough under a shared folder that denies traversal: the package user, a member of
-   `http`, could not enter a share only administrators may traverse, and read the DLL only once a traverse
-   entry was added at the share root and the folder in between. Granting traversal, or telling the user to, is
-   a decision.
-
 ### Editing a site's ports, host name or protocol fails
 
 `Ui/Services/ReverseProxyManagerService.cs:74` — `UpdateAsync` finds the DSM rule with

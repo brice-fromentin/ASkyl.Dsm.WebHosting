@@ -129,4 +129,10 @@ public static partial class ProcessLoggingExtensions
     /// </summary>
     [LoggerMessage(EventId = 1600020, Level = LogLevel.Error, Message = "Lifecycle command '{CommandName}' failed unexpectedly for site '{SiteName}'")]
     public static partial void LifecycleCommandFailed(this ILogger<ILogSiteLifecycleManager> logger, Exception ex, string commandName, string siteName);
+
+    /// <summary>
+    /// Logs a site that cannot start because this process, which it would run as, may not read its application.
+    /// </summary>
+    [LoggerMessage(EventId = 1600021, Level = LogLevel.Error, Message = "Cannot start site '{SiteName}': {ApplicationPath} exists but cannot be read; DSM's http group has no access to it")]
+    public static partial void ApplicationNotReadable(this ILogger<ILogSiteLifecycleManager> logger, string siteName, string applicationPath);
 }

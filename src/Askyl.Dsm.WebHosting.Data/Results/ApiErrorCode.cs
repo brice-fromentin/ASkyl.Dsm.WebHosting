@@ -31,6 +31,11 @@ public enum ApiErrorCode
     DsmUnreachable = 1002,
 
     /// <summary>
+    /// The application's file exists but this process may not read it: DSM's http group lacks access to its folder.
+    /// </summary>
+    ApplicationNotReadable = 1003,
+
+    /// <summary>
     /// Authentication or authorization failed.
     /// </summary>
     Unauthorized = 401,

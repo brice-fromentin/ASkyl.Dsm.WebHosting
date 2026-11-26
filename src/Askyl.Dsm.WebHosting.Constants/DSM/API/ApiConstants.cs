@@ -46,6 +46,8 @@ public static class ApiConstants
     public const string MethodSet = "set";
     public const string MethodUpdate = "update";
     public const string MethodDelete = "delete";
+    public const string MethodStatus = "status";
+    public const string MethodStop = "stop";
 
     #endregion
 

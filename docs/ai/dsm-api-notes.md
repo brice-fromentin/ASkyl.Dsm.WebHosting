@@ -26,6 +26,7 @@ cosmetic: DSM rejects the wrong one. Established by working code, per API below.
 | `SYNO.Core.User` | 1 | `get` | Form | Administrator-only; see below |
 | `SYNO.Core.UserSettings` | 1 | `get` | Form | Refuses an account that never opened DSM; see below |
 | `SYNO.Core.ACL` | 1 | `set` | Form | `dirPaths` is a share path; replaces explicit entries; see below |
+| `SYNO.Core.ACL` | 1 | `get`, `status`, `stop` | Form | Read before `set`; poll and release its task; see below |
 | `SYNO.Core.AppPortal.ReverseProxy` | 1 | `list` | Form | |
 | `SYNO.Core.AppPortal.ReverseProxy` | 1 | `create` | **Json** | |
 | `SYNO.Core.AppPortal.ReverseProxy` | 1 | `update` | **Json** | |
@@ -76,8 +77,36 @@ with `synoacltool -get`.
 - **`rules` is the complete explicit list, not an addition**: an explicit entry present before the call was
   gone after it; inherited entries stayed. The editor reads the ACL and sends every explicit entry back with the
   change.
-- **The call is asynchronous**: it returns a `task_id` before the ACL changes. Nothing in this application polls
-  it, and no status method has been tried.
+- **The call is asynchronous**: it returns a `task_id` before the ACL changes.
+
+### How DSM's own editor does it, and how the application now does it
+
+Traced on 2026-11-04 in the browser while File Station's permission editor saved a share root, then replayed:
+
+1. `get` with `type=all`, `file_path` the real path, `include_noname_rules=true`. The answer lists every entry with
+   its `level` — 0 for one set on that path, 1 and more for one inherited from that many folders up — its
+   `owner_id`, and `is_inherited` for the path itself.
+2. `set` with every **level-0** entry sent back as it came, `owner_id` included and `level` left out, the new entry
+   added, `inherited` equal to `get`'s `is_inherited` (`false` at a share root). The same call serves a share root
+   and a folder.
+3. `status` with the `task_id` until `finished` is `true` — 0.2 s for each folder on the Virtual DSM — then `stop`.
+
+Measured details:
+
+- Strings may go unquoted, as the Form serializer sends them; the editor quotes them (`file_path="/volume1/x"`),
+  and both work for `get`, `set`, `status` and `stop`.
+- **A permission object missing keys is refused with `403`.** Send all thirteen, as the C# record does.
+- **The least a site needs** (checked as the package user with `sudo -u`): passage only (`exe_file`, inherit
+  this folder only — `---n` in `synoacltool`) on the shared folder and on each folder in between, and Read
+  (`read_data`, `exe_file`, `read_attr`, `read_ext_attr`, `read_perm`, inherited by everything) on the site's
+  folder. The application then reads its dll and lists its folder, and can neither list the shared folder nor the
+  folder in between, nor read a file in another folder of the share.
+- **A folder under Linux permissions** (its ACL removed with `synoacltool -del`, as a copy over SSH leaves it):
+  `get` answers `is_acl: false` and lists entries derived from the mode bits — a root-owned `750` folder came back
+  as `user:admin` rwx and `group:administrators` rx, `admin` being the real account of uid 1024. Writing that list
+  back with `set` converted the folder to an ACL that gave the `admin` account root's rights, and the files inside
+  kept their Linux modes, so the dll stayed unreadable (measured 2026-11-05). The grant therefore reads every
+  folder first and changes none when one of them is not under ACL.
 
 ## Error codes
 

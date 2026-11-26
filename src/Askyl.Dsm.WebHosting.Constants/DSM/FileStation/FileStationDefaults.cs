@@ -6,6 +6,11 @@ namespace Askyl.Dsm.WebHosting.Constants.DSM.FileStation;
 public static class FileStationDefaults
 {
     /// <summary>
+    /// Separator of DSM share paths (<c>/share/folder</c>) and of the real paths behind them, whatever the host.
+    /// </summary>
+    public const char PathSeparator = '/';
+
+    /// <summary>
     /// Default additional fields to request when listing files and folders.
     /// </summary>
     public const string AdditionalPathSizeTimeFields = "[\"real_path\", \"size\", \"time\"]";

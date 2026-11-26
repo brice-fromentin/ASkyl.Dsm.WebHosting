@@ -214,7 +214,18 @@ public sealed class SiteLifecycleManager(
         // Dispose stale process handle from a previously exited process
         DisposeStaleProcess();
 
-        if (!File.Exists(configuration.ApplicationRealPath))
+        // Opened rather than File.Exists, which also answers false for a file this process may not read: sites created
+        // in a folder closed to DSM's http group were reported missing, for a file that was there
+        try
+        {
+            File.OpenRead(configuration.ApplicationRealPath).Dispose();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            logger.ApplicationNotReadable(configuration.Name, configuration.ApplicationRealPath);
+            return ApiResult.CreateFailure(localizer[LK.Error.ApplicationNotReadable, configuration.ApplicationPath]);
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException)
         {
             logger.ApplicationBinaryNotFound(configuration.ApplicationRealPath);
             return ApiResult.CreateFailure(localizer[LK.Error.ApplicationBinaryNotFound, configuration.ApplicationRealPath]);

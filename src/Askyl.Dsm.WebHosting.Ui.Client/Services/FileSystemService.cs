@@ -1,6 +1,7 @@
 using Askyl.Dsm.WebHosting.Constants.Application;
 using Askyl.Dsm.WebHosting.Constants.WebApi;
 using Askyl.Dsm.WebHosting.Data.Contracts;
+using Askyl.Dsm.WebHosting.Data.Domain.FileSystem;
 using Askyl.Dsm.WebHosting.Data.Results;
 using Askyl.Dsm.WebHosting.Globalization;
 using Askyl.Dsm.WebHosting.Tools.Extensions;
@@ -28,10 +29,6 @@ public class FileSystemService(IHttpClientFactory httpClientFactory, ILocalizer 
     }
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// This method is now handled internally by WebSiteHostingService on the server side.
-    /// It should not be called from the client - permissions are automatically set when adding/updating websites.
-    /// </remarks>
-    public Task<ApiResult> SetHttpGroupPermissionsAsync(string path, bool isDirectory, CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("Permission setting is handled internally by WebSiteHostingService and is not available through the client proxy.");
+    public async Task<ApiResult> GrantSiteAccessAsync(SiteAccessRequest request, CancellationToken cancellationToken = default)
+        => await _httpClient.PostJsonOrDefaultAsync(FileManagementRoutes.SiteAccessFullRoute, request, () => ApiResult.CreateFailure(localizer[LK.Error.SiteAccessGrantFailed, request.ApplicationPath]), cancellationToken);
 }

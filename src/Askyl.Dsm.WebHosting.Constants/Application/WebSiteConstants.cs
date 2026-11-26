@@ -113,11 +113,6 @@ public static class WebSiteConstants
     #region File Extensions
 
     /// <summary>
-    /// File extension for DLL files.
-    /// </summary>
-    public const string DllFileExtension = ".dll";
-
-    /// <summary>
     /// File extension for temporary configuration file during atomic write.
     /// </summary>
     public const string ConfigurationTempExtension = ".tmp";

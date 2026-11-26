@@ -21,6 +21,11 @@ public static class FileManagementRoutes
     public const string DirectoryContentsRoute = "directory";
 
     /// <summary>
+    /// Route segment to grant DSM's http group the access a site's folder needs.
+    /// </summary>
+    public const string SiteAccessRoute = "site-access";
+
+    /// <summary>
     /// Full route for the shared folders endpoint.
     /// </summary>
     public static readonly string SharedFoldersFullRoute = String.Join("/", ControllerBaseRoute, SharedFoldersRoute);
@@ -29,4 +34,9 @@ public static class FileManagementRoutes
     /// Full route for the directory contents endpoint.
     /// </summary>
     public static readonly string DirectoryContentsFullRoute = String.Join("/", ControllerBaseRoute, DirectoryContentsRoute);
+
+    /// <summary>
+    /// Full route for the site access endpoint.
+    /// </summary>
+    public static readonly string SiteAccessFullRoute = String.Join("/", ControllerBaseRoute, SiteAccessRoute);
 }
